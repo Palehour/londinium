@@ -1,0 +1,53 @@
+# Builds Windows, macOS and Linux from ONE Linux runner (Godot cross-exports with official templates).
+# Runs only on version tags (v0.1.0, ...) or manually, to save Actions minutes and artifact storage.
+name: export
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Only uploads artifacts (no releases), so read-only is enough.
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: true             # builds need real assets
+          persist-credentials: false
+
+      - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+
+      - name: Import project
+        run: godot --headless --path . --import
+        timeout-minutes: 5
+
+      - name: Run tests before building
+        run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
+
+      # Preset names must match export_presets.cfg exactly (case-sensitive).
+      - name: Export
+        run: |
+          mkdir -p build/windows build/macos build/linux
+          godot --headless --path . --export-release "Windows Desktop" build/windows/Londinium.exe
+          godot --headless --path . --export-release "macOS"           build/macos/Londinium.zip
+          godot --headless --path . --export-release "Linux"           build/linux/Londinium.x86_64
+
+      - uses: actions/upload-artifact@v7
+        with: { name: londinium-windows, path: build/windows, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        with: { name: londinium-macos, path: build/macos, retention-days: 14 }
+      - uses: actions/upload-artifact@v7
+        with: { name: londinium-linux, path: build/linux, retention-days: 14 }
