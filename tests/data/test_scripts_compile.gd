@@ -1,7 +1,7 @@
 extends GutTest
 
 
-func test_every_project_script_parses_and_instantiates() -> void:
+func test_every_project_script_compiles() -> void:
 	var paths: Array[String] = _collect("res://src")
 	paths.append_array(_collect("res://tests"))
 	assert_gt(paths.size(), 0, "Expected at least one project script.")
