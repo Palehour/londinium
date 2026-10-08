@@ -1,0 +1,35 @@
+# Godot 4 (based on github/gitignore Godot.gitignore + Godot docs)
+.godot/
+.import/
+.nomedia
+*.tmp
+*.translation
+# Export credentials live here since Godot 4; export_presets.cfg itself IS committed.
+export_credentials.cfg
+export.cfg
+
+# Do NOT ignore *.uid files (Godot 4.4+): they must be committed.
+
+# Build outputs
+build/
+*.exe
+*.x86_64
+*.app/
+*.dmg
+*.zip
+*.pck
+
+# Test output
+gut_results.xml
+
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# Local agent/tool state (keep shared agent config like AGENTS.md committed)
+.claude/settings.local.json
+.env

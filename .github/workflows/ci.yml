@@ -1,0 +1,49 @@
+# Runs the headless GUT suite on every PR and on pushes to main.
+# Linux only: cheapest runner (free for public repos; 2,000 min/month if the repo becomes private).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  tests:
+    name: tests (headless GUT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: false            # tests never need art/audio; saves LFS bandwidth
+
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false     # GDScript only
+          include-templates: false
+
+      - name: Import project (builds .godot cache / class_name list)
+        run: godot --headless --path . --import
+        timeout-minutes: 5
+
+      - name: Run tests
+        run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
+        timeout-minutes: 8
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut-results
+          path: gut_results.xml
+          retention-days: 7
+          if-no-files-found: ignore
