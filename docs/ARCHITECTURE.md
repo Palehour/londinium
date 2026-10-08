@@ -94,6 +94,8 @@ Parameter keys are dotted paths into the data (`building.bakery.jobs`, `defeat.h
 
 ## Conventions worth stating
 - Money is `int` in pence; display converts to £/s/d or decimals in the UI only.
+- Monetary parameters round to the nearest penny once, after the entire modifier list;
+  ties round away from zero (2.5 → 3, -2.5 → -3). Non-monetary parameters are not rounded.
 - Time in data is in game seconds; the UI may show minutes.
 - Save/load is out of M1, but state classes expose `to_dict()`/`from_dict()` so it's cheap later.
 - Renderer: **Compatibility** (OpenGL) — enough for 2D squares, runs on older Macs/PCs and in CI.

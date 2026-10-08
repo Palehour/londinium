@@ -53,6 +53,10 @@ func test_money_rounds_once_after_all_modifiers() -> void:
 	assert_typeof(params.get_value(key), TYPE_INT)
 	role.modifiers.append(Modifier.new(key, &"set", 1.49))
 	assert_eq(Params.new(_catalog, role).get_value(key), 1)
+	role.modifiers.append(Modifier.new(key, &"set", 2.5))
+	assert_eq(Params.new(_catalog, role).get_value(key), 3)
+	role.modifiers.append(Modifier.new(key, &"set", -2.5))
+	assert_eq(Params.new(_catalog, role).get_value(key), -3)
 
 
 func test_unknown_key_is_an_error_not_zero() -> void:
