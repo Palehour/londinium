@@ -24,3 +24,4 @@ Closes #
 - [ ] No hardcoded balance values (all in `data/`, read via `Params`)
 - [ ] No edits to `docs/GDD.md` / `docs/DECISIONS.md`; no P-xxx implemented without approval
 - [ ] No tests weakened/skipped; scope limited to the issue
+- [ ] Labels, milestone, assignee and project status are set (see AGENTS.md, GitHub tracking)
