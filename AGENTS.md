@@ -29,8 +29,8 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 ## GDScript style
 - Static typing everywhere: typed vars, params and returns (`var x: int`, `func f(a: float) -> void`).
   `:=` is fine when the type is obvious. Typed arrays/dicts (`Array[Building]`, `Dictionary[StringName, int]`).
-  Untyped declarations are a compile error in this project (`untyped_declaration=2`). Keep
-  `debug/gdscript/warnings/exclude_addons=true` in `project.godot` so vendored addons aren't checked.
+  Untyped declarations are a compile error in this project (`untyped_declaration=2`). Never set
+  `debug/gdscript/warnings/exclude_addons=false` (the default is true) so vendored addons aren't checked.
 - Follow the official GDScript style guide: `snake_case` files/functions/vars, `PascalCase` `class_name`,
   `CONSTANT_CASE` constants, signals in past tense (`stock_changed`). One `class_name` per file, file name =
   snake_case of the class.
@@ -70,11 +70,11 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 
 ## GitHub tracking
 When you open the PR, update tracking in the same step. Do not leave it for later.
-- On the PR and on the issue: hito-1, one 	ipo:*, one rea:*, one of p1/p2/p3, gente:codex or gente:claude or gente:grok, and en-revision. Remove listo-para-agente from the issue.
-- Milestone: the current hito. Assignee: crisesarmiento.
-- Add the PR and the issue to the project https://github.com/users/crisesarmiento/projects/5. Status En revisión. Set Prioridad and Agente to match the labels.
-- If gh project says the token is missing the project scope, say so in the PR. Do not skip it silently.
-- Agents never merge. After merge, status moves to Hecho (Cristian or the reviewer).
+- On the PR and on the issue: `hito-1`, one `tipo:*`, one `area:*`, one of `p1`/`p2`/`p3`, `agente:codex` or `agente:claude` or `agente:grok`, and `en-revision`. Remove `listo-para-agente` from the issue.
+- Milestone: the current hito. Assignee: `crisesarmiento`.
+- Add both to the board: `gh project item-add 5 --owner crisesarmiento --url <issue-or-pr-url>`. Then set Status to `En revisión`, and Prioridad and Agente to match the labels. Field and option ids come from `gh project field-list 5 --owner crisesarmiento`. Pass them to `gh project item-edit` with `--id`, `--field-id` and `--single-select-option-id` so accents are not mangled.
+- If `gh project` fails for a missing scope, Cristian runs `gh auth refresh -h github.com -s project` once on that machine. Until then, write `Tablero: pendiente (sin scope project)` in the PR. Do not skip it silently. Cristian or the reviewer updates the board.
+- Agents never merge. After merge, status moves to `Hecho` (Cristian or the reviewer).
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
