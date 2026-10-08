@@ -1,5 +1,6 @@
 extends GutTest
 
+
 func test_every_project_script_parses_and_instantiates() -> void:
 	var paths: Array[String] = _collect("res://src")
 	paths.append_array(_collect("res://tests"))
@@ -9,11 +10,9 @@ func test_every_project_script_parses_and_instantiates() -> void:
 		assert_not_null(script, "Did not parse: %s" % path)
 		if script == null:
 			continue
-		assert_true(script.can_instantiate(), "Cannot instantiate: %s" % path)
-		var instance: Object = script.new()
-		assert_not_null(instance, "new() returned null: %s" % path)
-		if instance is Node:
-			(instance as Node).free()
+		# can_instantiate() is false when the script failed to compile. Don't call new():
+		# constructors with arguments or scene-tree access would fail for valid scripts.
+		assert_true(script.can_instantiate(), "Did not compile: %s" % path)
 
 
 func _collect(root: String) -> Array[String]:
