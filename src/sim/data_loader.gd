@@ -178,19 +178,27 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		_errors.append("economy/buildings.json: expected buildings")
 	for id: String in raw:
 		var path: String = "economy/buildings.json.%s" % id
+		if raw[id] is not Dictionary:
+			_errors.append("%s: expected an object" % path)
+			continue
+		if not raw[id].has("tags"):
+			_errors.append("%s.tags: missing field" % path)
+			continue
+		var building: BuildingDef = BuildingDef.new()
+		building.id = StringName(id)
+		if not _strings(raw[id]["tags"], path + ".tags", building.tags):
+			continue
+		var is_housing: bool = "housing" in building.tags
 		var schema: Dictionary = BUILDING_FIELDS.duplicate()
-		schema["capacity" if id == "housing" else "recipe"] = "integer"
+		schema["capacity" if is_housing else "recipe"] = "integer"
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
 		if not _object(raw[id], fields, path):
 			continue
-		var building: BuildingDef = BuildingDef.new()
-		building.id = StringName(id)
-		_strings(raw[id]["tags"], path + ".tags", building.tags)
 		var numeric: Dictionary = raw[id].duplicate()
 		numeric.erase("tags")
-		if id != "housing":
+		if not is_housing:
 			building.recipe = _recipe(numeric["recipe"], path + ".recipe",
 				"building.%s.recipe" % id, catalog)
 			numeric.erase("recipe")

@@ -50,6 +50,27 @@ func test_invalid_tags_are_rejected() -> void:
 	_assert_invalid("mill.tags: expected nonempty strings")
 
 
+func test_housing_tag_works_with_a_different_building_id() -> void:
+	var buildings: Dictionary = _documents["economy/buildings.json"]
+	buildings["worker_housing"] = buildings["housing"]
+	buildings.erase("housing")
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_null(result.catalog.buildings[&"worker_housing"].recipe)
+		assert_true(result.catalog.base_values.has(&"building.worker_housing.capacity"))
+
+
+func test_housing_id_without_housing_tag_loads_as_a_producer() -> void:
+	_documents["economy/buildings.json"]["housing"] = \
+		_documents["economy/buildings.json"]["bakery"].duplicate(true)
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_not_null(result.catalog.buildings[&"housing"].recipe)
+		assert_false(result.catalog.base_values.has(&"building.housing.capacity"))
+
+
 func test_unknown_modifier_key_is_rejected() -> void:
 	_set_modifier({"key": "unknown.key", "op": "mul", "value": 0.5})
 	_assert_invalid("unknown key 'unknown.key'")

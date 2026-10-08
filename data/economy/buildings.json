@@ -1,21 +1,26 @@
 {
   "wharf": {
-    "cost": 2400, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
-    "jobs": 4, "tags": ["river", "source"],
-    "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
+	"cost": 2400, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
+	"jobs": 4, "tags": ["river", "source"],
+	"recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
   },
   "mill": {
-    "cost": 1800, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
-    "recipe": { "inputs": { "wheat": 10 }, "outputs": { "flour": 10 }, "seconds": 60 }
+	"cost": 1800, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
+	"jobs": 3, "tags": ["producer"],
+	"recipe": { "inputs": { "wheat": 10 }, "outputs": { "flour": 10 }, "seconds": 60 }
   },
   "bakery": {
-    "cost": 1200, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
-    "recipe": { "inputs": { "flour": 10 }, "outputs": { "bread": 20 }, "seconds": 60 }
+	"cost": 1200, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
+	"jobs": 3, "tags": ["producer"],
+	"recipe": { "inputs": { "flour": 10 }, "outputs": { "bread": 20 }, "seconds": 60 }
+  },
+  "wheat_field": {
+	"cost": 900, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
+	"jobs": 3, "tags": ["source", "cultivable"],
+	"recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 120 }
   },
   "housing": {
-    "cost": 600, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "tags": ["housing"]
+	"cost": 600, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
+	"jobs": 0, "capacity": 20, "tags": ["housing"]
   }
 }

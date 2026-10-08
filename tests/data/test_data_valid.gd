@@ -8,7 +8,7 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		return
 	var catalog: DataCatalog = result.catalog
 	assert_eq(catalog.goods.size(), 3)
-	assert_eq(catalog.buildings.size(), 4)
+	assert_eq(catalog.buildings.size(), 5)
 	assert_eq(catalog.roles.size(), 1)
 	assert_eq(catalog.maps.size(), 1)
 	for good: GoodDef in catalog.goods.values():
@@ -37,11 +37,35 @@ func test_whitechapel_has_no_cultivation_or_pending_content() -> void:
 	var map: MapDef = catalog.maps[&"whitechapel_1850s"]
 	assert_true(map.cultivable_cells.is_empty())
 	assert_false(map.river_cells.is_empty())
-	assert_false(catalog.buildings.has(&"wheat_field"))
+	assert_true(catalog.buildings.has(&"wheat_field"))
 	assert_false(catalog.goods.has(&"tea"))
 	assert_true(catalog.buildings[&"wharf"].recipe.inputs.is_empty())
 	assert_eq(catalog.buildings[&"wharf"].recipe.outputs, [&"wheat"])
 	assert_false(catalog.base_values.has(&"market.imported_flour.price"))
+
+
+func test_wheat_field_loads_with_recipe_tags_and_parameters() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	assert_true(result.catalog.buildings.has(&"wheat_field"))
+	if not result.catalog.buildings.has(&"wheat_field"):
+		return
+	var field: BuildingDef = result.catalog.buildings[&"wheat_field"]
+	assert_true("cultivable" in field.tags)
+	assert_true("source" in field.tags)
+	assert_not_null(field.recipe)
+	if field.recipe == null:
+		return
+	assert_true(field.recipe.inputs.is_empty())
+	assert_eq(field.recipe.outputs, [&"wheat"])
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	for suffix: String in ["cost", "upkeep_per_minute", "wage_per_worker_per_minute", "jobs",
+			"recipe.seconds", "recipe.outputs.wheat"]:
+		var key: StringName = StringName("building.wheat_field." + suffix)
+		assert_true(result.catalog.base_values.has(key), str(key))
+		assert_true(float(params.get_value(key)) > 0.0, str(key))
 
 
 func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
