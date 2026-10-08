@@ -1,4 +1,4 @@
-# Runs the headless GUT suite on every PR and on pushes to main.
+# Corre la suite GUT headless en PRs a develop/main y en pushes a develop/main.
 # Linux only: cheapest runner (free for public repos; 2,000 min/month if the repo becomes private).
 name: ci
 

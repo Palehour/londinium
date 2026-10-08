@@ -31,7 +31,8 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 7. Un agente por issue a la vez; issues que tocan los mismos archivos, en serie.
 
 ## Release
-1. Cristian abre una PR `develop` → `main` ("release: v0.x.y") y la mergea.
+1. Cristian abre una PR `develop` → `main` ("release: v0.x.y") y la mergea con *merge commit* (nunca squash),
+   para que `main` y `develop` no se separen. Las PRs `feat/*` → `develop` siguen siendo squash.
 2. Crea el tag `v0.x.y` sobre `main` (`git tag v0.x.y origin/main && git push origin v0.x.y`).
 3. `export.yml` genera los builds de Windows, macOS y Linux como artifacts.
 
@@ -43,7 +44,7 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
   suma una pieza más y más superficie. Lo reconsideramos si en el hito 2 hay que testear mucha UI.
 
 ## CI y builds multiplataforma (gratis)
-- **`ci.yml`** — en cada PR y push a `develop` o `main`: `chickensoft-games/setup-godot@v2` instala Godot 4.7.2 (sin .NET),
+- **`ci.yml`** — en cada PR y push a `develop` o `main`: `chickensoft-games/setup-godot` v2.4.3 (fijado por SHA) instala Godot 4.7.2 (sin .NET),
   `--import`, GUT headless. Solo Linux: es el runner más barato. Con el repo público los minutos de Actions son gratis
   (si pasa a privado: 2.000 min/mes en Free); una corrida debería rondar 2–4 min.
 - **`export.yml`** — solo con tag `v*` o a mano: el mismo action con `include-templates: true` exporta

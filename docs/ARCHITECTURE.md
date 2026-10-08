@@ -32,7 +32,7 @@ londinium/
 │   │   ├── goods.json        # wheat, flour, bread, tea, money unit
 │   │   ├── buildings.json    # wharf, mill, bakery, housing, wheat_field: cost, upkeep, jobs, recipe, tags
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
-│   │   ├── market.json       # wheat base price, fluctuation range, imported flour/tea prices
+│   │   ├── market.json       # wheat base price, fluctuation range, imported flour/tea prices (P-011/P-004, solo cuando se aprueben)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)

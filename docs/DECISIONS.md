@@ -25,7 +25,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-017 | 2026-10-08 | Prototipo en la era victoriana, en Whitechapel. Ambientación: la inmigración judía masiva empieza en los 1880; en los 1850 había una comunidad chica de judíos holandeses que hacía cigarros. (antes P-001) |
 | D-018 | 2026-10-08 | Fase 1: cadena trigo, harina y pan; trabajadores que consumen pan, crecen y pagan impuestos; panel de estadísticas; cuadrados de colores. (antes P-002) |
 | D-019 | 2026-10-08 | El jugador juega el hito 1 como administrador neutral del distrito, sin rol. (antes P-010) |
-| D-020 | 2026-10-08 | La fuente de grano es un embarcadero sobre el río (grano comprado en Mark Lane y llegado en lanchas desde los Surrey Docks); el molino del prototipo queda como licencia de diseño. (antes P-012) |
+| D-020 | 2026-10-08 | La fuente de grano es un embarcadero sobre el río (grano comprado en Mark Lane y llegado en lanchas desde los Surrey Docks); el molino del prototipo queda como licencia de diseño. Chronicler no encontró molinos harineros en Whitechapel en los 1850. Millwall Dock (1868) y el molino de McDougall (1869) sirven para una etapa victoriana posterior. (antes P-012) |
 
 ## Propuestas
 
