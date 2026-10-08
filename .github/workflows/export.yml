@@ -7,6 +7,10 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# Only uploads artifacts (no releases), so read-only is enough.
+permissions:
+  contents: read
+
 env:
   GODOT_VERSION: 4.7.2
 
@@ -18,8 +22,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           lfs: true             # builds need real assets
+          persist-credentials: false
 
-      - uses: chickensoft-games/setup-godot@v2
+      - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
         with:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
@@ -40,9 +45,9 @@ jobs:
           godot --headless --path . --export-release "macOS"           build/macos/Londinium.zip
           godot --headless --path . --export-release "Linux"           build/linux/Londinium.x86_64
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: londinium-windows, path: build/windows, retention-days: 14 }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: londinium-macos, path: build/macos, retention-days: 14 }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: londinium-linux, path: build/linux, retention-days: 14 }

@@ -29,7 +29,8 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 ## GDScript style
 - Static typing everywhere: typed vars, params and returns (`var x: int`, `func f(a: float) -> void`).
   `:=` is fine when the type is obvious. Typed arrays/dicts (`Array[Building]`, `Dictionary[StringName, int]`).
-  Untyped declarations are a compile error in this project (`untyped_declaration=2`).
+  Untyped declarations are a compile error in this project (`untyped_declaration=2`). Keep
+  `debug/gdscript/warnings/exclude_addons=true` in `project.godot` so vendored addons aren't checked.
 - Follow the official GDScript style guide: `snake_case` files/functions/vars, `PascalCase` `class_name`,
   `CONSTANT_CASE` constants, signals in past tense (`stock_changed`). One `class_name` per file, file name =
   snake_case of the class.
@@ -46,7 +47,8 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 
 ## Commands (run from repo root; `GODOT` = path to the Godot 4.7.2 *console* binary)
 - First run / after adding files: `"$GODOT" --headless --path . --import`
-- All tests: `tools/run_tests.sh` (Windows: `tools\run_tests.ps1`)
+- All tests: `tools/run_tests.sh` (Windows: `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1`).
+  Both save the import output to `.godot/import.log` and print it.
 - One test file: `"$GODOT" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gtest=res://tests/sim/test_production.gd`
 - Tests are GUT 9.7.x, in `tests/`, files `test_*.gd`, `extends GutTest`. Sim tests call `sim.tick()` N times
   directly (900 ticks = 15 game minutes); they must not depend on frames, real time or the scene tree.
@@ -57,8 +59,10 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - A passing build is not "done": if it touches the screen, describe how Cristian can see it in 3 steps.
 
 ## Git workflow
-- Never push to `main`. One issue = one branch = one PR into `main`.
-- Branches: `feat/<issue>-<slug>`, `fix/<issue>-<slug>`, `chore/<slug>`, `test/<slug>` (e.g. `feat/4-bakery-chain`).
+- Never push to `main` or `develop`. One issue = one branch = one PR into **`develop`** (the default branch).
+  Releases (`develop` → `main` via PR + `v*` tag) are Cristian's.
+- Branches: `<tipo>/<issue>-<slug>` for every type: `feat/`, `fix/`, `chore/`, `test/` (e.g. `feat/4-bakery-chain`,
+  `chore/1-bootstrap`). `docs/<issue>-<slug>` is only for the designer/historian bots.
 - Commits: Conventional Commits (`feat(sim): add bakery conversion`). Keep PRs small: aim for < 300 changed
   lines of non-test code; split otherwise.
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
@@ -66,7 +70,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
-2. `tools/run_tests` passes locally and CI is green. No new warnings or errors in the import log.
+2. `tools/run_tests` passes locally and CI is green. No new warnings or errors in the import log (`.godot/import.log`).
 3. No hardcoded balance values; new parameters added to `data/` and read through `Params`.
 4. No edits to `docs/GDD.md` / `docs/DECISIONS.md`; no P-xxx implemented without approval.
 5. PR description uses the template: what changed, how to verify (≤ 3 steps), screenshots if UI, doc questions.

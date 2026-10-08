@@ -11,7 +11,7 @@ Changes to this file go through a normal PR reviewed by Cristian.
    real `delta × speed` and calls `sim.tick()` in whole steps (capped per frame). Same seed + same
    commands ⇒ same state. Randomness (wheat price) only via the sim's seeded `RandomNumberGenerator`.
 3. **Everything tunable lives in `data/`** as JSON, read through `Params.get_value(key)`, which applies the
-   active role's modifier list (empty for the neutral administrator in M1, D-014).
+   active role's modifier list (empty for the neutral administrator in M1, D-014 / D-019).
 4. **UI sends commands, reads snapshots.** `Simulation.apply_command(cmd)` (build, demolish, set_tax,
    order_wheat, toggle_tea, …) is the only way to change state. After each tick the sim emits a read-only
    snapshot + per-minute stats for the panel. The command log also gives free replays and, later, saves.
@@ -22,7 +22,8 @@ Changes to this file go through a normal PR reviewed by Cristian.
 ```
 londinium/
 ├── AGENTS.md                 # rules for coding agents (CLAUDE.md just imports it)
-├── project.godot             # Godot 4.7.2, Compatibility renderer, untyped_declaration = error
+├── project.godot             # Godot 4.7.2, Compatibility renderer, untyped_declaration = error,
+│                             #   keep debug/gdscript/warnings/exclude_addons=true (vendored GUT)
 ├── export_presets.cfg        # Windows Desktop / macOS / Linux (committed, no secrets)
 ├── .gutconfig.json
 ├── addons/gut/               # GUT 9.7.x vendored (never edited by agents)
@@ -64,7 +65,8 @@ londinium/
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands.
 2. Assign workers automatically by fixed priority: bakery → mill → wharf (GDD, D-012).
-3. Sources: wharf buys wheat at the current (fluctuating) price, wheat fields on cultivable cells only.
+3. Sources: wharf buys wheat at the current (fluctuating) price; wharf buys imported flour that skips the mill
+   (P-011, pending: only once approved); wheat fields on cultivable cells only.
 4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.
 5. Consumption: bread eaten per person; tea if available (only if P-004 approved); stale bread decays.
 6. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).

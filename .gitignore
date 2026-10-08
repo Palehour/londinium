@@ -1,12 +1,10 @@
 # Godot 4 (based on github/gitignore Godot.gitignore + Godot docs)
 .godot/
-.import/
 .nomedia
 *.tmp
 *.translation
 # Export credentials live here since Godot 4; export_presets.cfg itself IS committed.
 export_credentials.cfg
-export.cfg
 
 # Do NOT ignore *.uid files (Godot 4.4+): they must be committed.
 

@@ -1,11 +1,14 @@
 #!/bin/sh
-# Blocks direct pushes to main (project convention: everything enters main through a PR).
+# Blocks direct pushes to main and develop (project convention: everything enters through a PR).
 # Enable once per clone:  git config core.hooksPath .githooks
-# Emergency override:     ALLOW_MAIN_PUSH=1 git push
+# Emergency override:     ALLOW_PROTECTED_PUSH=1 git push
 while read -r local_ref local_sha remote_ref remote_sha; do
-  if [ "$remote_ref" = "refs/heads/main" ] && [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
-    echo "pre-push: direct push to main is blocked. Push a feat/* branch and open a PR." >&2
-    exit 1
-  fi
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/develop)
+      if [ "${ALLOW_PROTECTED_PUSH:-0}" != "1" ]; then
+        echo "pre-push: push directo a ${remote_ref#refs/heads/} bloqueado. Empujá una rama feat/fix/chore/test y abrí una PR a develop." >&2
+        exit 1
+      fi ;;
+  esac
 done
 exit 0

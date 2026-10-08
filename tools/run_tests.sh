@@ -3,5 +3,7 @@
 set -euo pipefail
 GODOT="${GODOT:-godot}"
 cd "$(dirname "$0")/.."
-"$GODOT" --headless --path . --import >/dev/null 2>&1 || true   # builds .godot/ cache and class_name list
+mkdir -p .godot
+# Builds the .godot/ cache and class_name list. Log kept in .godot/import.log (check it for new warnings).
+"$GODOT" --headless --path . --import 2>&1 | tee .godot/import.log || true
 "$GODOT" --headless --path . -s addons/gut/gut_cmdln.gd -gexit "$@"
