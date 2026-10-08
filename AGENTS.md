@@ -72,9 +72,9 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 When you open the PR, update tracking in the same step. Do not leave it for later.
 - On the PR and on the issue: `hito-1`, one `tipo:*`, one `area:*`, one of `p1`/`p2`/`p3`, `agente:codex` or `agente:claude` or `agente:grok`, and `en-revision`. Remove `listo-para-agente` from the issue.
 - Milestone: the current hito. Assignee: `crisesarmiento`.
-- Add both to the board. Get the item id: `gh project item-add 5 --owner crisesarmiento --url <url> --format json --jq .id`.
-- Get the project id: `gh project view 5 --owner crisesarmiento --format json --jq .id`.
-- Set Status to `En revisión`, and Prioridad and Agente to match the labels. Get field and option ids with `gh project field-list 5 --owner crisesarmiento --format json`.
+- Board: https://github.com/orgs/Palehour/projects/2. Add both to the board. Get the item id: `gh project item-add 2 --owner Palehour --url <url> --format json --jq .id`.
+- Get the project id: `gh project view 2 --owner Palehour --format json --jq .id`.
+- Set Status to `En revisión`, and Prioridad and Agente to match the labels. Get field and option ids with `gh project field-list 2 --owner Palehour --format json`.
 - Set one field per call: `gh project item-edit --id <item-id> --project-id <project-id> --field-id <field-id> --single-select-option-id <option-id>` so accents are not mangled.
 - If `gh project` fails for a missing scope, Cristian runs `gh auth refresh -h github.com -s project` once on that machine. Until then, write `Tablero: pendiente (sin scope project)` in the PR. Do not skip it silently. Cristian or the reviewer updates the board.
 - Agents never merge. After merge, status moves to `Hecho` (Cristian or the reviewer).
