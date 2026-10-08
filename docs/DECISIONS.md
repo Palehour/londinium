@@ -21,6 +21,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-013 | 2026-10-08 | El prototipo se puede perder. Condiciones de derrota iniciales: quiebra, motín de hambre y despoblación, cada una con aviso previo (umbrales en el GDD, a balancear). |
 | D-014 | 2026-10-08 | Los roles llegan después del hito 1. El diseño y el código dejan un gancho para modificadores de rol (parámetros en datos, leídos con una sola función que aplica modificadores) para no tener que rehacer nada. |
 | D-015 | 2026-10-08 | Fase 2: cervecería como segunda cadena, con el grano disputado entre el pan y la cerveza. |
+| D-016 | 2026-10-08 | El primer evento histórico es el cólera de 1866 en Whitechapel (East London Water Company, Old Ford), su peor año según Chronicler. El brote de 1854 (Broad Street) fue en Soho. |
 
 ## Propuestas
 
@@ -29,7 +30,6 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | P-001 | 2026-10-08 | Prototipo en la era victoriana, en Whitechapel. | Grok Bot | A favor: el río y la inmigración dan fuentes naturales para el loop. Ojo con la ambientación: la inmigración judía masiva empieza en los 1880; en los 1850 había una comunidad chica de judíos holandeses que hacía cigarros. |
 | P-002 | 2026-10-08 | Fase 1: cadena trigo, harina y pan; trabajadores que consumen pan, crecen y pagan impuestos; panel de estadísticas; cuadrados de colores. | Grok Bot | A favor. El origen del trigo ya está decidido en D-010. |
 | P-004 | 2026-10-08 | El té importado como primera preferencia (no obligatoria). | Mason | Cubre "preferencias" del hito con un solo bien y sin otra cadena. |
-| P-006 | 2026-10-08 | Evento histórico: el cólera de 1854. | Grok Bot | Chronicler confirmó que el brote de 1854 (Broad Street, John Snow) fue en Soho. En 1849 y 1854 lo peor estuvo al sur del río (Southwark, Bermondsey); en Whitechapel, 1866 (East London Water Company, Old Ford) fue claramente el peor año. Propongo el cólera de 1866 para Whitechapel. |
 | P-007 | 2026-10-08 | Eras: romana, medieval, 1666, victoriana y Blitz, con lo construido pasando de una era a otra. | Grok Bot | La continuidad entre eras es lo más caro del proyecto; conviene tratarla como visión y no comprometerla hasta validar el loop. |
 | P-008 | 2026-10-08 | Roles: mercader, familia noble, gremio obrero, sociedad secreta. | Grok Bot | Buena variedad; cada rol debería cambiar qué decisiones económicas importan, no solo dar bonos. Se apoya en el gancho de D-014. |
 | P-009 | 2026-10-08 | "Grietas de la historia" por donde se cuela el folklore de terror. | Grok Bot | Encaja con D-003; queda fuera del hito 1. |
