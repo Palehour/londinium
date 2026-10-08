@@ -68,6 +68,14 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
 
+## GitHub tracking
+When you open the PR, update tracking in the same step. Do not leave it for later.
+- On the PR and on the issue: hito-1, one 	ipo:*, one rea:*, one of p1/p2/p3, gente:codex or gente:claude or gente:grok, and en-revision. Remove listo-para-agente from the issue.
+- Milestone: the current hito. Assignee: crisesarmiento.
+- Add the PR and the issue to the project https://github.com/users/crisesarmiento/projects/5. Status En revisión. Set Prioridad and Agente to match the labels.
+- If gh project says the token is missing the project scope, say so in the PR. Do not skip it silently.
+- Agents never merge. After merge, status moves to Hecho (Cristian or the reviewer).
+
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
 2. `tools/run_tests` passes locally and CI is green. No new warnings or errors in the import log (`.godot/import.log`).
