@@ -74,7 +74,7 @@ func test_commands_enqueued_during_tick_wait_for_next_tick() -> void:
 func test_same_seed_and_command_schedule_match_after_900_ticks() -> void:
 	var first: Simulation = Simulation.new(_params, _initial, 456)
 	var second: Simulation = Simulation.new(_params, _initial, 456)
-	var initial_rng_state: int = first.rng.state
+	var initial_rng_state: int = first.snapshot()["rng_state"]
 	for tick_index: int in range(900):
 		if tick_index % 60 == 0:
 			for sim: Simulation in [first, second]:
@@ -84,7 +84,7 @@ func test_same_seed_and_command_schedule_match_after_900_ticks() -> void:
 		second.tick()
 	assert_eq(first.snapshot(), second.snapshot())
 	assert_eq(first.snapshot()["tick_count"], 900)
-	assert_ne(first.rng.state, initial_rng_state, "Replay exercises the owned RNG")
+	assert_ne(first.snapshot()["rng_state"], initial_rng_state, "Replay exercises the owned RNG")
 	assert_gt(first.snapshot()["economy"]["stocks"][&"wheat"], 0)
 	assert_eq(first.snapshot()["economy"]["population"], _initial.population)
 	assert_eq(first.snapshot()["economy"]["buildings"], _initial.buildings)
@@ -114,8 +114,10 @@ func test_snapshots_do_not_mutate_state_or_consume_rng() -> void:
 	detached["economy"]["buildings"].clear()
 	detached["economy"]["money"] = 99
 	detached["economy"]["population"] = 99
+	detached["rng_state"] = 99
 	assert_eq(sim.snapshot(), expected)
 	assert_eq(sim.snapshot(), expected, "Reading again must not consume RNG")
+	assert_eq(sim.get_rng_state(), expected["rng_state"])
 
 
 func test_initial_state_and_rng_are_independent_between_simulations() -> void:
@@ -130,7 +132,7 @@ func test_initial_state_and_rng_are_independent_between_simulations() -> void:
 	first.tick()
 	assert_eq(second.snapshot(), expected)
 	assert_ne(first.snapshot(), expected)
-	assert_ne(first.rng, second.rng)
+	assert_ne(first.snapshot()["rng_state"], second.snapshot()["rng_state"])
 
 
 func test_seed_controls_random_sequence() -> void:
@@ -139,8 +141,12 @@ func test_seed_controls_random_sequence() -> void:
 	var first_draws: Array[int] = []
 	var second_draws: Array[int] = []
 	for index: int in range(10):
-		first_draws.append(first.rng.randi())
-		second_draws.append(second.rng.randi())
+		first.apply_command(RandomStockCommand.new())
+		second.apply_command(RandomStockCommand.new())
+		first.tick()
+		second.tick()
+		first_draws.append(first.snapshot()["economy"]["stocks"][&"wheat"])
+		second_draws.append(second.snapshot()["economy"]["stocks"][&"wheat"])
 	assert_ne(first_draws, second_draws)
 	assert_eq(first.snapshot()["seed"], 123)
 	assert_eq(second.snapshot()["seed"], 124)

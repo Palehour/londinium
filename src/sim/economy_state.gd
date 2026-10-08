@@ -16,6 +16,7 @@ func to_dict() -> Dictionary:
 	}
 
 
+# Internal conversion: expects the complete value schema produced by to_dict().
 static func from_dict(values: Dictionary) -> EconomyState:
 	var result: EconomyState = EconomyState.new()
 	result.stocks.assign(values["stocks"])
