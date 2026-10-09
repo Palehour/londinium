@@ -269,20 +269,54 @@ func test_real_rate_city_60_to_27_exits_warning_at_stable_tick_208() -> void:
 	assert_true(recovered["defeat_causes"].is_empty())
 
 
-func test_gdd_depopulation_text_matches_issue_30_and_duration() -> void:
-	var text: String = FileAccess.get_file_as_string("res://docs/GDD.md")
-	var expected_row: String = "| Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |"
-	var expected_paragraph: String = "Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y la satisfacción no está por debajo del umbral de emigración. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación."
-	var row: String = ""
-	for line: String in text.split("\n"):
-		if line.begins_with("| Despoblación |"):
-			row = line
-	assert_eq(row, expected_row)
-	assert_false(row.contains("su máximo"))
-	assert_string_contains(row, "%d s seguidos" % int(_params().get_value(&"defeat.depopulation.duration_seconds")))
-	assert_eq(text.count(expected_row), 1)
-	assert_eq(text.count(expected_paragraph), 1)
-	assert_string_contains(text, expected_row + "\n\n" + expected_paragraph)
+func test_gdd_depopulation_records_key_contract_elements() -> void:
+	var text: String = FileAccess.get_file_as_string("res://docs/GDD.md").to_lower()
+	var lines: PackedStringArray = text.split("\n")
+	var row_index: int = -1
+	for index: int in range(lines.size()):
+		if lines[index].begins_with("| despoblación |"):
+			assert_eq(row_index, -1, "The depopulation row must be unique")
+			row_index = index
+	assert_gte(row_index, 0, "The depopulation contract must exist")
+	if row_index < 0:
+		return
+	var cells: PackedStringArray = lines[row_index].split("|")
+	assert_eq(cells.size(), 5, "The defeat table must retain its three columns")
+	if cells.size() != 5:
+		return
+	_assert_gdd_contract(cells[2], "50\\s*%[^.;|]*pico", "Warning uses 50 % of the peak")
+	var defeat: String = cells[3]
+	_assert_gdd_contract(defeat, "25\\s*%[^.;|]*pico", "Relative defeat uses 25 % of the peak")
+	_assert_gdd_contract(defeat, "%d\\s*(s\\b|segundos)" % int(
+		_params().get_value(&"defeat.depopulation.duration_seconds")), "Duration remains data-backed")
+	_assert_gdd_contract(defeat, "10\\s+habitantes[^.;|]*(no\\s+(est[aá]|es)\\s+estable|inestable)",
+		"The absolute minimum only applies to an unstable city")
+	_assert_gdd_contract(defeat, "\\b0\\s+habitantes[^.;|]*siempre[^.;|]*(terminada|despu[eé]s de|tras)[^.;|]*gracia",
+		"An empty city always counts after grace")
+	var paragraph: String = ""
+	for index: int in range(row_index + 1, lines.size()):
+		if lines[index].strip_edges().is_empty():
+			if not paragraph.is_empty():
+				break
+			continue
+		paragraph += " " + lines[index].strip_edges()
+	_assert_gdd_contract(paragraph, "ciudad[^.;]*estable", "The stability definition follows the table")
+	_assert_gdd_contract(paragraph, "no\\s+(hay\\s+)?emigraci[oó]n\\s+por\\s+hambre",
+		"Stability requires no hunger emigration")
+	_assert_gdd_contract(paragraph, "cobertura[^.;]*pan[^.;]*suavizada[^.;]*0\\s*[,\\.]\\s*6[^.;]*(o\\s+m[aá]s|como\\s+m[ií]nimo)",
+		"Stability requires smoothed bread coverage at least 0.6")
+	_assert_gdd_contract(paragraph, "satisfacci[oó]n[^.;]*no[^.;]*por\\s+debajo[^.;]*umbral[^.;]*emigraci[oó]n",
+		"Stability requires satisfaction at least the emigration threshold")
+	_assert_gdd_contract(paragraph, "mientras[^.;]*estable[^.;]*pico[^.;]*baja[^.;]*poblaci[oó]n\\s+actual",
+		"The peak decays toward current population while stable")
+	_assert_gdd_contract(paragraph, "durante[^.;]*gracia[^.;]*no[^.;]*avisos[^.;]*despoblaci[oó]n",
+		"Grace suppresses depopulation warnings")
+
+
+func _assert_gdd_contract(text: String, pattern: String, message: String) -> void:
+	var expression: RegEx = RegEx.new()
+	assert_eq(expression.compile(pattern), OK)
+	assert_not_null(expression.search(text), message)
 
 
 func test_smoothed_satisfaction_boundary_and_role_threshold_control_stability() -> void:
@@ -333,3 +367,81 @@ func test_satisfaction_recovery_resets_absolute_minimum_full_duration() -> void:
 	_ticks(state, params, 1)
 	assert_eq(state.depopulation.elapsed_seconds, 180)
 	assert_eq(state.defeat_causes, [&"depopulation"])
+
+
+func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation() -> void:
+	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	var threshold: float = float(params.get_value(&"population.growth.emigration_threshold"))
+	var coverage_threshold: float = float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+	var decay: float = float(params.get_value(&"defeat.depopulation.peak_decay_per_minute"))
+	var initial: EconomyState = EconomyState.new()
+	initial.population = 9
+	initial.population_peak = 10.0
+	initial.satisfaction = 60.0
+	initial.tax_rate = 1.0
+	initial.money = 10000
+	initial.stocks.assign({&"bread": 10, &"flour": 100})
+	initial.defeat_elapsed_seconds = int(params.get_value(&"defeat.grace_seconds"))
+	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(params, initial, 42, context)
+	var previous: Dictionary = sim.snapshot()["economy"]
+	var unstable_ticks: int = 0
+	var stable_ticks: int = 0
+	var recovery_requested: bool = false
+	var recovered: bool = false
+	var bakery: BuildCommand
+	var lower_tax: SetTaxCommand
+	# Full bread minus maximum tax and overcrowding targets exactly 30, not below.
+	# Depleting real reserves lowers that target before smoothed coverage triggers hunger.
+	for index: int in range(120):
+		sim.tick()
+		var current: Dictionary = sim.snapshot()["economy"]
+		assert_false(current["hunger_emigration_active"])
+		assert_gte(float(current["hunger_smoothed_coverage"]), coverage_threshold)
+		assert_true(current["defeat_causes"].is_empty())
+		assert_eq(current["housing_capacity"], 0)
+		assert_true(current["depopulation_active"])
+		assert_gt(float(current["population"]), float(current["population_peak"])
+			* float(params.get_value(&"defeat.depopulation.warning_fraction")),
+			"Only the absolute minimum can cause this warning")
+		if float(current["satisfaction"]) < threshold:
+			unstable_ticks += 1
+			assert_eq(current["population_peak"], previous["population_peak"])
+			assert_eq(current["depopulation"]["status"], &"warning")
+			assert_eq(current["depopulation"]["cause"], &"depopulation")
+			assert_eq(current["depopulation"]["elapsed_seconds"], unstable_ticks)
+			assert_lt(current["population"], int(params.get_value(&"defeat.depopulation.minimum_population")))
+			if not recovery_requested:
+				assert_gte(float(previous["satisfaction"]), threshold)
+				assert_lt(float(current["satisfaction_target"]), threshold)
+				assert_lt(float(current["bread_coverage"]), 1.0)
+				var land: Vector2i = Vector2i.ZERO
+				while land in context.map.river_cells:
+					land.x += 1
+				bakery = BuildCommand.new(context, &"bakery", land)
+				lower_tax = SetTaxCommand.new(0.0)
+				sim.apply_command(bakery)
+				sim.apply_command(lower_tax)
+				recovery_requested = true
+		else:
+			stable_ticks += 1
+			assert_almost_eq(float(current["population_peak"]),
+				float(previous["population_peak"]) * pow(1.0 - decay, 1.0 / 60.0), 0.00000001)
+			assert_eq(current["depopulation"]["status"], &"ok")
+			assert_eq(current["depopulation"]["cause"], &"")
+			assert_eq(current["depopulation"]["elapsed_seconds"], 0)
+			if recovery_requested:
+				assert_true(bakery.accepted)
+				assert_true(lower_tax.accepted)
+				assert_eq(current["tax_rate"], 0.0)
+				assert_eq(current["bread_coverage"], 1.0)
+				assert_gt(float(current["satisfaction_target"]), threshold)
+				recovered = true
+				break
+			assert_eq(current["bread_coverage"], 1.0)
+			assert_almost_eq(float(current["satisfaction_target"]), threshold, 0.00000001)
+		previous = current
+	assert_gt(stable_ticks, 1, "Exercise real smoothing and decay before the crisis")
+	assert_gt(unstable_ticks, 1, "The minimum must count for the whole satisfaction crisis")
+	assert_true(recovery_requested)
+	assert_true(recovered, "Real production and tax commands must restore stability")
