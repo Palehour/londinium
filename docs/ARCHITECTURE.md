@@ -64,7 +64,7 @@ londinium/
 
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands.
-2. Assign workers automatically by fixed priority: bakery → mill → wharf (GDD, D-012).
+2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery), then the rest by priority bakery → mill → wharf; emigration frees jobs in reverse order (D-021).
 3. Sources: wharf buys wheat at the current (fluctuating) price; wharf buys imported flour that skips the mill
    (P-011, pending: only once approved); wheat fields on cultivable cells only.
 4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.

@@ -17,7 +17,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-009 | 2026-10-06 | Primer hito: probar el flujo simple de fabricación, consumo, uso, población y preferencias. |
 | D-010 | 2026-10-08 | El trigo entra por el muelle, salvo en lugares donde históricamente se podía cultivar; ahí se cultiva en el mapa. Según Chronicler, en Whitechapel en los 1850 no hay tierra cultivable; los candidatos son Barking/Ilford, West Ham y East Ham (Essex), y Stepney en la era medieval. |
 | D-011 | 2026-10-08 | Almacén global en el prototipo. Más adelante se define si conviene el transporte físico. |
-| D-012 | 2026-10-08 | Por ahora los trabajadores se asignan solos a los edificios. |
+| D-012 | 2026-10-08 | ~~Por ahora los trabajadores se asignan solos a los edificios.~~ Reemplazada por D-021. |
 | D-013 | 2026-10-08 | El prototipo se puede perder. Condiciones de derrota iniciales: quiebra, motín de hambre y despoblación, cada una con aviso previo (umbrales en el GDD, a balancear). |
 | D-014 | 2026-10-08 | Los roles llegan después del hito 1. El diseño y el código dejan un gancho para modificadores de rol (parámetros en datos, leídos con una sola función que aplica modificadores) para no tener que rehacer nada. |
 | D-015 | 2026-10-08 | Fase 2: cervecería como segunda cadena, con el grano disputado entre el pan y la cerveza. |
@@ -26,6 +26,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-018 | 2026-10-08 | Fase 1: cadena trigo, harina y pan; trabajadores que consumen pan, crecen y pagan impuestos; panel de estadísticas; cuadrados de colores. (antes P-002) |
 | D-019 | 2026-10-08 | El jugador juega el hito 1 como administrador neutral del distrito, sin rol. (antes P-010) |
 | D-020 | 2026-10-08 | La fuente de grano es un embarcadero sobre el río (grano comprado en Mark Lane y llegado en lanchas desde los Surrey Docks); el molino del prototipo queda como licencia de diseño. Chronicler no encontró molinos harineros en Whitechapel en los 1850. Millwall Dock (1868) y el molino de McDougall (1869) sirven para una etapa victoriana posterior. (antes P-012) |
+| D-021 | 2026-10-08 | Los trabajadores se asignan solos a los edificios con esta regla: primero un trabajador por edificio en el orden de la cadena (embarcadero, molino, panadería); después, el resto con la prioridad panadería, molino, embarcadero. Cuando la emigración reduce la población, los puestos se liberan en el orden inverso al de la asignación. Evita que el embarcadero, raíz de la cadena, quede vacío primero. Reemplaza a D-012 (issue #5, PR #19). |
 
 ## Propuestas
 

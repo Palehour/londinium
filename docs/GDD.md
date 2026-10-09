@@ -38,7 +38,7 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 
 ## Población y necesidades
 
-Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios según una prioridad fija (primero la panadería, después el molino, después el muelle).
+Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería) y después el resto con la prioridad panadería, molino, embarcadero. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
 - **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción y la recaudación.
