@@ -147,7 +147,12 @@ func _bread_text(economy: Dictionary, stats: Dictionary, diagnostics: Dictionary
 		return "\n".join(lines)
 	lines.append(Strings.BREAD_SHORT)
 	for cause: Dictionary in diagnostics["bread_causes"]:
-		lines.append(Strings.BREAD_CAUSE % [Strings.building_label(String(cause["definition_id"])), Strings.reason(cause["reason"])])
+		var label: String = Strings.building_label(String(cause["definition_id"]))
+		# Chain-wide causes have no single building to blame.
+		if label.is_empty():
+			lines.append(Strings.BREAD_CHAIN_CAUSE % Strings.reason(cause["reason"]))
+		else:
+			lines.append(Strings.BREAD_CAUSE % [label, Strings.reason(cause["reason"])])
 	return "\n".join(lines)
 
 

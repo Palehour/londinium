@@ -210,6 +210,31 @@ func test_diagnostics_report_missing_workers_money_and_buildings() -> void:
 	assert_eq(_reason(working, &"mill"), &"ok")
 
 
+func _hungry_chain(population: int) -> Dictionary:
+	var state: EconomyState = _chain_state(population, 10000)
+	state.stocks[&"wheat"] = 500
+	state.stocks[&"flour"] = 500
+	# Demand far above what one fully supplied chain can bake.
+	var params: Params = _params([Modifier.new(&"population.initial_bread", &"set", 0),
+		Modifier.new(&"population.bread_per_person_per_minute", &"set", 50)])
+	var sim: Simulation = _sim(state, params)
+	sim.tick()
+	return sim.snapshot()["diagnostics"]
+
+
+func test_diagnostics_explain_shortage_when_every_stage_works() -> void:
+	var full: Dictionary = _hungry_chain(20)
+	assert_true(full["bread_short"])
+	for building: Dictionary in full["buildings"]:
+		assert_eq(building["reason"], &"ok")
+	assert_eq(full["bread_causes"], [{"definition_id": &"", "reason": &"insufficient_capacity"}])
+	# Ten jobs, five workers: the bakery is filled first, so the mill and wharf lack hands.
+	var short_handed: Dictionary = _hungry_chain(5)
+	assert_true(short_handed["bread_short"])
+	assert_eq(short_handed["bread_causes"], [{"definition_id": &"wharf", "reason": &"understaffed"},
+		{"definition_id": &"mill", "reason": &"understaffed"}])
+
+
 func test_snapshot_sections_are_isolated_copies() -> void:
 	var sim: Simulation = _sim(_chain_state(20, 10000))
 	sim.tick()

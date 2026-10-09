@@ -17,9 +17,13 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 			"workers": int(building.get("workers", 0)), "jobs": jobs,
 			"reason": building_reason(state, context, building),
 		})
+	var bread_short: bool = state.bread_coverage < 1.0
+	var causes: Array[Dictionary] = _chain_causes(buildings)
+	if bread_short and causes.is_empty():
+		causes = _throughput_causes(buildings)
 	return {
-		"bread_short": state.bread_coverage < 1.0,
-		"bread_causes": _chain_causes(buildings),
+		"bread_short": bread_short,
+		"bread_causes": causes,
 		"buildings": buildings,
 	}
 
@@ -54,4 +58,18 @@ static func _chain_causes(buildings: Array[Dictionary]) -> Array[Dictionary]:
 				break
 		if reason != &"ok":
 			causes.append({"definition_id": id, "reason": reason})
+	return causes
+
+
+# Every stage works but bread still runs short: name the stages missing hands, or else the
+# whole chain is simply too small for the population.
+static func _throughput_causes(buildings: Array[Dictionary]) -> Array[Dictionary]:
+	var causes: Array[Dictionary] = []
+	for id: StringName in CHAIN:
+		for building: Dictionary in buildings:
+			if building["definition_id"] == id and building["workers"] < building["jobs"]:
+				causes.append({"definition_id": id, "reason": &"understaffed"})
+				break
+	if causes.is_empty():
+		causes.append({"definition_id": &"", "reason": &"insufficient_capacity"})
 	return causes

@@ -70,6 +70,16 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	assert_string_contains(_text("_buildings"), Strings.BUILDING_STATUS % [Strings.building_label("wharf"), 0, 7, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
 
 
+func test_panel_shows_chain_wide_capacity_cause_without_a_building_label() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["diagnostics"]["bread_short"] = true
+	snapshot["diagnostics"]["bread_causes"] = [{"definition_id": &"", "reason": &"insufficient_capacity"}]
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_bread"), Strings.BREAD_SHORT + "
+" + Strings.BREAD_CHAIN_CAUSE % Strings.reason(&"insufficient_capacity"))
+
+
 func test_tax_box_sends_set_tax_command_and_resyncs_from_snapshot() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	var tax: SpinBox = _panel.get("_tax") as SpinBox

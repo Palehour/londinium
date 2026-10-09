@@ -28,6 +28,7 @@ const BREAD_RATE: String = "Pan/min: producido %.1f · consumido %.1f · demanda
 const BREAD_OK: String = "El pan alcanza."
 const BREAD_SHORT: String = "Falta pan porque:"
 const BREAD_CAUSE: String = "• %s: %s"
+const BREAD_CHAIN_CAUSE: String = "• %s"
 const STOCKS: String = "Stocks: trigo %d · harina %d · pan %d"
 const TREASURY: String = "Tesoro: %s"
 const OPERATING_BALANCE: String = "Balance operativo: %s/min"
@@ -74,6 +75,8 @@ const REASONS: Dictionary[StringName, String] = {
 	&"no_workers": "Sin trabajadores.",
 	&"no_input": "Sin insumo.",
 	&"missing_building": "No hay ninguno construido.",
+	&"understaffed": "Faltan trabajadores para cubrir los puestos.",
+	&"insufficient_capacity": "La cadena hace menos pan del que se come: hacen falta más edificios.",
 	&"invalid_tax_rate": "Tasa de impuestos inválida.",
 	&"ok": "Operativo.",
 }
