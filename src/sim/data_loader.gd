@@ -24,7 +24,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
-			"minimum_population": "integer", "duration_seconds": "positive_integer"},
+			"minimum_population": "integer", "duration_seconds": "positive_integer",
+			"peak_decay_per_minute": "fraction"},
 		"grace_seconds": "number",
 	},
 }

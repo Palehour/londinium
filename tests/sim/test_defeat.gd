@@ -18,7 +18,9 @@ func before_each() -> void:
 
 
 func _with(overrides: Dictionary[StringName, float]) -> Params:
+	# These tests isolate historical thresholds from the separately tested decay.
 	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"defeat.depopulation.peak_decay_per_minute", &"set", 0))
 	for key: StringName in overrides:
 		role.modifiers.append(Modifier.new(key, &"set", overrides[key]))
 	return Params.new(_catalog, role)
@@ -153,7 +155,7 @@ func test_small_city_activation_absolute_minimum_and_historical_peak() -> void:
 	assert_eq(_state.depopulation.status, &"warning")
 	_ticks(1)
 	assert_eq(_state.depopulation.status, &"defeat")
-	assert_eq(_state.population_peak, 10)
+	assert_eq(_state.population_peak, 10.0)
 
 
 func test_absolute_minimum_recovery_restarts_full_duration() -> void:
@@ -174,7 +176,7 @@ func test_absolute_minimum_recovery_restarts_full_duration() -> void:
 
 
 func test_peak_includes_initial_population_and_ignores_housing() -> void:
-	assert_eq(_state.population_peak, 100)
+	assert_eq(_state.population_peak, 100.0)
 	_state.housing_capacity = 1000
 	_ticks(1)
 	assert_eq(_state.depopulation.status, &"ok")
@@ -182,7 +184,7 @@ func test_peak_includes_initial_population_and_ignores_housing() -> void:
 	_ticks(1)
 	_state.population = 59
 	_ticks(1)
-	assert_eq(_state.population_peak, 120)
+	assert_eq(_state.population_peak, 120.0)
 	assert_eq(_state.depopulation.status, &"warning")
 
 
@@ -192,13 +194,17 @@ func test_grace_warns_without_counting_and_tick_301_starts_at_one() -> void:
 	_state.bread_coverage = 0.0
 	_state.population = 9
 	_ticks(300)
-	for condition: DefeatState in [_state.bankruptcy, _state.hunger, _state.depopulation]:
+	for condition: DefeatState in [_state.bankruptcy, _state.hunger]:
 		assert_eq(condition.status, &"warning")
 		assert_eq(condition.elapsed_seconds, 0)
+	assert_eq(_state.depopulation.status, &"ok")
+	assert_eq(_state.depopulation.cause, &"")
+	assert_eq(_state.depopulation.elapsed_seconds, 0)
 	assert_true(_state.defeat_causes.is_empty())
 	assert_eq(_state.defeat_elapsed_seconds, 300)
 	_ticks(1)
 	for condition: DefeatState in [_state.bankruptcy, _state.hunger, _state.depopulation]:
+		assert_eq(condition.status, &"warning")
 		assert_eq(condition.elapsed_seconds, 1)
 
 

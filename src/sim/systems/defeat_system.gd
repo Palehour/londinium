@@ -29,6 +29,7 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	if update_coverage:
 		update_hunger_coverage(state, params)
 	_update_population_history(state, params)
+	_decay_population_peak(state, params)
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
@@ -43,7 +44,7 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction"))))
 	var critical: bool = empty or (state.depopulation_active and (below_minimum or state.population \
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction"))))
-	if empty and not counting:
+	if not counting:
 		warning = false
 	_update(state.depopulation, &"depopulation", warning, critical, counting,
 		float(params.get_value(&"defeat.depopulation.duration_seconds")))
@@ -53,9 +54,17 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 
 
 func _update_population_history(state: EconomyState, params: Params) -> void:
-	state.population_peak = maxi(state.population_peak, state.population)
+	state.population_peak = maxf(state.population_peak, float(state.population))
 	if state.population_peak >= int(params.get_value(&"defeat.depopulation.minimum_population")):
 		state.depopulation_active = true
+
+
+func _decay_population_peak(state: EconomyState, params: Params) -> void:
+	if state.hunger_smoothed_coverage < float(params.get_value(&"population.growth.hunger_emigration_recovery")):
+		return
+	var rate: float = float(params.get_value(&"defeat.depopulation.peak_decay_per_minute"))
+	# A tick is one game second; compounding preserves the configured reduction over 60 ticks.
+	state.population_peak = maxf(float(state.population), state.population_peak * pow(1.0 - rate, 1.0 / 60.0))
 
 
 func _update(condition: DefeatState, cause: StringName, warning: bool,

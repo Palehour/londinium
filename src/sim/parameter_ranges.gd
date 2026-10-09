@@ -18,6 +18,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.depopulation.defeat_fraction": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
+	&"defeat.depopulation.peak_decay_per_minute": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.depopulation.minimum_population": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"defeat.hunger.smoothing": {
