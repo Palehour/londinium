@@ -27,13 +27,16 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	assert_eq(state["population"], 20)
 	assert_eq(state["stocks"][&"bread"], 40)
 	assert_true(state["buildings"].is_empty())
+	assert_eq(_session.get_snapshot()["seed"], 42)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1234), Modifier.new(&"startup.population", &"set", 12), Modifier.new(&"population.initial_bread", &"set", 55)])
+	role.modifiers.append(Modifier.new(&"startup.seed", &"set", 77))
 	var session: GameSession = GameSession.new(_catalog, Params.new(_catalog, role))
 	state = session.get_snapshot()["economy"]
 	assert_eq(state["money"], 1234)
 	assert_eq(state["population"], 12)
 	assert_eq(state["stocks"][&"bread"], 55)
+	assert_eq(session.get_snapshot()["seed"], 77)
 
 
 func test_commands_wait_for_tick_and_publish_snapshots_without_aliases() -> void:

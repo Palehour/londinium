@@ -6,15 +6,17 @@ var cell_size: float
 var viewport_size: Vector2
 var center: Vector2
 var zoom: float
+var max_zoom_factor: float
 var selected: Vector2i = Vector2i(-1, -1)
 
 
-func _init(dimensions: Vector2i, tile_size: float, viewport: Vector2) -> void:
+func _init(dimensions: Vector2i, tile_size: float, viewport: Vector2, zoom_limit: float) -> void:
 	cell_size = tile_size
 	map_size = Vector2(dimensions) * cell_size
 	viewport_size = viewport
 	center = map_size / 2.0
 	zoom = minimum_zoom()
+	max_zoom_factor = zoom_limit
 
 
 func minimum_zoom() -> float:
@@ -41,7 +43,7 @@ func select_cell(screen: Vector2) -> Vector2i:
 
 
 func constrain() -> void:
-	zoom = clampf(zoom, minimum_zoom(), minimum_zoom() * 4.0)
+	zoom = clampf(zoom, minimum_zoom(), minimum_zoom() * max_zoom_factor)
 	var half: Vector2 = viewport_size / (2.0 * zoom)
 	center.x = map_size.x / 2.0 if half.x * 2.0 >= map_size.x else clampf(center.x, half.x, map_size.x - half.x)
 	center.y = map_size.y / 2.0 if half.y * 2.0 >= map_size.y else clampf(center.y, half.y, map_size.y - half.y)

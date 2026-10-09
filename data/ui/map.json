@@ -1,10 +1,17 @@
 {
   "terrain": {"land": "#545961", "river": "#287ba8", "cultivable": "#659c48"},
+  "colors": {"header": "#20242b", "label": "#000000", "selection": "#ffffff"},
+  "layout": {
+    "cell_size": 112, "header_height": 176, "help_x": 16, "help_y": 8,
+    "grid_inset": 1, "building_inset": 6, "font_size": 14,
+    "label_offset_y": 5, "selection_inset": 2, "selection_width": 3
+  },
+  "camera": {"pan_speed": 500, "zoom_step": 1.15, "max_zoom_factor": 4},
   "buildings": {
-    "wharf": {"color": "#e2bd65", "label": "building.wharf"},
-    "mill": {"color": "#cf8166", "label": "building.mill"},
-    "bakery": {"color": "#ca80ba", "label": "building.bakery"},
-    "housing": {"color": "#88b8bc", "label": "building.housing"},
-    "wheat_field": {"color": "#b5cf68", "label": "building.wheat_field"}
+    "wharf": {"color": "#e2bd65"},
+    "mill": {"color": "#cf8166"},
+    "bakery": {"color": "#ca80ba"},
+    "housing": {"color": "#88b8bc"},
+    "wheat_field": {"color": "#b5cf68"}
   }
 }

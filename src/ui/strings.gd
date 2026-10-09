@@ -3,18 +3,18 @@ extends RefCounted
 
 const HELP: String = "1 %s · 2 %s · 3 %s · 4 %s · 5 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −"
 const LOADING: String = "Cargando mapa…"
-const LEGEND: String = "Tierra: gris · Río: azul · Cultivable: verde (Whitechapel no tiene casillas cultivables)"
+const LEGEND: String = "Terrenos: tierra · río · cultivable (Whitechapel no tiene casillas cultivables)"
 const SELECT: String = "Selección"
 const MODE: String = "Modo: %s · Casilla: %s"
 const PENDING: String = "Comando pendiente…"
 const SUCCESS: String = "Comando realizado."
 const LOAD_ERROR: String = "No se pudo iniciar la partida:\n%s"
 const BUILDING_LABELS: Dictionary[String, String] = {
-	"building.wharf": "Embarcadero",
-	"building.mill": "Molino",
-	"building.bakery": "Panadería",
-	"building.housing": "Vivienda",
-	"building.wheat_field": "Campo de trigo",
+	"wharf": "Embarcadero",
+	"mill": "Molino",
+	"bakery": "Panadería",
+	"housing": "Vivienda",
+	"wheat_field": "Campo de trigo",
 }
 const REASONS: Dictionary[StringName, String] = {
 	&"unknown_building": "Tipo de edificio desconocido.",

@@ -14,7 +14,7 @@ func _init(catalog: DataCatalog, params: Params) -> void:
 	var state: EconomyState = EconomyState.new()
 	state.money = int(params.get_value(&"startup.money"))
 	state.population = int(params.get_value(&"startup.population"))
-	simulation = Simulation.create_new(params, state, 42, context)
+	simulation = Simulation.create_new(params, state, int(params.get_value(&"startup.seed")), context)
 
 
 func get_snapshot() -> Dictionary:
