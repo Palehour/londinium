@@ -33,11 +33,24 @@ func _ticks(count: int) -> void:
 
 
 func test_defeat_sets_cause_even_without_a_previous_warning() -> void:
-	for cause: StringName in [&"bankruptcy", &"hunger", &"depopulation"]:
-		var condition: DefeatState = DefeatState.new()
-		_system._update(condition, cause, false, true, true, 1.0)
+	_params = _with({&"defeat.grace_seconds": 0, &"defeat.hunger.smoothing": 1,
+		&"defeat.bankruptcy.duration_seconds": 1, &"defeat.hunger.duration_seconds": 1,
+		&"defeat.depopulation.duration_seconds": 1})
+	_state.money = -1
+	_state.bread_coverage = 0.0
+	_state.population = 9
+	var conditions: Dictionary[StringName, DefeatState] = {
+		&"bankruptcy": _state.bankruptcy, &"hunger": _state.hunger, &"depopulation": _state.depopulation,
+	}
+	for condition: DefeatState in conditions.values():
+		assert_eq(condition.status, &"ok")
+		assert_eq(condition.cause, &"")
+	_system.tick(_state, _params)
+	for cause: StringName in conditions:
+		var condition: DefeatState = conditions[cause]
 		assert_eq(condition.status, &"defeat")
 		assert_eq(condition.cause, cause)
+	assert_eq(_state.defeat_causes, [&"bankruptcy", &"hunger", &"depopulation"])
 
 
 func test_bankruptcy_warning_recovery_and_exact_deadline() -> void:

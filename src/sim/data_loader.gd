@@ -96,6 +96,12 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if catalog.base_values.has(defeat_key) and catalog.base_values.has(warning_key) \
 			and float(catalog.base_values[defeat_key]) > float(catalog.base_values[warning_key]):
 		_errors.append("economy/defeat.json: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+	if _errors.is_empty():
+		for role: RoleDef in catalog.roles.values():
+			for message: String in Params.new(catalog, role).validation_errors():
+				var error: String = "roles/%s.json.modifiers: %s" % [role.id, message]
+				if error not in _errors:
+					_errors.append(error)
 	var result: DataLoadResult = DataLoadResult.new()
 	result.errors.assign(_errors)
 	if _errors.is_empty():

@@ -56,6 +56,48 @@ func test_depopulation_defeat_fraction_cannot_exceed_warning_fraction() -> void:
 	assert_true(DataLoader.new().load_documents(_documents).is_ok(), "Equal thresholds are valid")
 
 
+func test_role_invalid_final_parameter_values_fail_cleanly_during_load() -> void:
+	var invalid: Dictionary[String, float] = {
+		"defeat.hunger.threshold": 2.0,
+		"defeat.depopulation.warning_fraction": -0.1,
+		"defeat.depopulation.defeat_fraction": 1.1,
+		"defeat.depopulation.minimum_population": 1.5,
+		"defeat.bankruptcy.threshold": -1.0,
+		"defeat.bankruptcy.duration_seconds": 0.0,
+		"defeat.hunger.duration_seconds": 1.5,
+		"defeat.depopulation.duration_seconds": -1.0,
+		"defeat.hunger.smoothing": 0.0,
+		"defeat.grace_seconds": -1.0,
+		"population.satisfaction.smoothing_per_second": 0.0,
+	}
+	for key: String in invalid:
+		before_each()
+		_set_modifier({"key": key, "op": "set", "value": invalid[key]})
+		_assert_invalid("roles/neutral_administrator.json.modifiers: Params: invalid range for '%s'" % key)
+
+
+func test_role_inverted_depopulation_thresholds_fail_cleanly_during_load() -> void:
+	for key: String in ["defeat.depopulation.defeat_fraction", "defeat.depopulation.warning_fraction"]:
+		before_each()
+		_set_modifier({"key": key, "op": "set", "value": 0.75 if key.ends_with("defeat_fraction") else 0.1})
+		_assert_invalid("roles/neutral_administrator.json.modifiers: Params: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+
+
+func test_role_validation_uses_final_values_instead_of_intermediate_modifiers() -> void:
+	_documents["roles/neutral_administrator.json"]["modifiers"] = [
+		{"key": "defeat.hunger.threshold", "op": "set", "value": 2.0},
+		{"key": "defeat.hunger.threshold", "op": "set", "value": 0.5},
+		{"key": "defeat.depopulation.defeat_fraction", "op": "set", "value": 0.75},
+		{"key": "defeat.depopulation.warning_fraction", "op": "set", "value": 0.75},
+	]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+		assert_eq(params.get_value(&"defeat.hunger.threshold"), 0.5)
+		assert_eq(params.get_value(&"defeat.depopulation.defeat_fraction"), 0.75)
+
+
 func test_missing_field_identifies_file_and_field() -> void:
 	_documents["economy/buildings.json"]["bakery"].erase("jobs")
 	_assert_invalid("economy/buildings.json.bakery.jobs: missing field")
