@@ -16,7 +16,7 @@ var _help: Label
 func _ready() -> void:
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
-	var loaded: DataLoadResult = DataLoader.new().load_all()
+	var loaded: DataLoadResult = _load_catalog()
 	if not loaded.is_ok():
 		_show_load_error(layer, loaded.errors)
 		return
@@ -37,10 +37,26 @@ func _ready() -> void:
 	help.position = Vector2(presentation.layout["help_x"], presentation.layout["help_y"])
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(help)
-	for text: String in [Strings.LOADING, Strings.LEGEND, "", ""]:
+	for text: String in [Strings.LOADING, "", ""]:
 		var label: Label = Label.new()
 		label.text = text
 		help.add_child(label)
+	var legend: HBoxContainer = HBoxContainer.new()
+	legend.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var caption: Label = Label.new()
+	caption.text = Strings.LEGEND
+	legend.add_child(caption)
+	for kind: String in ["land", "river", "cultivable"]:
+		var sample: ColorRect = ColorRect.new()
+		sample.color = presentation.terrain[kind]
+		sample.custom_minimum_size = Vector2.ONE * presentation.layout["font_size"]
+		sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		legend.add_child(sample)
+		var label: Label = Label.new()
+		label.text = Strings.TERRAIN_LABELS[kind]
+		legend.add_child(label)
+	help.add_child(legend)
+	help.move_child(legend, 1)
 	_mode = help.get_child(2) as Label
 	_status = help.get_child(3) as Label
 	_help = help.get_child(0) as Label
@@ -62,6 +78,10 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
+
+
+func _load_catalog() -> DataLoadResult:
+	return DataLoader.new().load_all()
 
 
 func _update_help() -> void:

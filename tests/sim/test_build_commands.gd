@@ -113,6 +113,31 @@ func test_availability_matches_changed_tags_and_new_cultivable_building() -> voi
 	assert_eq(_context.building_unavailable_reason(definition.id), &"")
 
 
+func test_map_availability_uses_the_same_terrain_rules_as_build_commands() -> void:
+	_context.map.river_cells.clear()
+	assert_eq(_context.building_unavailable_reason(&"wharf"), &"requires_river")
+	assert_eq(_context.building_unavailable_reason(&"mill"), &"")
+	_reject(&"wharf", Vector2i(1, 1), &"requires_river")
+	for x: int in range(_context.map.width):
+		for y: int in range(_context.map.height):
+			_context.map.river_cells.append(Vector2i(x, y))
+	assert_eq(_context.building_unavailable_reason(&"wharf"), &"")
+	assert_eq(_context.building_unavailable_reason(&"mill"), &"requires_land")
+	_reject(&"mill", Vector2i(1, 1), &"requires_land")
+
+
+func test_availability_queries_the_simulation_owned_map_copy() -> void:
+	var sim: Simulation = _sim()
+	_context.map.cultivable_cells.append(Vector2i(2, 2))
+	assert_eq(_context.building_unavailable_reason(&"wheat_field"), &"")
+	assert_eq(sim.get_building_unavailable_reason(&"wheat_field"), &"no_cultivable_cells")
+	var command: BuildCommand = BuildCommand.new(_context, &"wheat_field", Vector2i(2, 2))
+	sim.apply_command(command)
+	sim.tick()
+	assert_false(command.accepted)
+	assert_eq(command.reason, &"not_cultivable")
+
+
 func test_wharf_requires_river_and_land_buildings_cannot_use_river() -> void:
 	_reject(&"wharf", Vector2i(1, 1), &"requires_river")
 	_reject(&"mill", Vector2i(0, 7), &"requires_land")

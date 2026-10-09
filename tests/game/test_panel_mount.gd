@@ -85,3 +85,23 @@ func test_loader_failure_shows_strings_message_and_logs_diagnostics() -> void:
 	for diagnostic: String in diagnostics:
 		assert_false(label.text.contains(diagnostic))
 		assert_push_error(diagnostic)
+
+
+func test_legend_samples_match_map_data_colors() -> void:
+	var viewport: SubViewport = SubViewport.new()
+	viewport.size = Vector2i(1152, 800)
+	add_child_autofree(viewport)
+	var scene: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	viewport.add_child(scene)
+	var view: Node = scene.get_node("Map")
+	var help: Label = view.get("_help") as Label
+	var legend: Node = help.get_parent().get_child(1)
+	assert_is(legend, HBoxContainer)
+	if legend is not HBoxContainer:
+		return
+	var presentation: MapPresentation = view.get("presentation") as MapPresentation
+	var keys: Array[String] = ["land", "river", "cultivable"]
+	for index: int in range(keys.size()):
+		var sample: ColorRect = legend.get_child(index * 2 + 1) as ColorRect
+		assert_not_null(sample)
+		assert_eq(sample.color, presentation.terrain[keys[index]])

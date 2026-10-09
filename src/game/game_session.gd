@@ -22,7 +22,7 @@ func get_snapshot() -> Dictionary:
 
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
-	return context.building_unavailable_reason(id)
+	return simulation.get_building_unavailable_reason(id)
 
 
 func submit_command(command: SimulationCommand) -> void:
