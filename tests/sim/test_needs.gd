@@ -68,6 +68,7 @@ func test_production_in_progress_is_not_edible() -> void:
 func test_satisfaction_breakdown_and_overcrowding_are_bounded() -> void:
 	_state.population = 40
 	_state.bread_coverage = 0.8
+	_state.hunger_smoothed_coverage = 0.8
 	_state.buildings.append({"definition_id": &"housing"})
 	SatisfactionSystem.new().tick(_state, _params, _context)
 	assert_eq(_state.housing_capacity, 20)
@@ -78,12 +79,14 @@ func test_satisfaction_breakdown_and_overcrowding_are_bounded() -> void:
 	assert_eq(_state.satisfaction, 5.5)
 	_state.buildings.clear()
 	_state.bread_coverage = 0.0
+	_state.hunger_smoothed_coverage = 0.0
 	SatisfactionSystem.new().tick(_state, _params, _context)
 	assert_eq(_state.overcrowding, 1.0)
 	assert_eq(_state.satisfaction_target, 0.0)
 	assert_almost_eq(_state.satisfaction, 4.95, 0.00000001)
 	_state.population = 0
 	_state.bread_coverage = 1.0
+	_state.hunger_smoothed_coverage = 1.0
 	SatisfactionSystem.new().tick(_state, _params, _context)
 	assert_eq(_state.overcrowding, 0.0)
 	assert_eq(_state.satisfaction_target, 90.0)
@@ -151,6 +154,10 @@ func test_empty_city_lookahead_uses_modified_consumption_and_growth() -> void:
 
 
 func test_satisfaction_converges_to_target_without_a_one_tick_jump() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"population.satisfaction.snap_epsilon", &"set", 0.00000001))
+	_params = Params.new(loaded.catalog, role)
 	_state.satisfaction = 0.0
 	SatisfactionSystem.new().tick(_state, _params, _context)
 	assert_almost_eq(_state.satisfaction, 9.0, 0.00000001)
