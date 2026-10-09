@@ -25,9 +25,10 @@ func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
-	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_params = SimTestParams.isolated_params(_catalog)
 	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	_initial = EconomyState.new()
+	_initial.satisfaction = float(_params.get_value(&"population.satisfaction.bread_weight"))
 	_initial.money = 10000
 	_initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 0})
 
@@ -174,9 +175,9 @@ func test_commands_precede_workers_and_production_and_demolition_reassigns_worke
 	sim.apply_command(build)
 	sim.tick()
 	var state: Dictionary = sim.snapshot()["economy"]
-	assert_eq(state["buildings"][0]["workers"], 0)
-	assert_eq(state["buildings"][1]["workers"], 3)
-	assert_eq(state["stocks"][&"wheat"], 2)
+	assert_eq(state["buildings"][0]["workers"], 1)
+	assert_eq(state["buildings"][1]["workers"], 2)
+	assert_eq(state["stocks"][&"wheat"], 1)
 	sim.apply_command(DemolishCommand.new(Vector2i(2, 1)))
 	sim.tick()
 	state = sim.snapshot()["economy"]
@@ -189,7 +190,7 @@ func test_build_cost_applies_all_modifiers_and_rounds_only_at_end() -> void:
 	role.modifiers.assign([Modifier.new(&"building.bakery.cost", &"set", 1),
 		Modifier.new(&"building.bakery.cost", &"mul", 0.5),
 		Modifier.new(&"building.bakery.cost", &"mul", 3)])
-	_params = Params.new(_catalog, role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_initial.money = 2
 	var sim: Simulation = _sim()
 	var command: BuildCommand = BuildCommand.new(_context, &"bakery", Vector2i(1, 1))

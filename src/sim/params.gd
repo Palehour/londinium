@@ -31,6 +31,9 @@ func get_value(key: StringName) -> Variant:
 	if not is_finite(float(value)):
 		push_error("Params: nonfinite result for '%s'" % key)
 		return null
+	if not ParameterRanges.is_valid(key, float(value)):
+		push_error("Params: invalid range for '%s'" % key)
+		return null
 	# Rounding once preserves the specified order, including intermediate fractions.
 	if key in _money_keys and typeof(value) == TYPE_FLOAT:
 		if value >= 9223372036854775808.0 or value < -9223372036854775808.0:

@@ -11,6 +11,10 @@ var _context: EconomyContext
 var _workers: WorkersSystem = WorkersSystem.new()
 var _market: MarketSystem = MarketSystem.new()
 var _production: ProductionSystem = ProductionSystem.new()
+var _consumption: ConsumptionSystem = ConsumptionSystem.new()
+var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
+var _growth: GrowthSystem = GrowthSystem.new()
+var _money: MoneySystem = MoneySystem.new()
 
 
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
@@ -22,6 +26,12 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_context = context.copy() if context != null else null
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
+	if _context != null and _state.tax_rate < 0.0:
+		_state.tax_rate = float(_params.get_value(&"population.tax.rate"))
+		# Construction initializes diagnostics, but smoothing advances only on ticks.
+		_satisfaction.update_target(_state, _params, _context)
+	if _context != null:
+		WorkersSystem.refresh_counts(_state)
 
 
 func apply_command(command: SimulationCommand) -> void:
@@ -41,6 +51,10 @@ func tick() -> void:
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count)
 		_production.tick(_state, _params, _context)
+		_consumption.tick(_state, _params)
+		_satisfaction.tick(_state, _params, _context)
+		_growth.tick(_state, _params)
+		_money.tick(_state, _params)
 
 
 func get_rng_state() -> int:
