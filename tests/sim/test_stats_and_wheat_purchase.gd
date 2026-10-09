@@ -122,6 +122,44 @@ func test_money_change_equals_operating_balance_minus_construction() -> void:
 	assert_eq(float(after - before), stats["operating_balance_per_minute"] - stats["construction_spent_per_minute"])
 
 
+func _window_after(ticks: int, params: Params) -> Dictionary:
+	var sim: Simulation = _sim(_chain_state(20, 10000), params)
+	for index: int in range(ticks):
+		sim.tick()
+	return sim.snapshot()
+
+
+func test_stats_window_round_trips_through_the_snapshot() -> void:
+	var params: Params = _params()
+	var saved: Dictionary = _window_after(75, params)
+	var expected: Dictionary = saved["stats"].duplicate(true)
+	var window: Array = saved["stats"]["window"]
+	assert_eq(window.size(), 60)
+	var loaded: Simulation = Simulation.new(params, EconomyState.from_dict(saved["economy"]), saved["seed"], _context, window)
+	assert_eq(loaded.snapshot()["stats"], expected, "rates and window match before and after loading")
+	window[0][&"taxes"] = 999.0
+	window.clear()
+	assert_eq(loaded.snapshot()["stats"]["window"], expected["window"], "the loaded window is a copy")
+	loaded.tick()
+	var after: Array = loaded.snapshot()["stats"]["window"]
+	assert_eq(after.size(), 60)
+	assert_eq(after.slice(0, 59), expected["window"].slice(1), "the restored window keeps rolling")
+	var fresh: Simulation = Simulation.new(params, EconomyState.from_dict(saved["economy"]), saved["seed"], _context)
+	assert_eq(fresh.snapshot()["stats"]["window_seconds"], 0, "no window means an empty one")
+
+
+func test_restored_window_fits_the_current_size_and_rejects_bad_samples() -> void:
+	var saved: Dictionary = _window_after(75, _params())
+	var small: Params = _params([Modifier.new(&"population.stats_window_seconds", &"set", 5)])
+	var loaded: Simulation = Simulation.new(small, EconomyState.from_dict(saved["economy"]), saved["seed"], _context, saved["stats"]["window"])
+	assert_eq(loaded.snapshot()["stats"]["window"], saved["stats"]["window"].slice(55), "keeps the newest samples")
+	var broken: Array = saved["stats"]["window"].duplicate(true)
+	broken[30].erase(&"wages")
+	var rejected: Simulation = Simulation.new(_params(), EconomyState.from_dict(saved["economy"]), saved["seed"], _context, broken)
+	assert_push_error("Stats: malformed window sample; starting an empty window")
+	assert_eq(rejected.snapshot()["stats"]["window_seconds"], 0)
+
+
 func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> void:
 	# Plenty of bread keeps the wharf staffed for the whole run.
 	var fed: Params = _params([Modifier.new(&"population.initial_bread", &"set", 100000)])
@@ -223,6 +261,15 @@ func test_diagnostics_report_missing_workers_money_and_buildings() -> void:
 		assert_eq(_reason(nobody, id), &"no_workers")
 	var broke: EconomyState = _chain_state(20, 0)
 	assert_eq(_reason(_diagnostics(broke), &"wharf"), &"no_money_for_wheat")
+	var empty: Dictionary = _diagnostics(_state(20, 10000))
+	assert_eq(empty["bread_causes"][2], {"definition_id": &"bakery", "reason": &"missing_building"})
+	var fed: EconomyState = _chain_state(20, 10000)
+	fed.stocks[&"wheat"] = 50
+	fed.stocks[&"flour"] = 50
+	var working: Dictionary = _diagnostics(fed, false)
+	assert_false(working["bread_short"])
+	assert_true(working["bread_causes"].is_empty())
+	assert_eq(_reason(working, &"mill"), &"ok")
 
 
 func test_no_money_reason_uses_the_market_affordability_rule() -> void:
@@ -237,22 +284,13 @@ func test_no_money_reason_uses_the_market_affordability_rule() -> void:
 	assert_eq(MarketSystem.affordable_wheat(state, 10), 10, "free wheat is never limited by money")
 	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
 	state.wheat_price = 3
-	for money: int in [2, 3]:
-		state.money = money
-		var expected: StringName = &"no_money_for_wheat" if MarketSystem.affordable_wheat(state, 1) == 0 else &"ok"
-		assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), expected, str(money))
+	state.money = 2
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"no_money_for_wheat", "cannot buy one unit")
+	state.money = 3
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "exactly one unit is affordable")
 	state.money = 2
 	state.wheat_price = 0
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok")
-	var empty: Dictionary = _diagnostics(_state(20, 10000))
-	assert_eq(empty["bread_causes"][2], {"definition_id": &"bakery", "reason": &"missing_building"})
-	var fed: EconomyState = _chain_state(20, 10000)
-	fed.stocks[&"wheat"] = 50
-	fed.stocks[&"flour"] = 50
-	var working: Dictionary = _diagnostics(fed, false)
-	assert_false(working["bread_short"])
-	assert_true(working["bread_causes"].is_empty())
-	assert_eq(_reason(working, &"mill"), &"ok")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "free wheat needs no money")
 
 
 func _hungry_chain(population: int) -> Dictionary:

@@ -12,6 +12,22 @@ func _init(window_size: int) -> void:
 	_window_size = maxi(1, window_size)
 
 
+# Loading resumes the per-minute rates where the snapshot left them. Only the newest samples
+# that fit the current window are kept; a malformed window is dropped rather than half-used.
+func restore(window: Array) -> void:
+	_samples.clear()
+	for entry: Variant in window.slice(maxi(0, window.size() - _window_size)):
+		if entry is not Dictionary or not KEYS.all(func(key: StringName) -> bool:
+				return entry.has(key) and typeof(entry[key]) in [TYPE_INT, TYPE_FLOAT]):
+			push_error("Stats: malformed window sample; starting an empty window")
+			_samples.clear()
+			return
+		var sample: Dictionary = {}
+		for key: StringName in KEYS:
+			sample[key] = float(entry[key])
+		_samples.append(sample)
+
+
 # Records real per-tick flows; rates never infer production from stock differences.
 func record(state: EconomyState) -> void:
 	_samples.append({

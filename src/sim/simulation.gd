@@ -36,14 +36,16 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	return Simulation.new(params, state, seed_value, context)
 
 
+# stats_window is snapshot()["stats"]["window"]; it is copied, so callers may keep mutating theirs.
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
-		context: EconomyContext = null) -> void:
+		context: EconomyContext = null, stats_window: Array = []) -> void:
 	_params = params
 	_state = EconomyState.from_dict(initial_state.to_dict())
 	_seed = seed_value
 	_rng.seed = seed_value
 	_context = context.copy() if context != null else null
 	_stats = Stats.new(int(_params.get_value(&"population.stats_window_seconds")))
+	_stats.restore(stats_window)
 	if _context != null:
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
