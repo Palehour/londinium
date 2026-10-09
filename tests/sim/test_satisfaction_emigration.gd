@@ -99,9 +99,23 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 		assert_true(bakery.accepted)
 		var change_tax: SetTaxCommand = SetTaxCommand.new(tax)
 		sim.apply_command(change_tax)
+		var saw_emigration: bool = false
+		var stabilization_tick: int = -1
 		for index: int in range(3300):
 			sim.tick()
 			var current: Dictionary = sim.snapshot()["economy"]
+			if tax == 1.0:
+				if float(current["emigration_fraction"]) > 0.0:
+					saw_emigration = true
+				elif saw_emigration and stabilization_tick < 0:
+					# Stabilization is the first tick that clears departures after the crisis.
+					stabilization_tick = index + 301
+				if index + 301 >= 531:
+					assert_eq(current["population"], 13)
+					assert_eq(current["satisfaction_target"], 30.0)
+					assert_eq(current["satisfaction"], 30.0)
+					assert_eq(current["emigration_fraction"], 0.0)
+					assert_false(current["hunger_emigration_active"])
 			assert_true(current["defeat_causes"].is_empty())
 			assert_gt(current["population"], 0)
 			assert_eq(current["housing_capacity"], 0)
@@ -115,6 +129,9 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 		assert_eq(final_state["emigration_fraction"], 0.0)
 		assert_eq(final_state["depopulation"]["status"], &"ok")
 		if tax == 1.0:
+			assert_true(saw_emigration, "The real chain must exercise the satisfaction crisis")
+			assert_eq(stabilization_tick, 531)
+			assert_eq(final_state["population"], 13)
 			assert_eq(final_state["satisfaction_target"], 30.0)
 			assert_eq(final_state["satisfaction"], 30.0)
 		else:
