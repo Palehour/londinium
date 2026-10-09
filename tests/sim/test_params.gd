@@ -70,6 +70,8 @@ func test_defeat_ranges_apply_to_role_modifiers() -> void:
 		&"defeat.grace_seconds": [-1.0],
 		&"defeat.hunger.smoothing": [0.0, -0.1, 1.01],
 		&"defeat.depopulation.duration_seconds": [0.0, -1.0, 1.5],
+		&"defeat.bankruptcy.duration_seconds": [0.0, -1.0, 1.5],
+		&"defeat.hunger.duration_seconds": [0.0, -1.0, 1.5],
 	}
 	for key: StringName in invalid:
 		for value: float in invalid[key]:

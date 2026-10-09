@@ -34,12 +34,14 @@ func before_each() -> void:
 
 
 func _sim() -> Simulation:
-	return SimTestParams.isolated_simulation(_params, _initial, 123, _context)
+	return Simulation.new(_params, _initial, 123, _context)
 
 
 func _reject(id: StringName, cell: Vector2i, expected_reason: StringName) -> void:
 	var sim: Simulation = _sim()
 	var before: Dictionary = sim.snapshot()["economy"]
+	# A rejected command preserves the economy; the production tick still advances time.
+	before["defeat_elapsed_seconds"] += 1
 	var command: BuildCommand = BuildCommand.new(_context, id, cell)
 	sim.apply_command(command)
 	sim.tick()
@@ -142,12 +144,39 @@ func test_demolish_is_deferred_preserves_global_stock_and_has_no_refund() -> voi
 func test_demolish_empty_cell_rejects_without_mutation() -> void:
 	var sim: Simulation = _sim()
 	var before: Dictionary = sim.snapshot()["economy"]
+	before["defeat_elapsed_seconds"] += 1
 	var command: DemolishCommand = DemolishCommand.new(Vector2i(1, 1))
 	sim.apply_command(command)
 	sim.tick()
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"no_building")
 	assert_eq(sim.snapshot()["economy"], before)
+
+
+func test_build_runs_before_real_defeat_and_later_commands_are_rejected() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.hunger.duration_seconds", &"set", 1)])
+	_params = SimTestParams.isolated_params(_catalog, role)
+	_initial.population = 10
+	_initial.bread_coverage = 0.0
+	var sim: Simulation = _sim()
+	var build: BuildCommand = BuildCommand.new(_context, &"bakery", Vector2i(1, 1))
+	sim.apply_command(build)
+	sim.tick()
+	var final_state: Dictionary = sim.snapshot()
+	assert_true(build.accepted)
+	assert_eq(final_state["economy"]["money"],
+		_initial.money - int(_params.get_value(&"building.bakery.cost")))
+	assert_eq(final_state["economy"]["buildings"].size(), 1)
+	assert_eq(final_state["economy"]["defeat_causes"], [&"hunger"])
+	assert_eq(final_state["economy"]["defeat_elapsed_seconds"], 1)
+	var demolish: DemolishCommand = DemolishCommand.new(Vector2i(1, 1))
+	sim.apply_command(demolish)
+	assert_false(demolish.accepted)
+	assert_eq(demolish.reason, &"simulation_defeated")
+	sim.tick()
+	assert_eq(sim.snapshot(), final_state)
 
 
 func test_demolition_frees_cell_for_rebuild_without_reusing_fractions() -> void:
