@@ -16,6 +16,22 @@ class RandomStockCommand extends SimulationCommand:
 		state.stocks[&"wheat"] += generator.randi_range(1, 10)
 
 
+class ContextProbeCommand extends SimulationCommand:
+	var context: EconomyContext
+	var context_received: bool = false
+	var executed_context_id: int = 0
+
+
+	func use_context(value: EconomyContext) -> void:
+		context = value
+		context_received = true
+
+
+	func execute(_state: EconomyState, _params: Params, _rng: RandomNumberGenerator) -> void:
+		accepted = context_received
+		executed_context_id = context.get_instance_id() if context != null else 0
+
+
 class EnqueueCommand extends SimulationCommand:
 	var target: WeakRef
 
@@ -173,3 +189,83 @@ func test_economy_state_round_trip_copies_nested_values() -> void:
 	restored.stocks[&"wheat"] = 99
 	assert_eq(_initial.buildings[0]["cell"], [2, 3])
 	assert_eq(_initial.stocks[&"wheat"], 0)
+
+
+func test_contextless_snapshot_omits_uninitialized_price_and_round_trips() -> void:
+	var sim: Simulation = Simulation.new(_params, _initial, 123)
+	sim.tick()
+	var economy: Dictionary = sim.snapshot()["economy"]
+	assert_false(economy.has("wheat_price"), "An uninitialized price is absent, not negative")
+	var restored: EconomyState = EconomyState.from_dict(economy)
+	assert_eq(restored.to_dict(), economy)
+	var reconstructed: Simulation = Simulation.new(_params, restored, 123)
+	assert_eq(reconstructed.snapshot()["economy"], economy)
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	var activated: Simulation = Simulation.new(_params, restored, 123, context)
+	assert_eq(activated.snapshot()["economy"]["wheat_price"],
+		_params.get_value(&"market.wheat.base_price"))
+
+
+func test_any_command_receives_shared_simulation_context_before_execution() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	var first: ContextProbeCommand = ContextProbeCommand.new()
+	var second: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(first)
+	sim.apply_command(second)
+	assert_false(first.context_received, "Context delivery is deferred with execution")
+	sim.tick()
+	assert_true(first.accepted)
+	assert_true(second.accepted)
+	assert_ne(first.executed_context_id, 0, "Execution received a non-null context")
+	assert_eq(first.executed_context_id, second.executed_context_id,
+		"Commands receive the same reference during execution")
+	assert_ne(first.executed_context_id, context.get_instance_id(),
+		"The simulation still owns one isolated context")
+	assert_null(first.context)
+	assert_null(second.context)
+
+
+func test_common_command_interface_accepts_absent_context() -> void:
+	var sim: Simulation = Simulation.new(_params, _initial, 123)
+	var command: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(command)
+	sim.tick()
+	assert_true(command.accepted)
+	assert_true(command.context_received)
+	assert_null(command.context)
+
+
+func test_completed_command_cannot_mutate_simulation_map_or_catalog() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	_initial.money = 10000
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	var command: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(command)
+	sim.tick()
+	assert_null(command.context, "The borrowed context must be released after execute")
+	# Corrupt any retained reference; otherwise mutate the caller's available context.
+	var accessible: EconomyContext = command.context if command.context != null else context
+	accessible.map.river_cells.clear()
+	accessible.map.cultivable_cells.append(Vector2i(3, 1))
+	accessible.buildings[&"mill"].tags.append("river")
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 7))
+	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(1, 1))
+	var field: BuildCommand = BuildCommand.new(context, &"wheat_field", Vector2i(3, 1))
+	sim.apply_command(wharf)
+	sim.apply_command(mill)
+	sim.apply_command(field)
+	sim.tick()
+	assert_true(wharf.accepted, "Original river cells survive external mutations")
+	assert_true(mill.accepted, "Original catalog still permits mills on land")
+	assert_false(field.accepted, "Whitechapel still has no cultivable cells")
+	assert_eq(field.reason, &"not_cultivable")

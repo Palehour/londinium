@@ -7,13 +7,21 @@ var _params: Params
 var _seed: int
 var _tick_count: int = 0
 var _commands: Array[SimulationCommand] = []
+var _context: EconomyContext
+var _workers: WorkersSystem = WorkersSystem.new()
+var _market: MarketSystem = MarketSystem.new()
+var _production: ProductionSystem = ProductionSystem.new()
 
 
-func _init(params: Params, initial_state: EconomyState, seed_value: int) -> void:
+func _init(params: Params, initial_state: EconomyState, seed_value: int,
+		context: EconomyContext = null) -> void:
 	_params = params
 	_state = EconomyState.from_dict(initial_state.to_dict())
 	_seed = seed_value
 	_rng.seed = seed_value
+	_context = context.copy() if context != null else null
+	if _context != null and _state.wheat_price < 0:
+		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
 
 
 func apply_command(command: SimulationCommand) -> void:
@@ -25,8 +33,14 @@ func tick() -> void:
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
 	for command: SimulationCommand in pending:
+		command.use_context(_context)
 		command.execute(_state, _params, _rng)
+		command.release_context()
 	_tick_count += 1
+	if _context != null:
+		_workers.tick(_state, _params)
+		_market.tick(_state, _params, _rng, _tick_count)
+		_production.tick(_state, _params, _context)
 
 
 func get_rng_state() -> int:
