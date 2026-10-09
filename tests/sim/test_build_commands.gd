@@ -71,6 +71,7 @@ func test_build_is_deferred_and_charges_cost_once() -> void:
 
 func test_whitechapel_rejects_field_on_every_non_cultivable_cell_with_reason() -> void:
 	assert_true(_context.map.cultivable_cells.is_empty())
+	assert_eq(_context.building_unavailable_reason(&"wheat_field"), &"no_cultivable_cells")
 	for x: int in range(_context.map.width):
 		for y: int in range(_context.map.height):
 			_reject(&"wheat_field", Vector2i(x, y), &"not_cultivable")
@@ -78,6 +79,7 @@ func test_whitechapel_rejects_field_on_every_non_cultivable_cell_with_reason() -
 
 func test_synthetic_cultivable_map_allows_field_and_charges_params_cost() -> void:
 	_context.map.cultivable_cells.append(Vector2i(1, 1))
+	assert_eq(_context.building_unavailable_reason(&"wheat_field"), &"")
 	var sim: Simulation = _sim()
 	var command: BuildCommand = BuildCommand.new(_context, &"wheat_field", Vector2i(1, 1))
 	sim.apply_command(command)
@@ -87,6 +89,28 @@ func test_synthetic_cultivable_map_allows_field_and_charges_params_cost() -> voi
 	assert_eq(sim.snapshot()["economy"]["money"],
 		_initial.money - int(_params.get_value(&"building.wheat_field.cost")))
 	assert_true(_catalog.maps[&"whitechapel_1850s"].cultivable_cells.is_empty())
+
+
+func test_availability_matches_changed_tags_and_new_cultivable_building() -> void:
+	_context.buildings[&"wheat_field"].tags.erase("cultivable")
+	assert_eq(_context.building_unavailable_reason(&"wheat_field"), &"")
+	var sim: Simulation = _sim()
+	var field: BuildCommand = BuildCommand.new(_context, &"wheat_field", Vector2i(1, 1))
+	sim.apply_command(field)
+	sim.tick()
+	assert_true(field.accepted)
+	_context.buildings[&"bakery"].tags.append("cultivable")
+	assert_eq(_context.building_unavailable_reason(&"bakery"), &"no_cultivable_cells")
+	_reject(&"bakery", Vector2i(1, 1), &"not_cultivable")
+	var definition: BuildingDef = BuildingDef.new()
+	definition.id = &"additional_field"
+	definition.tags.append("cultivable")
+	_context.buildings[definition.id] = definition
+	assert_eq(_context.building_unavailable_reason(definition.id), &"no_cultivable_cells")
+	assert_eq(_context.building_unavailable_reason(&"missing"), &"unknown_building")
+	_context.map.cultivable_cells.append(Vector2i(1, 1))
+	assert_eq(_context.building_unavailable_reason(&"bakery"), &"")
+	assert_eq(_context.building_unavailable_reason(definition.id), &"")
 
 
 func test_wharf_requires_river_and_land_buildings_cannot_use_river() -> void:

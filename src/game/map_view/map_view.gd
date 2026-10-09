@@ -68,15 +68,17 @@ func _update_help() -> void:
 	var labels: Array[String] = []
 	for id: StringName in TYPES:
 		var label: String = presentation.labels[id]
-		var reason: String = presentation.building_unavailable_reason(id, session.context.map)
+		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
 		labels.append(label if reason.is_empty() else Strings.DISABLED_BUILDING % [label, reason])
 	_help.text = Strings.HELP % labels
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
 	var label: Label = Label.new()
-	label.text = Strings.LOAD_ERROR % "\n".join(errors)
+	label.text = Strings.LOAD_ERROR
 	layer.add_child(label)
+	for diagnostic: String in errors:
+		push_error(diagnostic)
 
 
 func _map_viewport() -> Vector2:
@@ -119,7 +121,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode >= KEY_1 and event.keycode <= KEY_5:
 			var type: StringName = TYPES[event.keycode - KEY_1]
-			var reason: String = presentation.building_unavailable_reason(type, session.context.map)
+			var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(type))
 			_building_type = type if reason.is_empty() else &""
 			if not reason.is_empty():
 				_status.text = reason

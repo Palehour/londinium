@@ -21,6 +21,10 @@ func get_snapshot() -> Dictionary:
 	return simulation.snapshot()
 
 
+func get_building_unavailable_reason(id: StringName) -> StringName:
+	return context.building_unavailable_reason(id)
+
+
 func submit_command(command: SimulationCommand) -> void:
 	simulation.apply_command(command)
 	_pending.append(command)

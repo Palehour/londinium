@@ -70,3 +70,18 @@ func test_idle_frames_and_hover_do_not_redraw_but_changes_do() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_signal_emit_count(view, "draw", 2)
+
+
+func test_loader_failure_shows_strings_message_and_logs_diagnostics() -> void:
+	var script: GDScript = load("res://src/game/map_view/map_view.gd") as GDScript
+	var view: Node2D = script.new() as Node2D
+	autofree(view)
+	var layer: CanvasLayer = CanvasLayer.new()
+	view.add_child(layer)
+	var diagnostics: Array[String] = ["data/ui/map.json: invalid JSON", "economy/startup.json: missing field"]
+	view.call("_show_load_error", layer, diagnostics)
+	var label: Label = layer.get_child(0) as Label
+	assert_eq(label.text, Strings.LOAD_ERROR)
+	for diagnostic: String in diagnostics:
+		assert_false(label.text.contains(diagnostic))
+		assert_push_error(diagnostic)

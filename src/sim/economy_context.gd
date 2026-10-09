@@ -28,3 +28,11 @@ func copy() -> EconomyContext:
 	var catalog: DataCatalog = DataCatalog.new()
 	catalog.buildings.assign(buildings)
 	return EconomyContext.new(catalog, map)
+
+
+func building_unavailable_reason(id: StringName) -> StringName:
+	if not buildings.has(id):
+		return &"unknown_building"
+	if "cultivable" in buildings[id].tags and map.cultivable_cells.is_empty():
+		return &"no_cultivable_cells"
+	return &""

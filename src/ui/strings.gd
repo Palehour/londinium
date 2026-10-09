@@ -10,7 +10,7 @@ const SELECT: String = "Selección"
 const MODE: String = "Modo: %s · Casilla: %s"
 const PENDING: String = "Comando pendiente…"
 const SUCCESS: String = "Comando realizado."
-const LOAD_ERROR: String = "No se pudo iniciar la partida:\n%s"
+const LOAD_ERROR: String = "No se pudo iniciar la partida. Revisá el registro para ver los detalles."
 const BUILDING_LABELS: Dictionary[String, String] = {
 	"wharf": "Embarcadero",
 	"mill": "Molino",
@@ -19,6 +19,7 @@ const BUILDING_LABELS: Dictionary[String, String] = {
 	"wheat_field": "Campo de trigo",
 }
 const REASONS: Dictionary[StringName, String] = {
+	&"no_cultivable_cells": NO_CULTIVABLE_CELLS,
 	&"unknown_building": "Tipo de edificio desconocido.",
 	&"outside_map": "La ubicación está fuera del mapa.",
 	&"occupied_cell": "La casilla está ocupada.",

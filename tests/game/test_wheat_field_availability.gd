@@ -61,3 +61,19 @@ func test_cultivable_cells_keep_normal_help_and_construction_mode() -> void:
 	_press(view, KEY_5)
 	assert_eq(view.get("_building_type"), &"wheat_field")
 	assert_ne((view.get("_status") as Label).text, "Este mapa no tiene casillas cultivables.")
+
+
+func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> void:
+	var view: Node2D = _fixture(false)
+	var session: GameSession = view.get("session") as GameSession
+	session.context.buildings[&"wheat_field"].tags.erase("cultivable")
+	session.context.buildings[&"bakery"].tags.append("cultivable")
+	view.call("_update_help")
+	var help: String = (view.get("_help") as Label).text
+	assert_string_contains(help, "5 Campo de trigo\n")
+	assert_string_contains(help, "3 Panadería (desactivado:")
+	_press(view, KEY_5)
+	assert_eq(view.get("_building_type"), &"wheat_field")
+	_press(view, KEY_3)
+	assert_eq(view.get("_building_type"), &"")
+	assert_eq((view.get("_status") as Label).text, Strings.NO_CULTIVABLE_CELLS)
