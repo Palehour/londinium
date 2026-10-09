@@ -26,7 +26,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-018 | 2026-10-08 | Fase 1: cadena trigo, harina y pan; trabajadores que consumen pan, crecen y pagan impuestos; panel de estadísticas; cuadrados de colores. (antes P-002) |
 | D-019 | 2026-10-08 | El jugador juega el hito 1 como administrador neutral del distrito, sin rol. (antes P-010) |
 | D-020 | 2026-10-08 | La fuente de grano es un embarcadero sobre el río (grano comprado en Mark Lane y llegado en lanchas desde los Surrey Docks); el molino del prototipo queda como licencia de diseño. Chronicler no encontró molinos harineros en Whitechapel en los 1850. Millwall Dock (1868) y el molino de McDougall (1869) sirven para una etapa victoriana posterior. (antes P-012) |
-| D-021 | 2026-10-08 | Los trabajadores se asignan solos a los edificios con esta regla: primero un trabajador por edificio en el orden de la cadena (embarcadero, molino, panadería); después, el resto con la prioridad panadería, molino, embarcadero. Cuando la emigración reduce la población, los puestos se liberan en el orden inverso al de la asignación. Evita que el embarcadero, raíz de la cadena, quede vacío primero. Reemplaza a D-012 (issue #5, PR #19). |
+| D-021 | 2026-10-08 | Los trabajadores se asignan solos a los edificios con esta regla: primero un trabajador por edificio en el orden de la cadena (embarcadero, molino, panadería); entre edificios del mismo tipo, por orden de construcción; después, el resto con la prioridad panadería, molino, embarcadero. Cuando la emigración reduce la población, los puestos se liberan en el orden inverso al de la asignación. Evita que el embarcadero, raíz de la cadena, quede vacío primero. Reemplaza a D-012 (issue #5, PR #19). |
 
 ## Propuestas
 

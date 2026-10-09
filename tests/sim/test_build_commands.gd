@@ -25,7 +25,7 @@ func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
-	_params = _isolated_params()
+	_params = SimTestParams.isolated_params(_catalog)
 	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	_initial = EconomyState.new()
 	_initial.satisfaction = float(_params.get_value(&"population.satisfaction.bread_weight"))
@@ -190,7 +190,7 @@ func test_build_cost_applies_all_modifiers_and_rounds_only_at_end() -> void:
 	role.modifiers.assign([Modifier.new(&"building.bakery.cost", &"set", 1),
 		Modifier.new(&"building.bakery.cost", &"mul", 0.5),
 		Modifier.new(&"building.bakery.cost", &"mul", 3)])
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_initial.money = 2
 	var sim: Simulation = _sim()
 	var command: BuildCommand = BuildCommand.new(_context, &"bakery", Vector2i(1, 1))
@@ -263,19 +263,3 @@ func test_completed_build_releases_context_on_success_and_rejection() -> void:
 	assert_null(mill.retained_context())
 	assert_null(rejected.retained_context(), "Early rejection also releases the context")
 	assert_eq(context.copies, 1, "No context copies per command")
-
-
-func _isolated_params(role: RoleDef = null) -> Params:
-	# These fixtures test production/building rules independently of needs and finance.
-	var isolated: RoleDef = RoleDef.new()
-	if role != null:
-		isolated.modifiers.assign(role.modifiers)
-	for key: StringName in [&"population.bread_per_person_per_minute",
-			&"population.bread_decay_fraction_per_minute", &"population.tax.rate",
-			&"population.satisfaction.overcrowding_weight",
-			&"population.growth.immigration_per_minute", &"population.growth.emigration_per_minute"]:
-		isolated.modifiers.append(Modifier.new(key, &"set", 0))
-	for id: StringName in _catalog.buildings:
-		for suffix: String in ["wage_per_worker_per_minute", "upkeep_per_minute"]:
-			isolated.modifiers.append(Modifier.new(StringName("building.%s.%s" % [id, suffix]), &"set", 0))
-	return Params.new(_catalog, isolated)

@@ -29,7 +29,7 @@ func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
-	_params = _isolated_params()
+	_params = SimTestParams.isolated_params(_catalog)
 	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	_initial = EconomyState.new()
 	_initial.satisfaction = float(_params.get_value(&"population.satisfaction.bread_weight"))
@@ -272,7 +272,7 @@ func test_role_modifiers_control_production_staffing_and_market_interval() -> vo
 		Modifier.new(&"market.wheat.max_price", &"set", 5),
 		Modifier.new(&"market.wheat.base_price", &"set", 4.5),
 	])
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_add(&"bakery")
 	_initial.population = 1
 	_initial.stocks[&"flour"] = 5
@@ -302,7 +302,7 @@ func test_small_fraction_does_not_round_up_before_a_unit_is_complete() -> void:
 	role.modifiers.assign([Modifier.new(&"building.mill.recipe.seconds", &"set", 1),
 		Modifier.new(&"building.mill.recipe.inputs.wheat", &"set", 1),
 		Modifier.new(&"building.mill.recipe.outputs.flour", &"set", 0.999999)])
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_add(&"mill")
 	_initial.stocks[&"wheat"] = 2
 	var sim: Simulation = _sim()
@@ -340,7 +340,7 @@ func test_tick_order_uses_new_wharf_wheat_and_mill_flour_in_same_tick() -> void:
 	var role: RoleDef = RoleDef.new()
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
 		role.modifiers.append(Modifier.new(StringName("building.%s.recipe.seconds" % id), &"set", 1))
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_add(&"wharf", [0, 7])
 	_add(&"mill")
 	_add(&"bakery", [2, 1])
@@ -398,7 +398,7 @@ func test_nonpositive_market_interval_keeps_price_and_rng_but_allows_purchases()
 	for interval: int in [0, -2]:
 		var role: RoleDef = RoleDef.new()
 		role.modifiers.append(Modifier.new(&"market.wheat.price_update_seconds", &"set", interval))
-		_params = _isolated_params(role)
+		_params = SimTestParams.isolated_params(_catalog, role)
 		var sim: Simulation = _sim()
 		var before: Dictionary = sim.snapshot()
 		var state: Dictionary = _ticks(sim, 6)
@@ -413,7 +413,7 @@ func test_fractional_jobs_use_same_integer_capacity_for_assignment_and_rate() ->
 		for jobs: float in [2.5, 0.5, -0.5]:
 			var role: RoleDef = RoleDef.new()
 			role.modifiers.append(Modifier.new(StringName("building.%s.jobs" % id), &"set", jobs))
-			_params = _isolated_params(role)
+			_params = SimTestParams.isolated_params(_catalog, role)
 			_initial.buildings.clear()
 			_add(id)
 			var output: StringName = _context.buildings[id].recipe.outputs[0]
@@ -436,7 +436,7 @@ func test_simulation_reconstruction_preserves_saved_market_price() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"market.wheat.min_price", &"set", 3),
 		Modifier.new(&"market.wheat.max_price", &"set", 3)])
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_add(&"wharf", [0, 7])
 	var saved: Dictionary = _ticks(_sim(), 60)
 	assert_eq(saved["wheat_price"], 3)
@@ -454,7 +454,7 @@ func test_simulation_reconstruction_preserves_zero_price() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"market.wheat.min_price", &"set", 0),
 		Modifier.new(&"market.wheat.max_price", &"set", 0)])
-	_params = _isolated_params(role)
+	_params = SimTestParams.isolated_params(_catalog, role)
 	_add(&"wharf", [0, 7])
 	var saved: Dictionary = _ticks(_sim(), 60)
 	assert_eq(saved["wheat_price"], 0)
@@ -464,22 +464,6 @@ func test_simulation_reconstruction_preserves_zero_price() -> void:
 	var next: Dictionary = _ticks(sim, 6)
 	assert_eq(next["wheat_price"], 0)
 	assert_eq(next["money"], saved["money"])
-
-
-func _isolated_params(role: RoleDef = null) -> Params:
-	# These fixtures test production/building rules independently of needs and finance.
-	var isolated: RoleDef = RoleDef.new()
-	if role != null:
-		isolated.modifiers.assign(role.modifiers)
-	for key: StringName in [&"population.bread_per_person_per_minute",
-			&"population.bread_decay_fraction_per_minute", &"population.tax.rate",
-			&"population.satisfaction.overcrowding_weight",
-			&"population.growth.immigration_per_minute", &"population.growth.emigration_per_minute"]:
-		isolated.modifiers.append(Modifier.new(key, &"set", 0))
-	for id: StringName in _catalog.buildings:
-		for suffix: String in ["wage_per_worker_per_minute", "upkeep_per_minute"]:
-			isolated.modifiers.append(Modifier.new(StringName("building.%s.%s" % [id, suffix]), &"set", 0))
-	return Params.new(_catalog, isolated)
 
 
 func test_chain_first_worker_precedes_a_second_bakery_worker() -> void:

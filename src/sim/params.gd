@@ -31,10 +31,7 @@ func get_value(key: StringName) -> Variant:
 	if not is_finite(float(value)):
 		push_error("Params: nonfinite result for '%s'" % key)
 		return null
-	if (key == &"population.growth.hunger_emigration_multiplier" and float(value) < 1.0) \
-			or (key == &"population.empty_city_bread_lookahead_seconds" and float(value) < 0.0) \
-			or (key == &"population.satisfaction.smoothing_per_second" \
-			and (float(value) <= 0.0 or float(value) > 1.0)):
+	if not ParameterRanges.is_valid(key, float(value)):
 		push_error("Params: invalid range for '%s'" % key)
 		return null
 	# Rounding once preserves the specified order, including intermediate fractions.
