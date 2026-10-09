@@ -77,6 +77,8 @@ func test_window_size_comes_from_data_through_params() -> void:
 	assert_eq(stats["window_size"], 5)
 	assert_eq(stats["window_seconds"], 5)
 	assert_true(stats["complete"])
+	assert_eq(stats["window"].size(), 5, "the snapshot carries the whole window")
+	assert_eq(stats["window"][0].keys().size(), Stats.KEYS.size())
 
 
 func test_bread_rates_are_measured_flows_not_stock_differences() -> void:
@@ -149,10 +151,32 @@ func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> voi
 	assert_gt(disabled.snapshot()["economy"]["stocks"].get(&"wheat", 0), 0)
 
 
-func test_startup_wheat_purchase_flag_comes_from_data() -> void:
-	var session: GameSession = GameSession.new(_catalog, _params([Modifier.new(&"startup.wheat_purchases_enabled", &"set", 0)]))
+func test_startup_wheat_purchase_flag_is_a_boolean_in_data_params_and_state() -> void:
+	assert_typeof(_catalog.base_values[&"startup.wheat_purchases_enabled"], TYPE_BOOL)
+	var key: StringName = &"startup.wheat_purchases_enabled"
+	assert_typeof(_params().get_value(key), TYPE_BOOL)
+	assert_eq(_params([Modifier.new(key, &"set", 0)]).get_value(key), false)
+	assert_eq(_params([Modifier.new(key, &"set", 1)]).get_value(key), true)
+	for modifier: Modifier in [Modifier.new(key, &"set", 2), Modifier.new(key, &"add", 1), Modifier.new(key, &"mul", 0)]:
+		assert_null(_params([modifier]).get_value(key))
+		assert_push_error("Params: boolean '%s' only accepts set 0 or 1" % key)
+	var session: GameSession = GameSession.new(_catalog, _params([Modifier.new(key, &"set", 0)]))
+	assert_typeof(session.get_snapshot()["economy"]["wheat_purchases_enabled"], TYPE_BOOL)
 	assert_false(session.get_snapshot()["economy"]["wheat_purchases_enabled"])
 	assert_true(GameSession.new(_catalog, _params()).get_snapshot()["economy"]["wheat_purchases_enabled"])
+
+
+func test_data_rejects_a_numeric_wheat_purchase_switch() -> void:
+	var documents: Dictionary[String, Dictionary] = {}
+	for folder: String in ["economy", "roles", "maps"]:
+		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
+			if file_name.ends_with(".json"):
+				var path: String = folder.path_join(file_name)
+				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
+	for value: Variant in [1, 0, "true"]:
+		documents["economy/startup.json"]["wheat_purchases_enabled"] = value
+		var result: DataLoadResult = DataLoader.new().load_documents(documents)
+		assert_eq(result.errors, ["economy/startup.json.wheat_purchases_enabled: expected a boolean"], str(value))
 
 
 func _diagnostics(state: EconomyState, starving: bool = true) -> Dictionary:
@@ -199,6 +223,27 @@ func test_diagnostics_report_missing_workers_money_and_buildings() -> void:
 		assert_eq(_reason(nobody, id), &"no_workers")
 	var broke: EconomyState = _chain_state(20, 0)
 	assert_eq(_reason(_diagnostics(broke), &"wharf"), &"no_money_for_wheat")
+
+
+func test_no_money_reason_uses_the_market_affordability_rule() -> void:
+	var state: EconomyState = _state(20, 5)
+	state.wheat_price = 3
+	assert_eq(MarketSystem.affordable_wheat(state, 10), 1)
+	state.money = 2
+	assert_eq(MarketSystem.affordable_wheat(state, 10), 0)
+	state.money = -50
+	assert_eq(MarketSystem.affordable_wheat(state, 10), 0)
+	state.wheat_price = 0
+	assert_eq(MarketSystem.affordable_wheat(state, 10), 10, "free wheat is never limited by money")
+	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
+	state.wheat_price = 3
+	for money: int in [2, 3]:
+		state.money = money
+		var expected: StringName = &"no_money_for_wheat" if MarketSystem.affordable_wheat(state, 1) == 0 else &"ok"
+		assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), expected, str(money))
+	state.money = 2
+	state.wheat_price = 0
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok")
 	var empty: Dictionary = _diagnostics(_state(20, 10000))
 	assert_eq(empty["bread_causes"][2], {"definition_id": &"bakery", "reason": &"missing_building"})
 	var fed: EconomyState = _chain_state(20, 10000)
@@ -241,6 +286,8 @@ func test_snapshot_sections_are_isolated_copies() -> void:
 	var snapshot: Dictionary = sim.snapshot()
 	var expected: Dictionary = sim.snapshot().duplicate(true)
 	snapshot["stats"]["window_seconds"] = 999
+	snapshot["stats"]["window"][0][&"taxes"] = 999.0
+	snapshot["stats"]["window"].clear()
 	snapshot["diagnostics"]["buildings"][0]["cell"][0] = 99
 	snapshot["diagnostics"]["bread_causes"].clear()
 	snapshot["defeat"]["causes"].append(&"hunger")

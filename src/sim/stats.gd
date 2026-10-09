@@ -42,6 +42,8 @@ func snapshot() -> Dictionary:
 		"window_size": _window_size,
 		"window_seconds": _samples.size(),
 		"complete": _samples.size() >= _window_size,
+		# Per-tick samples, oldest first; a deep copy so readers cannot alter the window.
+		"window": _samples.duplicate(true),
 		"bread_produced_per_minute": sums[&"bread_produced"] * per_minute,
 		"bread_consumed_per_minute": sums[&"bread_consumed"] * per_minute,
 		"bread_demand_per_minute": sums[&"bread_demand"] * per_minute,

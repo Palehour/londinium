@@ -18,7 +18,7 @@ func _init(catalog: DataCatalog, params: Params) -> void:
 	var state: EconomyState = EconomyState.new()
 	state.money = int(params.get_value(&"startup.money"))
 	state.population = int(params.get_value(&"startup.population"))
-	state.wheat_purchases_enabled = int(params.get_value(&"startup.wheat_purchases_enabled")) != 0
+	state.wheat_purchases_enabled = params.get_value(&"startup.wheat_purchases_enabled")
 	# create_new copies the state, so this template stays pristine for restarts.
 	_initial_state = state
 	_seed = int(params.get_value(&"startup.seed"))

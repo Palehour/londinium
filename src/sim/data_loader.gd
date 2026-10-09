@@ -6,7 +6,7 @@ const BUILDING_FIELDS: Dictionary = {
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
 const ECONOMY_SCHEMAS: Dictionary = {
-	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "integer"},
+	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
@@ -152,6 +152,8 @@ func _numbers(raw: Variant, schema: Dictionary, path: String,
 
 
 func _number(raw: Variant, kind: String, path: String, key: String, catalog: DataCatalog) -> bool:
+	if kind == "boolean":
+		return _boolean(raw, path, key, catalog)
 	var integral: bool = kind in ["money", "integer", "positive_integer"]
 	if typeof(raw) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(raw)):
 		_errors.append("%s: expected a finite %s" % [path, kind])
@@ -167,6 +169,16 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	catalog.base_values[StringName(key)] = int(raw) if integral else value
 	if kind == "money":
 		catalog.money_keys.append(StringName(key))
+	return true
+
+
+func _boolean(raw: Variant, path: String, key: String, catalog: DataCatalog) -> bool:
+	# JSON true/false only; 0/1 would hide a typo in a switch as a number.
+	if typeof(raw) != TYPE_BOOL:
+		_errors.append("%s: expected a boolean" % path)
+		return false
+	catalog.base_values[StringName(key)] = raw
+	catalog.boolean_keys.append(StringName(key))
 	return true
 
 

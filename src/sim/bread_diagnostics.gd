@@ -35,7 +35,7 @@ static func building_reason(state: EconomyState, context: EconomyContext, buildi
 		return &"wheat_purchases_disabled"
 	if int(building.get("workers", 0)) <= 0:
 		return &"no_workers"
-	if id == &"wharf" and state.wheat_price > 0 and maxi(0, state.money) < state.wheat_price:
+	if id == &"wharf" and MarketSystem.affordable_wheat(state, 1) == 0:
 		return &"no_money_for_wheat"
 	var recipe: RecipeDef = context.buildings[id].recipe if context != null and context.buildings.has(id) else null
 	if recipe == null or recipe.inputs.is_empty():

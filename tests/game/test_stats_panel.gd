@@ -80,6 +80,29 @@ func test_panel_shows_chain_wide_capacity_cause_without_a_building_label() -> vo
 " + Strings.BREAD_CHAIN_CAUSE % Strings.reason(&"insufficient_capacity"))
 
 
+func test_money_formats_int64_extremes_without_overflow() -> void:
+	var int64_min: int = -9223372036854775807 - 1
+	assert_eq(Strings.money(int64_min), "-£38430716820228232 10s 8d")
+	assert_eq(Strings.money(9223372036854775807), "£38430716820228232 10s 7d")
+	assert_eq(Strings.money(0), "£0 0s 0d")
+	assert_eq(Strings.money(-1), "-£0 0s 1d")
+
+
+func test_hunger_causes_show_only_when_bread_is_short() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["diagnostics"]["bread_short"] = false
+	snapshot["diagnostics"]["bread_causes"] = [{"definition_id": &"wharf", "reason": &"wheat_purchases_disabled"}]
+	_panel.update_snapshot(snapshot)
+	var cause: String = Strings.BREAD_CAUSE % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")]
+	assert_string_contains(_text("_bread"), Strings.BREAD_OK)
+	assert_false(_text("_bread").contains(Strings.BREAD_SHORT))
+	assert_false(_text("_bread").contains(cause))
+	snapshot["diagnostics"]["bread_short"] = true
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_bread"), cause)
+	assert_false(_text("_bread").contains(Strings.BREAD_OK))
+
+
 func test_tax_box_sends_set_tax_command_and_resyncs_from_snapshot() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	var tax: SpinBox = _panel.get("_tax") as SpinBox

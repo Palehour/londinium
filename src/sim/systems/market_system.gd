@@ -21,10 +21,15 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 			+ ProductionSystem.staffed_rate(params, building, "outputs.wheat")
 		var units: int = ProductionSystem.whole_units(capacity)
 		building["output_fraction"] = maxf(0.0, capacity - units)
-		if state.wheat_price > 0:
-			@warning_ignore("integer_division")
-			var affordable: int = maxi(0, state.money) / state.wheat_price
-			units = mini(units, affordable)
+		units = affordable_wheat(state, units)
 		state.money -= units * state.wheat_price
 		state.wheat_spent_tick += units * state.wheat_price
 		state.stocks[&"wheat"] = state.stocks.get(&"wheat", 0) + units
+
+
+# Shared with BreadDiagnostics so the panel's "no money" reason matches what the wharf buys.
+static func affordable_wheat(state: EconomyState, wanted: int) -> int:
+	if state.wheat_price <= 0:
+		return wanted
+	@warning_ignore("integer_division")
+	return mini(wanted, maxi(0, state.money) / state.wheat_price)

@@ -92,13 +92,14 @@ static func building_label(key: String) -> String:
 
 # The simulation keeps pence; pre-decimal display is 12d = 1s and 20s = £1.
 static func money(pence: int) -> String:
-	var sign: String = "-" if pence < 0 else ""
-	var absolute: int = absi(pence)
+	# Split before negating: absi(INT64_MIN) overflows, but its quotient and remainder do not.
+	var sign: int = -1 if pence < 0 else 1
 	@warning_ignore("integer_division")
-	var pounds: int = absolute / PENCE_PER_POUND
+	var pounds: int = sign * (pence / PENCE_PER_POUND)
+	var rest: int = sign * (pence % PENCE_PER_POUND)
 	@warning_ignore("integer_division")
-	var shillings: int = (absolute % PENCE_PER_POUND) / PENCE_PER_SHILLING
-	return "%s£%d %ds %dd" % [sign, pounds, shillings, absolute % PENCE_PER_SHILLING]
+	var shillings: int = rest / PENCE_PER_SHILLING
+	return "%s£%d %ds %dd" % ["-" if sign < 0 else "", pounds, shillings, rest % PENCE_PER_SHILLING]
 
 
 static func reason(key: StringName) -> String:

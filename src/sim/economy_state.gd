@@ -100,7 +100,7 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.hunger_emigration_active = values.get("hunger_emigration_active", false)
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
-	result.wheat_purchases_enabled = values.get("wheat_purchases_enabled", true)
+	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
 	for cause: Variant in values.get("defeat_causes", []):
 		result.defeat_causes.append(StringName(cause))
 	result.stocks.assign(values["stocks"])
