@@ -20,9 +20,10 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"max_price": "money", "price_update_seconds": "positive_integer"}},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
-		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer"},
+		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
-			"minimum_population": "integer"},
+			"minimum_population": "integer", "duration_seconds": "positive_integer"},
+		"grace_seconds": "number",
 	},
 }
 
@@ -90,6 +91,17 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		for modifier: Modifier in role.modifiers:
 			if not catalog.base_values.has(modifier.key):
 				_errors.append("roles/%s.json.modifiers: unknown key '%s'" % [role.id, modifier.key])
+	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
+	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
+	if catalog.base_values.has(defeat_key) and catalog.base_values.has(warning_key) \
+			and float(catalog.base_values[defeat_key]) > float(catalog.base_values[warning_key]):
+		_errors.append("economy/defeat.json: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+	if _errors.is_empty():
+		for role: RoleDef in catalog.roles.values():
+			for message: String in Params.new(catalog, role).validation_errors():
+				var error: String = "roles/%s.json.modifiers: %s" % [role.id, message]
+				if error not in _errors:
+					_errors.append(error)
 	var result: DataLoadResult = DataLoadResult.new()
 	result.errors.assign(_errors)
 	if _errors.is_empty():
