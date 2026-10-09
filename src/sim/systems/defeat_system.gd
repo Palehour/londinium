@@ -8,15 +8,25 @@ func initialize(state: EconomyState, params: Params) -> void:
 	state.defeat_initialized = true
 	state.hunger_smoothed_coverage = state.bread_coverage
 	_update_population_history(state, params)
+	# A new empty city's initial diagnostics must already expose its warning.
+	if state.population == 0:
+		_update(state.depopulation, &"depopulation", true, true, false,
+			float(params.get_value(&"defeat.depopulation.duration_seconds")))
 
 
-func tick(state: EconomyState, params: Params) -> void:
+func update_hunger_coverage(state: EconomyState, params: Params) -> void:
+	initialize(state, params)
+	state.hunger_smoothed_coverage += (state.bread_coverage - state.hunger_smoothed_coverage) \
+		* float(params.get_value(&"defeat.hunger.smoothing"))
+
+
+func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> void:
 	if not state.defeat_causes.is_empty():
 		return
 	initialize(state, params)
 	state.defeat_elapsed_seconds += 1
-	state.hunger_smoothed_coverage += (state.bread_coverage - state.hunger_smoothed_coverage) \
-		* float(params.get_value(&"defeat.hunger.smoothing"))
+	if update_coverage:
+		update_hunger_coverage(state, params)
 	_update_population_history(state, params)
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
@@ -27,10 +37,11 @@ func tick(state: EconomyState, params: Params) -> void:
 	_update(state.hunger, &"hunger", hungry, hungry, counting,
 		float(params.get_value(&"defeat.hunger.duration_seconds")))
 	var below_minimum: bool = state.population < int(params.get_value(&"defeat.depopulation.minimum_population"))
-	var warning: bool = state.depopulation_active and (below_minimum or state.population \
-		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction")))
-	var critical: bool = state.depopulation_active and (below_minimum or state.population \
-		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction")))
+	var empty: bool = state.population == 0
+	var warning: bool = empty or (state.depopulation_active and (below_minimum or state.population \
+		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction"))))
+	var critical: bool = empty or (state.depopulation_active and (below_minimum or state.population \
+		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction"))))
 	_update(state.depopulation, &"depopulation", warning, critical, counting,
 		float(params.get_value(&"defeat.depopulation.duration_seconds")))
 	for condition: DefeatState in [state.bankruptcy, state.hunger, state.depopulation]:

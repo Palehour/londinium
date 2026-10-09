@@ -61,7 +61,7 @@ La partida se puede perder. Cada condición tiene un aviso previo, para que la c
 |---|---|---|
 | Quiebra | El tesoro queda en negativo | El tesoro sigue en negativo 3 minutos seguidos |
 | Motín de hambre | Menos del 50 % del pan cubierto | Menos del 50 % del pan cubierto durante 3 minutos seguidos |
-| Despoblación | La población cae por debajo del 50 % de su máximo | La población cae por debajo del 25 % de su máximo, o a menos de 10 habitantes |
+| Despoblación | La población cae por debajo del 50 % de su máximo | La población permanece por debajo del 25 % de su máximo, o a menos de 10 habitantes, durante 180 s seguidos |
 
 Los umbrales y los tiempos son placeholders para balancear.
 

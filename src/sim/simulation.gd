@@ -18,6 +18,22 @@ var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
 
 
+# New-game defaults are explicit so loading a snapshot never grants supplies or resets happiness.
+static func create_new(params: Params, initial_state: EconomyState, seed_value: int,
+		context: EconomyContext) -> Simulation:
+	var state: EconomyState = EconomyState.from_dict(initial_state.to_dict())
+	state.stocks[&"bread"] = int(params.get_value(&"population.initial_bread"))
+	state.bread_fraction = 0.0
+	state.bread_consumed = 0.0
+	if state.tax_rate < 0.0:
+		state.tax_rate = float(params.get_value(&"population.tax.rate"))
+	state.bread_coverage = ConsumptionSystem.new().coverage(state, params)
+	SatisfactionSystem.new().update_target(state, params, context)
+	state.satisfaction = state.satisfaction_target
+	state.satisfaction_breakdown["smoothed"] = state.satisfaction
+	return Simulation.new(params, state, seed_value, context)
+
+
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		context: EconomyContext = null) -> void:
 	_params = params
@@ -59,10 +75,11 @@ func tick() -> void:
 		_market.tick(_state, _params, _rng, _tick_count)
 		_production.tick(_state, _params, _context)
 		_consumption.tick(_state, _params)
+		_defeat.update_hunger_coverage(_state, _params)
 		_satisfaction.tick(_state, _params, _context)
 		_growth.tick(_state, _params)
 		_money.tick(_state, _params)
-		_defeat.tick(_state, _params)
+		_defeat.tick(_state, _params, false)
 		if not _state.defeat_causes.is_empty():
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)

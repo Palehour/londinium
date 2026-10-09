@@ -1,4 +1,5 @@
 {
+  "initial_bread": 40,
   "bread_per_person_per_minute": 1.0,
   "bread_decay_fraction_per_minute": 0.05,
   "empty_city_bread_lookahead_seconds": 60,
@@ -9,6 +10,7 @@
   "growth": {
     "immigration_threshold": 70.0, "emigration_threshold": 30.0,
     "immigration_per_minute": 2.0, "emigration_per_minute": 4.0,
+    "hunger_emigration_threshold": 0.5,
     "hunger_emigration_multiplier": 2.0
   },
   "tax": { "rate": 0.25, "base_per_employed_worker_per_minute": 8 }

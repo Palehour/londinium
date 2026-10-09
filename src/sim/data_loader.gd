@@ -7,13 +7,14 @@ const BUILDING_FIELDS: Dictionary = {
 }
 const ECONOMY_SCHEMAS: Dictionary = {
 	"population": {
+		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
 		"empty_city_bread_lookahead_seconds": "number",
 		"satisfaction": {"bread_weight": "number", "tax_weight": "number",
 			"overcrowding_weight": "number", "smoothing_per_second": "number"},
 		"growth": {"immigration_threshold": "percent", "emigration_threshold": "percent",
 			"immigration_per_minute": "number", "emigration_per_minute": "number",
-			"hunger_emigration_multiplier": "number"},
+			"hunger_emigration_threshold": "fraction", "hunger_emigration_multiplier": "number"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
