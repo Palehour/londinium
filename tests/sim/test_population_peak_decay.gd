@@ -325,20 +325,21 @@ func test_smoothed_satisfaction_boundary_and_role_threshold_control_stability() 
 			&"population.growth.emigration_threshold": threshold})
 		assert_eq(float(params.get_value(&"population.growth.emigration_threshold")), threshold)
 		for satisfaction: float in [threshold - 0.001, threshold, threshold + 0.001]:
-			var stable: bool = satisfaction >= threshold
-			var state: EconomyState = _state()
-			state.satisfaction = satisfaction
-			state.satisfaction_target = 0.0 if stable else 100.0
-			_ticks(state, params, 60)
-			assert_almost_eq(state.population_peak, 97.0 if stable else 100.0, 0.00000001)
-			var small: EconomyState = _state(9)
-			small.population_peak = 10.0
-			small.satisfaction = satisfaction
-			small.satisfaction_target = state.satisfaction_target
-			_ticks(small, params, 60)
-			assert_eq(small.depopulation.status, &"ok" if stable else &"warning")
-			assert_eq(small.depopulation.cause, &"" if stable else &"depopulation")
-			assert_eq(small.depopulation.elapsed_seconds, 0 if stable else 60)
+			for target: float in [threshold - 0.001, threshold, threshold + 0.001]:
+				var stable: bool = satisfaction >= threshold or target >= threshold
+				var state: EconomyState = _state()
+				state.satisfaction = satisfaction
+				state.satisfaction_target = target
+				_ticks(state, params, 60)
+				assert_almost_eq(state.population_peak, 97.0 if stable else 100.0, 0.00000001)
+				var small: EconomyState = _state(9)
+				small.population_peak = 10.0
+				small.satisfaction = satisfaction
+				small.satisfaction_target = target
+				_ticks(small, params, 60)
+				assert_eq(small.depopulation.status, &"ok" if stable else &"warning")
+				assert_eq(small.depopulation.cause, &"" if stable else &"depopulation")
+				assert_eq(small.depopulation.elapsed_seconds, 0 if stable else 60)
 
 
 func test_satisfaction_recovery_resets_absolute_minimum_full_duration() -> void:
@@ -347,6 +348,7 @@ func test_satisfaction_recovery_resets_absolute_minimum_full_duration() -> void:
 	var state: EconomyState = _state(9)
 	state.population_peak = 10.0
 	state.satisfaction = threshold - 0.001
+	state.satisfaction_target = threshold - 0.001
 	_ticks(state, params, 179)
 	assert_eq(state.population_peak, 10.0)
 	assert_eq(state.depopulation.status, &"warning")
@@ -359,6 +361,7 @@ func test_satisfaction_recovery_resets_absolute_minimum_full_duration() -> void:
 	assert_eq(state.depopulation.elapsed_seconds, 0)
 	var recovered_peak: float = state.population_peak
 	state.satisfaction = threshold - 0.001
+	state.satisfaction_target = threshold - 0.001
 	_ticks(state, params, 179)
 	assert_eq(state.population_peak, recovered_peak)
 	assert_eq(state.depopulation.status, &"warning")
@@ -393,7 +396,7 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 	var lower_tax: SetTaxCommand
 	# Full bread minus maximum tax and overcrowding targets exactly 30, not below.
 	# Depleting real reserves lowers that target before smoothed coverage triggers hunger.
-	for index: int in range(120):
+	for index: int in range(240):
 		sim.tick()
 		var current: Dictionary = sim.snapshot()["economy"]
 		assert_false(current["hunger_emigration_active"])
@@ -404,15 +407,16 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 		assert_gt(float(current["population"]), float(current["population_peak"])
 			* float(params.get_value(&"defeat.depopulation.warning_fraction")),
 			"Only the absolute minimum can cause this warning")
-		if float(current["satisfaction"]) < threshold:
+		if float(current["satisfaction"]) < threshold and float(current["satisfaction_target"]) < threshold:
 			unstable_ticks += 1
+			if unstable_ticks == 1:
+				assert_gte(float(previous["satisfaction"]), threshold)
 			assert_eq(current["population_peak"], previous["population_peak"])
 			assert_eq(current["depopulation"]["status"], &"warning")
 			assert_eq(current["depopulation"]["cause"], &"depopulation")
 			assert_eq(current["depopulation"]["elapsed_seconds"], unstable_ticks)
 			assert_lt(current["population"], int(params.get_value(&"defeat.depopulation.minimum_population")))
-			if not recovery_requested:
-				assert_gte(float(previous["satisfaction"]), threshold)
+			if not recovery_requested and unstable_ticks >= 3:
 				assert_lt(float(current["satisfaction_target"]), threshold)
 				assert_lt(float(current["bread_coverage"]), 1.0)
 				var land: Vector2i = Vector2i.ZERO
@@ -434,14 +438,24 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 				assert_true(bakery.accepted)
 				assert_true(lower_tax.accepted)
 				assert_eq(current["tax_rate"], 0.0)
-				assert_eq(current["bread_coverage"], 1.0)
+				assert_eq(current["bread_coverage"], 0.0, "Tax recovers the target before the new bakery completes its first batch")
 				assert_gt(float(current["satisfaction_target"]), threshold)
+				assert_lt(float(current["satisfaction"]), threshold, "Target recovery stops the crisis before smoothed satisfaction recovers")
 				recovered = true
 				break
-			assert_eq(current["bread_coverage"], 1.0)
-			assert_almost_eq(float(current["satisfaction_target"]), threshold, 0.00000001)
+			assert_almost_eq(float(current["satisfaction_target"]),
+				float(current["hunger_smoothed_coverage"]) * 100.0 - 70.0, 0.00000001)
 		previous = current
 	assert_gt(stable_ticks, 1, "Exercise real smoothing and decay before the crisis")
 	assert_gt(unstable_ticks, 1, "The minimum must count for the whole satisfaction crisis")
 	assert_true(recovery_requested)
 	assert_true(recovered, "Real production and tax commands must restore stability")
+
+	for index: int in range(60):
+		sim.tick()
+	var supplied: Dictionary = sim.snapshot()["economy"]
+	assert_eq(supplied["bread_coverage"], 1.0, "The accepted bakery supplies real bread after its production cycle")
+	assert_false(supplied["hunger_emigration_active"])
+	assert_eq(supplied["depopulation"]["status"], &"ok")
+	assert_eq(supplied["depopulation"]["elapsed_seconds"], 0)
+	assert_true(supplied["defeat_causes"].is_empty())

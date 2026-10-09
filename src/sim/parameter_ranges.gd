@@ -4,6 +4,10 @@ extends RefCounted
 const INT64_UPPER_BOUND: float = 9223372036854775808.0
 
 const BY_KEY: Dictionary[StringName, Dictionary] = {
+	&"population.hunger_coverage_snap_epsilon": {
+		"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"population.satisfaction.snap_epsilon": {
+		"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
 	&"population.initial_bread": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"population.growth.hunger_emigration_threshold": {

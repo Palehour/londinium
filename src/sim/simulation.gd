@@ -28,6 +28,7 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
 	state.bread_coverage = ConsumptionSystem.new().coverage(state, params)
+	state.hunger_smoothed_coverage = state.bread_coverage
 	SatisfactionSystem.new().update_target(state, params, context)
 	state.satisfaction = state.satisfaction_target
 	state.satisfaction_breakdown["smoothed"] = state.satisfaction
@@ -41,6 +42,8 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_seed = seed_value
 	_rng.seed = seed_value
 	_context = context.copy() if context != null else null
+	if _context != null:
+		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
 	if _context != null and _state.tax_rate < 0.0:
@@ -49,7 +52,6 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_satisfaction.update_target(_state, _params, _context)
 	if _context != null:
 		WorkersSystem.refresh_counts(_state)
-		_defeat.initialize(_state, _params)
 
 
 func apply_command(command: SimulationCommand) -> void:

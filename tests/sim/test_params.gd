@@ -250,3 +250,29 @@ func test_peak_decay_range_applies_to_final_modifier_value() -> void:
 		var role: RoleDef = RoleDef.new()
 		role.modifiers.assign([Modifier.new(key, &"set", 2), Modifier.new(key, &"set", boundary)])
 		assert_eq(Params.new(_catalog, role).get_value(key), boundary)
+
+
+func test_snap_epsilon_validates_final_modified_value_on_read() -> void:
+	var key: StringName = &"population.satisfaction.snap_epsilon"
+	for invalid: float in [0.0, -0.01, INF, NAN]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", invalid))
+		assert_null(Params.new(_catalog, role).get_value(key))
+		assert_push_error("invalid range" if is_finite(invalid) else "nonfinite result")
+	var valid_role: RoleDef = RoleDef.new()
+	valid_role.modifiers.assign([Modifier.new(key, &"set", -1.0), Modifier.new(key, &"add", 1.125),
+		Modifier.new(key, &"mul", 0.5)])
+	assert_eq(Params.new(_catalog, valid_role).get_value(key), 0.0625)
+
+
+func test_coverage_snap_epsilon_validates_final_modified_value_on_read() -> void:
+	var key: StringName = &"population.hunger_coverage_snap_epsilon"
+	for invalid: float in [0.0, -0.01, INF, NAN]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", invalid))
+		assert_null(Params.new(_catalog, role).get_value(key))
+		assert_push_error("invalid range" if is_finite(invalid) else "nonfinite result")
+	var valid_role: RoleDef = RoleDef.new()
+	valid_role.modifiers.assign([Modifier.new(key, &"set", -1.0), Modifier.new(key, &"add", 1.125),
+		Modifier.new(key, &"mul", 0.5)])
+	assert_eq(Params.new(_catalog, valid_role).get_value(key), 0.0625)

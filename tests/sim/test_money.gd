@@ -98,6 +98,7 @@ func test_new_immigrant_only_works_and_eats_on_next_tick() -> void:
 
 
 func test_departing_employed_worker_does_not_pay_tax_or_wages() -> void:
+	_state.bread_coverage = 0.0
 	_state.population = 3
 	_state.emigration_fraction = 0.9
 	_state.buildings.append({"definition_id": &"bakery", "cell": [1, 1]})

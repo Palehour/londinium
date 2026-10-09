@@ -19,6 +19,9 @@ func update_hunger_coverage(state: EconomyState, params: Params) -> void:
 	initialize(state, params)
 	state.hunger_smoothed_coverage += (state.bread_coverage - state.hunger_smoothed_coverage) \
 		* float(params.get_value(&"defeat.hunger.smoothing"))
+	var epsilon: float = float(params.get_value(&"population.hunger_coverage_snap_epsilon"))
+	if absf(state.bread_coverage - state.hunger_smoothed_coverage) < epsilon:
+		state.hunger_smoothed_coverage = state.bread_coverage
 
 
 func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> void:
@@ -65,7 +68,7 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 func _is_city_stable(state: EconomyState, params: Params) -> bool:
 	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) \
-		and state.satisfaction >= float(params.get_value(&"population.growth.emigration_threshold"))
+		and not GrowthSystem.is_satisfaction_emigration_active(state, params)
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:

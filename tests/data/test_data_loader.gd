@@ -392,3 +392,37 @@ func test_peak_decay_schema_and_final_modifier_validation() -> void:
 	if loaded.is_ok():
 		var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
 		assert_eq(params.get_value(StringName(key)), 0.5)
+
+
+func test_snap_epsilon_is_required_positive_finite_and_typed() -> void:
+	_documents["economy/population.json"]["satisfaction"].erase("snap_epsilon")
+	_assert_invalid("snap_epsilon")
+	for invalid: Variant in ["0.01", null, true, 0.0, -0.01, INF, NAN]:
+		before_each()
+		_documents["economy/population.json"]["satisfaction"]["snap_epsilon"] = invalid
+		_assert_invalid("snap_epsilon")
+	for valid: float in [0.00000001, 0.01, 2.0]:
+		before_each()
+		_documents["economy/population.json"]["satisfaction"]["snap_epsilon"] = valid
+		assert_true(DataLoader.new().load_documents(_documents).is_ok())
+	for invalid: float in [0.0, -0.01, INF, NAN]:
+		before_each()
+		_set_modifier({"key": "population.satisfaction.snap_epsilon", "op": "set", "value": invalid})
+		_assert_invalid("snap_epsilon" if is_finite(invalid) else "finite")
+
+
+func test_coverage_snap_epsilon_is_required_positive_finite_and_typed() -> void:
+	_documents["economy/population.json"].erase("hunger_coverage_snap_epsilon")
+	_assert_invalid("snap_epsilon")
+	for invalid: Variant in ["0.01", null, true, 0.0, -0.01, INF, NAN]:
+		before_each()
+		_documents["economy/population.json"]["hunger_coverage_snap_epsilon"] = invalid
+		_assert_invalid("snap_epsilon")
+	for valid: float in [0.00000001, 0.01, 2.0]:
+		before_each()
+		_documents["economy/population.json"]["hunger_coverage_snap_epsilon"] = valid
+		assert_true(DataLoader.new().load_documents(_documents).is_ok())
+	for invalid: float in [0.0, -0.01, INF, NAN]:
+		before_each()
+		_set_modifier({"key": "population.hunger_coverage_snap_epsilon", "op": "set", "value": invalid})
+		_assert_invalid("snap_epsilon" if is_finite(invalid) else "finite")
