@@ -1,5 +1,15 @@
 extends GutTest
 
+
+class CopyCountingContext extends EconomyContext:
+	var copies: int = 0
+
+
+	func copy() -> EconomyContext:
+		copies += 1
+		return super.copy()
+
+
 var _catalog: DataCatalog
 var _params: Params
 var _context: EconomyContext
@@ -193,3 +203,22 @@ func test_context_and_queued_build_copy_structural_data() -> void:
 	sim.tick()
 	assert_true(command.accepted)
 	assert_false(_catalog.maps[&"whitechapel_1850s"].river_cells.is_empty())
+
+
+func test_build_commands_share_simulation_context_without_per_command_copies() -> void:
+	var context: CopyCountingContext = CopyCountingContext.new(_catalog,
+		_catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	assert_eq(context.copies, 1, "Simulation owns one detached structural context")
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 7))
+	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(1, 1))
+	assert_eq(context.copies, 1, "Creating commands must not copy the context")
+	# Both commands must use the simulation's protected copy, not caller mutations.
+	context.map.river_cells.clear()
+	context.buildings[&"wharf"].tags.clear()
+	sim.apply_command(wharf)
+	sim.apply_command(mill)
+	sim.tick()
+	assert_true(wharf.accepted)
+	assert_true(mill.accepted)
+	assert_eq(context.copies, 1)

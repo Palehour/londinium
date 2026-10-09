@@ -389,3 +389,76 @@ func test_wharf_resumes_funded_purchases_at_normal_rate() -> void:
 	state = _ticks(sim, 5)
 	assert_eq(state["stocks"][&"wheat"], 2)
 	assert_eq(state["money"], 100 - int(state["wheat_price"]))
+
+
+func test_nonpositive_market_interval_keeps_price_and_rng_but_allows_purchases() -> void:
+	_add(&"wharf", [0, 7])
+	for interval: int in [0, -2]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(&"market.wheat.price_update_seconds", &"set", interval))
+		_params = Params.new(_catalog, role)
+		var sim: Simulation = _sim()
+		var before: Dictionary = sim.snapshot()
+		var state: Dictionary = _ticks(sim, 6)
+		assert_eq(state["wheat_price"], before["economy"]["wheat_price"])
+		assert_eq(sim.get_rng_state(), before["rng_state"])
+		assert_eq(state["stocks"][&"wheat"], 1)
+		assert_eq(state["money"], _initial.money - int(state["wheat_price"]))
+
+
+func test_fractional_jobs_use_same_integer_capacity_for_assignment_and_rate() -> void:
+	for id: StringName in [&"wharf", &"mill", &"bakery"]:
+		for jobs: float in [2.5, 0.5, -0.5]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(StringName("building.%s.jobs" % id), &"set", jobs))
+			_params = Params.new(_catalog, role)
+			_initial.buildings.clear()
+			_add(id)
+			var output: StringName = _context.buildings[id].recipe.outputs[0]
+			for population: int in [1, 10]:
+				_initial.population = population
+				_initial.stocks.assign({&"wheat": 20, &"flour": 20, &"bread": 0})
+				var start_stock: int = _initial.stocks[output]
+				var assigned: int = mini(population, maxi(0, int(jobs)))
+				var state: Dictionary = _ticks(_sim(), 60)
+				assert_eq(state["buildings"][0]["workers"], assigned)
+				var expected_output: int = 0
+				if assigned > 0:
+					var output_per_minute: float = float(_params.get_value(
+						StringName("building.%s.recipe.outputs.%s" % [id, output])))
+					expected_output = roundi(output_per_minute * assigned / int(jobs))
+				assert_eq(state["stocks"][output] - start_stock, expected_output)
+
+
+func test_simulation_reconstruction_preserves_saved_market_price() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(&"market.wheat.min_price", &"set", 3),
+		Modifier.new(&"market.wheat.max_price", &"set", 3)])
+	_params = Params.new(_catalog, role)
+	_add(&"wharf", [0, 7])
+	var saved: Dictionary = _ticks(_sim(), 60)
+	assert_eq(saved["wheat_price"], 3)
+	assert_ne(saved["wheat_price"], _params.get_value(&"market.wheat.base_price"))
+	var restored: EconomyState = EconomyState.from_dict(saved)
+	var sim: Simulation = Simulation.new(_params, restored, 123, _context)
+	assert_eq(sim.snapshot()["economy"], saved)
+	var next: Dictionary = _ticks(sim, 6)
+	assert_eq(next["wheat_price"], saved["wheat_price"])
+	assert_eq(next["money"], int(saved["money"]) - 3)
+	assert_eq(next["stocks"][&"wheat"], int(saved["stocks"][&"wheat"]) + 1)
+
+
+func test_simulation_reconstruction_preserves_zero_price() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(&"market.wheat.min_price", &"set", 0),
+		Modifier.new(&"market.wheat.max_price", &"set", 0)])
+	_params = Params.new(_catalog, role)
+	_add(&"wharf", [0, 7])
+	var saved: Dictionary = _ticks(_sim(), 60)
+	assert_eq(saved["wheat_price"], 0)
+	var restored: EconomyState = EconomyState.from_dict(saved)
+	var sim: Simulation = Simulation.new(_params, restored, 123, _context)
+	assert_eq(sim.snapshot()["economy"], saved)
+	var next: Dictionary = _ticks(sim, 6)
+	assert_eq(next["wheat_price"], 0)
+	assert_eq(next["money"], saved["money"])

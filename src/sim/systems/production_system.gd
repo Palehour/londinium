@@ -15,9 +15,9 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 
 static func staffed_rate(params: Params, building: Dictionary, quantity_key: String) -> float:
 	var prefix: String = "building.%s" % building["definition_id"]
-	var jobs: float = float(params.get_value(StringName(prefix + ".jobs")))
+	var jobs: int = WorkersSystem.job_capacity(params, building["definition_id"])
 	var seconds: float = float(params.get_value(StringName(prefix + ".recipe.seconds")))
-	if jobs <= 0.0 or seconds <= 0.0:
+	if jobs <= 0 or seconds <= 0.0:
 		return 0.0
 	return float(params.get_value(StringName(prefix + ".recipe." + quantity_key))) \
 		/ seconds * float(building.get("workers", 0)) / jobs

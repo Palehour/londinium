@@ -4,7 +4,8 @@ extends RefCounted
 
 func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int) -> void:
 	var interval: int = int(params.get_value(&"market.wheat.price_update_seconds"))
-	if tick_count % interval == 0:
+	# Nonpositive modifier results disable repricing, not purchases at the saved price.
+	if interval > 0 and tick_count % interval == 0:
 		var minimum: int = int(params.get_value(&"market.wheat.min_price"))
 		var maximum: int = int(params.get_value(&"market.wheat.max_price"))
 		# Keep the scheduled draw even if modifiers temporarily fix the price.

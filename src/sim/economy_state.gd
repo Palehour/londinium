@@ -5,7 +5,8 @@ var stocks: Dictionary[StringName, int] = {}
 var money: int = 0
 var population: int = 0
 var buildings: Array[Dictionary] = []
-var wheat_price: int = 0
+# Uninitialized market sentinel; zero is a valid saved price.
+var wheat_price: int = -1
 
 
 func to_dict() -> Dictionary:

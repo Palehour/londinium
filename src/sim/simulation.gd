@@ -20,7 +20,7 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_seed = seed_value
 	_rng.seed = seed_value
 	_context = context.copy() if context != null else null
-	if _context != null:
+	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
 
 
@@ -33,6 +33,8 @@ func tick() -> void:
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
 	for command: SimulationCommand in pending:
+		if command is BuildCommand and _context != null:
+			(command as BuildCommand).use_context(_context)
 		command.execute(_state, _params, _rng)
 	_tick_count += 1
 	if _context != null:
