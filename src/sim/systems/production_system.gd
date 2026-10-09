@@ -54,5 +54,7 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 			budget = 0.0
 	var produced: int = whole_units(fraction)
 	state.stocks[output] = state.stocks.get(output, 0) + produced
+	if output == &"bread":
+		state.bread_produced_tick += produced
 	building["reserved_input"] = reserved
 	building["output_fraction"] = maxf(0.0, fraction - produced)

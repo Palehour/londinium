@@ -6,11 +6,12 @@ const BUILDING_FIELDS: Dictionary = {
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
 const ECONOMY_SCHEMAS: Dictionary = {
-	"startup": {"money": "money", "population": "integer", "seed": "integer"},
+	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "integer"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
 		"empty_city_bread_lookahead_seconds": "number",
+		"stats_window_seconds": "positive_integer",
 		"hunger_coverage_snap_epsilon": "positive",
 		"satisfaction": {"bread_weight": "number", "tax_weight": "number",
 			"overcrowding_weight": "number", "smoothing_per_second": "number", "snap_epsilon": "positive"},

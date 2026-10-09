@@ -1,0 +1,54 @@
+class_name Stats
+extends RefCounted
+
+const KEYS: Array[StringName] = [&"bread_produced", &"bread_consumed", &"bread_demand",
+	&"taxes", &"wages", &"upkeep", &"wheat", &"construction"]
+
+var _window_size: int
+var _samples: Array[Dictionary] = []
+
+
+func _init(window_size: int) -> void:
+	_window_size = maxi(1, window_size)
+
+
+# Records real per-tick flows; rates never infer production from stock differences.
+func record(state: EconomyState) -> void:
+	_samples.append({
+		&"bread_produced": float(state.bread_produced_tick),
+		&"bread_consumed": state.bread_consumed_tick,
+		&"bread_demand": state.bread_demand_tick,
+		&"taxes": float(state.taxes_tick),
+		&"wages": float(state.wages_tick),
+		&"upkeep": float(state.upkeep_tick),
+		&"wheat": float(state.wheat_spent_tick),
+		&"construction": float(state.construction_spent_tick),
+	})
+	if _samples.size() > _window_size:
+		_samples.pop_front()
+
+
+func snapshot() -> Dictionary:
+	# Summing on demand avoids float drift from a running total over long games.
+	var sums: Dictionary[StringName, float] = {}
+	for key: StringName in KEYS:
+		sums[key] = 0.0
+	for sample: Dictionary in _samples:
+		for key: StringName in KEYS:
+			sums[key] += float(sample[key])
+	# A tick is one game second; a partial window is scaled by the seconds it covers.
+	var per_minute: float = 60.0 / float(maxi(_samples.size(), 1))
+	return {
+		"window_size": _window_size,
+		"window_seconds": _samples.size(),
+		"complete": _samples.size() >= _window_size,
+		"bread_produced_per_minute": sums[&"bread_produced"] * per_minute,
+		"bread_consumed_per_minute": sums[&"bread_consumed"] * per_minute,
+		"bread_demand_per_minute": sums[&"bread_demand"] * per_minute,
+		"taxes_per_minute": sums[&"taxes"] * per_minute,
+		"wages_per_minute": sums[&"wages"] * per_minute,
+		"upkeep_per_minute": sums[&"upkeep"] * per_minute,
+		"wheat_spent_per_minute": sums[&"wheat"] * per_minute,
+		"operating_balance_per_minute": (sums[&"taxes"] - sums[&"wages"] - sums[&"upkeep"] - sums[&"wheat"]) * per_minute,
+		"construction_spent_per_minute": sums[&"construction"] * per_minute,
+	}

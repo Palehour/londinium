@@ -20,6 +20,9 @@ func tick(state: EconomyState, params: Params) -> void:
 	var wages_paid: int = ProductionSystem.whole_units(state.wage_fraction)
 	var upkeep_paid: int = ProductionSystem.whole_units(state.upkeep_fraction)
 	state.money += taxes_paid - wages_paid - upkeep_paid
+	state.taxes_tick = taxes_paid
+	state.wages_tick = wages_paid
+	state.upkeep_tick = upkeep_paid
 	state.tax_fraction = maxf(0.0, state.tax_fraction - taxes_paid)
 	state.wage_fraction = maxf(0.0, state.wage_fraction - wages_paid)
 	state.upkeep_fraction = maxf(0.0, state.upkeep_fraction - upkeep_paid)
