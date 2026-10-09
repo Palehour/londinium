@@ -16,6 +16,20 @@ class RandomStockCommand extends SimulationCommand:
 		state.stocks[&"wheat"] += generator.randi_range(1, 10)
 
 
+class ContextProbeCommand extends SimulationCommand:
+	var context: EconomyContext
+	var context_received: bool = false
+
+
+	func use_context(value: EconomyContext) -> void:
+		context = value
+		context_received = true
+
+
+	func execute(_state: EconomyState, _params: Params, _rng: RandomNumberGenerator) -> void:
+		accepted = context_received
+
+
 class EnqueueCommand extends SimulationCommand:
 	var target: WeakRef
 
@@ -173,3 +187,50 @@ func test_economy_state_round_trip_copies_nested_values() -> void:
 	restored.stocks[&"wheat"] = 99
 	assert_eq(_initial.buildings[0]["cell"], [2, 3])
 	assert_eq(_initial.stocks[&"wheat"], 0)
+
+
+func test_contextless_snapshot_omits_uninitialized_price_and_round_trips() -> void:
+	var sim: Simulation = Simulation.new(_params, _initial, 123)
+	sim.tick()
+	var economy: Dictionary = sim.snapshot()["economy"]
+	assert_false(economy.has("wheat_price"), "An uninitialized price is absent, not negative")
+	var restored: EconomyState = EconomyState.from_dict(economy)
+	assert_eq(restored.to_dict(), economy)
+	var reconstructed: Simulation = Simulation.new(_params, restored, 123)
+	assert_eq(reconstructed.snapshot()["economy"], economy)
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	var activated: Simulation = Simulation.new(_params, restored, 123, context)
+	assert_eq(activated.snapshot()["economy"]["wheat_price"],
+		_params.get_value(&"market.wheat.base_price"))
+
+
+func test_any_command_receives_shared_simulation_context_before_execution() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	var first: ContextProbeCommand = ContextProbeCommand.new()
+	var second: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(first)
+	sim.apply_command(second)
+	assert_false(first.context_received, "Context delivery is deferred with execution")
+	sim.tick()
+	assert_true(first.accepted)
+	assert_true(second.accepted)
+	assert_not_null(first.context)
+	assert_eq(first.context, second.context, "Commands receive the same reference")
+	assert_ne(first.context, context, "The simulation still owns one isolated context")
+
+
+func test_common_command_interface_accepts_absent_context() -> void:
+	var sim: Simulation = Simulation.new(_params, _initial, 123)
+	var command: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(command)
+	sim.tick()
+	assert_true(command.accepted)
+	assert_true(command.context_received)
+	assert_null(command.context)

@@ -13,7 +13,8 @@ func _init(context: EconomyContext, definition_id: StringName, cell: Vector2i) -
 
 
 func use_context(context: EconomyContext) -> void:
-	_context = context
+	if context != null:
+		_context = context
 
 
 func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:

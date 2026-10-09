@@ -33,8 +33,7 @@ func tick() -> void:
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
 	for command: SimulationCommand in pending:
-		if command is BuildCommand and _context != null:
-			(command as BuildCommand).use_context(_context)
+		command.use_context(_context)
 		command.execute(_state, _params, _rng)
 	_tick_count += 1
 	if _context != null:
