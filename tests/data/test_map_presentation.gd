@@ -46,3 +46,14 @@ func test_startup_data_is_required_and_rejects_invalid_values() -> void:
 		assert_false(DataLoader.new().load_documents(missing).is_ok())
 	documents.erase("economy/startup.json")
 	assert_false(DataLoader.new().load_documents(documents).is_ok())
+
+
+func test_building_labels_resolve_through_strings_and_reject_unknown_keys() -> void:
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.validate(raw, [&"mill"])
+	assert_eq(presentation.labels[&"mill"], "Molino")
+	raw["buildings"]["mill"]["label"] = "missing.translation"
+	presentation.validate(raw, [&"mill"])
+	assert_eq(presentation.errors.size(), 1)
+	assert_false(presentation.labels.has(&"mill"))

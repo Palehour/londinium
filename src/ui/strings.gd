@@ -9,6 +9,13 @@ const MODE: String = "Modo: %s · Casilla: %s"
 const PENDING: String = "Comando pendiente…"
 const SUCCESS: String = "Comando realizado."
 const LOAD_ERROR: String = "No se pudo iniciar la partida:\n%s"
+const BUILDING_LABELS: Dictionary[String, String] = {
+	"building.wharf": "Embarcadero",
+	"building.mill": "Molino",
+	"building.bakery": "Panadería",
+	"building.housing": "Vivienda",
+	"building.wheat_field": "Campo de trigo",
+}
 const REASONS: Dictionary[StringName, String] = {
 	&"unknown_building": "Tipo de edificio desconocido.",
 	&"outside_map": "La ubicación está fuera del mapa.",
@@ -24,3 +31,7 @@ const REASONS: Dictionary[StringName, String] = {
 
 static func command_result(accepted: bool, reason: StringName) -> String:
 	return SUCCESS if accepted else REASONS.get(reason, String(reason))
+
+
+static func building_label(key: String) -> String:
+	return BUILDING_LABELS.get(key, "")

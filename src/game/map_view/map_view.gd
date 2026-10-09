@@ -19,11 +19,6 @@ var _mode: Label
 func _ready() -> void:
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
-	# Issue #9 attaches its panel here and consumes input before _unhandled_input.
-	var panel_mount: Control = Control.new()
-	panel_mount.name = "PanelMount"
-	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(panel_mount)
 	var background: ColorRect = ColorRect.new()
 	background.color = Color("#20242b")
 	background.size = Vector2(get_viewport_rect().size.x, HELP_HEIGHT)
@@ -41,6 +36,11 @@ func _ready() -> void:
 		help.add_child(label)
 	_mode = help.get_child(2) as Label
 	_status = help.get_child(3) as Label
+	# Mount last so issue #9 draws and receives input above the header and help.
+	var panel_mount: Control = Control.new()
+	panel_mount.name = "PanelMount"
+	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(panel_mount)
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	if not loaded.is_ok():
 		_status.text = Strings.LOAD_ERROR % "\n".join(loaded.errors)

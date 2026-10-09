@@ -31,11 +31,12 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			errors.append("data/ui/map.json.terrain.%s: invalid color" % kind)
 	for id: StringName in building_ids:
 		var entry: Variant = raw["buildings"].get(String(id))
-		if entry is not Dictionary or not _valid_color(entry.get("color")) or entry.get("label") is not String or entry["label"].strip_edges().is_empty():
-			errors.append("data/ui/map.json.buildings.%s: expected color and nonempty label" % id)
+		var label: String = Strings.building_label(entry["label"]) if entry is Dictionary and entry.get("label") is String else ""
+		if entry is not Dictionary or not _valid_color(entry.get("color")) or label.is_empty():
+			errors.append("data/ui/map.json.buildings.%s: expected color and known label key" % id)
 			continue
 		colors[id] = Color(entry["color"])
-		labels[id] = entry["label"]
+		labels[id] = label
 
 
 func _valid_color(value: Variant) -> bool:
