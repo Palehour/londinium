@@ -91,6 +91,11 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		for modifier: Modifier in role.modifiers:
 			if not catalog.base_values.has(modifier.key):
 				_errors.append("roles/%s.json.modifiers: unknown key '%s'" % [role.id, modifier.key])
+	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
+	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
+	if catalog.base_values.has(defeat_key) and catalog.base_values.has(warning_key) \
+			and float(catalog.base_values[defeat_key]) > float(catalog.base_values[warning_key]):
+		_errors.append("economy/defeat.json: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
 	var result: DataLoadResult = DataLoadResult.new()
 	result.errors.assign(_errors)
 	if _errors.is_empty():

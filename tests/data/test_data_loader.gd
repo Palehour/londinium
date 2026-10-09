@@ -49,6 +49,13 @@ func test_missing_file_has_no_partial_catalog() -> void:
 	_assert_invalid("economy/population.json: missing file")
 
 
+func test_depopulation_defeat_fraction_cannot_exceed_warning_fraction() -> void:
+	_documents["economy/defeat.json"]["depopulation"]["defeat_fraction"] = 0.75
+	_assert_invalid("defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+	_documents["economy/defeat.json"]["depopulation"]["defeat_fraction"] = 0.5
+	assert_true(DataLoader.new().load_documents(_documents).is_ok(), "Equal thresholds are valid")
+
+
 func test_missing_field_identifies_file_and_field() -> void:
 	_documents["economy/buildings.json"]["bakery"].erase("jobs")
 	_assert_invalid("economy/buildings.json.bakery.jobs: missing field")

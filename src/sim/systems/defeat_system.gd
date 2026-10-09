@@ -51,3 +51,4 @@ func _update(condition: DefeatState, cause: StringName, warning: bool,
 	condition.cause = cause if warning else &""
 	if counting and critical and condition.elapsed_seconds >= duration:
 		condition.status = &"defeat"
+		condition.cause = cause

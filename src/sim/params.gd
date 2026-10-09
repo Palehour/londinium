@@ -14,6 +14,24 @@ func _init(catalog: DataCatalog, role: RoleDef) -> void:
 
 
 func get_value(key: StringName) -> Variant:
+	var value: Variant = _get_modified_value(key)
+	if value == null:
+		return null
+	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
+	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
+	if key in [defeat_key, warning_key]:
+		var other: Variant = _get_modified_value(warning_key if key == defeat_key else defeat_key)
+		if other == null:
+			return null
+		var defeat: float = float(value if key == defeat_key else other)
+		var warning: float = float(value if key == warning_key else other)
+		if defeat > warning:
+			push_error("Params: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction after role modifiers")
+			return null
+	return value
+
+
+func _get_modified_value(key: StringName) -> Variant:
 	if not _base_values.has(key):
 		push_error("Params: unknown key '%s'" % key)
 		return null

@@ -27,6 +27,17 @@ func _with(overrides: Dictionary[StringName, float]) -> Params:
 func _ticks(count: int) -> void:
 	for index: int in range(count):
 		_system.tick(_state, _params)
+		for condition: DefeatState in [_state.bankruptcy, _state.hunger, _state.depopulation]:
+			if condition.status == &"defeat":
+				assert_ne(condition.cause, &"", "Every defeat must report its cause")
+
+
+func test_defeat_sets_cause_even_without_a_previous_warning() -> void:
+	for cause: StringName in [&"bankruptcy", &"hunger", &"depopulation"]:
+		var condition: DefeatState = DefeatState.new()
+		_system._update(condition, cause, false, true, true, 1.0)
+		assert_eq(condition.status, &"defeat")
+		assert_eq(condition.cause, cause)
 
 
 func test_bankruptcy_warning_recovery_and_exact_deadline() -> void:

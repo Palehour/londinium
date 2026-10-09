@@ -65,6 +65,29 @@ func test_unknown_key_is_an_error_not_zero() -> void:
 	assert_push_error("Params: unknown key 'missing.key'")
 
 
+func test_role_cannot_invert_depopulation_thresholds_on_either_read() -> void:
+	var invalid: Dictionary[StringName, float] = {
+		&"defeat.depopulation.defeat_fraction": 0.75,
+		&"defeat.depopulation.warning_fraction": 0.1,
+	}
+	for modified_key: StringName in invalid:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(modified_key, &"set", invalid[modified_key]))
+		var params: Params = Params.new(_catalog, role)
+		for key: StringName in invalid:
+			assert_null(params.get_value(key))
+			assert_push_error("defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+
+
+func test_depopulation_relation_uses_both_final_modified_values_and_allows_equality() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(&"defeat.depopulation.defeat_fraction", &"set", 0.75),
+		Modifier.new(&"defeat.depopulation.warning_fraction", &"set", 0.75)])
+	var params: Params = Params.new(_catalog, role)
+	assert_eq(params.get_value(&"defeat.depopulation.defeat_fraction"), 0.75)
+	assert_eq(params.get_value(&"defeat.depopulation.warning_fraction"), 0.75)
+
+
 func test_defeat_ranges_apply_to_role_modifiers() -> void:
 	var invalid: Dictionary[StringName, Array] = {
 		&"defeat.grace_seconds": [-1.0],
