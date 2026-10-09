@@ -6,6 +6,7 @@ const BUILDING_FIELDS: Dictionary = {
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
 const ECONOMY_SCHEMAS: Dictionary = {
+	"startup": {"money": "money", "population": "integer"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",

@@ -1,0 +1,10 @@
+{
+  "terrain": {"land": "#545961", "river": "#287ba8", "cultivable": "#659c48"},
+  "buildings": {
+    "wharf": {"color": "#e2bd65", "label": "Embarcadero"},
+    "mill": {"color": "#cf8166", "label": "Molino"},
+    "bakery": {"color": "#ca80ba", "label": "Panadería"},
+    "housing": {"color": "#88b8bc", "label": "Vivienda"},
+    "wheat_field": {"color": "#b5cf68", "label": "Campo de trigo"}
+  }
+}

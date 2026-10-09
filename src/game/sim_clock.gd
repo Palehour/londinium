@@ -1,6 +1,8 @@
 class_name SimClock
 extends Node
 
+signal tick_advanced
+
 const TICK_SECONDS: float = 1.0
 
 var simulation: Simulation
@@ -36,5 +38,6 @@ func advance(delta: float) -> void:
 	var ticks: int = 0
 	while _accumulator >= TICK_SECONDS and ticks < max_ticks_per_frame:
 		simulation.tick()
+		tick_advanced.emit()
 		_accumulator -= TICK_SECONDS
 		ticks += 1

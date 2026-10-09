@@ -32,6 +32,17 @@ func test_fractional_seconds_accumulate() -> void:
 	assert_eq(_ticks(), 1)
 
 
+func test_tick_signal_follows_each_completed_tick_and_not_pause() -> void:
+	watch_signals(_clock)
+	_clock.speed = 3
+	_clock.advance(1.0)
+	assert_signal_emit_count(_clock, "tick_advanced", 3)
+	assert_eq(_ticks(), 3)
+	_clock.speed = 0
+	_clock.advance(1.0)
+	assert_signal_emit_count(_clock, "tick_advanced", 3)
+
+
 func test_pause_preserves_fraction_and_ignores_elapsed_time() -> void:
 	_clock.advance(0.75)
 	_clock.speed = 0
