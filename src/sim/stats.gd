@@ -14,11 +14,13 @@ func _init(window_size: int) -> void:
 
 # Loading resumes the per-minute rates where the snapshot left them. Only the newest samples
 # that fit the current window are kept; a malformed window is dropped rather than half-used.
+# Every flow is an amount paid, eaten or made in one tick, so it is finite and never negative.
 func restore(window: Array) -> void:
 	_samples.clear()
 	for entry: Variant in window.slice(maxi(0, window.size() - _window_size)):
 		if entry is not Dictionary or not KEYS.all(func(key: StringName) -> bool:
-				return entry.has(key) and typeof(entry[key]) in [TYPE_INT, TYPE_FLOAT]):
+				return entry.has(key) and typeof(entry[key]) in [TYPE_INT, TYPE_FLOAT] \
+					and is_finite(float(entry[key])) and float(entry[key]) >= 0.0):
 			push_error("Stats: malformed window sample; starting an empty window")
 			_samples.clear()
 			return

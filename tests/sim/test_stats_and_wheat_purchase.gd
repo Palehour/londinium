@@ -81,6 +81,17 @@ func test_window_size_comes_from_data_through_params() -> void:
 	assert_eq(stats["window"][0].keys().size(), Stats.KEYS.size())
 
 
+func test_fractional_window_modifier_is_rejected_not_truncated() -> void:
+	var key: StringName = &"population.stats_window_seconds"
+	for value: float in [1.5, 59.9, 0.5]:
+		assert_null(_params([Modifier.new(key, &"set", value)]).get_value(key), str(value))
+		assert_push_error("Params: invalid range for '%s'" % key)
+	assert_null(_params([Modifier.new(key, &"mul", 1.01)]).get_value(key))
+	assert_push_error("Params: invalid range for '%s'" % key)
+	assert_eq(_params([Modifier.new(key, &"set", 5)]).get_value(key), 5.0)
+	assert_eq(_params([Modifier.new(key, &"mul", 0.5)]).get_value(key), 30.0)
+
+
 func test_bread_rates_are_measured_flows_not_stock_differences() -> void:
 	var sim: Simulation = _sim(_state(20, 10000))
 	for index: int in range(60):
@@ -158,6 +169,22 @@ func test_restored_window_fits_the_current_size_and_rejects_bad_samples() -> voi
 	var rejected: Simulation = Simulation.new(_params(), EconomyState.from_dict(saved["economy"]), saved["seed"], _context, broken)
 	assert_push_error("Stats: malformed window sample; starting an empty window")
 	assert_eq(rejected.snapshot()["stats"]["window_seconds"], 0)
+
+
+func test_restore_rejects_nonfinite_or_negative_samples() -> void:
+	var saved: Dictionary = _window_after(75, _params())
+	for value: float in [NAN, INF, -INF, -1.0]:
+		var broken: Array = saved["stats"]["window"].duplicate(true)
+		broken[10][&"taxes"] = value
+		var stats: Stats = Stats.new(60)
+		stats.restore(broken)
+		assert_push_error("Stats: malformed window sample; starting an empty window")
+		assert_eq(stats.snapshot()["window_seconds"], 0, str(value))
+	var zero: Array = saved["stats"]["window"].duplicate(true)
+	zero[10][&"taxes"] = 0.0
+	var accepted: Stats = Stats.new(60)
+	accepted.restore(zero)
+	assert_eq(accepted.snapshot()["window_seconds"], 60, "zero is a valid flow")
 
 
 func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> void:

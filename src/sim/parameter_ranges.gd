@@ -55,7 +55,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 
 static func is_valid(key: StringName, value: float) -> bool:
 	if key in [&"startup.seed", &"startup.population", &"population.initial_bread", &"defeat.depopulation.duration_seconds", &"defeat.bankruptcy.duration_seconds",
-			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population"] \
+			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population",
+			&"population.stats_window_seconds"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):
