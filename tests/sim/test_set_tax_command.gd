@@ -33,7 +33,8 @@ func test_tax_is_deferred_fifo_and_affects_satisfaction_and_money_same_tick() ->
 	assert_eq(second.reason, &"")
 	var after: Dictionary = sim.snapshot()["economy"]
 	assert_eq(after["tax_rate"], 1.0)
-	assert_eq(after["satisfaction"], 60.0)
+	assert_eq(after["satisfaction_target"], 60.0)
+	assert_eq(after["satisfaction"], 6.0)
 	assert_almost_eq(after["tax_fraction"], 24.0 / 60.0, 0.00000001)
 	sim.apply_command(SetTaxCommand.new(0.0))
 	sim.tick()
@@ -81,6 +82,7 @@ func test_round_trip_preserves_every_nonzero_population_and_finance_field() -> v
 	_state.bread_consumed = 0.4
 	_state.bread_coverage = 0.8
 	_state.satisfaction = 55.0
+	_state.satisfaction_target = 70.0
 	_state.satisfaction_breakdown.assign({"bread": 80.0, "tea": 0.0, "tax": 10.0, "overcrowding": 15.0})
 	_state.housing_capacity = 20
 	_state.overcrowding = 0.5

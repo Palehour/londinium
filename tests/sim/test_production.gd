@@ -32,6 +32,7 @@ func before_each() -> void:
 	_params = _isolated_params()
 	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	_initial = EconomyState.new()
+	_initial.satisfaction = float(_params.get_value(&"population.satisfaction.bread_weight"))
 	_initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 0})
 	_initial.money = 10000
 	_initial.population = 10
@@ -138,17 +139,18 @@ func test_zero_workers_do_not_reserve_inputs_or_buy_wheat() -> void:
 		assert_eq(building.get("reserved_input", 0.0), 0.0)
 
 
-func test_workers_prioritize_bakery_then_mill_then_wharf() -> void:
+func test_workers_staff_chain_first_then_prioritize_bakery_mill_wharf() -> void:
 	_add(&"wharf", [0, 7])
 	_add(&"mill")
 	_add(&"bakery", [2, 1])
+	var expected: Dictionary[int, Array] = {2: [1, 1, 0], 4: [1, 1, 2], 7: [1, 3, 3]}
 	for population: int in [2, 4, 7]:
 		_initial.population = population
 		var state: Dictionary = _ticks(_sim(), 1)
 		var buildings: Array[Dictionary] = state["buildings"]
-		assert_eq(buildings[2]["workers"], mini(population, 3))
-		assert_eq(buildings[1]["workers"], clampi(population - 3, 0, 3))
-		assert_eq(buildings[0]["workers"], maxi(0, population - 6))
+		assert_eq(buildings[0]["workers"], expected[population][0])
+		assert_eq(buildings[1]["workers"], expected[population][1])
+		assert_eq(buildings[2]["workers"], expected[population][2])
 
 
 func test_same_type_workers_follow_construction_order_without_duplication() -> void:
@@ -478,3 +480,68 @@ func _isolated_params(role: RoleDef = null) -> Params:
 		for suffix: String in ["wage_per_worker_per_minute", "upkeep_per_minute"]:
 			isolated.modifiers.append(Modifier.new(StringName("building.%s.%s" % [id, suffix]), &"set", 0))
 	return Params.new(_catalog, isolated)
+
+
+func test_chain_first_worker_precedes_a_second_bakery_worker() -> void:
+	_add(&"bakery", [2, 1])
+	_add(&"mill")
+	_add(&"wharf", [0, 7])
+	for population: int in range(1, 4):
+		_initial.population = population
+		var state: Dictionary = _ticks(_sim(), 1)
+		assert_eq(state["buildings"][2]["workers"], 1)
+		assert_eq(state["buildings"][1]["workers"], 1 if population >= 2 else 0)
+		assert_eq(state["buildings"][0]["workers"], 1 if population >= 3 else 0)
+
+
+func test_lower_population_keeps_every_chain_stage_running() -> void:
+	_add(&"wharf", [0, 7])
+	_add(&"mill")
+	_add(&"bakery", [2, 1])
+	var sim: Simulation = _sim()
+	_ticks(sim, 1)
+	sim.apply_command(PopulationCommand.new(3))
+	var state: Dictionary = _ticks(sim, 180)
+	for building: Dictionary in state["buildings"]:
+		assert_eq(building["workers"], 1)
+	assert_gt(state["stocks"][&"bread"], 0, "The complete chain still feeds its town")
+
+
+func test_emigration_exactly_reverses_both_assignment_phases() -> void:
+	_add(&"bakery")
+	_add(&"wharf", [0, 7])
+	_add(&"mill", [2, 1])
+	_add(&"bakery", [3, 1])
+	_initial.population = 13
+	var fully_assigned: EconomyState = EconomyState.from_dict(_ticks(_sim(), 1))
+	for population: int in range(12, -1, -1):
+		fully_assigned.population = population
+		WorkersSystem.trim_to_population(fully_assigned)
+		var fresh: EconomyState = EconomyState.from_dict(_initial.to_dict())
+		fresh.population = population
+		WorkersSystem.new().tick(fresh, _params)
+		for index: int in range(fresh.buildings.size()):
+			assert_eq(fully_assigned.buildings[index]["workers"], fresh.buildings[index]["workers"],
+				"Reverse allocation equals fresh allocation at population %d" % population)
+
+
+func test_small_town_chain_remains_fed_after_population_drops() -> void:
+	_add(&"wharf", [0, 7])
+	_add(&"mill")
+	_add(&"bakery", [2, 1])
+	_add(&"housing", [3, 1])
+	_initial.stocks[&"bread"] = 4
+	var role: RoleDef = RoleDef.new()
+	# Fix town size while exercising real consumption, decay, smoothing and finance.
+	role.modifiers.append(Modifier.new(&"population.growth.immigration_per_minute", &"set", 0))
+	_params = Params.new(_catalog, role)
+	var sim: Simulation = _sim()
+	sim.apply_command(PopulationCommand.new(3))
+	for index: int in range(900):
+		sim.tick()
+		var state: Dictionary = sim.snapshot()["economy"]
+		assert_eq(state["population"], 3)
+		assert_almost_eq(state["bread_coverage"], 1.0, 0.00000001)
+		for building: Dictionary in state["buildings"]:
+			assert_eq(building["workers"], 0 if building["definition_id"] == &"housing" else 1)
+	assert_gt(sim.snapshot()["economy"]["satisfaction"], 70.0)

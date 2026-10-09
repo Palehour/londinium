@@ -70,11 +70,14 @@ func test_higher_taxes_give_more_money_and_less_satisfaction() -> void:
 	var second: Dictionary = high.snapshot()["economy"]
 	assert_eq(first["population"], second["population"])
 	assert_eq(second["money"] - first["money"], 6)
-	assert_eq(first["satisfaction"] - second["satisfaction"], 40.0)
+	assert_eq(first["satisfaction_target"] - second["satisfaction_target"], 40.0)
+	assert_almost_eq(first["satisfaction"] - second["satisfaction"],
+		40.0 * (1.0 - pow(0.9, 15)), 0.00000001)
 
 
 func test_new_immigrant_only_works_and_eats_on_next_tick() -> void:
 	_state.population = 2
+	_state.satisfaction = 90.0
 	_state.stocks[&"bread"] = 100
 	_state.immigration_fraction = 29.0 / 30.0
 	_state.buildings.assign([{"definition_id": &"bakery", "cell": [1, 1]},

@@ -1,5 +1,10 @@
 extends GutTest
 
+
+class SupplyBreadCommand extends SimulationCommand:
+	func execute(state: EconomyState, _params: Params, _rng: RandomNumberGenerator) -> void:
+		state.stocks[&"bread"] = 100
+
 var _params: Params
 var _context: EconomyContext
 var _state: EconomyState
@@ -34,6 +39,7 @@ func test_starving_town_shrinks_twice_as_fast_as_fed_unhappy_town() -> void:
 
 func test_fed_town_grows_with_free_housing_and_stops_at_capacity() -> void:
 	_state.stocks[&"bread"] = 1000
+	_state.satisfaction = 90.0
 	var sim: Simulation = Simulation.new(_params, _state, 42, _context)
 	assert_eq(_ticks(sim, 60)["population"], 12)
 	assert_eq(_ticks(sim, 600)["population"], 20)
@@ -97,7 +103,9 @@ func test_empty_town_can_repopulate_without_emigration_debt() -> void:
 	var empty: Dictionary = _ticks(sim, 8)
 	assert_eq(empty["population"], 0)
 	assert_eq(empty["emigration_fraction"], 0.0)
-	assert_eq(_ticks(sim, 30)["population"], 1)
+	assert_eq(_ticks(sim, 30)["population"], 0, "Empty towns now require a bread reserve")
+	sim.apply_command(SupplyBreadCommand.new())
+	assert_eq(_ticks(sim, 60)["population"], 1)
 
 
 func test_unemployed_leave_first_then_jobs_in_reverse_priority_and_order() -> void:
@@ -115,10 +123,10 @@ func test_unemployed_leave_first_then_jobs_in_reverse_priority_and_order() -> vo
 	assert_eq(_state.buildings[0]["workers"], 4)
 	_state.population = 5
 	WorkersSystem.trim_to_population(_state)
-	assert_eq(_state.buildings[0]["workers"], 0)
-	assert_eq(_state.buildings[2]["workers"], 0)
-	assert_eq(_state.buildings[1]["workers"], 3)
-	assert_eq(_state.buildings[3]["workers"], 2)
+	assert_eq(_state.buildings[0]["workers"], 1)
+	assert_eq(_state.buildings[2]["workers"], 1)
+	assert_eq(_state.buildings[1]["workers"], 2)
+	assert_eq(_state.buildings[3]["workers"], 1)
 	assert_eq(_state.employed, 5)
 	assert_eq(_state.unemployed, 0)
 
@@ -141,3 +149,35 @@ func test_role_modifier_controls_hunger_speed() -> void:
 	_params = Params.new(loaded.catalog, role)
 	var sim: Simulation = Simulation.new(_params, _state, 42, _context)
 	assert_eq(_ticks(sim, 60)["population"], 6)
+
+
+func test_empty_city_without_bread_cannot_immigrate_even_with_saved_high_happiness() -> void:
+	_state.population = 0
+	_state.satisfaction = 100.0
+	_state.immigration_fraction = 0.99
+	var sim: Simulation = Simulation.new(_params, _state, 42, _context)
+	var snapshot: Dictionary = _ticks(sim, 120)
+	assert_eq(snapshot["bread_coverage"], 0.0)
+	assert_eq(snapshot["population"], 0)
+	assert_eq(snapshot["immigration_fraction"], 0.0)
+
+
+func test_empty_city_with_enough_bread_can_immigrate() -> void:
+	_state.population = 0
+	_state.stocks[&"bread"] = 10
+	var sim: Simulation = Simulation.new(_params, _state, 42, _context)
+	assert_gt(_ticks(sim, 60)["population"], 0)
+
+
+func test_growth_uses_smoothed_happiness_instead_of_target() -> void:
+	_state.satisfaction = 0.0
+	_state.stocks[&"bread"] = 100
+	_state.immigration_fraction = 0.99
+	var sim: Simulation = Simulation.new(_params, _state, 42, _context)
+	sim.tick()
+	var snapshot: Dictionary = sim.snapshot()["economy"]
+	assert_eq(snapshot.get("satisfaction_target"), 90.0)
+	assert_almost_eq(snapshot["satisfaction"], 9.0, 0.00000001)
+	assert_eq(snapshot["population"], 10)
+	assert_eq(snapshot["immigration_fraction"], 0.0)
+	assert_gt(snapshot["emigration_fraction"], 0.0)

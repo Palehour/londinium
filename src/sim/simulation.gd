@@ -28,7 +28,8 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
 	if _context != null and _state.tax_rate < 0.0:
 		_state.tax_rate = float(_params.get_value(&"population.tax.rate"))
-		_satisfaction.tick(_state, _params)
+		# Construction initializes diagnostics, but smoothing advances only on ticks.
+		_satisfaction.update_target(_state, _params, _context)
 	if _context != null:
 		WorkersSystem.refresh_counts(_state)
 
@@ -51,7 +52,7 @@ func tick() -> void:
 		_market.tick(_state, _params, _rng, _tick_count)
 		_production.tick(_state, _params, _context)
 		_consumption.tick(_state, _params)
-		_satisfaction.tick(_state, _params)
+		_satisfaction.tick(_state, _params, _context)
 		_growth.tick(_state, _params)
 		_money.tick(_state, _params)
 

@@ -8,8 +8,9 @@ const BUILDING_FIELDS: Dictionary = {
 const ECONOMY_SCHEMAS: Dictionary = {
 	"population": {
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
+		"empty_city_bread_lookahead_seconds": "number",
 		"satisfaction": {"bread_weight": "number", "tax_weight": "number",
-			"overcrowding_weight": "number"},
+			"overcrowding_weight": "number", "smoothing_per_second": "positive_fraction"},
 		"growth": {"immigration_threshold": "percent", "emigration_threshold": "percent",
 			"immigration_per_minute": "number", "emigration_per_minute": "number",
 			"hunger_emigration_multiplier": "multiplier"},
@@ -137,7 +138,7 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	if value < 0 or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
 			or (kind.begins_with("positive") and value <= 0) \
 			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
-			or (kind == "multiplier" and value < 1):
+			or (kind == "multiplier" and value < 1) or (kind == "positive_fraction" and value > 1):
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value

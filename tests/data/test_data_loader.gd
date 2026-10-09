@@ -193,3 +193,18 @@ func test_hunger_multiplier_is_required_finite_and_at_least_one() -> void:
 	before_each()
 	_documents["economy/population.json"]["growth"]["hunger_emigration_multiplier"] = 1.0
 	assert_true(DataLoader.new().load_documents(_documents).is_ok())
+
+
+func test_empty_city_lookahead_and_smoothing_are_validated_in_data() -> void:
+	for value: float in [-1.0, INF, NAN]:
+		before_each()
+		_documents["economy/population.json"]["empty_city_bread_lookahead_seconds"] = value
+		_assert_invalid("empty_city_bread_lookahead_seconds:")
+	for value: float in [0.0, -0.1, 1.01, INF, NAN]:
+		before_each()
+		_documents["economy/population.json"]["satisfaction"]["smoothing_per_second"] = value
+		_assert_invalid("smoothing_per_second:")
+	before_each()
+	_documents["economy/population.json"]["empty_city_bread_lookahead_seconds"] = 0
+	_documents["economy/population.json"]["satisfaction"]["smoothing_per_second"] = 1.0
+	assert_true(DataLoader.new().load_documents(_documents).is_ok())

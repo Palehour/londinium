@@ -86,3 +86,28 @@ func test_money_modifier_result_outside_int64_is_an_error() -> void:
 	role.modifiers.append(Modifier.new(key, &"set", 1e30))
 	assert_null(Params.new(_catalog, role).get_value(key))
 	assert_push_error("Params: money result outside int64 for 'market.wheat.base_price'")
+
+
+func test_role_modifiers_cannot_break_population_parameter_ranges() -> void:
+	var invalid: Dictionary[StringName, Array] = {
+		&"population.growth.hunger_emigration_multiplier": [0.99, -1.0],
+		&"population.empty_city_bread_lookahead_seconds": [-1.0],
+		&"population.satisfaction.smoothing_per_second": [0.0, -0.1, 1.01],
+	}
+	for key: StringName in invalid:
+		for value: float in invalid[key]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(key, &"set", value))
+			assert_null(Params.new(_catalog, role).get_value(key))
+			assert_push_error("Params: invalid range for '%s'" % key)
+
+
+func test_population_range_validation_uses_final_modified_value() -> void:
+	for key: StringName in [&"population.growth.hunger_emigration_multiplier",
+			&"population.empty_city_bread_lookahead_seconds", &"population.satisfaction.smoothing_per_second"]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.assign([Modifier.new(key, &"set", -1), Modifier.new(key, &"add", 2)])
+		assert_eq(Params.new(_catalog, role).get_value(key), 1.0)
+	var zero_lookahead: RoleDef = RoleDef.new()
+	zero_lookahead.modifiers.append(Modifier.new(&"population.empty_city_bread_lookahead_seconds", &"set", 0))
+	assert_eq(Params.new(_catalog, zero_lookahead).get_value(&"population.empty_city_bread_lookahead_seconds"), 0.0)

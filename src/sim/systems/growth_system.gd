@@ -5,7 +5,7 @@ extends RefCounted
 func tick(state: EconomyState, params: Params) -> void:
 	var free_housing: int = maxi(0, state.housing_capacity - state.population)
 	if state.satisfaction >= float(params.get_value(&"population.growth.immigration_threshold")) \
-			and free_housing > 0:
+			and free_housing > 0 and (state.population > 0 or state.bread_coverage > 0.0):
 		state.emigration_fraction = 0.0
 		state.immigration_fraction += float(params.get_value(&"population.growth.immigration_per_minute")) / 60.0
 		var arrivals: int = mini(free_housing, ProductionSystem.whole_units(state.immigration_fraction))

@@ -13,6 +13,7 @@ var bread_demand: float = 0.0
 var bread_consumed: float = 0.0
 var bread_coverage: float = 1.0
 var satisfaction: float = 0.0
+var satisfaction_target: float = 0.0
 var satisfaction_breakdown: Dictionary[String, float] = {}
 var housing_capacity: int = 0
 var overcrowding: float = 0.0
@@ -34,6 +35,7 @@ func to_dict() -> Dictionary:
 		"bread_fraction": bread_fraction, "bread_demand": bread_demand,
 		"bread_consumed": bread_consumed, "bread_coverage": bread_coverage,
 		"satisfaction": satisfaction, "satisfaction_breakdown": satisfaction_breakdown.duplicate(),
+		"satisfaction_target": satisfaction_target,
 		"housing_capacity": housing_capacity, "overcrowding": overcrowding,
 		"employed": employed, "unemployed": unemployed,
 		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
@@ -60,6 +62,7 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.bread_consumed = values.get("bread_consumed", 0.0)
 	result.bread_coverage = values.get("bread_coverage", 1.0)
 	result.satisfaction = values.get("satisfaction", 0.0)
+	result.satisfaction_target = values.get("satisfaction_target", 0.0)
 	result.satisfaction_breakdown.assign(values.get("satisfaction_breakdown", {}))
 	result.housing_capacity = values.get("housing_capacity", 0)
 	result.overcrowding = values.get("overcrowding", 0.0)
