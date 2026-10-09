@@ -32,34 +32,40 @@ func _ticks(state: EconomyState, params: Params, count: int) -> void:
 		_system.tick(state, params, false)
 
 
-func test_compound_decay_is_fractional_and_exactly_one_percent_per_minute() -> void:
+func test_compound_decay_is_fractional_and_exactly_three_percent_per_minute() -> void:
 	var state: EconomyState = _state()
 	var params: Params = _params()
 	_ticks(state, params, 1)
-	assert_almost_eq(float(state.population_peak), 100.0 * pow(0.99, 1.0 / 60.0), 0.00000001)
+	assert_almost_eq(float(state.population_peak), 100.0 * pow(0.97, 1.0 / 60.0), 0.00000001)
 	_ticks(state, params, 59)
-	assert_almost_eq(float(state.population_peak), 99.0, 0.00000001)
+	assert_almost_eq(float(state.population_peak), 97.0, 0.00000001)
 	_ticks(state, params, 60)
-	assert_almost_eq(float(state.population_peak), 98.01, 0.00000001)
+	assert_almost_eq(float(state.population_peak), 94.09, 0.00000001)
 
 
-func test_decay_uses_shared_smoothed_coverage_and_modified_recovery() -> void:
-	var state: EconomyState = _state()
-	var params: Params = _params({&"population.growth.hunger_emigration_recovery": 0.9})
-	state.bread_coverage = 1.0
-	state.hunger_smoothed_coverage = 0.899
-	_ticks(state, params, 60)
-	assert_eq(float(state.population_peak), 100.0)
-	state.bread_coverage = 0.0
-	state.hunger_smoothed_coverage = 0.9
-	_ticks(state, params, 60)
-	assert_almost_eq(float(state.population_peak), 99.0, 0.00000001)
-	state.hunger_smoothed_coverage = 0.75
-	_ticks(state, _params(), 60)
-	assert_almost_eq(float(state.population_peak), 98.01, 0.00000001)
-	state.hunger_smoothed_coverage = 0.749
-	_ticks(state, _params(), 60)
-	assert_almost_eq(float(state.population_peak), 98.01, 0.00000001)
+func test_stability_uses_shared_coverage_threshold_and_active_emigration() -> void:
+	for threshold: float in [0.6, 0.55]:
+		var params: Params = _params({&"population.growth.hunger_emigration_threshold": threshold,
+			&"population.growth.hunger_emigration_recovery": 0.9})
+		for coverage: float in [threshold - 0.001, threshold, threshold + 0.001, 1.0]:
+			for active: bool in [false, true]:
+				var state: EconomyState = _state()
+				state.bread_coverage = 0.0 if coverage >= threshold else 1.0
+				state.hunger_smoothed_coverage = coverage
+				state.hunger_emigration_active = active
+				_ticks(state, params, 60)
+				var stable: bool = not active and coverage >= threshold
+				assert_almost_eq(float(state.population_peak), 97.0 if stable else 100.0, 0.00000001)
+				assert_eq(state.hunger_emigration_active, active)
+				# Same predicate controls the absolute minimum, independently of relative limits.
+				var small: EconomyState = _state(9)
+				small.population_peak = 10.0
+				small.bread_coverage = state.bread_coverage
+				small.hunger_smoothed_coverage = coverage
+				small.hunger_emigration_active = active
+				_ticks(small, params, 60)
+				assert_eq(small.depopulation.status, &"ok" if stable else &"warning")
+				assert_eq(small.depopulation.elapsed_seconds, 0 if stable else 60)
 
 
 func test_rate_modifiers_boundaries_population_floor_and_new_peak() -> void:
@@ -79,6 +85,7 @@ func test_rate_modifiers_boundaries_population_floor_and_new_peak() -> void:
 func test_stable_city_recovers_warning_but_continuing_decline_does_not() -> void:
 	var stable: EconomyState = _state(49)
 	var falling: EconomyState = _state(49)
+	falling.hunger_emigration_active = true
 	var params: Params = _params()
 	_ticks(stable, params, 1)
 	_ticks(falling, params, 1)
@@ -94,13 +101,18 @@ func test_stable_city_recovers_warning_but_continuing_decline_does_not() -> void
 	assert_eq(falling.depopulation.elapsed_seconds, 0)
 
 
-func test_decay_preserves_absolute_minimum_activation_and_terminal_state() -> void:
+func test_stable_minimum_recovers_and_instability_preserves_terminal_state() -> void:
 	var state: EconomyState = _state(9)
 	var params: Params = _params({&"defeat.depopulation.peak_decay_per_minute": 1,
 		&"defeat.depopulation.duration_seconds": 2})
 	_ticks(state, params, 1)
 	assert_eq(float(state.population_peak), 9.0)
 	assert_true(state.depopulation_active)
+	assert_eq(state.depopulation.status, &"ok")
+	assert_eq(state.depopulation.elapsed_seconds, 0)
+	state.hunger_emigration_active = true
+	_ticks(state, params, 1)
+	assert_eq(float(state.population_peak), 9.0)
 	assert_eq(state.depopulation.status, &"warning")
 	assert_eq(state.depopulation.elapsed_seconds, 1)
 	_ticks(state, params, 1)
@@ -138,7 +150,7 @@ func test_decay_during_grace_round_trips_without_extra_initialization_step() -> 
 	var params: Params = _params({&"defeat.grace_seconds": 75})
 	var state: EconomyState = _state(24)
 	_ticks(state, params, 60)
-	assert_almost_eq(float(state.population_peak), 99.0, 0.00000001)
+	assert_almost_eq(float(state.population_peak), 97.0, 0.00000001)
 	var values: Dictionary = state.to_dict()
 	var restored: EconomyState = EconomyState.from_dict(values)
 	_system.initialize(restored, params)
@@ -168,10 +180,99 @@ func test_simulation_snapshot_preserves_fractional_peak_and_continuation() -> vo
 	for index: int in range(17):
 		sim.tick()
 	var snapshot: Dictionary = sim.snapshot()["economy"]
-	assert_almost_eq(float(snapshot["population_peak"]), 100.0 * pow(0.99, 17.0 / 60.0), 0.00000001)
+	assert_almost_eq(float(snapshot["population_peak"]), 100.0 * pow(0.97, 17.0 / 60.0), 0.00000001)
 	var restored: Simulation = Simulation.new(params, EconomyState.from_dict(snapshot), 42, context)
 	assert_eq(restored.snapshot()["economy"], snapshot)
 	for index: int in range(60):
 		sim.tick()
 		restored.tick()
 		assert_eq(restored.snapshot()["economy"], sim.snapshot()["economy"])
+
+
+func test_stability_recovery_resets_absolute_minimum_duration() -> void:
+	var state: EconomyState = _state(9)
+	state.population_peak = 10.0
+	state.hunger_emigration_active = true
+	var params: Params = _params()
+	_ticks(state, params, 179)
+	assert_eq(state.depopulation.status, &"warning")
+	assert_eq(state.depopulation.elapsed_seconds, 179)
+	state.hunger_emigration_active = false
+	state.hunger_smoothed_coverage = 0.6
+	_ticks(state, params, 1)
+	assert_eq(state.depopulation.status, &"ok")
+	assert_eq(state.depopulation.cause, &"")
+	assert_eq(state.depopulation.elapsed_seconds, 0)
+	state.hunger_emigration_active = true
+	_ticks(state, params, 179)
+	assert_true(state.defeat_causes.is_empty())
+	assert_eq(state.depopulation.elapsed_seconds, 179)
+	_ticks(state, params, 1)
+	assert_eq(state.defeat_causes, [&"depopulation"])
+
+
+func test_fed_empty_city_always_counts_after_grace_with_or_without_history() -> void:
+	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	for historical_peak: float in [0.0, 9.0, 60.0]:
+		var state: EconomyState = EconomyState.new()
+		state.population_peak = historical_peak
+		_system.initialize(state, params)
+		assert_false(state.hunger_emigration_active)
+		assert_eq(state.hunger_smoothed_coverage, 1.0)
+		_ticks(state, params, 300)
+		assert_eq(state.depopulation.status, &"ok")
+		assert_eq(state.depopulation.elapsed_seconds, 0)
+		_ticks(state, params, 1)
+		assert_eq(state.depopulation.status, &"warning")
+		assert_eq(state.depopulation.elapsed_seconds, 1)
+		_ticks(state, params, 178)
+		assert_true(state.defeat_causes.is_empty())
+		assert_eq(state.depopulation.elapsed_seconds, 179)
+		_ticks(state, params, 1)
+		assert_eq(state.defeat_causes, [&"depopulation"])
+		assert_eq(state.depopulation.elapsed_seconds, 180)
+
+
+func test_real_rate_city_60_to_27_exits_warning_at_stable_tick_208() -> void:
+	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"defeat.depopulation.peak_decay_per_minute"), 0.03)
+	var state: EconomyState = EconomyState.new()
+	state.population = 27
+	state.population_peak = 60.0
+	state.depopulation_active = true
+	state.defeat_initialized = true
+	state.defeat_elapsed_seconds = 300
+	state.money = 10000
+	state.stocks[&"bread"] = 1000
+	# Full coverage with no housing keeps satisfaction between migration thresholds.
+	state.satisfaction = 60.0
+	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(params, state, 42, context)
+	for index: int in range(207):
+		sim.tick()
+		var snapshot: Dictionary = sim.snapshot()["economy"]
+		assert_eq(snapshot["population"], 27)
+		assert_false(snapshot["hunger_emigration_active"])
+		assert_eq(snapshot["hunger_smoothed_coverage"], 1.0)
+		assert_eq(snapshot["depopulation"]["status"], &"warning")
+		assert_eq(snapshot["depopulation"]["elapsed_seconds"], 0)
+		assert_true(snapshot["defeat_causes"].is_empty())
+	sim.tick()
+	var recovered: Dictionary = sim.snapshot()["economy"]
+	assert_eq(sim.snapshot()["tick_count"], 208)
+	assert_eq(recovered["population"], 27)
+	assert_almost_eq(float(recovered["population_peak"]), 60.0 * pow(0.97, 208.0 / 60.0), 0.00000001)
+	assert_eq(recovered["depopulation"]["status"], &"ok")
+	assert_eq(recovered["depopulation"]["cause"], &"")
+	assert_eq(recovered["depopulation"]["elapsed_seconds"], 0)
+	assert_true(recovered["defeat_causes"].is_empty())
+
+
+func test_gdd_depopulation_row_records_decaying_peak_and_duration() -> void:
+	var row: String = ""
+	for line: String in FileAccess.get_file_as_string("res://docs/GDD.md").split("\n"):
+		if line.begins_with("| Despoblación |"):
+			row = line
+	assert_eq(row.count("su pico (el pico baja despacio mientras la ciudad está estable)"), 2)
+	assert_false(row.contains("su máximo"))
+	assert_string_contains(row, "%d s seguidos" % int(_params().get_value(&"defeat.depopulation.duration_seconds")))

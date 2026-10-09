@@ -29,7 +29,9 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	if update_coverage:
 		update_hunger_coverage(state, params)
 	_update_population_history(state, params)
-	_decay_population_peak(state, params)
+	var stable: bool = _is_city_stable(state, params)
+	if stable:
+		_decay_population_peak(state, params)
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
@@ -38,7 +40,8 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 		< float(params.get_value(&"defeat.hunger.threshold"))
 	_update(state.hunger, &"hunger", hungry, hungry, counting,
 		float(params.get_value(&"defeat.hunger.duration_seconds")))
-	var below_minimum: bool = state.population < int(params.get_value(&"defeat.depopulation.minimum_population"))
+	var below_minimum: bool = not stable and state.population \
+		< int(params.get_value(&"defeat.depopulation.minimum_population"))
 	var empty: bool = state.population == 0
 	var warning: bool = empty or (state.depopulation_active and (below_minimum or state.population \
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction"))))
@@ -59,9 +62,12 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 		state.depopulation_active = true
 
 
+func _is_city_stable(state: EconomyState, params: Params) -> bool:
+	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
+		>= float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+
+
 func _decay_population_peak(state: EconomyState, params: Params) -> void:
-	if state.hunger_smoothed_coverage < float(params.get_value(&"population.growth.hunger_emigration_recovery")):
-		return
 	var rate: float = float(params.get_value(&"defeat.depopulation.peak_decay_per_minute"))
 	# A tick is one game second; compounding preserves the configured reduction over 60 ticks.
 	state.population_peak = maxf(float(state.population), state.population_peak * pow(1.0 - rate, 1.0 / 60.0))

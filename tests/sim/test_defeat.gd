@@ -141,6 +141,7 @@ func test_depopulation_relative_limits_and_recovery_to_warning() -> void:
 
 func test_small_city_activation_absolute_minimum_and_historical_peak() -> void:
 	_state = EconomyState.new()
+	_state.hunger_emigration_active = true
 	_state.population = 9
 	_system.initialize(_state, _params)
 	_ticks(200)
@@ -160,6 +161,7 @@ func test_small_city_activation_absolute_minimum_and_historical_peak() -> void:
 
 func test_absolute_minimum_recovery_restarts_full_duration() -> void:
 	_state = EconomyState.new()
+	_state.hunger_emigration_active = true
 	_state.population = 10
 	_system.initialize(_state, _params)
 	_state.population = 9
