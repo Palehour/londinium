@@ -54,6 +54,10 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		WorkersSystem.refresh_counts(_state)
 
 
+func get_building_unavailable_reason(id: StringName) -> StringName:
+	return _context.building_unavailable_reason(id) if _context != null else &"unknown_building"
+
+
 func apply_command(command: SimulationCommand) -> void:
 	if not _state.defeat_causes.is_empty():
 		_reject_after_defeat(command)

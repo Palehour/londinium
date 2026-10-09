@@ -40,13 +40,9 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	for building: Dictionary in state.buildings:
 		if building["cell"] == [_cell.x, _cell.y]:
 			return &"occupied_cell"
-	var tags: Array[String] = _context.buildings[_definition_id].tags
-	if "cultivable" in tags and _cell not in map.cultivable_cells:
-		return &"not_cultivable"
-	if "river" in tags and _cell not in map.river_cells:
-		return &"requires_river"
-	if "river" not in tags and _cell in map.river_cells:
-		return &"requires_land"
+	var terrain_reason: StringName = _context.terrain_placement_reason(_definition_id, _cell)
+	if terrain_reason != &"":
+		return terrain_reason
 	if state.money < int(params.get_value(StringName("building.%s.cost" % _definition_id))):
 		return &"insufficient_money"
 	return &""

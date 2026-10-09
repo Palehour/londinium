@@ -28,3 +28,26 @@ func copy() -> EconomyContext:
 	var catalog: DataCatalog = DataCatalog.new()
 	catalog.buildings.assign(buildings)
 	return EconomyContext.new(catalog, map)
+
+
+func building_unavailable_reason(id: StringName) -> StringName:
+	if not buildings.has(id):
+		return &"unknown_building"
+	if "cultivable" in buildings[id].tags and map.cultivable_cells.is_empty():
+		return &"no_cultivable_cells"
+	for x: int in range(map.width):
+		for y: int in range(map.height):
+			if terrain_placement_reason(id, Vector2i(x, y)) == &"":
+				return &""
+	return &"requires_river" if "river" in buildings[id].tags else &"requires_land"
+
+
+func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
+	var tags: Array[String] = buildings[id].tags
+	if "cultivable" in tags and cell not in map.cultivable_cells:
+		return &"not_cultivable"
+	if "river" in tags and cell not in map.river_cells:
+		return &"requires_river"
+	if "river" not in tags and cell in map.river_cells:
+		return &"requires_land"
+	return &""
