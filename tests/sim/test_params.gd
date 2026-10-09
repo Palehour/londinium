@@ -115,6 +115,55 @@ func test_invalid_synthetic_operation_is_an_error() -> void:
 	assert_push_error("Params: unknown operation 'divide' for 'market.wheat.base_price'")
 
 
+func test_modified_defeat_thresholds_match_schema_ranges() -> void:
+	var invalid: Dictionary[StringName, Array] = {
+		&"defeat.hunger.threshold": [-0.1, 2.0],
+		&"defeat.depopulation.warning_fraction": [-0.1, 1.1],
+		&"defeat.depopulation.defeat_fraction": [-0.1, 1.1],
+		&"defeat.depopulation.minimum_population": [-1.0, 1.5, 1e30],
+		&"defeat.bankruptcy.threshold": [-1.0, 1e30],
+		&"defeat.bankruptcy.duration_seconds": [1e30],
+		&"defeat.hunger.duration_seconds": [1e30],
+		&"defeat.depopulation.duration_seconds": [1e30],
+	}
+	for key: StringName in invalid:
+		for value: float in invalid[key]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(key, &"set", value))
+			assert_null(Params.new(_catalog, role).get_value(key))
+			assert_push_error("Params: invalid range for '%s'" % key)
+
+
+func test_every_defeat_key_has_post_modifier_range_and_rejects_nonfinite_values() -> void:
+	for key: StringName in _catalog.base_values:
+		if not String(key).begins_with("defeat."):
+			continue
+		assert_true(ParameterRanges.BY_KEY.has(key), str(key))
+		for value: float in [INF, NAN]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(key, &"set", value))
+			assert_null(Params.new(_catalog, role).get_value(key))
+			assert_push_error("Params: nonfinite result for '%s'" % key)
+
+
+func test_modified_defeat_schema_boundaries_and_money_rounding() -> void:
+	for boundary: float in [0.0, 1.0]:
+		var role: RoleDef = RoleDef.new()
+		for key: StringName in [&"defeat.hunger.threshold", &"defeat.depopulation.warning_fraction",
+				&"defeat.depopulation.defeat_fraction", &"defeat.depopulation.minimum_population"]:
+			role.modifiers.append(Modifier.new(key, &"set", boundary))
+		var params: Params = Params.new(_catalog, role)
+		for modifier: Modifier in role.modifiers:
+			assert_eq(params.get_value(modifier.key), boundary)
+	var money_role: RoleDef = RoleDef.new()
+	money_role.modifiers.assign([Modifier.new(&"defeat.bankruptcy.threshold", &"set", 1),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"mul", 0.5),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"mul", 3)])
+	var money: Variant = Params.new(_catalog, money_role).get_value(&"defeat.bankruptcy.threshold")
+	assert_eq(money, 2)
+	assert_typeof(money, TYPE_INT)
+
+
 func test_nonfinite_modifier_result_is_an_error() -> void:
 	var key: StringName = &"building.bakery.recipe.seconds"
 	var role: RoleDef = RoleDef.new()
