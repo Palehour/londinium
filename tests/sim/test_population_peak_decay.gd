@@ -22,6 +22,7 @@ func _params(overrides: Dictionary[StringName, float] = {}) -> Params:
 func _state(population: int = 60) -> EconomyState:
 	var state: EconomyState = EconomyState.new()
 	state.population = 100
+	state.satisfaction = float(_params().get_value(&"population.growth.emigration_threshold"))
 	_system.initialize(state, _params())
 	state.population = population
 	return state
@@ -268,11 +269,67 @@ func test_real_rate_city_60_to_27_exits_warning_at_stable_tick_208() -> void:
 	assert_true(recovered["defeat_causes"].is_empty())
 
 
-func test_gdd_depopulation_row_records_decaying_peak_and_duration() -> void:
+func test_gdd_depopulation_text_matches_issue_30_and_duration() -> void:
+	var text: String = FileAccess.get_file_as_string("res://docs/GDD.md")
+	var expected_row: String = "| Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |"
+	var expected_paragraph: String = "Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y la satisfacción no está por debajo del umbral de emigración. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación."
 	var row: String = ""
-	for line: String in FileAccess.get_file_as_string("res://docs/GDD.md").split("\n"):
+	for line: String in text.split("\n"):
 		if line.begins_with("| Despoblación |"):
 			row = line
-	assert_eq(row.count("su pico (el pico baja despacio mientras la ciudad está estable)"), 2)
+	assert_eq(row, expected_row)
 	assert_false(row.contains("su máximo"))
 	assert_string_contains(row, "%d s seguidos" % int(_params().get_value(&"defeat.depopulation.duration_seconds")))
+	assert_eq(text.count(expected_row), 1)
+	assert_eq(text.count(expected_paragraph), 1)
+	assert_string_contains(text, expected_row + "\n\n" + expected_paragraph)
+
+
+func test_smoothed_satisfaction_boundary_and_role_threshold_control_stability() -> void:
+	for threshold: float in [30.0, 45.0]:
+		var params: Params = _params() if threshold == 30.0 else _params({
+			&"population.growth.emigration_threshold": threshold})
+		assert_eq(float(params.get_value(&"population.growth.emigration_threshold")), threshold)
+		for satisfaction: float in [threshold - 0.001, threshold, threshold + 0.001]:
+			var stable: bool = satisfaction >= threshold
+			var state: EconomyState = _state()
+			state.satisfaction = satisfaction
+			state.satisfaction_target = 0.0 if stable else 100.0
+			_ticks(state, params, 60)
+			assert_almost_eq(state.population_peak, 97.0 if stable else 100.0, 0.00000001)
+			var small: EconomyState = _state(9)
+			small.population_peak = 10.0
+			small.satisfaction = satisfaction
+			small.satisfaction_target = state.satisfaction_target
+			_ticks(small, params, 60)
+			assert_eq(small.depopulation.status, &"ok" if stable else &"warning")
+			assert_eq(small.depopulation.cause, &"" if stable else &"depopulation")
+			assert_eq(small.depopulation.elapsed_seconds, 0 if stable else 60)
+
+
+func test_satisfaction_recovery_resets_absolute_minimum_full_duration() -> void:
+	var params: Params = _params()
+	var threshold: float = float(params.get_value(&"population.growth.emigration_threshold"))
+	var state: EconomyState = _state(9)
+	state.population_peak = 10.0
+	state.satisfaction = threshold - 0.001
+	_ticks(state, params, 179)
+	assert_eq(state.population_peak, 10.0)
+	assert_eq(state.depopulation.status, &"warning")
+	assert_eq(state.depopulation.elapsed_seconds, 179)
+	assert_true(state.defeat_causes.is_empty())
+	state.satisfaction = threshold
+	_ticks(state, params, 1)
+	assert_eq(state.depopulation.status, &"ok")
+	assert_eq(state.depopulation.cause, &"")
+	assert_eq(state.depopulation.elapsed_seconds, 0)
+	var recovered_peak: float = state.population_peak
+	state.satisfaction = threshold - 0.001
+	_ticks(state, params, 179)
+	assert_eq(state.population_peak, recovered_peak)
+	assert_eq(state.depopulation.status, &"warning")
+	assert_eq(state.depopulation.elapsed_seconds, 179)
+	assert_true(state.defeat_causes.is_empty())
+	_ticks(state, params, 1)
+	assert_eq(state.depopulation.elapsed_seconds, 180)
+	assert_eq(state.defeat_causes, [&"depopulation"])
