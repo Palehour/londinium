@@ -18,7 +18,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-010 | 2026-10-08 | El trigo entra por el muelle, salvo en lugares donde históricamente se podía cultivar; ahí se cultiva en el mapa. Según Chronicler, en Whitechapel en los 1850 no hay tierra cultivable; los candidatos son Barking/Ilford, West Ham y East Ham (Essex), y Stepney en la era medieval. |
 | D-011 | 2026-10-08 | Almacén global en el prototipo. Más adelante se define si conviene el transporte físico. |
 | D-012 | 2026-10-08 | ~~Por ahora los trabajadores se asignan solos a los edificios.~~ Reemplazada por D-021. |
-| D-013 | 2026-10-08 | El prototipo se puede perder. Condiciones de derrota iniciales: quiebra, motín de hambre y despoblación, cada una con aviso previo (umbrales en el GDD, a balancear). |
+| D-013 | 2026-10-08 | El prototipo se puede perder. Condiciones de derrota iniciales: quiebra, motín de hambre y despoblación, cada una con aviso previo (umbrales en el GDD, a balancear). La condición crítica de despoblación debe persistir durante 180 s seguidos (autorizado en issue #21). |
 | D-014 | 2026-10-08 | Los roles llegan después del hito 1. El diseño y el código dejan un gancho para modificadores de rol (parámetros en datos, leídos con una sola función que aplica modificadores) para no tener que rehacer nada. |
 | D-015 | 2026-10-08 | Fase 2: cervecería como segunda cadena, con el grano disputado entre el pan y la cerveza. |
 | D-016 | 2026-10-08 | El primer evento histórico es el cólera de 1866 en Whitechapel (East London Water Company, Old Ford), su peor año según Chronicler. El brote de 1854 (Broad Street) fue en Soho. |

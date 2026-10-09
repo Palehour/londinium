@@ -286,3 +286,55 @@ func test_empty_city_lookahead_and_smoothing_are_validated_in_data() -> void:
 	_documents["economy/population.json"]["empty_city_bread_lookahead_seconds"] = 0
 	_documents["economy/population.json"]["satisfaction"]["smoothing_per_second"] = 1.0
 	assert_true(DataLoader.new().load_documents(_documents).is_ok())
+
+
+func test_city_start_and_hunger_parameters_require_valid_data() -> void:
+	for field: String in ["initial_bread", "growth.hunger_emigration_threshold"]:
+		before_each()
+		var parts: PackedStringArray = field.split(".")
+		var section: Dictionary = _documents["economy/population.json"]
+		if parts.size() == 2:
+			section = section[parts[0]]
+		section.erase(parts[-1])
+		_assert_invalid(parts[-1] + ": missing field")
+	var invalid: Dictionary[String, Array] = {
+		"initial_bread": ["40", true, -1.0, 1.5, 1e30, INF, NAN],
+		"growth.hunger_emigration_threshold": ["0.5", true, -0.01, 1.01, INF, NAN],
+	}
+	for field: String in invalid:
+		for value: Variant in invalid[field]:
+			before_each()
+			var section: Dictionary = _documents["economy/population.json"]
+			var parts: PackedStringArray = field.split(".")
+			if parts.size() == 2:
+				section = section[parts[0]]
+			section[parts[-1]] = value
+			_assert_invalid(parts[-1] + ":")
+	for threshold: float in [0.0, 1.0]:
+		before_each()
+		_documents["economy/population.json"]["initial_bread"] = 0
+		_documents["economy/population.json"]["growth"]["hunger_emigration_threshold"] = threshold
+		assert_true(DataLoader.new().load_documents(_documents).is_ok())
+
+
+func test_city_start_and_hunger_parameter_modifiers_validate_final_values() -> void:
+	var invalid: Dictionary[String, Array] = {
+		"population.initial_bread": [-1.0, 1.5, 1e30],
+		"population.growth.hunger_emigration_threshold": [-0.1, 1.1],
+	}
+	for key: String in invalid:
+		for value: float in invalid[key]:
+			before_each()
+			_set_modifier({"key": key, "op": "set", "value": value})
+			_assert_invalid("Params: invalid range for '%s'" % key)
+	before_each()
+	_documents["roles/neutral_administrator.json"]["modifiers"] = [
+		{"key": "population.initial_bread", "op": "set", "value": 0},
+		{"key": "population.growth.hunger_emigration_threshold", "op": "set", "value": 1},
+	]
+	var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	if loaded.is_ok():
+		var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+		assert_eq(params.get_value(&"population.initial_bread"), 0.0)
+		assert_eq(params.get_value(&"population.growth.hunger_emigration_threshold"), 1.0)

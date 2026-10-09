@@ -4,6 +4,10 @@ extends RefCounted
 const INT64_UPPER_BOUND: float = 9223372036854775808.0
 
 const BY_KEY: Dictionary[StringName, Dictionary] = {
+	&"population.initial_bread": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"population.growth.hunger_emigration_threshold": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.bankruptcy.threshold": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"defeat.hunger.threshold": {
@@ -34,7 +38,7 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 
 
 static func is_valid(key: StringName, value: float) -> bool:
-	if key in [&"defeat.depopulation.duration_seconds", &"defeat.bankruptcy.duration_seconds",
+	if key in [&"population.initial_bread", &"defeat.depopulation.duration_seconds", &"defeat.bankruptcy.duration_seconds",
 			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population"] \
 			and value != floor(value):
 		return false

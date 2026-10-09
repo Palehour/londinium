@@ -4,7 +4,9 @@ extends RefCounted
 
 func tick(state: EconomyState, params: Params) -> void:
 	var free_housing: int = maxi(0, state.housing_capacity - state.population)
-	if state.satisfaction >= float(params.get_value(&"population.growth.immigration_threshold")) \
+	var hungry: bool = state.hunger_smoothed_coverage \
+		< float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+	if not hungry and state.satisfaction >= float(params.get_value(&"population.growth.immigration_threshold")) \
 			and free_housing > 0 and (state.population > 0 or state.bread_coverage > 0.0):
 		state.emigration_fraction = 0.0
 		state.immigration_fraction += float(params.get_value(&"population.growth.immigration_per_minute")) / 60.0
@@ -12,7 +14,7 @@ func tick(state: EconomyState, params: Params) -> void:
 		state.population += arrivals
 		state.immigration_fraction = maxf(0.0, state.immigration_fraction - arrivals) \
 			if arrivals < free_housing else 0.0
-	elif state.satisfaction < float(params.get_value(&"population.growth.emigration_threshold")) \
+	elif (hungry or state.satisfaction < float(params.get_value(&"population.growth.emigration_threshold"))) \
 			and state.population > 0:
 		state.immigration_fraction = 0.0
 		var multiplier: float = float(params.get_value(&"population.growth.hunger_emigration_multiplier"))
