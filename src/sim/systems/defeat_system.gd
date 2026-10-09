@@ -8,8 +8,9 @@ func initialize(state: EconomyState, params: Params) -> void:
 	state.defeat_initialized = true
 	state.hunger_smoothed_coverage = state.bread_coverage
 	_update_population_history(state, params)
-	# A new empty city's initial diagnostics must already expose its warning.
-	if state.population == 0:
+	# Empty cities expose diagnostics immediately only when grace has already ended.
+	if state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
+			or state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))):
 		_update(state.depopulation, &"depopulation", true, true, false,
 			float(params.get_value(&"defeat.depopulation.duration_seconds")))
 
@@ -42,6 +43,8 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction"))))
 	var critical: bool = empty or (state.depopulation_active and (below_minimum or state.population \
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction"))))
+	if empty and not counting:
+		warning = false
 	_update(state.depopulation, &"depopulation", warning, critical, counting,
 		float(params.get_value(&"defeat.depopulation.duration_seconds")))
 	for condition: DefeatState in [state.bankruptcy, state.hunger, state.depopulation]:

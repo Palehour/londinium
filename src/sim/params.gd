@@ -44,6 +44,17 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 		if defeat > warning:
 			errors.append("Params: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction after role modifiers")
 			return null
+	var threshold_key: StringName = &"population.growth.hunger_emigration_threshold"
+	var recovery_key: StringName = &"population.growth.hunger_emigration_recovery"
+	if key in [threshold_key, recovery_key]:
+		var other: Variant = _get_modified_value(recovery_key if key == threshold_key else threshold_key, errors)
+		if other == null:
+			return null
+		var threshold: float = float(value if key == threshold_key else other)
+		var recovery: float = float(value if key == recovery_key else other)
+		if recovery < threshold:
+			errors.append("Params: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold after role modifiers")
+			return null
 	return value
 
 

@@ -203,3 +203,35 @@ func test_population_range_validation_uses_final_modified_value() -> void:
 	var zero_lookahead: RoleDef = RoleDef.new()
 	zero_lookahead.modifiers.append(Modifier.new(&"population.empty_city_bread_lookahead_seconds", &"set", 0))
 	assert_eq(Params.new(_catalog, zero_lookahead).get_value(&"population.empty_city_bread_lookahead_seconds"), 0.0)
+
+
+func test_hunger_relation_is_checked_on_either_read() -> void:
+	var threshold: StringName = &"population.growth.hunger_emigration_threshold"
+	var recovery: StringName = &"population.growth.hunger_emigration_recovery"
+	for modified_key: StringName in [threshold, recovery]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(modified_key, &"set", 0.8 if modified_key == threshold else 0.5))
+		var params: Params = Params.new(_catalog, role)
+		for key: StringName in [threshold, recovery]:
+			assert_null(params.get_value(key))
+			assert_push_error("hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold after role modifiers")
+
+
+func test_hunger_ranges_and_final_relation_apply_after_modifiers() -> void:
+	var threshold: StringName = &"population.growth.hunger_emigration_threshold"
+	var recovery: StringName = &"population.growth.hunger_emigration_recovery"
+	for key: StringName in [threshold, recovery]:
+		assert_true(ParameterRanges.BY_KEY.has(key))
+		for value: float in [-0.01, 1.01, INF, NAN]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(key, &"set", value))
+			assert_null(Params.new(_catalog, role).get_value(key))
+			assert_push_error("invalid range" if is_finite(value) else "nonfinite result")
+	for boundary: float in [0.0, 1.0]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.assign([Modifier.new(threshold, &"set", 2), Modifier.new(threshold, &"set", boundary),
+			Modifier.new(recovery, &"set", -1), Modifier.new(recovery, &"set", boundary)])
+		var params: Params = Params.new(_catalog, role)
+		assert_eq(params.get_value(threshold), boundary)
+		assert_eq(params.get_value(recovery), boundary)
+		assert_true(params.validation_errors().is_empty())

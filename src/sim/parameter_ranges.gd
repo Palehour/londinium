@@ -8,6 +8,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"population.growth.hunger_emigration_threshold": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
+	&"population.growth.hunger_emigration_recovery": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.bankruptcy.threshold": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"defeat.hunger.threshold": {

@@ -14,7 +14,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"overcrowding_weight": "number", "smoothing_per_second": "number"},
 		"growth": {"immigration_threshold": "percent", "emigration_threshold": "percent",
 			"immigration_per_minute": "number", "emigration_per_minute": "number",
-			"hunger_emigration_threshold": "fraction", "hunger_emigration_multiplier": "number"},
+			"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
+			"hunger_emigration_multiplier": "number"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
@@ -97,6 +98,11 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if catalog.base_values.has(defeat_key) and catalog.base_values.has(warning_key) \
 			and float(catalog.base_values[defeat_key]) > float(catalog.base_values[warning_key]):
 		_errors.append("economy/defeat.json: defeat.depopulation.defeat_fraction must be <= defeat.depopulation.warning_fraction")
+	var threshold_key: StringName = &"population.growth.hunger_emigration_threshold"
+	var recovery_key: StringName = &"population.growth.hunger_emigration_recovery"
+	if catalog.base_values.has(threshold_key) and catalog.base_values.has(recovery_key) \
+			and float(catalog.base_values[recovery_key]) < float(catalog.base_values[threshold_key]):
+		_errors.append("economy/population.json: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
 	if _errors.is_empty():
 		for role: RoleDef in catalog.roles.values():
 			for message: String in Params.new(catalog, role).validation_errors():

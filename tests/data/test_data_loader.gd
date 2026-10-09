@@ -289,7 +289,7 @@ func test_empty_city_lookahead_and_smoothing_are_validated_in_data() -> void:
 
 
 func test_city_start_and_hunger_parameters_require_valid_data() -> void:
-	for field: String in ["initial_bread", "growth.hunger_emigration_threshold"]:
+	for field: String in ["initial_bread", "growth.hunger_emigration_threshold", "growth.hunger_emigration_recovery"]:
 		before_each()
 		var parts: PackedStringArray = field.split(".")
 		var section: Dictionary = _documents["economy/population.json"]
@@ -300,6 +300,7 @@ func test_city_start_and_hunger_parameters_require_valid_data() -> void:
 	var invalid: Dictionary[String, Array] = {
 		"initial_bread": ["40", true, -1.0, 1.5, 1e30, INF, NAN],
 		"growth.hunger_emigration_threshold": ["0.5", true, -0.01, 1.01, INF, NAN],
+		"growth.hunger_emigration_recovery": ["0.75", true, -0.01, 1.01, INF, NAN],
 	}
 	for field: String in invalid:
 		for value: Variant in invalid[field]:
@@ -314,6 +315,7 @@ func test_city_start_and_hunger_parameters_require_valid_data() -> void:
 		before_each()
 		_documents["economy/population.json"]["initial_bread"] = 0
 		_documents["economy/population.json"]["growth"]["hunger_emigration_threshold"] = threshold
+		_documents["economy/population.json"]["growth"]["hunger_emigration_recovery"] = threshold
 		assert_true(DataLoader.new().load_documents(_documents).is_ok())
 
 
@@ -321,6 +323,7 @@ func test_city_start_and_hunger_parameter_modifiers_validate_final_values() -> v
 	var invalid: Dictionary[String, Array] = {
 		"population.initial_bread": [-1.0, 1.5, 1e30],
 		"population.growth.hunger_emigration_threshold": [-0.1, 1.1],
+		"population.growth.hunger_emigration_recovery": [-0.1, 1.1],
 	}
 	for key: String in invalid:
 		for value: float in invalid[key]:
@@ -331,6 +334,7 @@ func test_city_start_and_hunger_parameter_modifiers_validate_final_values() -> v
 	_documents["roles/neutral_administrator.json"]["modifiers"] = [
 		{"key": "population.initial_bread", "op": "set", "value": 0},
 		{"key": "population.growth.hunger_emigration_threshold", "op": "set", "value": 1},
+		{"key": "population.growth.hunger_emigration_recovery", "op": "set", "value": 1},
 	]
 	var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(loaded.is_ok(), str(loaded.errors))
@@ -338,3 +342,25 @@ func test_city_start_and_hunger_parameter_modifiers_validate_final_values() -> v
 		var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
 		assert_eq(params.get_value(&"population.initial_bread"), 0.0)
 		assert_eq(params.get_value(&"population.growth.hunger_emigration_threshold"), 1.0)
+
+
+func test_hunger_recovery_relation_rejects_base_and_modified_inversions() -> void:
+	_documents["economy/population.json"]["growth"]["hunger_emigration_recovery"] = 0.4
+	_assert_invalid("hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
+	for field: String in ["threshold", "recovery"]:
+		before_each()
+		_set_modifier({"key": "population.growth.hunger_emigration_" + field,
+			"op": "set", "value": 0.8 if field == "threshold" else 0.5})
+		_assert_invalid("after role modifiers")
+
+
+func test_hunger_relation_accepts_final_modifiers_and_equal_boundaries() -> void:
+	for boundary: float in [0.0, 1.0]:
+		before_each()
+		_documents["roles/neutral_administrator.json"]["modifiers"] = [
+			{"key": "population.growth.hunger_emigration_threshold", "op": "set", "value": 2},
+			{"key": "population.growth.hunger_emigration_threshold", "op": "set", "value": boundary},
+			{"key": "population.growth.hunger_emigration_recovery", "op": "set", "value": boundary},
+		]
+		var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
+		assert_true(loaded.is_ok(), str(loaded.errors))
