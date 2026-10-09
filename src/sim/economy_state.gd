@@ -30,6 +30,7 @@ var depopulation: DefeatState = DefeatState.new()
 var defeat_initialized: bool = false
 var defeat_elapsed_seconds: int = 0
 var hunger_smoothed_coverage: float = 1.0
+var hunger_emigration_active: bool = false
 var population_peak: int = 0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
@@ -41,6 +42,7 @@ func to_dict() -> Dictionary:
 		"depopulation": depopulation.to_dict(), "defeat_initialized": defeat_initialized,
 		"defeat_elapsed_seconds": defeat_elapsed_seconds,
 		"hunger_smoothed_coverage": hunger_smoothed_coverage,
+		"hunger_emigration_active": hunger_emigration_active,
 		"population_peak": population_peak, "depopulation_active": depopulation_active,
 		"defeat_causes": defeat_causes.duplicate(),
 		"stocks": stocks.duplicate(),
@@ -73,6 +75,7 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.defeat_initialized = values.get("defeat_initialized", false)
 	result.defeat_elapsed_seconds = values.get("defeat_elapsed_seconds", 0)
 	result.hunger_smoothed_coverage = values.get("hunger_smoothed_coverage", 1.0)
+	result.hunger_emigration_active = values.get("hunger_emigration_active", false)
 	result.population_peak = values.get("population_peak", 0)
 	result.depopulation_active = values.get("depopulation_active", false)
 	for cause: Variant in values.get("defeat_causes", []):

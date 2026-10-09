@@ -4,8 +4,13 @@ extends RefCounted
 
 func tick(state: EconomyState, params: Params) -> void:
 	var free_housing: int = maxi(0, state.housing_capacity - state.population)
-	var hungry: bool = state.hunger_smoothed_coverage \
-		< float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+	if state.hunger_emigration_active:
+		state.hunger_emigration_active = state.hunger_smoothed_coverage \
+			< float(params.get_value(&"population.growth.hunger_emigration_recovery"))
+	else:
+		state.hunger_emigration_active = state.hunger_smoothed_coverage \
+			< float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+	var hungry: bool = state.hunger_emigration_active
 	if not hungry and state.satisfaction >= float(params.get_value(&"population.growth.immigration_threshold")) \
 			and free_housing > 0 and (state.population > 0 or state.bread_coverage > 0.0):
 		state.emigration_fraction = 0.0

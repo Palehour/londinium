@@ -69,11 +69,12 @@ londinium/
    (P-011, pending: only once approved); wheat fields on cultivable cells only.
 4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.
 5. Consumption: bread eaten per person; tea if available (only if P-004 approved); stale bread decays.
-6. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).
-7. Growth: immigration if satisfaction high and housing free; emigration if low.
-8. Money: taxes from employed workers only; minus wages and building upkeep.
-9. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
-10. Stats + snapshot emitted.
+6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
+7. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).
+8. Growth: hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction high and housing free, emigration if low.
+9. Money: taxes from employed workers only; minus wages and building upkeep.
+10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
+11. Stats + snapshot emitted.
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json
