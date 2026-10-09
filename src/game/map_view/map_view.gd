@@ -10,6 +10,7 @@ var _snapshot: Dictionary
 var _building_type: StringName = &""
 var _status: Label
 var _mode: Label
+var _help: Label
 
 
 func _ready() -> void:
@@ -42,16 +43,14 @@ func _ready() -> void:
 		help.add_child(label)
 	_mode = help.get_child(2) as Label
 	_status = help.get_child(3) as Label
+	_help = help.get_child(0) as Label
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
 	panel_mount.name = "PanelMount"
 	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(panel_mount)
-	var labels: Array[String] = []
-	for id: StringName in TYPES:
-		labels.append(presentation.labels[id])
-	(help.get_child(0) as Label).text = Strings.HELP % labels
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
+	_update_help()
 	geometry = MapGeometry.new(Vector2i(session.context.map.width, session.context.map.height), presentation.layout["cell_size"], _map_viewport(), presentation.camera["max_zoom_factor"])
 	_snapshot = session.get_snapshot()
 	session.snapshot_changed.connect(_snapshot_received)
@@ -63,6 +62,15 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
+
+
+func _update_help() -> void:
+	var labels: Array[String] = []
+	for id: StringName in TYPES:
+		var label: String = presentation.labels[id]
+		var reason: String = presentation.building_unavailable_reason(id, session.context.map)
+		labels.append(label if reason.is_empty() else Strings.DISABLED_BUILDING % [label, reason])
+	_help.text = Strings.HELP % labels
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
@@ -110,7 +118,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	var zoom_step: float = presentation.camera["zoom_step"]
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode >= KEY_1 and event.keycode <= KEY_5:
-			_building_type = TYPES[event.keycode - KEY_1]
+			var type: StringName = TYPES[event.keycode - KEY_1]
+			var reason: String = presentation.building_unavailable_reason(type, session.context.map)
+			_building_type = type if reason.is_empty() else &""
+			if not reason.is_empty():
+				_status.text = reason
 		elif event.keycode == KEY_ESCAPE:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):

@@ -57,6 +57,11 @@ func _valid_color(value: Variant) -> bool:
 	return value is String and Color.html_is_valid(value)
 
 
+func building_unavailable_reason(id: StringName, map: MapDef) -> String:
+	# This disables a UI affordance; placement validation still belongs to BuildCommand.
+	return Strings.NO_CULTIVABLE_CELLS if id == &"wheat_field" and map.cultivable_cells.is_empty() else ""
+
+
 func _load_numbers(raw: Variant, keys: Array[String], target: Dictionary[String, float]) -> void:
 	for key: String in keys:
 		var value: Variant = raw.get(key) if raw is Dictionary else null

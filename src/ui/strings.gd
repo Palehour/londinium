@@ -3,7 +3,9 @@ extends RefCounted
 
 const HELP: String = "1 %s · 2 %s · 3 %s · 4 %s · 5 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −"
 const LOADING: String = "Cargando mapa…"
-const LEGEND: String = "Terrenos: tierra · río · cultivable (Whitechapel no tiene casillas cultivables)"
+const LEGEND: String = "Terrenos: tierra · río · cultivable"
+const NO_CULTIVABLE_CELLS: String = "Este mapa no tiene casillas cultivables."
+const DISABLED_BUILDING: String = "%s (desactivado: %s)"
 const SELECT: String = "Selección"
 const MODE: String = "Modo: %s · Casilla: %s"
 const PENDING: String = "Comando pendiente…"
