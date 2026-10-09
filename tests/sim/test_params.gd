@@ -239,7 +239,7 @@ func test_hunger_ranges_and_final_relation_apply_after_modifiers() -> void:
 
 func test_peak_decay_range_applies_to_final_modifier_value() -> void:
 	var key: StringName = &"defeat.depopulation.peak_decay_per_minute"
-	assert_eq(Params.new(_catalog, RoleDef.new()).get_value(key), 0.01)
+	assert_eq(Params.new(_catalog, RoleDef.new()).get_value(key), 0.03)
 	assert_true(ParameterRanges.BY_KEY.has(key))
 	for invalid: float in [-0.01, 1.01, INF, NAN]:
 		var role: RoleDef = RoleDef.new()
