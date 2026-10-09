@@ -88,3 +88,4 @@ func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
 	assert_eq(params.get_value(&"defeat.depopulation.warning_fraction"), 0.5)
 	assert_eq(params.get_value(&"defeat.depopulation.defeat_fraction"), 0.25)
 	assert_eq(params.get_value(&"defeat.depopulation.minimum_population"), 10)
+	assert_eq(params.get_value(&"population.growth.hunger_emigration_multiplier"), 2.0)

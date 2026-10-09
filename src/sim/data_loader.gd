@@ -11,7 +11,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"satisfaction": {"bread_weight": "number", "tax_weight": "number",
 			"overcrowding_weight": "number"},
 		"growth": {"immigration_threshold": "percent", "emigration_threshold": "percent",
-			"immigration_per_minute": "number", "emigration_per_minute": "number"},
+			"immigration_per_minute": "number", "emigration_per_minute": "number",
+			"hunger_emigration_multiplier": "multiplier"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
@@ -135,7 +136,8 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	# JSON numbers arrive as doubles; reject values outside int64 before conversion.
 	if value < 0 or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
 			or (kind.begins_with("positive") and value <= 0) \
-			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100):
+			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
+			or (kind == "multiplier" and value < 1):
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value

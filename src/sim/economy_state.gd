@@ -7,6 +7,22 @@ var population: int = 0
 var buildings: Array[Dictionary] = []
 # Uninitialized market sentinel; zero is a valid saved price.
 var wheat_price: int = -1
+var tax_rate: float = -1.0
+var bread_fraction: float = 0.0
+var bread_demand: float = 0.0
+var bread_consumed: float = 0.0
+var bread_coverage: float = 1.0
+var satisfaction: float = 0.0
+var satisfaction_breakdown: Dictionary[String, float] = {}
+var housing_capacity: int = 0
+var overcrowding: float = 0.0
+var employed: int = 0
+var unemployed: int = 0
+var immigration_fraction: float = 0.0
+var emigration_fraction: float = 0.0
+var tax_fraction: float = 0.0
+var wage_fraction: float = 0.0
+var upkeep_fraction: float = 0.0
 
 
 func to_dict() -> Dictionary:
@@ -15,10 +31,19 @@ func to_dict() -> Dictionary:
 		"money": money,
 		"population": population,
 		"buildings": buildings.duplicate(true),
+		"bread_fraction": bread_fraction, "bread_demand": bread_demand,
+		"bread_consumed": bread_consumed, "bread_coverage": bread_coverage,
+		"satisfaction": satisfaction, "satisfaction_breakdown": satisfaction_breakdown.duplicate(),
+		"housing_capacity": housing_capacity, "overcrowding": overcrowding,
+		"employed": employed, "unemployed": unemployed,
+		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
+		"tax_fraction": tax_fraction, "wage_fraction": wage_fraction, "upkeep_fraction": upkeep_fraction,
 	}
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
 		values["wheat_price"] = wheat_price
+	if tax_rate >= 0.0:
+		values["tax_rate"] = tax_rate
 	return values
 
 
@@ -29,5 +54,21 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.money = values["money"]
 	result.population = values["population"]
 	result.wheat_price = values.get("wheat_price", -1)
+	result.tax_rate = values.get("tax_rate", -1.0)
+	result.bread_fraction = values.get("bread_fraction", 0.0)
+	result.bread_demand = values.get("bread_demand", 0.0)
+	result.bread_consumed = values.get("bread_consumed", 0.0)
+	result.bread_coverage = values.get("bread_coverage", 1.0)
+	result.satisfaction = values.get("satisfaction", 0.0)
+	result.satisfaction_breakdown.assign(values.get("satisfaction_breakdown", {}))
+	result.housing_capacity = values.get("housing_capacity", 0)
+	result.overcrowding = values.get("overcrowding", 0.0)
+	result.employed = values.get("employed", 0)
+	result.unemployed = values.get("unemployed", 0)
+	result.immigration_fraction = values.get("immigration_fraction", 0.0)
+	result.emigration_fraction = values.get("emigration_fraction", 0.0)
+	result.tax_fraction = values.get("tax_fraction", 0.0)
+	result.wage_fraction = values.get("wage_fraction", 0.0)
+	result.upkeep_fraction = values.get("upkeep_fraction", 0.0)
 	result.buildings.assign(values["buildings"].duplicate(true))
 	return result

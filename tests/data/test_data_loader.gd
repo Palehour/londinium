@@ -180,3 +180,16 @@ func _load_file_fixture(text: String) -> DataLoadResult:
 		DirAccess.remove_absolute(FIXTURE_ROOT.path_join(folder))
 	DirAccess.remove_absolute(FIXTURE_ROOT)
 	return result
+
+
+func test_hunger_multiplier_is_required_finite_and_at_least_one() -> void:
+	before_each()
+	_documents["economy/population.json"]["growth"].erase("hunger_emigration_multiplier")
+	_assert_invalid("hunger_emigration_multiplier: missing field")
+	for value: float in [0.99, -1.0, INF, NAN]:
+		before_each()
+		_documents["economy/population.json"]["growth"]["hunger_emigration_multiplier"] = value
+		_assert_invalid("hunger_emigration_multiplier:")
+	before_each()
+	_documents["economy/population.json"]["growth"]["hunger_emigration_multiplier"] = 1.0
+	assert_true(DataLoader.new().load_documents(_documents).is_ok())
