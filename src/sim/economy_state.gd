@@ -5,6 +5,7 @@ var stocks: Dictionary[StringName, int] = {}
 var money: int = 0
 var population: int = 0
 var buildings: Array[Dictionary] = []
+var wheat_price: int = 0
 
 
 func to_dict() -> Dictionary:
@@ -13,6 +14,7 @@ func to_dict() -> Dictionary:
 		"money": money,
 		"population": population,
 		"buildings": buildings.duplicate(true),
+		"wheat_price": wheat_price,
 	}
 
 
@@ -22,5 +24,6 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.stocks.assign(values["stocks"])
 	result.money = values["money"]
 	result.population = values["population"]
+	result.wheat_price = values["wheat_price"]
 	result.buildings.assign(values["buildings"].duplicate(true))
 	return result
