@@ -235,3 +235,18 @@ func test_hunger_ranges_and_final_relation_apply_after_modifiers() -> void:
 		assert_eq(params.get_value(threshold), boundary)
 		assert_eq(params.get_value(recovery), boundary)
 		assert_true(params.validation_errors().is_empty())
+
+
+func test_peak_decay_range_applies_to_final_modifier_value() -> void:
+	var key: StringName = &"defeat.depopulation.peak_decay_per_minute"
+	assert_eq(Params.new(_catalog, RoleDef.new()).get_value(key), 0.01)
+	assert_true(ParameterRanges.BY_KEY.has(key))
+	for invalid: float in [-0.01, 1.01, INF, NAN]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", invalid))
+		assert_null(Params.new(_catalog, role).get_value(key))
+		assert_push_error("invalid range" if is_finite(invalid) else "nonfinite result")
+	for boundary: float in [0.0, 1.0]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.assign([Modifier.new(key, &"set", 2), Modifier.new(key, &"set", boundary)])
+		assert_eq(Params.new(_catalog, role).get_value(key), boundary)

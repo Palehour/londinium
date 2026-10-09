@@ -45,14 +45,16 @@ func test_empty_city_loses_at_480_with_no_historical_peak() -> void:
 	assert_eq(state["depopulation"]["elapsed_seconds"], 179)
 	state = _ticks(sim, 1)
 	assert_eq(state["defeat_causes"], [&"depopulation"])
-	assert_eq(state["population_peak"], 0)
+	assert_eq(state["population_peak"], 0.0)
 	assert_false(state["depopulation_active"])
 
 
 func test_small_peak_empty_city_recovers_and_restarts_full_timer() -> void:
 	var state: EconomyState = EconomyState.new()
 	state.population = 9
-	var params: Params = _with({&"defeat.grace_seconds": 0})
+	# Isolate the empty-city timer from peak decay.
+	var params: Params = _with({&"defeat.grace_seconds": 0,
+		&"defeat.depopulation.peak_decay_per_minute": 0})
 	var system: DefeatSystem = DefeatSystem.new()
 	system.initialize(state, params)
 	state.population = 0
@@ -70,7 +72,7 @@ func test_small_peak_empty_city_recovers_and_restarts_full_timer() -> void:
 	assert_true(state.defeat_causes.is_empty())
 	system.tick(state, params)
 	assert_eq(state.defeat_causes, [&"depopulation"])
-	assert_eq(state.population_peak, 9)
+	assert_eq(state.population_peak, 9.0)
 
 
 func test_bankruptcy_earliest_defeat_remains_480() -> void:

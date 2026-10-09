@@ -4,7 +4,8 @@ const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
 
 
 func test_defeat_parameters_are_required_and_validate_ranges() -> void:
-	for field: String in ["grace_seconds", "hunger.smoothing", "depopulation.duration_seconds"]:
+	for field: String in ["grace_seconds", "hunger.smoothing", "depopulation.duration_seconds",
+			"depopulation.peak_decay_per_minute"]:
 		before_each()
 		var parts: PackedStringArray = field.split(".")
 		var section: Dictionary = _documents["economy/defeat.json"]
@@ -16,6 +17,7 @@ func test_defeat_parameters_are_required_and_validate_ranges() -> void:
 		"grace_seconds": [-1.0, INF, NAN],
 		"hunger.smoothing": [0.0, -0.1, 1.01, INF, NAN],
 		"depopulation.duration_seconds": [0.0, -1.0, 1.5, INF, NAN],
+		"depopulation.peak_decay_per_minute": [-0.01, 1.01, INF, NAN],
 	}
 	for field: String in invalid:
 		for value: float in invalid[field]:
@@ -364,3 +366,29 @@ func test_hunger_relation_accepts_final_modifiers_and_equal_boundaries() -> void
 		]
 		var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
 		assert_true(loaded.is_ok(), str(loaded.errors))
+
+
+func test_peak_decay_schema_and_final_modifier_validation() -> void:
+	var key: String = "defeat.depopulation.peak_decay_per_minute"
+	for invalid: Variant in ["0.01", null, true]:
+		before_each()
+		_documents["economy/defeat.json"]["depopulation"]["peak_decay_per_minute"] = invalid
+		_assert_invalid("peak_decay_per_minute:")
+	for boundary: float in [0.0, 1.0]:
+		before_each()
+		_documents["economy/defeat.json"]["depopulation"]["peak_decay_per_minute"] = boundary
+		assert_true(DataLoader.new().load_documents(_documents).is_ok())
+	for invalid: float in [-0.01, 1.01]:
+		before_each()
+		_set_modifier({"key": key, "op": "set", "value": invalid})
+		_assert_invalid("Params: invalid range for '%s'" % key)
+	before_each()
+	_documents["roles/neutral_administrator.json"]["modifiers"] = [
+		{"key": key, "op": "set", "value": 2.0},
+		{"key": key, "op": "mul", "value": 0.25},
+	]
+	var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	if loaded.is_ok():
+		var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+		assert_eq(params.get_value(StringName(key)), 0.5)
