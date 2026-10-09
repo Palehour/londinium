@@ -15,6 +15,7 @@ var _consumption: ConsumptionSystem = ConsumptionSystem.new()
 var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
 var _growth: GrowthSystem = GrowthSystem.new()
 var _money: MoneySystem = MoneySystem.new()
+var _defeat: DefeatSystem = DefeatSystem.new()
 
 
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
@@ -32,13 +33,19 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_satisfaction.update_target(_state, _params, _context)
 	if _context != null:
 		WorkersSystem.refresh_counts(_state)
+		_defeat.initialize(_state, _params)
 
 
 func apply_command(command: SimulationCommand) -> void:
+	if not _state.defeat_causes.is_empty():
+		_reject_after_defeat(command)
+		return
 	_commands.append(command)
 
 
 func tick() -> void:
+	if not _state.defeat_causes.is_empty():
+		return
 	# Detach the batch so commands queued during execution wait until the next tick.
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
@@ -55,6 +62,16 @@ func tick() -> void:
 		_satisfaction.tick(_state, _params, _context)
 		_growth.tick(_state, _params)
 		_money.tick(_state, _params)
+		_defeat.tick(_state, _params)
+		if not _state.defeat_causes.is_empty():
+			for command: SimulationCommand in _commands:
+				_reject_after_defeat(command)
+			_commands.clear()
+
+
+func _reject_after_defeat(command: SimulationCommand) -> void:
+	command.accepted = false
+	command.reason = &"simulation_defeated"
 
 
 func get_rng_state() -> int:

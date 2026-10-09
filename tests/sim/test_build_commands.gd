@@ -34,7 +34,7 @@ func before_each() -> void:
 
 
 func _sim() -> Simulation:
-	return Simulation.new(_params, _initial, 123, _context)
+	return SimTestParams.isolated_simulation(_params, _initial, 123, _context)
 
 
 func _reject(id: StringName, cell: Vector2i, expected_reason: StringName) -> void:

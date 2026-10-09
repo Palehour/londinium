@@ -1,0 +1,53 @@
+class_name DefeatSystem
+extends RefCounted
+
+
+func initialize(state: EconomyState, params: Params) -> void:
+	if state.defeat_initialized:
+		return
+	state.defeat_initialized = true
+	state.hunger_smoothed_coverage = state.bread_coverage
+	_update_population_history(state, params)
+
+
+func tick(state: EconomyState, params: Params) -> void:
+	if not state.defeat_causes.is_empty():
+		return
+	initialize(state, params)
+	state.defeat_elapsed_seconds += 1
+	state.hunger_smoothed_coverage += (state.bread_coverage - state.hunger_smoothed_coverage) \
+		* float(params.get_value(&"defeat.hunger.smoothing"))
+	_update_population_history(state, params)
+	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
+	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
+	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
+		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
+	var hungry: bool = state.population > 0 and state.hunger_smoothed_coverage \
+		< float(params.get_value(&"defeat.hunger.threshold"))
+	_update(state.hunger, &"hunger", hungry, hungry, counting,
+		float(params.get_value(&"defeat.hunger.duration_seconds")))
+	var below_minimum: bool = state.population < int(params.get_value(&"defeat.depopulation.minimum_population"))
+	var warning: bool = state.depopulation_active and (below_minimum or state.population \
+		< state.population_peak * float(params.get_value(&"defeat.depopulation.warning_fraction")))
+	var critical: bool = state.depopulation_active and (below_minimum or state.population \
+		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction")))
+	_update(state.depopulation, &"depopulation", warning, critical, counting,
+		float(params.get_value(&"defeat.depopulation.duration_seconds")))
+	for condition: DefeatState in [state.bankruptcy, state.hunger, state.depopulation]:
+		if condition.status == &"defeat":
+			state.defeat_causes.append(condition.cause)
+
+
+func _update_population_history(state: EconomyState, params: Params) -> void:
+	state.population_peak = maxi(state.population_peak, state.population)
+	if state.population_peak >= int(params.get_value(&"defeat.depopulation.minimum_population")):
+		state.depopulation_active = true
+
+
+func _update(condition: DefeatState, cause: StringName, warning: bool,
+		critical: bool, counting: bool, duration: float) -> void:
+	condition.elapsed_seconds = condition.elapsed_seconds + 1 if counting and critical else 0
+	condition.status = &"warning" if warning else &"ok"
+	condition.cause = cause if warning else &""
+	if counting and critical and condition.elapsed_seconds >= duration:
+		condition.status = &"defeat"

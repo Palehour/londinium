@@ -65,6 +65,24 @@ func test_unknown_key_is_an_error_not_zero() -> void:
 	assert_push_error("Params: unknown key 'missing.key'")
 
 
+func test_defeat_ranges_apply_to_role_modifiers() -> void:
+	var invalid: Dictionary[StringName, Array] = {
+		&"defeat.grace_seconds": [-1.0],
+		&"defeat.hunger.smoothing": [0.0, -0.1, 1.01],
+		&"defeat.depopulation.duration_seconds": [0.0, -1.0, 1.5],
+	}
+	for key: StringName in invalid:
+		for value: float in invalid[key]:
+			var role: RoleDef = RoleDef.new()
+			role.modifiers.append(Modifier.new(key, &"set", value))
+			assert_null(Params.new(_catalog, role).get_value(key))
+			assert_push_error("Params: invalid range for '%s'" % key)
+	for key: StringName in invalid:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.assign([Modifier.new(key, &"set", -1), Modifier.new(key, &"add", 2)])
+		assert_eq(Params.new(_catalog, role).get_value(key), 1.0)
+
+
 func test_invalid_synthetic_operation_is_an_error() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"market.wheat.base_price", &"divide", 2))

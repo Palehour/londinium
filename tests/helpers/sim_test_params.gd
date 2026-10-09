@@ -2,6 +2,19 @@ class_name SimTestParams
 extends RefCounted
 
 
+class InactiveDefeatSystem extends DefeatSystem:
+	func tick(_state: EconomyState, _params: Params) -> void:
+		# Construction fixtures assert command effects independently of elapsed time.
+		pass
+
+
+static func isolated_simulation(params: Params, state: EconomyState, seed_value: int,
+		context: EconomyContext) -> Simulation:
+	var sim: Simulation = Simulation.new(params, state, seed_value, context)
+	sim._defeat = InactiveDefeatSystem.new()
+	return sim
+
+
 static func isolated_params(catalog: DataCatalog, role: RoleDef = null) -> Params:
 	# These fixtures test production/building rules independently of needs and finance.
 	var isolated: RoleDef = RoleDef.new()

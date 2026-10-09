@@ -20,9 +20,10 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"max_price": "money", "price_update_seconds": "positive_integer"}},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
-		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer"},
+		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
-			"minimum_population": "integer"},
+			"minimum_population": "integer", "duration_seconds": "positive_integer"},
+		"grace_seconds": "number",
 	},
 }
 

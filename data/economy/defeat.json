@@ -1,5 +1,6 @@
 {
   "bankruptcy": { "threshold": 0, "duration_seconds": 180 },
-  "hunger": { "threshold": 0.5, "duration_seconds": 180 },
-  "depopulation": { "warning_fraction": 0.5, "defeat_fraction": 0.25, "minimum_population": 10 }
+  "hunger": { "threshold": 0.5, "duration_seconds": 180, "smoothing": 0.1 },
+  "depopulation": { "warning_fraction": 0.5, "defeat_fraction": 0.25, "minimum_population": 10, "duration_seconds": 180 },
+  "grace_seconds": 300
 }

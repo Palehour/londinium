@@ -2,6 +2,35 @@ extends GutTest
 
 const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
 
+
+func test_defeat_parameters_are_required_and_validate_ranges() -> void:
+	for field: String in ["grace_seconds", "hunger.smoothing", "depopulation.duration_seconds"]:
+		before_each()
+		var parts: PackedStringArray = field.split(".")
+		var section: Dictionary = _documents["economy/defeat.json"]
+		if parts.size() == 2:
+			section = section[parts[0]]
+		section.erase(parts[-1])
+		_assert_invalid(parts[-1] + ": missing field")
+	var invalid: Dictionary[String, Array] = {
+		"grace_seconds": [-1.0, INF, NAN],
+		"hunger.smoothing": [0.0, -0.1, 1.01, INF, NAN],
+		"depopulation.duration_seconds": [0.0, -1.0, 1.5, INF, NAN],
+	}
+	for field: String in invalid:
+		for value: float in invalid[field]:
+			before_each()
+			var parts: PackedStringArray = field.split(".")
+			var section: Dictionary = _documents["economy/defeat.json"]
+			if parts.size() == 2:
+				section = section[parts[0]]
+			section[parts[-1]] = value
+			_assert_invalid(parts[-1] + ":")
+	before_each()
+	_documents["economy/defeat.json"]["grace_seconds"] = 0
+	_documents["economy/defeat.json"]["hunger"]["smoothing"] = 1
+	assert_true(DataLoader.new().load_documents(_documents).is_ok())
+
 var _documents: Dictionary[String, Dictionary] = {}
 
 

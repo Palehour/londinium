@@ -2,6 +2,12 @@ class_name ParameterRanges
 extends RefCounted
 
 const BY_KEY: Dictionary[StringName, Dictionary] = {
+	&"defeat.hunger.smoothing": {
+		"min": 0.0, "max": 1.0, "min_inclusive": false, "max_inclusive": true},
+	&"defeat.grace_seconds": {
+		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
+	&"defeat.depopulation.duration_seconds": {
+		"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": true},
 	&"population.growth.hunger_emigration_multiplier": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"population.empty_city_bread_lookahead_seconds": {
@@ -12,6 +18,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 
 
 static func is_valid(key: StringName, value: float) -> bool:
+	if key == &"defeat.depopulation.duration_seconds" and value != floor(value):
+		return false
 	if not BY_KEY.has(key):
 		return true
 	var bounds: Dictionary = BY_KEY[key]
