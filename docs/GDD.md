@@ -61,7 +61,9 @@ La partida se puede perder. Cada condición tiene un aviso previo, para que la c
 |---|---|---|
 | Quiebra | El tesoro queda en negativo | El tesoro sigue en negativo 3 minutos seguidos |
 | Motín de hambre | Menos del 50 % del pan cubierto | Menos del 50 % del pan cubierto durante 3 minutos seguidos |
-| Despoblación | La población cae por debajo del 50 % de su pico (el pico baja despacio mientras la ciudad está estable) | La población permanece por debajo del 25 % de su pico (el pico baja despacio mientras la ciudad está estable), o a menos de 10 habitantes, durante 180 s seguidos |
+| Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |
+
+Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y la satisfacción no está por debajo del umbral de emigración. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación.
 
 Los umbrales y los tiempos son placeholders para balancear.
 

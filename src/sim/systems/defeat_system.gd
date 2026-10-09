@@ -64,7 +64,8 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 
 func _is_city_stable(state: EconomyState, params: Params) -> bool:
 	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
-		>= float(params.get_value(&"population.growth.hunger_emigration_threshold"))
+		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) \
+		and state.satisfaction >= float(params.get_value(&"population.growth.emigration_threshold"))
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:
