@@ -17,6 +17,10 @@ func use_context(context: EconomyContext) -> void:
 		_context = context
 
 
+func release_context() -> void:
+	_context = null
+
+
 func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
 	accepted = false
 	reason = _validate(state, params)

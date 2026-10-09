@@ -10,6 +10,11 @@ class CopyCountingContext extends EconomyContext:
 		return super.copy()
 
 
+class InspectingBuildCommand extends BuildCommand:
+	func retained_context() -> EconomyContext:
+		return _context
+
+
 var _catalog: DataCatalog
 var _params: Params
 var _context: EconomyContext
@@ -222,3 +227,38 @@ func test_build_commands_share_simulation_context_without_per_command_copies() -
 	assert_true(wharf.accepted)
 	assert_true(mill.accepted)
 	assert_eq(context.copies, 1)
+
+
+func test_completed_build_releases_context_on_success_and_rejection() -> void:
+	var context: CopyCountingContext = CopyCountingContext.new(_catalog,
+		_catalog.maps[&"whitechapel_1850s"])
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	var command: InspectingBuildCommand = InspectingBuildCommand.new(context,
+		&"bakery", Vector2i(1, 1))
+	sim.apply_command(command)
+	sim.tick()
+	assert_true(command.accepted)
+	assert_null(command.retained_context())
+	var accessible: EconomyContext = command.retained_context()
+	if accessible == null:
+		accessible = context
+	accessible.map.river_cells.clear()
+	accessible.buildings[&"mill"].tags.append("river")
+	var wharf: InspectingBuildCommand = InspectingBuildCommand.new(context,
+		&"wharf", Vector2i(0, 7))
+	var mill: InspectingBuildCommand = InspectingBuildCommand.new(context,
+		&"mill", Vector2i(2, 1))
+	var rejected: InspectingBuildCommand = InspectingBuildCommand.new(context,
+		&"wheat_field", Vector2i(3, 1))
+	sim.apply_command(wharf)
+	sim.apply_command(mill)
+	sim.apply_command(rejected)
+	sim.tick()
+	assert_true(wharf.accepted)
+	assert_true(mill.accepted)
+	assert_false(rejected.accepted)
+	assert_eq(rejected.reason, &"not_cultivable")
+	assert_null(wharf.retained_context())
+	assert_null(mill.retained_context())
+	assert_null(rejected.retained_context(), "Early rejection also releases the context")
+	assert_eq(context.copies, 1, "No context copies per command")

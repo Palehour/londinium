@@ -19,6 +19,7 @@ class RandomStockCommand extends SimulationCommand:
 class ContextProbeCommand extends SimulationCommand:
 	var context: EconomyContext
 	var context_received: bool = false
+	var executed_context_id: int = 0
 
 
 	func use_context(value: EconomyContext) -> void:
@@ -28,6 +29,7 @@ class ContextProbeCommand extends SimulationCommand:
 
 	func execute(_state: EconomyState, _params: Params, _rng: RandomNumberGenerator) -> void:
 		accepted = context_received
+		executed_context_id = context.get_instance_id() if context != null else 0
 
 
 class EnqueueCommand extends SimulationCommand:
@@ -221,9 +223,13 @@ func test_any_command_receives_shared_simulation_context_before_execution() -> v
 	sim.tick()
 	assert_true(first.accepted)
 	assert_true(second.accepted)
-	assert_not_null(first.context)
-	assert_eq(first.context, second.context, "Commands receive the same reference")
-	assert_ne(first.context, context, "The simulation still owns one isolated context")
+	assert_ne(first.executed_context_id, 0, "Execution received a non-null context")
+	assert_eq(first.executed_context_id, second.executed_context_id,
+		"Commands receive the same reference during execution")
+	assert_ne(first.executed_context_id, context.get_instance_id(),
+		"The simulation still owns one isolated context")
+	assert_null(first.context)
+	assert_null(second.context)
 
 
 func test_common_command_interface_accepts_absent_context() -> void:
@@ -234,3 +240,32 @@ func test_common_command_interface_accepts_absent_context() -> void:
 	assert_true(command.accepted)
 	assert_true(command.context_received)
 	assert_null(command.context)
+
+
+func test_completed_command_cannot_mutate_simulation_map_or_catalog() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog,
+		loaded.catalog.maps[&"whitechapel_1850s"])
+	_initial.money = 10000
+	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
+	var command: ContextProbeCommand = ContextProbeCommand.new()
+	sim.apply_command(command)
+	sim.tick()
+	assert_null(command.context, "The borrowed context must be released after execute")
+	# Corrupt any retained reference; otherwise mutate the caller's available context.
+	var accessible: EconomyContext = command.context if command.context != null else context
+	accessible.map.river_cells.clear()
+	accessible.map.cultivable_cells.append(Vector2i(3, 1))
+	accessible.buildings[&"mill"].tags.append("river")
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 7))
+	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(1, 1))
+	var field: BuildCommand = BuildCommand.new(context, &"wheat_field", Vector2i(3, 1))
+	sim.apply_command(wharf)
+	sim.apply_command(mill)
+	sim.apply_command(field)
+	sim.tick()
+	assert_true(wharf.accepted, "Original river cells survive external mutations")
+	assert_true(mill.accepted, "Original catalog still permits mills on land")
+	assert_false(field.accepted, "Whitechapel still has no cultivable cells")
+	assert_eq(field.reason, &"not_cultivable")

@@ -35,6 +35,7 @@ func tick() -> void:
 	for command: SimulationCommand in pending:
 		command.use_context(_context)
 		command.execute(_state, _params, _rng)
+		command.release_context()
 	_tick_count += 1
 	if _context != null:
 		_workers.tick(_state, _params)
