@@ -64,7 +64,7 @@ func test_exact_thresholds_and_neutral_interval() -> void:
 	assert_eq(_state.population, 10)
 
 
-func test_hunger_does_not_emigrate_above_threshold_and_scales_partial_shortage() -> void:
+func test_coverage_dip_without_hunger_does_not_emigrate_but_low_satisfaction_uses_base_rate() -> void:
 	_state.housing_capacity = 20
 	_state.satisfaction = 40.0
 	_state.bread_coverage = 0.5
@@ -74,7 +74,7 @@ func test_hunger_does_not_emigrate_above_threshold_and_scales_partial_shortage()
 	_state.satisfaction = 20.0
 	for index: int in range(60):
 		GrowthSystem.new().tick(_state, _params)
-	assert_eq(_state.population, 4)
+	assert_eq(_state.population, 6)
 
 
 func test_blocked_and_reversed_growth_discard_pending_fractions() -> void:
@@ -214,3 +214,44 @@ func test_target_recovery_cuts_emigration_and_discards_fraction_immediately() ->
 	GrowthSystem.new().tick(_state, _params)
 	assert_eq(_state.emigration_fraction, 0.0)
 	assert_eq(_state.population, 10)
+
+
+func test_coverage_dip_without_active_hunger_keeps_satisfaction_emigration_at_base_rate() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	for multiplier: float in [2.0, 3.0]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(&"population.growth.hunger_emigration_multiplier", &"set", multiplier))
+		var params: Params = Params.new(loaded.catalog, role)
+		var state: EconomyState = EconomyState.new()
+		state.population = 20
+		state.satisfaction = 20.0
+		state.satisfaction_target = 20.0
+		state.bread_coverage = 0.5
+		state.hunger_smoothed_coverage = 0.8
+		GrowthSystem.new().tick(state, params)
+		assert_false(state.hunger_emigration_active)
+		assert_almost_eq(state.emigration_fraction, 4.0 / 60.0, 0.00000001)
+		for index: int in range(59):
+			GrowthSystem.new().tick(state, params)
+		assert_eq(state.population, 16)
+
+
+func test_active_hunger_still_multiplies_departures_during_partial_shortage() -> void:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	for multiplier: float in [2.0, 3.0]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(&"population.growth.hunger_emigration_multiplier", &"set", multiplier))
+		var params: Params = Params.new(loaded.catalog, role)
+		var state: EconomyState = EconomyState.new()
+		state.population = 20
+		state.satisfaction = 100.0
+		state.satisfaction_target = 100.0
+		state.bread_coverage = 0.5
+		state.hunger_smoothed_coverage = 0.5
+		GrowthSystem.new().tick(state, params)
+		assert_true(state.hunger_emigration_active)
+		var rate: float = 4.0 * (1.0 + (multiplier - 1.0) * 0.5)
+		assert_almost_eq(state.emigration_fraction, rate / 60.0, 0.00000001)
+		for index: int in range(59):
+			GrowthSystem.new().tick(state, params)
+		assert_eq(state.population, 20 - int(rate))

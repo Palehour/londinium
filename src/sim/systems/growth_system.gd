@@ -22,9 +22,10 @@ func tick(state: EconomyState, params: Params) -> void:
 	elif (hungry or is_satisfaction_emigration_active(state, params)) \
 			and state.population > 0:
 		state.immigration_fraction = 0.0
-		var multiplier: float = float(params.get_value(&"population.growth.hunger_emigration_multiplier"))
-		var rate: float = float(params.get_value(&"population.growth.emigration_per_minute")) \
-			* (1.0 + (multiplier - 1.0) * (1.0 - state.bread_coverage))
+		var rate: float = float(params.get_value(&"population.growth.emigration_per_minute"))
+		if hungry:
+			var multiplier: float = float(params.get_value(&"population.growth.hunger_emigration_multiplier"))
+			rate *= 1.0 + (multiplier - 1.0) * (1.0 - state.bread_coverage)
 		state.emigration_fraction += rate / 60.0
 		var departures: int = mini(state.population, ProductionSystem.whole_units(state.emigration_fraction))
 		state.population -= departures

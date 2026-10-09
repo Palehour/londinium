@@ -105,15 +105,18 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 			sim.tick()
 			var current: Dictionary = sim.snapshot()["economy"]
 			if tax == 1.0:
-				if float(current["emigration_fraction"]) > 0.0:
+				var active: bool = bool(current["hunger_emigration_active"]) or (float(current["satisfaction"]) < 30.0 and float(current["satisfaction_target"]) < 30.0)
+				if active:
 					saw_emigration = true
+					stabilization_tick = -1
 				elif saw_emigration and stabilization_tick < 0:
-					# Stabilization is the first tick that clears departures after the crisis.
+					# Record the start of the final uninterrupted stable period.
 					stabilization_tick = index + 301
-				if index + 301 >= 531:
-					assert_eq(current["population"], 13)
+				if index + 301 >= 468:
+					assert_eq(current["population"], 19)
 					assert_eq(current["satisfaction_target"], 30.0)
-					assert_eq(current["satisfaction"], 30.0)
+					if index + 301 >= 531:
+						assert_eq(current["satisfaction"], 30.0)
 					assert_eq(current["emigration_fraction"], 0.0)
 					assert_false(current["hunger_emigration_active"])
 			assert_true(current["defeat_causes"].is_empty())
@@ -130,13 +133,13 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 		assert_eq(final_state["depopulation"]["status"], &"ok")
 		if tax == 1.0:
 			assert_true(saw_emigration, "The real chain must exercise the satisfaction crisis")
-			assert_eq(stabilization_tick, 531)
-			assert_eq(final_state["population"], 13)
+			assert_eq(stabilization_tick, 468)
+			assert_eq(final_state["population"], 19)
 			assert_eq(final_state["satisfaction_target"], 30.0)
 			assert_eq(final_state["satisfaction"], 30.0)
 		else:
 			assert_eq(final_state["population"], 20)
-			assert_almost_eq(float(final_state["satisfaction_target"]), 33.905457256015382, 0.00000001)
+			assert_almost_eq(float(final_state["satisfaction_target"]), 33.743789163801793, 0.00000001)
 
 
 func test_coverage_snap_strict_boundary_from_both_sides_and_role_modifier() -> void:
@@ -156,19 +159,55 @@ func test_coverage_snap_strict_boundary_from_both_sides_and_role_modifier() -> v
 
 
 func test_coverage_snap_real_epsilon_and_snapshot_continuation() -> void:
-	assert_eq(_params.get_value(&"population.hunger_coverage_snap_epsilon"), 0.000001)
+	assert_eq(_params.get_value(&"population.hunger_coverage_snap_epsilon"), 0.01)
 	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
 	for target: float in [0.0, 1.0]:
 		var state: EconomyState = EconomyState.new()
 		state.defeat_initialized = true
 		state.bread_coverage = target
 		state.hunger_smoothed_coverage = 1.0 - target
-		for index: int in range(100):
+		for index: int in range(30):
 			DefeatSystem.new().update_hunger_coverage(state, params)
+		assert_ne(state.hunger_smoothed_coverage, target, "Save before the default snap occurs")
 		var restored: EconomyState = EconomyState.from_dict(state.to_dict())
 		assert_eq(restored.hunger_smoothed_coverage, state.hunger_smoothed_coverage)
-		for index: int in range(40):
+		for index: int in range(20):
 			DefeatSystem.new().update_hunger_coverage(state, params)
 			DefeatSystem.new().update_hunger_coverage(restored, params)
 			assert_eq(restored.to_dict(), state.to_dict())
+			if index >= 13:
+				assert_eq(state.hunger_smoothed_coverage, target, "Default snap occurs exactly at tick 44")
+			else:
+				assert_ne(state.hunger_smoothed_coverage, target)
 		assert_eq(state.hunger_smoothed_coverage, target)
+
+
+func test_real_chain_with_one_house_and_maximum_tax_finishes_with_26_residents() -> void:
+	var state: EconomyState = EconomyState.new()
+	state.population = 30
+	state.money = 10000
+	var sim: Simulation = Simulation.create_new(_params, state, 42, _context)
+	var commands: Array[BuildCommand] = [
+		BuildCommand.new(_context, &"wharf", Vector2i(0, 7)),
+		BuildCommand.new(_context, &"mill", Vector2i(0, 0)),
+		BuildCommand.new(_context, &"bakery", Vector2i(1, 0)),
+		BuildCommand.new(_context, &"housing", Vector2i(2, 0))]
+	for command: BuildCommand in commands:
+		sim.apply_command(command)
+	for index: int in range(300):
+		sim.tick()
+	for command: BuildCommand in commands:
+		assert_true(command.accepted)
+	var change_tax: SetTaxCommand = SetTaxCommand.new(1.0)
+	sim.apply_command(change_tax)
+	for index: int in range(3300):
+		sim.tick()
+		var current: Dictionary = sim.snapshot()["economy"]
+		assert_true(current["defeat_causes"].is_empty())
+		assert_gt(current["population"], 0)
+		assert_eq(current["housing_capacity"], 20)
+		if index >= 2700:
+			assert_eq(current["population"], 26)
+	assert_true(change_tax.accepted)
+	assert_eq(sim.snapshot()["tick_count"], 3600)
+	assert_eq(sim.snapshot()["economy"]["population"], 26)
