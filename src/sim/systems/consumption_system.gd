@@ -5,8 +5,10 @@ extends RefCounted
 func tick(state: EconomyState, params: Params) -> void:
 	state.bread_demand = state.population * float(params.get_value(
 		&"population.bread_per_person_per_minute")) / 60.0
+	state.bread_demand_tick = state.bread_demand
 	var available: float = float(state.stocks.get(&"bread", 0)) + state.bread_fraction
 	state.bread_consumed = minf(available, state.bread_demand)
+	state.bread_consumed_tick = state.bread_consumed
 	state.bread_coverage = coverage(state, params)
 	var decay: float = float(params.get_value(&"population.bread_decay_fraction_per_minute"))
 	var remaining: float = maxf(0.0, available - state.bread_consumed) * pow(1.0 - decay, 1.0 / 60.0)

@@ -34,6 +34,27 @@ var hunger_emigration_active: bool = false
 var population_peak: float = 0.0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
+var wheat_purchases_enabled: bool = true
+# Per-tick flows feed the stats window; they are transient and never saved.
+var bread_produced_tick: int = 0
+var bread_consumed_tick: float = 0.0
+var bread_demand_tick: float = 0.0
+var taxes_tick: int = 0
+var wages_tick: int = 0
+var upkeep_tick: int = 0
+var wheat_spent_tick: int = 0
+var construction_spent_tick: int = 0
+
+
+func reset_flows() -> void:
+	bread_produced_tick = 0
+	bread_consumed_tick = 0.0
+	bread_demand_tick = 0.0
+	taxes_tick = 0
+	wages_tick = 0
+	upkeep_tick = 0
+	wheat_spent_tick = 0
+	construction_spent_tick = 0
 
 
 func to_dict() -> Dictionary:
@@ -45,6 +66,7 @@ func to_dict() -> Dictionary:
 		"hunger_emigration_active": hunger_emigration_active,
 		"population_peak": population_peak, "depopulation_active": depopulation_active,
 		"defeat_causes": defeat_causes.duplicate(),
+		"wheat_purchases_enabled": wheat_purchases_enabled,
 		"stocks": stocks.duplicate(),
 		"money": money,
 		"population": population,
@@ -78,6 +100,7 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.hunger_emigration_active = values.get("hunger_emigration_active", false)
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
+	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
 	for cause: Variant in values.get("defeat_causes", []):
 		result.defeat_causes.append(StringName(cause))
 	result.stocks.assign(values["stocks"])

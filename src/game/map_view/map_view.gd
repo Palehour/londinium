@@ -11,6 +11,7 @@ var _building_type: StringName = &""
 var _status: Label
 var _mode: Label
 var _help: Label
+var _stats_panel: StatsPanel
 
 
 func _ready() -> void:
@@ -63,6 +64,7 @@ func _ready() -> void:
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
 	panel_mount.name = "PanelMount"
+	panel_mount.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(panel_mount)
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
@@ -75,6 +77,16 @@ func _ready() -> void:
 	clock.simulation = session.simulation
 	clock.tick_advanced.connect(session.publish_tick)
 	add_child(clock)
+	_stats_panel = StatsPanel.new()
+	_stats_panel.name = "StatsPanel"
+	_stats_panel.setup(session, clock)
+	_stats_panel.apply_style(presentation.ui_colors["header"], presentation.ui_colors["alert"], presentation.layout["panel_margin"])
+	# Anchored to the right edge, so window resizes keep it in place without manual layout.
+	_stats_panel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	_stats_panel.offset_left = -presentation.layout["panel_width"]
+	_stats_panel.restart_requested.connect(_restart_session)
+	panel_mount.add_child(_stats_panel)
+	_stats_panel.update_snapshot(_snapshot)
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
@@ -103,7 +115,7 @@ func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
 
 func _map_viewport() -> Vector2:
 	var size: Vector2 = get_viewport_rect().size
-	return Vector2(maxf(size.x, 1.0), maxf(size.y - presentation.layout["header_height"], 1.0))
+	return Vector2(maxf(size.x - presentation.layout["panel_width"], 1.0), maxf(size.y - presentation.layout["header_height"], 1.0))
 
 
 func _resized() -> void:
@@ -152,6 +164,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
 	if event is InputEventMouseButton:
+		# Clicking the map takes keyboard focus back from HUD fields such as the tax box.
+		if event.pressed:
+			get_viewport().gui_release_focus()
 		if event.pressed and event.position.y >= header_offset.y:
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				geometry.select_cell(event.position - header_offset)
@@ -181,6 +196,20 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 	if snapshot == _snapshot:
 		return
 	_snapshot = snapshot
+	_stats_panel.update_snapshot(snapshot)
+	queue_redraw()
+
+
+func _restart_session() -> void:
+	session.restart()
+	clock.simulation = session.simulation
+	clock.reset()
+	_building_type = &""
+	geometry.selected = Vector2i(-1, -1)
+	_status.text = ""
+	_snapshot = session.get_snapshot()
+	_stats_panel.update_snapshot(_snapshot)
+	_update_mode()
 	queue_redraw()
 
 

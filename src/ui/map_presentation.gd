@@ -29,13 +29,13 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	if raw is not Dictionary or raw.get("terrain") is not Dictionary or raw.get("buildings") is not Dictionary:
 		errors.append("data/ui/map.json: expected terrain and buildings objects")
 		return
-	for key: String in ["header", "label", "selection"]:
+	for key: String in ["header", "label", "selection", "alert"]:
 		var color: Variant = raw.get("colors", {}).get(key) if raw.get("colors", {}) is Dictionary else null
 		if _valid_color(color):
 			ui_colors[key] = Color(color)
 		else:
 			errors.append("data/ui/map.json.colors.%s: invalid color" % key)
-	_load_numbers(raw.get("layout"), ["cell_size", "header_height", "help_x", "help_y", "grid_inset", "building_inset", "font_size", "label_offset_y", "selection_inset", "selection_width"], layout)
+	_load_numbers(raw.get("layout"), ["cell_size", "header_height", "panel_width", "panel_margin", "help_x", "help_y", "grid_inset", "building_inset", "font_size", "label_offset_y", "selection_inset", "selection_width"], layout)
 	_load_numbers(raw.get("camera"), ["pan_speed", "zoom_step", "max_zoom_factor"], camera)
 	for kind: String in ["land", "river", "cultivable"]:
 		var color: Variant = raw["terrain"].get(kind)

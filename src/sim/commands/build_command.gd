@@ -26,7 +26,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	reason = _validate(state, params)
 	if reason != &"":
 		return
-	state.money -= int(params.get_value(StringName("building.%s.cost" % _definition_id)))
+	var cost: int = int(params.get_value(StringName("building.%s.cost" % _definition_id)))
+	state.money -= cost
+	state.construction_spent_tick += cost
 	state.buildings.append({"definition_id": _definition_id, "cell": [_cell.x, _cell.y]})
 	accepted = true
 

@@ -16,6 +16,7 @@ var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
 var _growth: GrowthSystem = GrowthSystem.new()
 var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
+var _stats: Stats
 
 
 # New-game defaults are explicit so loading a snapshot never grants supplies or resets happiness.
@@ -35,13 +36,16 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	return Simulation.new(params, state, seed_value, context)
 
 
+# stats_window is snapshot()["stats"]["window"]; it is copied, so callers may keep mutating theirs.
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
-		context: EconomyContext = null) -> void:
+		context: EconomyContext = null, stats_window: Array = []) -> void:
 	_params = params
 	_state = EconomyState.from_dict(initial_state.to_dict())
 	_seed = seed_value
 	_rng.seed = seed_value
 	_context = context.copy() if context != null else null
+	_stats = Stats.new(int(_params.get_value(&"population.stats_window_seconds")))
+	_stats.restore(stats_window)
 	if _context != null:
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
@@ -71,6 +75,7 @@ func tick() -> void:
 	# Detach the batch so commands queued during execution wait until the next tick.
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
+	_state.reset_flows()
 	for command: SimulationCommand in pending:
 		command.use_context(_context)
 		command.execute(_state, _params, _rng)
@@ -90,6 +95,7 @@ func tick() -> void:
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)
 			_commands.clear()
+		_stats.record(_state)
 
 
 func _reject_after_defeat(command: SimulationCommand) -> void:
@@ -105,7 +111,38 @@ func get_rng_state() -> int:
 func snapshot() -> Dictionary:
 	return {
 		"economy": _state.to_dict(),
+		"stats": _stats.snapshot(),
+		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
+		"defeat": _defeat_snapshot(),
 		"tick_count": _tick_count,
 		"seed": _seed,
 		"rng_state": get_rng_state(),
 	}
+
+
+func _defeat_snapshot() -> Dictionary:
+	var grace: int = int(_params.get_value(&"defeat.grace_seconds"))
+	return {
+		"grace_active": _state.defeat_elapsed_seconds <= grace,
+		"grace_remaining_seconds": maxi(0, grace - _state.defeat_elapsed_seconds),
+		"causes": _state.defeat_causes.duplicate(),
+		"bankruptcy": _condition_snapshot(_state.bankruptcy, &"bankruptcy",
+			{"money": _state.money, "threshold": int(_params.get_value(&"defeat.bankruptcy.threshold"))}),
+		"hunger": _condition_snapshot(_state.hunger, &"hunger",
+			{"coverage": _state.hunger_smoothed_coverage, "threshold": float(_params.get_value(&"defeat.hunger.threshold"))}),
+		"depopulation": _condition_snapshot(_state.depopulation, &"depopulation",
+			{"population": _state.population, "peak": _state.population_peak, "active": _state.depopulation_active}),
+	}
+
+
+func _condition_snapshot(condition: DefeatState, key: StringName, metrics: Dictionary) -> Dictionary:
+	var duration: int = int(_params.get_value(StringName("defeat.%s.duration_seconds" % key)))
+	var result: Dictionary = metrics.duplicate(true)
+	result["status"] = condition.status
+	result["cause"] = condition.cause
+	# The timer runs while the critical condition holds, which can differ from the warning.
+	result["timer_running"] = condition.elapsed_seconds > 0
+	result["elapsed_seconds"] = condition.elapsed_seconds
+	result["remaining_seconds"] = maxi(0, duration - condition.elapsed_seconds)
+	result["duration_seconds"] = duration
+	return result

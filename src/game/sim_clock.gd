@@ -41,3 +41,8 @@ func advance(delta: float) -> void:
 		tick_advanced.emit()
 		_accumulator -= TICK_SECONDS
 		ticks += 1
+
+
+func reset() -> void:
+	_accumulator = 0.0
+	speed = 1
