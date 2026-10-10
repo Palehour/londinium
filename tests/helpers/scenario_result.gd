@@ -57,7 +57,10 @@ func survived() -> bool:
 func unexpected_rejections() -> Array[Dictionary]:
 	var found: Array[Dictionary] = []
 	for entry: Dictionary in commands:
-		if not entry["accepted"] and entry["reason"] != entry["expect_reject"]:
+		# An accepted command only counts as expected when the script did not expect a refusal.
+		var expected: StringName = entry["expect_reject"]
+		var matches: bool = entry["reason"] == expected if not entry["accepted"] else expected == &""
+		if not matches:
 			found.append(entry)
 	return found
 

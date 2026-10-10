@@ -58,6 +58,19 @@ func test_rejected_command_is_reported_unless_expected() -> void:
 	assert_eq(_runner.run(_scenario(script, 42, 60)).unexpected_rejections().size(), 0)
 
 
+func test_expected_rejection_that_succeeds_is_reported() -> void:
+	# Housing on a land cell is accepted; the script claims it should be refused.
+	var script: Array = [{"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3], "expect_reject": "insufficient_money"}]
+	var result: ScenarioResult = _runner.run(_scenario(script, 42, 60))
+	assert_eq(result.unexpected_rejections().size(), 1)
+	assert_true(result.unexpected_rejections()[0]["accepted"])
+
+
+func test_expected_rejection_with_a_different_reason_is_reported() -> void:
+	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 5], "expect_reject": "insufficient_money"}]
+	assert_eq(_runner.run(_scenario(script, 42, 60)).unexpected_rejections().size(), 1)
+
+
 func test_accepted_commands_are_logged() -> void:
 	var result: ScenarioResult = _runner.run(_scenario(_chain(), 42, 60))
 	assert_eq(result.commands.size(), 3)
