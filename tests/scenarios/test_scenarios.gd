@@ -119,16 +119,14 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 	assert_gte(float(final["bread_coverage"]), 0.95)
 
 
-# Issue #39 criterion 1 across wheat-price seeds: the second chain should be bought between minutes
-# 8 and 12 in at least 17 of 20 seeds, and the big city should end at 1.5x the small one in most.
-# Measured with the mean-reverting price (PR #40, H1/H5): 12 of 20 seeds inside the window, one seed
-# never gets the money, and 18 of 20 reach 1.5x. The floors below are those measured numbers, so a
-# regression shows up here; they are NOT the criterion. When Mason retunes data/ and the criterion
-# is met, raise WINDOW_TARGET to 17 and the floors will follow.
+# Issue #39 criterion 1 across wheat-price seeds: the second chain is bought between minutes 8 and
+# 12 in at least 17 of 20 seeds, and the big city ends at 1.5x the small one in at least 17 of 20.
+# The floors are the criterion, not what was measured, so this test fails while it is not met:
+# PR #40 reports 12 of 20 in the window and 18 of 20 at 1.5x (H1, H7). Do not lower them to make
+# the suite green; retune data/ with Mason instead.
 const SEEDS: int = 20
 const WINDOW_TARGET: int = 17
-const WINDOW_FLOOR: int = 12
-const BIG_FLOOR: int = 18
+const BIG_TARGET: int = 17
 
 
 func test_big_tight_r06_financing_window_across_twenty_seeds() -> void:
@@ -154,11 +152,24 @@ func test_big_tight_r06_financing_window_across_twenty_seeds() -> void:
 		var small: ScenarioResult = runner.run(small_variant)
 		if float(result.final_row()["population"]) >= 1.5 * float(small.final_row()["population"]):
 			big_enough += 1
-	assert_gte(in_window, WINDOW_FLOOR, "seeds with the purchase inside minutes 8-12 (issue asks %d)" % WINDOW_TARGET)
-	assert_gte(big_enough, BIG_FLOOR, "seeds where the big city is 1.5x the small one")
-	assert_lte(never_bought, 1, "seeds where the money never reaches the price")
-	gut.p("big_tight_r06 over %d seeds: %d inside 8-12 (target %d), %d never bought, %d at 1.5x"
-		% [SEEDS, in_window, WINDOW_TARGET, never_bought, big_enough])
+	gut.p("big_tight_r06 over %d seeds: %d bought inside minutes 8-12, %d never bought, %d at 1.5x"
+		% [SEEDS, in_window, never_bought, big_enough])
+	assert_gte(in_window, WINDOW_TARGET, "seeds with the second chain bought inside minutes 8-12")
+	assert_gte(big_enough, BIG_TARGET, "seeds where the big city is 1.5x the small one")
+
+
+# The scenario's rule pauses wheat purchases at price 3 while the stock covers two minutes of mill.
+# The wharf only buys what the mill eats, and the mill takes each unit in the tick it arrives, so
+# the stock of wheat is always 0 at the end of a tick and the rule never fires. If this fails, a
+# change made wheat pile up: the rule now does something and the scenario needs a new look.
+func test_big_tight_r06_wheat_rule_never_fires_because_no_wheat_stock_builds_up() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
+	assert_eq(scenario["rules"].size(), 1)
+	for seed_value: int in [1, 5, 42]:
+		var variant: Dictionary = scenario.duplicate(true)
+		variant["seed"] = seed_value
+		assert_eq(runner.run(variant).rule_command_count(), 0, "seed %d" % seed_value)
 
 
 func test_two_equilibria_differ() -> void:
