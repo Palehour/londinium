@@ -1,6 +1,6 @@
 # Builds Windows, macOS and Linux from ONE Linux runner (Godot cross-exports with official templates).
 # Runs only on version tags (v0.1.0, ...) or manually, to save Actions minutes and artifact storage.
-# A pushed v* tag also publishes the three builds as a GitHub pre-release. A manual run
+# A pushed v* tag (push event, never a manual run) also publishes the three builds as a GitHub pre-release. A manual run
 # (workflow_dispatch) only uploads artifacts and never creates a release.
 name: export
 
@@ -31,7 +31,7 @@ jobs:
       - name: Tag must point at a commit on main
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          git fetch --no-tags origin main
+          # fetch-depth: 0 above already fetched every branch, so origin/main exists without credentials.
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::Tag $GITHUB_REF_NAME is not on main. Merge develop into main first, then tag main."
             exit 1
@@ -79,15 +79,16 @@ jobs:
           godot --headless --path . --export-release "macOS"           build/macos/Londinium.zip
           godot --headless --path . --export-release "Linux"           build/linux/Londinium.x86_64
 
-      # Boot the real Linux build for a moment. If data/ is missing or invalid from the export, the
-      # map view reports it through _show_load_error, so that is the line to look for.
+      # Boot the real Linux build for a moment. If data/ is missing or invalid in the export, DataLoader
+      # diagnostics reach the log as "ERROR: <file>.json: <problem>" (or "cannot open directory").
+      # Release templates print no GDScript backtrace, so match the message, not a function name.
       - name: Smoke test the Linux build
         run: |
           chmod +x build/linux/Londinium.x86_64
           ./build/linux/Londinium.x86_64 --headless --quit-after 120 > smoke.log 2>&1
           cat smoke.log
-          if grep -F "_show_load_error" smoke.log; then
-            echo "::error::The exported Linux build could not load data/ (see DataLoader errors above)."
+          if grep -E "ERROR:.*(\.json|cannot open directory)" smoke.log; then
+            echo "::error::The exported Linux build could not load data/ (see the DataLoader errors above)."
             exit 1
           fi
 
@@ -109,7 +110,8 @@ jobs:
 
   release:
     needs: export
-    if: startsWith(github.ref, 'refs/tags/v')
+    # A manual run on an existing tag must not publish: only a pushed tag does.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
