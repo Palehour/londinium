@@ -13,7 +13,10 @@ var _state: EconomyState
 func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
-	_params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+	# Pinned so these checks do not move when Mason retunes immigration in data/.
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"population.growth.immigration_per_minute", &"set", 2))
+	_params = Params.new(loaded.catalog, role)
 	_context = EconomyContext.new(loaded.catalog, loaded.catalog.maps[&"whitechapel_1850s"])
 	_state = EconomyState.new()
 	_state.population = 10
