@@ -16,8 +16,9 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --summary             one row per scenario and metric (min, median, mean, max over the seeds)
                         instead of the per-minute CSV; with --out it also writes
                         balance_summary.csv, balance_seeds.csv and balance_refused.csv
-  --tax <rate>          replace the rate of every set_tax command, 0 to 1. The defeat_* scenarios
-                        are left alone: their tax rate is part of how they lose
+  --tax <rate>          replace the rate of every set_tax command, 0 to 1. Scenarios whose JSON has
+                        "tax_override": false (the defeat_* ones) are left alone: their tax rate is
+                        part of how they lose
   --wheat-price <n>     fix the market price of wheat at n
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in

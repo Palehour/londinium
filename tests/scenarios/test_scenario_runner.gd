@@ -190,6 +190,8 @@ func test_validation_of_wait_for_money_and_with_previous() -> void:
 		"with_previous first": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "with_previous": true}],
 		"with_previous not a boolean": [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
 			{"tick": 0, "cmd": "set_tax", "rate": 0.4, "with_previous": 1}],
+		"with_previous at a different tick": [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
+			{"tick": 60, "cmd": "set_tax", "rate": 0.4, "with_previous": true}],
 		"with_previous and wait": [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
 			{"tick": 0, "cmd": "set_tax", "rate": 0.4, "with_previous": true, "wait_for_money": 5}],
 	}
@@ -238,10 +240,23 @@ func test_second_chain_purchase_tick_is_the_real_tick_not_a_minute_row() -> void
 	assert_eq(_runner.run(_scenario(_chain())).second_chain_purchase_tick(), -1, "one chain only")
 
 
-func test_with_tax_overrides_survival_scenarios_but_not_defeat_ones() -> void:
+func test_with_tax_skips_exactly_the_scenarios_that_say_tax_override_false() -> void:
 	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.0}]
-	var survival: Dictionary = {"id": "small_rich", "seed": 1, "duration_ticks": 10, "commands": commands}
-	var defeat: Dictionary = {"id": "defeat_bankruptcy", "seed": 1, "duration_ticks": 10, "commands": commands}
-	assert_eq(ScenarioRunner.with_tax(survival, 0.6)["commands"][0]["rate"], 0.6)
-	assert_eq(ScenarioRunner.with_tax(defeat, 0.6)["commands"][0]["rate"], 0.0)
-	assert_eq(survival["commands"][0]["rate"], 0.0, "the original is not modified")
+	var plain: Dictionary = {"id": "small_rich", "seed": 1, "duration_ticks": 10, "commands": commands}
+	var opted_out: Dictionary = {"id": "anything", "tax_override": false, "seed": 1, "duration_ticks": 10,
+		"commands": commands}
+	var opted_in: Dictionary = {"id": "defeat_by_name_only", "tax_override": true, "seed": 1,
+		"duration_ticks": 10, "commands": commands}
+	assert_eq(ScenarioRunner.with_tax(plain, 0.6)["commands"][0]["rate"], 0.6)
+	assert_eq(ScenarioRunner.with_tax(opted_in, 0.6)["commands"][0]["rate"], 0.6, "the id prefix decides nothing")
+	assert_eq(ScenarioRunner.with_tax(opted_out, 0.6)["commands"][0]["rate"], 0.0)
+	assert_eq(plain["commands"][0]["rate"], 0.0, "the original is not modified")
+	opted_out["tax_override"] = "no"
+	assert_gt(_runner.validate(opted_out).size(), 0, "tax_override must be a boolean")
+
+
+func test_every_defeat_scenario_opts_out_of_the_tax_override() -> void:
+	for path: String in ScenarioRunner.scenario_paths():
+		var scenario: Dictionary = ScenarioRunner.load_file(path)
+		if String(scenario["id"]).begins_with("defeat_"):
+			assert_eq(scenario.get("tax_override"), false, scenario["id"])

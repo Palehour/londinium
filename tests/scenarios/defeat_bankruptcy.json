@@ -1,6 +1,7 @@
 {
   "id": "defeat_bankruptcy",
   "description": "Quiebra: impuesto 0 y un molino de mas que solo cuesta mantenimiento. El tesoro pasa a negativo cerca del fin de la gracia, antes de que la despoblacion llegue a su contador.",
+  "tax_override": false,
   "seed": 42,
   "duration_ticks": 900,
   "commands": [

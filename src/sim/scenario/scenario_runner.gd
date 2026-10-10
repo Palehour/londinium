@@ -75,11 +75,16 @@ func validate(scenario: Dictionary) -> Array[String]:
 	if scenario.get("commands") is not Array:
 		errors.append("commands must be a list")
 		return errors
+	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
+		errors.append("tax_override must be true or false")
 	var previous_tick: int = 0
+	var command_before_tick: int = -1
 	var index: int = 0
 	for entry: Variant in scenario["commands"]:
-		errors.append_array(_validate_command(entry, index, duration, previous_tick))
-		if entry is Dictionary and _is_whole(entry.get("tick")):
+		errors.append_array(_validate_command(entry, index, duration, previous_tick, command_before_tick))
+		var declared: bool = entry is Dictionary and _is_whole(entry.get("tick"))
+		command_before_tick = int(entry["tick"]) if declared else -1
+		if declared:
 			previous_tick = maxi(previous_tick, int(entry["tick"]))
 		index += 1
 	return errors
@@ -136,11 +141,12 @@ func is_stable(result: ScenarioResult) -> bool:
 	return DefeatSystem.new().is_city_stable(EconomyState.from_dict(result.final_economy), _params)
 
 
-# Copy of `scenario` with every set_tax rate replaced, for probes. The defeat_* scenarios are left
-# alone: their tax rate is part of how they lose, so overriding it would turn them into survivors.
+# Copy of `scenario` with every set_tax rate replaced, for probes. A scenario with
+# "tax_override": false is left alone: its tax rate is part of what it demonstrates (the defeat_*
+# ones lose partly because of it), so overriding it would change the scenario itself.
 static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
 	var copy: Dictionary = scenario.duplicate(true)
-	if String(copy.get("id", "")).begins_with("defeat_"):
+	if copy.get("tax_override", true) == false:
 		return copy
 	for command: Dictionary in copy["commands"]:
 		if command["cmd"] == "set_tax":
@@ -234,7 +240,8 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 	}
 
 
-func _validate_command(entry: Variant, index: int, duration: int, previous_tick: int) -> Array[String]:
+func _validate_command(entry: Variant, index: int, duration: int, previous_tick: int,
+		command_before_tick: int) -> Array[String]:
 	var errors: Array[String] = []
 	var where: String = "commands[%d]" % index
 	if entry is not Dictionary:
@@ -248,6 +255,9 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		errors.append("%s: wait_for_money must be a whole amount of pence >= 0" % where)
 	if entry.has("with_previous") and (entry["with_previous"] is not bool or index == 0):
 		errors.append("%s: with_previous must be true or false and cannot be on the first command" % where)
+	if entry.get("with_previous", false) is bool and entry.get("with_previous", false) 			and command_before_tick >= 0 and _is_whole(entry.get("tick")) 			and int(entry["tick"]) != command_before_tick:
+		errors.append("%s: with_previous must declare the same tick as the command before it (%d)"
+			% [where, command_before_tick])
 	if entry.get("with_previous", false) and entry.has("wait_for_money"):
 		errors.append("%s: with_previous follows the command before it and cannot wait for money" % where)
 	var name: String = String(entry.get("cmd", ""))
