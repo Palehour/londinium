@@ -182,7 +182,7 @@ func test_the_command_sets_a_valid_policy() -> void:
 func test_the_command_rejects_what_the_market_cannot_honour() -> void:
 	var cases: Array[Array] = [
 		[-2, -1, 0, 0], [-1, -2, 0, 0], [-1, -1, -1, 0], [-1, -1, 0, -1],
-		[4, -1, 0, 0], [-1, 4, 0, 0], [3, 2, 0, 0], [-1, -1, 101, 0], [-1, -1, 0, 11],
+		[4, -1, 0, 0], [0, -1, 0, 0], [-1, 4, 0, 0], [3, 2, 0, 0], [-1, -1, 101, 0], [-1, -1, 0, 11],
 	]
 	for values: Array in cases:
 		var sim: Simulation = _sim(_state(2, [1, 2, 30, 2]))
@@ -396,6 +396,16 @@ func test_the_reason_appears_only_when_the_maximum_really_stops_the_wharf() -> v
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "under the reserve it buys")
 
 
+func test_policy_price_defaults_follow_the_money_rounding_of_roles() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"set", 2))
+	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"mul", 1.25))
+	assert_eq(Params.new(_catalog, role).get_value(&"policy.wheat.default_max_price"), 3, "2.5 pence rounds to 3, once, after the modifiers")
+	var untouched: RoleDef = RoleDef.new()
+	untouched.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"add", 0.0))
+	assert_eq(Params.new(_catalog, untouched).get_value(&"policy.wheat.default_max_price"), WheatPolicy.NO_LIMIT, "the sentinel survives")
+
+
 func test_roles_cannot_make_the_policy_defaults_impossible() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"set", 9))
@@ -443,6 +453,9 @@ func test_data_rejects_an_impossible_policy_or_a_missing_file() -> void:
 	documents = _documents()
 	documents.erase("economy/policy.json")
 	assert_eq(DataLoader.new().load_documents(documents).errors, ["economy/policy.json: missing file"])
+	documents = _documents()
+	documents["economy/policy.json"]["wheat"]["default_accumulate_price"] = 0
+	assert_false(DataLoader.new().load_documents(documents).is_ok(), "an accumulate price below the market minimum of 1")
 	documents = _documents()
 	documents["economy/market.json"]["wheat"]["decay_fraction_per_minute"] = 1
 	assert_false(DataLoader.new().load_documents(documents).is_ok(), "a loss of 100 % a minute is not a loss, it is a wipe")

@@ -19,6 +19,8 @@ static func validation_error(accumulate_price: int, max_price: int, target_stock
 		return "safety reserve must be between 0 and %d minutes of mill" % MAX_RESERVE_MINUTES
 	if accumulate_price > market_max_price:
 		return "accumulate price is above the market's maximum price"
+	if accumulate_price != OFF and accumulate_price < min_price:
+		return "accumulate price is below the market's minimum price (use %d to turn it off)" % OFF
 	if max_price != NO_LIMIT and (max_price < min_price or max_price > market_max_price):
 		return "maximum price must be %d (no limit) or inside the market's price range" % NO_LIMIT
 	if max_price != NO_LIMIT and accumulate_price > max_price:

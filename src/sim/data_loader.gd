@@ -185,7 +185,7 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value
-	if kind == "money":
+	if kind in ["money", "optional_price"]:
 		catalog.money_keys.append(StringName(key))
 	return true
 
