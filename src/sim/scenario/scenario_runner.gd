@@ -44,6 +44,20 @@ func pin_wheat_price(price: int) -> void:
 	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
 
 
+# Balance probes only (issue #42): the highest price the wheat market can reach. Like pin_wheat_price,
+# it changes this runner's copy of the values, never the files in data/.
+func pin_wheat_max_price(price: int) -> void:
+	_catalog.base_values[&"market.wheat.max_price"] = price
+	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+
+
+# Money plus the wheat in store valued at the base price (issue #42): what the city owns, not only
+# what is in the treasury. Flour and bread are left out on purpose: they are what the mill and the
+# bakery make for the people, not savings.
+func net_worth(row: Dictionary) -> int:
+	return int(row["money"]) + int(row["wheat_stock"]) * int(_params.get_value(&"market.wheat.base_price"))
+
+
 static func scenario_paths() -> Array[String]:
 	var found: Array[String] = []
 	var dir: DirAccess = DirAccess.open(SCENARIO_DIR)
@@ -195,6 +209,15 @@ static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
 	for command: Dictionary in copy["commands"]:
 		if command["cmd"] == "set_tax":
 			command["rate"] = rate
+	return copy
+
+
+# Copy of `scenario` with the target stock of every set_wheat_policy replaced, for probes.
+static func with_target_stock(scenario: Dictionary, target_stock: int) -> Dictionary:
+	var copy: Dictionary = scenario.duplicate(true)
+	for command: Dictionary in copy["commands"]:
+		if command["cmd"] == "set_wheat_policy":
+			command["target_stock"] = target_stock
 	return copy
 
 

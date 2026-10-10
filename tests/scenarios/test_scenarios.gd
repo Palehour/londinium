@@ -321,3 +321,67 @@ func test_crisis_is_caused_explained_and_recovered() -> void:
 	assert_gte(float(result.final_row()["bread_coverage"]), 0.9)
 	var before_crisis: int = result.row(4)["population"]
 	assert_gte(float(result.final_row()["population"]), 0.8 * float(before_crisis))
+
+
+# Issue #42: can stockpiling pay? The same 20 seeds, smart against blind, judged on net worth at
+# minute 15 (money plus the wheat in store at the base price) instead of on the treasury alone.
+# Each lever is tried alone, on top of the #41 script. The first three numbers are the criterion's
+# "ties or wins in at least 12 of 20"; the strict wins and losses keep the difference from being
+# flattened (accumulating has to win some seeds and lose others).
+const NET_WORTH_TARGET: int = 12
+const MIN_STRICT_WINS: int = 3
+const MIN_STRICT_LOSSES: int = 2
+
+
+# {wins, ties, losses, lost_cities, median_gap} of smart minus blind, seed by seed.
+func _net_worth_comparison(runner: ScenarioRunner, target_stock: int) -> Dictionary:
+	var blind: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
+	var smart: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06_smart.json")
+	if target_stock >= 0:
+		smart = ScenarioRunner.with_target_stock(smart, target_stock)
+	var tally: Dictionary = {"wins": 0, "ties": 0, "losses": 0, "lost_cities": 0}
+	var gaps: Array[float] = []
+	for seed_value: int in range(1, SEEDS + 1):
+		var blind_variant: Dictionary = blind.duplicate(true)
+		blind_variant["seed"] = seed_value
+		var smart_variant: Dictionary = smart.duplicate(true)
+		smart_variant["seed"] = seed_value
+		var blind_result: ScenarioResult = runner.run(blind_variant)
+		var smart_result: ScenarioResult = runner.run(smart_variant)
+		if not smart_result.survived() or not runner.is_stable(smart_result):
+			tally["lost_cities"] += 1
+		var gap: int = runner.net_worth(smart_result.final_row()) - runner.net_worth(blind_result.final_row())
+		gaps.append(float(gap))
+		if gap > 0:
+			tally["wins"] += 1
+		elif gap == 0:
+			tally["ties"] += 1
+		else:
+			tally["losses"] += 1
+	tally["median_gap"] = _median(gaps)
+	return tally
+
+
+func test_net_worth_counts_the_wheat_in_store_at_the_base_price() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var base_price: int = int(runner.param(&"market.wheat.base_price"))
+	assert_eq(runner.net_worth({"money": 100, "wheat_stock": 0}), 100)
+	assert_eq(runner.net_worth({"money": 100, "wheat_stock": 30}), 100 + 30 * base_price)
+
+
+func test_net_worth_levers_one_at_a_time() -> void:
+	var report: Array[String] = []
+	for lever: Dictionary in [
+		{"name": "baseline (target 60, max price 3)", "target": -1, "max_price": 0},
+		{"name": "lever 1: target stock 30", "target": 30, "max_price": 0},
+		{"name": "lever 2: market max price 4", "target": -1, "max_price": 4},
+	]:
+		var runner: ScenarioRunner = ScenarioRunner.create()
+		if lever["max_price"] > 0:
+			runner.pin_wheat_max_price(lever["max_price"])
+		var tally: Dictionary = _net_worth_comparison(runner, lever["target"])
+		report.append("%s: smart ties or wins %d/%d (wins %d, ties %d, losses %d), median gap %.1f pence, lost cities %d"
+			% [lever["name"], tally["wins"] + tally["ties"], SEEDS, tally["wins"], tally["ties"],
+			tally["losses"], tally["median_gap"], tally["lost_cities"]])
+		assert_eq(tally["lost_cities"], 0, "%s: no city may be lost or unstable" % lever["name"])
+	gut.p("\n".join(report))
