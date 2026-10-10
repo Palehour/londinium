@@ -396,3 +396,18 @@ func test_a_game_that_ends_mid_minute_gets_a_last_row_with_the_terminal_state() 
 	var whole: ScenarioResult = _runner.run(_scenario(_chain(), 42, 120))
 	assert_eq(whole.rows.size(), 3, "no extra row when the game ends on a whole minute")
 	assert_eq(whole.final_row()["tick"], 120)
+
+
+func test_a_wait_after_commands_of_the_same_tick_sees_what_they_spent() -> void:
+	# The first chain is queued at tick 0 and has not touched the treasury yet. A wait for 540 behind
+	# it must not be released by the 1050 of the starting treasury: after the chain only 510 is left.
+	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 540},
+		{"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}]
+	var result: ScenarioResult = _runner.run(_scenario(commands))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary], "the group was not released on stale funds")
+	var tick: int = result.second_chain_purchase_tick()
+	# Released on stale funds it would have run at tick 0 and the bakery would have been refused.
+	assert_gt(tick, 0, "it waited for the first chain's profit")
+	assert_eq(result.final_row()["n_wharf"], 2)

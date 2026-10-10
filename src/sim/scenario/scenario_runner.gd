@@ -199,13 +199,17 @@ static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
 
 # Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back
 # until the treasury reaches that amount, and `with_previous` runs it in the same tick as the
-# command before it, so a purchase made of several buildings is priced once.
+# command before it, so a purchase made of several buildings is priced once. Commands queued
+# earlier in the same tick have not spent anything yet, so a wait that comes after one of them
+# is checked again on the next tick, when the treasury already reflects what they cost.
 func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, ran_this_tick: bool) -> bool:
 	if entry.get("with_previous", false):
 		return ran_this_tick
 	if tick_index < int(entry["tick"]):
 		return false
 	if entry.has("wait_for_money"):
+		if ran_this_tick:
+			return false
 		return int(sim.snapshot()["economy"]["money"]) >= int(entry["wait_for_money"])
 	return true
 
