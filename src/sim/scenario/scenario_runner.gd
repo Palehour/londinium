@@ -3,6 +3,8 @@ extends RefCounted
 
 # Runs scripted games on the pure simulation: no nodes, no clock, no UI. Same seed and same
 # command list always give the same ScenarioResult (docs/ARCHITECTURE.md, principle 2).
+# It lives in src/ because both tests/ and tools/balance_report.gd use it; it reads the scenario
+# files only through load_file()/scenario_paths(), never from game code.
 
 const SCENARIO_DIR: String = "res://tests/scenarios"
 const TICKS_PER_MINUTE: int = 60
