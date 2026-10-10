@@ -4,8 +4,6 @@ extends PanelContainer
 signal restart_requested
 
 const PERCENT: float = 100.0
-# A role can widen the market to thousands of prices; the selectors list this many from the minimum.
-const MAX_PRICE_OPTIONS: int = 12
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 
 var session: GameSession
@@ -16,16 +14,15 @@ var _alert: Label
 var _restart: Button
 var _tax: SpinBox
 var _wheat: CheckButton
-var _accumulate: OptionButton
-var _max_price: OptionButton
+var _accumulate_on: CheckBox
+var _accumulate_price: SpinBox
+var _limit_on: CheckBox
+var _limit_price: SpinBox
 var _target: HSlider
 var _target_label: Label
 var _reserve: HSlider
 var _reserve_label: Label
 var _wheat_row: Label
-# Option index -> price (0 = off / no limit), rebuilt when the market's price range changes.
-var _accumulate_prices: Array[int] = []
-var _max_prices: Array[int] = []
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _pause: Button
@@ -110,8 +107,12 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_wheat)
 	_wheat_row = _label("")
 	content.add_child(_wheat_row)
-	_accumulate = _price_selector(content, Strings.ACCUMULATE_LABEL)
-	_max_price = _price_selector(content, Strings.MAX_PRICE_LABEL)
+	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
+	_accumulate_on = accumulate_row[0] as CheckBox
+	_accumulate_price = accumulate_row[1] as SpinBox
+	var limit_row: Array[Control] = _price_row(content, Strings.MAX_PRICE_LABEL)
+	_limit_on = limit_row[0] as CheckBox
+	_limit_price = limit_row[1] as SpinBox
 	_target_label = _label("")
 	content.add_child(_target_label)
 	_target = HSlider.new()
@@ -161,67 +162,47 @@ func _update_controls(economy: Dictionary, defeated: bool) -> void:
 	_update_clock_controls()
 
 
-func _price_selector(content: VBoxContainer, title: String) -> OptionButton:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_child(_label(title))
-	var selector: OptionButton = OptionButton.new()
-	selector.focus_mode = Control.FOCUS_NONE
-	selector.item_selected.connect(func(_index: int) -> void: _submit_policy())
-	row.add_child(selector)
+# A switch and a bounded number: the whole price range of the market stays selectable, however wide a
+# role makes it, and the switch is the only way to say "off" / "no limit" (which are not prices).
+func _price_row(content: VBoxContainer, title: String) -> Array[Control]:
+	# Stacked, not side by side: the panel has a fixed width and the switch's text is long.
+	var row: VBoxContainer = VBoxContainer.new()
+	var check: CheckBox = CheckBox.new()
+	check.text = title
+	check.focus_mode = Control.FOCUS_NONE
+	check.toggled.connect(func(_on: bool) -> void: _submit_policy())
+	row.add_child(check)
+	var spin: SpinBox = SpinBox.new()
+	spin.step = 1.0
+	spin.suffix = Strings.PENCE_SUFFIX
+	spin.value_changed.connect(func(_value: float) -> void: _submit_policy())
+	row.add_child(spin)
 	content.add_child(row)
-	return selector
+	return [check, spin]
 
 
-# The player picks among the market's own prices: a price above the top one could never be paid. Only the
-# first MAX_PRICE_OPTIONS are listed, plus the price the policy already has, so a very wide market
-# never builds thousands of items and an accepted policy is never shown as something else.
-func _rebuild_price_options(market: Dictionary) -> void:
-	# Accumulating at the market's top price is a valid policy (always stockpile), so it is listed;
-	# a maximum at the top price never stops anything, so "no limit" stands for it.
-	var accumulate_choices: Array[int] = [WheatPolicy.OFF]
-	accumulate_choices.append_array(_price_choices(market, int(market["accumulate_price"]), true))
-	var max_choices: Array[int] = _price_choices(market, int(market["max_price"]), false)
-	max_choices.append(WheatPolicy.NO_LIMIT)
-	if accumulate_choices == _accumulate_prices and max_choices == _max_prices:
-		return
-	_accumulate_prices = accumulate_choices
-	_max_prices = max_choices
-	_accumulate.clear()
-	_max_price.clear()
-	for price: int in _accumulate_prices:
-		_accumulate.add_item(Strings.ACCUMULATE_OFF if price == WheatPolicy.OFF else Strings.money(price))
-	for price: int in _max_prices:
-		_max_price.add_item(Strings.NO_LIMIT if price == WheatPolicy.NO_LIMIT else Strings.money(price))
-
-
-func _price_choices(market: Dictionary, current: int, include_top: bool) -> Array[int]:
-	var low: int = market["min_price"]
-	var top: int = market["top_price"]
-	var last: int = mini(top if include_top else top - 1, low + MAX_PRICE_OPTIONS - 1)
-	var prices: Array[int] = []
-	for price: int in range(low, last + 1):
-		prices.append(price)
-	var listable: bool = current >= low and (current <= top if include_top else current < top)
-	if listable and current not in prices:
-		prices.append(current)
-		prices.sort()
-	return prices
+# Never overwrite a price the player is still typing; a switched-off row keeps its number for when it
+# is switched on again.
+func _sync_price_row(check: CheckBox, spin: SpinBox, value: int, none: int, market: Dictionary, defeated: bool) -> void:
+	spin.min_value = market["min_price"]
+	spin.max_value = market["top_price"]
+	var on: bool = value != none
+	check.set_pressed_no_signal(on)
+	if on and not spin.get_line_edit().has_focus():
+		spin.value = value
+	check.disabled = defeated
+	spin.editable = on and not defeated
 
 
 func _update_wheat_policy(market: Dictionary, defeated: bool) -> void:
-	_rebuild_price_options(market)
 	_syncing = true
-	# An unlisted maximum is the market's top price: nothing can exceed it, so it reads as no limit.
-	_accumulate.select(maxi(0, _accumulate_prices.find(int(market["accumulate_price"]))))
-	var max_index: int = _max_prices.find(int(market["max_price"]))
-	_max_price.select(max_index if max_index >= 0 else _max_prices.size() - 1)
+	_sync_price_row(_accumulate_on, _accumulate_price, int(market["accumulate_price"]), WheatPolicy.OFF, market, defeated)
+	_sync_price_row(_limit_on, _limit_price, int(market["max_price"]), WheatPolicy.NO_LIMIT, market, defeated)
 	_target.max_value = market["capacity"]
 	if not _dragging_target:
 		_target.value = market["target_stock"]
 		_target_label.text = Strings.TARGET_LABEL % int(market["target_stock"])
 	_syncing = false
-	for control: Control in [_accumulate, _max_price]:
-		(control as OptionButton).disabled = defeated
 	_reserve.max_value = market["max_reserve_minutes"]
 	if not _dragging_reserve:
 		_reserve.value = market["reserve_minutes"]
@@ -243,8 +224,9 @@ func _wheat_text(market: Dictionary) -> String:
 func _submit_policy() -> void:
 	if _syncing:
 		return
-	session.submit_command(SetWheatPolicyCommand.new(_accumulate_prices[_accumulate.selected],
-		_max_prices[_max_price.selected], int(_target.value), int(_reserve.value)))
+	var accumulate: int = int(_accumulate_price.value) if _accumulate_on.button_pressed else WheatPolicy.OFF
+	var limit: int = int(_limit_price.value) if _limit_on.button_pressed else WheatPolicy.NO_LIMIT
+	session.submit_command(SetWheatPolicyCommand.new(accumulate, limit, int(_target.value), int(_reserve.value)))
 
 
 func _reserve_released(_changed: bool) -> void:

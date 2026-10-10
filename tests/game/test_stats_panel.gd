@@ -148,21 +148,28 @@ func test_wheat_row_shows_stock_price_trend_and_minutes_of_mill() -> void:
 	assert_string_contains(_text("_wheat_row"), Strings.WHEAT_BLOCKED_NOTE)
 
 
+func _price_controls() -> Dictionary:
+	return {"accumulate_on": _panel.get("_accumulate_on") as CheckBox, "accumulate": _panel.get("_accumulate_price") as SpinBox,
+		"limit_on": _panel.get("_limit_on") as CheckBox, "limit": _panel.get("_limit_price") as SpinBox}
+
+
 func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
-	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
-	var maximum: OptionButton = _panel.get("_max_price") as OptionButton
+	var controls: Dictionary = _price_controls()
+	var accumulate_on: CheckBox = controls["accumulate_on"]
+	var accumulate: SpinBox = controls["accumulate"]
+	var limit_on: CheckBox = controls["limit_on"]
+	var limit: SpinBox = controls["limit"]
 	var target: HSlider = _panel.get("_target") as HSlider
-	assert_eq(accumulate.item_count, 4, "off, 1, 2 and the market's top price 3")
-	assert_eq(maximum.item_count, 3, "1, 2 and no limit")
-	assert_eq(maximum.get_item_text(2), Strings.NO_LIMIT)
-	assert_eq(maximum.selected, 2, "the default policy has no limit")
+	assert_false(accumulate_on.button_pressed, "the default policy does not stockpile")
+	assert_false(limit_on.button_pressed, "and has no limit")
+	assert_false(accumulate.editable, "a switched-off price cannot be edited")
+	assert_eq([accumulate.min_value, accumulate.max_value], [1.0, 3.0], "the market's own prices")
 	assert_eq(target.max_value, 100.0)
 	assert_false(target.scrollable or (_panel.get("_reserve") as HSlider).scrollable, "the wheel would not send the command")
-	accumulate.select(1)
-	accumulate.item_selected.emit(1)
-	maximum.select(1)
-	maximum.item_selected.emit(1)
+	accumulate_on.button_pressed = true
+	limit_on.button_pressed = true
+	limit.value = 2.0
 	target.value = 60.0
 	target.drag_ended.emit(true)
 	var reserve: HSlider = _panel.get("_reserve") as HSlider
@@ -175,10 +182,14 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	var economy: Dictionary = _session.get_snapshot()["economy"]
 	assert_eq([economy["wheat_accumulate_price"], economy["wheat_max_price"], economy["wheat_target_stock"],
 		economy["wheat_reserve_minutes"]], [1, 2, 60, 4])
-	assert_eq([accumulate.selected, maximum.selected, target.value], [1, 1, 60.0])
+	assert_eq([accumulate_on.button_pressed, accumulate.value, limit_on.button_pressed, limit.value, target.value],
+		[true, 1.0, true, 2.0, 60.0])
 	assert_string_contains(_text("_target_label"), "60")
 	assert_eq(_text("_reserve_label"), Strings.RESERVE_LABEL % 4)
 	assert_true(_session.get("_pending").is_empty(), "resyncing the controls does not resend the command")
+	limit_on.button_pressed = false
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_max_price"], WheatPolicy.NO_LIMIT, "the switch turns the limit off")
 
 
 func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void:
@@ -186,8 +197,9 @@ func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void
 	_session.submit_command(SetWheatPolicyCommand.new(3, WheatPolicy.NO_LIMIT, 60, 2))
 	_tick()
 	_session.publish_tick()
-	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
-	assert_eq(accumulate.selected, 3, "the top price is not shown as No")
+	var controls: Dictionary = _price_controls()
+	assert_true((controls["accumulate_on"] as CheckBox).button_pressed)
+	assert_eq((controls["accumulate"] as SpinBox).value, 3.0, "the top price is shown as itself")
 	var reserve: HSlider = _panel.get("_reserve") as HSlider
 	reserve.value = 5.0
 	reserve.drag_ended.emit(true)
@@ -195,20 +207,22 @@ func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void
 	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 3, "changing another control does not turn accumulating off")
 
 
-func test_a_very_wide_market_does_not_build_thousands_of_price_options() -> void:
+func test_a_very_wide_market_keeps_its_whole_price_range_selectable() -> void:
 	_session = _new_session([Modifier.new(&"market.wheat.max_price", &"set", 1000000)])
 	_panel = _new_panel(_session)
 	_panel.update_snapshot(_session.get_snapshot())
-	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
-	var maximum: OptionButton = _panel.get("_max_price") as OptionButton
-	assert_lte(accumulate.item_count, StatsPanel.MAX_PRICE_OPTIONS + 2)
-	assert_lte(maximum.item_count, StatsPanel.MAX_PRICE_OPTIONS + 2)
+	var controls: Dictionary = _price_controls()
+	var accumulate: SpinBox = controls["accumulate"]
+	var limit: SpinBox = controls["limit"]
+	assert_eq([accumulate.min_value, accumulate.max_value], [1.0, 1000000.0])
 	_session.submit_command(SetWheatPolicyCommand.new(500, 700, 0, 2))
 	_tick()
 	_session.publish_tick()
-	assert_eq(int(_session.get_snapshot()["economy"]["wheat_accumulate_price"]), 500)
-	assert_eq((_panel.get("_accumulate_prices") as Array)[accumulate.selected], 500, "an accepted price outside the listed ones is still shown")
-	assert_eq((_panel.get("_max_prices") as Array)[maximum.selected], 700)
+	assert_eq([accumulate.value, limit.value], [500.0, 700.0], "an accepted policy is shown as it is")
+	accumulate.value = 600.0
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 600, "any valid price can be chosen")
+	assert_eq(_session.get_snapshot()["economy"]["wheat_max_price"], 700, "and the rest of the policy is kept")
 
 
 func test_policy_controls_are_blocked_after_defeat() -> void:
@@ -218,8 +232,10 @@ func test_policy_controls_are_blocked_after_defeat() -> void:
 	_panel = _new_panel(_session)
 	_tick()
 	_tick()
-	assert_true((_panel.get("_accumulate") as OptionButton).disabled)
-	assert_true((_panel.get("_max_price") as OptionButton).disabled)
+	var controls: Dictionary = _price_controls()
+	assert_true((controls["accumulate_on"] as CheckBox).disabled)
+	assert_true((controls["limit_on"] as CheckBox).disabled)
+	assert_false((controls["accumulate"] as SpinBox).editable)
 	assert_false((_panel.get("_target") as HSlider).editable)
 	assert_false((_panel.get("_reserve") as HSlider).editable)
 
