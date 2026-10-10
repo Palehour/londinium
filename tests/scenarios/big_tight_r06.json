@@ -4,14 +4,6 @@
   "notes": "H1/H5 del PR #40: la compra espera a la plata (wait_for_money) en vez de tener un tick fijo, porque con tick fijo en 8 de 20 semillas la caja estaba entre 529 y 599 y la vivienda se rechazaba. Si falla despues de un cambio en data/, es esperable: hay que recalibrarlo y confirmar con Mason que los criterios del #39 siguen cumplidos o no.",
   "seed": 42,
   "duration_ticks": 900,
-  "rules": [
-    {"id": "skip_wheat_at_peak",
-      "when": {"all": [
-        {"path": "wheat_price", "op": "==", "value": 3},
-        {"path": "stocks.wheat", "op": ">=", "value": 20}]},
-      "then": {"cmd": "set_wheat_purchases", "enabled": false},
-      "otherwise": {"cmd": "set_wheat_purchases", "enabled": true}}
-  ],
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
     {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},

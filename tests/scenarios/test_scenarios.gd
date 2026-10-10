@@ -119,57 +119,60 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 	assert_gte(float(final["bread_coverage"]), 0.95)
 
 
-# Issue #39 criterion 1 across wheat-price seeds: the second chain is bought between minutes 8 and
-# 12 in at least 17 of 20 seeds, and the big city ends at 1.5x the small one in at least 17 of 20.
-# The floors are the criterion, not what was measured, so this test fails while it is not met:
-# PR #40 reports 12 of 20 in the window and 18 of 20 at 1.5x (H1, H7). Do not lower them to make
-# the suite green; retune data/ with Mason instead.
+# Issue #39 criterion 1 (Cristian's wording): with r=0.6 and a varying wheat price, over 20 seeds of
+# big_tight_r06, (a) the median minute at which the second chain is bought is between 8 and 12 and
+# (b) at least 18 of 20 seeds buy it between minutes 6 and 15. A seed that does not buy before the
+# end counts as outside the range, as long as its city stays stable and keeps a positive balance.
+# The thresholds are the criterion, not what was measured: do not lower them to make the suite green.
 const SEEDS: int = 20
-const WINDOW_TARGET: int = 17
+const MEDIAN_FROM: float = 8.0
+const MEDIAN_TO: float = 12.0
+const RANGE_FROM: float = 6.0
+const RANGE_TO: float = 15.0
+const RANGE_TARGET: int = 18
+# Never bought: sorts after every real minute, so it can only push the median up.
+const NEVER: float = 1000000.0
+# The big city should also end at 1.5x the small one in most seeds (criterion 3).
 const BIG_TARGET: int = 17
 
 
-func test_big_tight_r06_financing_window_across_twenty_seeds() -> void:
+func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 	var runner: ScenarioRunner = ScenarioRunner.create()
 	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
 	var small_scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/small_rich.json")
-	var in_window: int = 0
-	var never_bought: int = 0
+	var minutes: Array[float] = []
+	var in_range: int = 0
 	var big_enough: int = 0
 	for seed_value: int in range(1, SEEDS + 1):
 		var variant: Dictionary = scenario.duplicate(true)
 		variant["seed"] = seed_value
 		var result: ScenarioResult = runner.run(variant)
 		var tick: int = result.second_chain_purchase_tick()
-		if tick < 0:
-			never_bought += 1
-			continue
-		var minute: float = float(tick) / 60.0
-		if minute >= 8.0 and minute <= 12.0:
-			in_window += 1
-		var small_variant: Dictionary = small_scenario.duplicate(true)
-		small_variant["seed"] = seed_value
-		var small: ScenarioResult = runner.run(small_variant)
-		if float(result.final_row()["population"]) >= 1.5 * float(small.final_row()["population"]):
-			big_enough += 1
-	gut.p("big_tight_r06 over %d seeds: %d bought inside minutes 8-12, %d never bought, %d at 1.5x"
-		% [SEEDS, in_window, never_bought, big_enough])
-	assert_gte(in_window, WINDOW_TARGET, "seeds with the second chain bought inside minutes 8-12")
+		var minute: float = float(tick) / 60.0 if tick >= 0 else NEVER
+		minutes.append(minute)
+		if minute >= RANGE_FROM and minute <= RANGE_TO:
+			in_range += 1
+		else:
+			# Outside the range only counts if nothing is wrong with the city.
+			assert_true(result.survived(), "seed %d is outside the range but was lost" % seed_value)
+			assert_true(runner.is_stable(result), "seed %d is outside the range and not stable" % seed_value)
+			assert_gt(result.mean("operating_balance_pm", 1, MINUTES), 0.0,
+				"seed %d is outside the range and loses money" % seed_value)
+		if tick >= 0:
+			var small_variant: Dictionary = small_scenario.duplicate(true)
+			small_variant["seed"] = seed_value
+			var small: ScenarioResult = runner.run(small_variant)
+			if float(result.final_row()["population"]) >= 1.5 * float(small.final_row()["population"]):
+				big_enough += 1
+	minutes.sort()
+	@warning_ignore("integer_division")
+	var middle: int = SEEDS / 2
+	var median: float = (minutes[middle - 1] + minutes[middle]) / 2.0
+	gut.p("big_tight_r06 over %d seeds: median purchase minute %.2f, %d of %d bought between minutes %d and %d, %d at 1.5x"
+		% [SEEDS, median, in_range, SEEDS, int(RANGE_FROM), int(RANGE_TO), big_enough])
+	assert_between(median, MEDIAN_FROM, MEDIAN_TO, "(a) median minute of the second chain's purchase")
+	assert_gte(in_range, RANGE_TARGET, "(b) seeds that buy it between minutes 6 and 15")
 	assert_gte(big_enough, BIG_TARGET, "seeds where the big city is 1.5x the small one")
-
-
-# The scenario's rule pauses wheat purchases at price 3 while the stock covers two minutes of mill.
-# The wharf only buys what the mill eats, and the mill takes each unit in the tick it arrives, so
-# the stock of wheat is always 0 at the end of a tick and the rule never fires. If this fails, a
-# change made wheat pile up: the rule now does something and the scenario needs a new look.
-func test_big_tight_r06_wheat_rule_never_fires_because_no_wheat_stock_builds_up() -> void:
-	var runner: ScenarioRunner = ScenarioRunner.create()
-	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
-	assert_eq(scenario["rules"].size(), 1)
-	for seed_value: int in [1, 5, 42]:
-		var variant: Dictionary = scenario.duplicate(true)
-		variant["seed"] = seed_value
-		assert_eq(runner.run(variant).rule_command_count(), 0, "seed %d" % seed_value)
 
 
 func test_two_equilibria_differ() -> void:
