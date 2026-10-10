@@ -104,13 +104,13 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	var snapshot: Dictionary = sim.snapshot()
 	result.rows.append(_row(result.id, 0, 0, snapshot))
 	for tick_index: int in range(int(scenario["duration_ticks"])):
-		var ran_this_tick: bool = false
-		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, ran_this_tick):
+		var queued: Array[Dictionary] = []
+		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued):
 			var entry: Dictionary = script[next_command]
 			var command: SimulationCommand = _make_command(entry)
 			sim.apply_command(command)
 			issued.append({"entry": entry, "command": command, "tick": tick_index})
-			ran_this_tick = true
+			queued.append(entry)
 			next_command += 1
 		sim.tick()
 		# After a defeat the state is frozen, so the last snapshot stays valid.
@@ -163,19 +163,28 @@ static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
 
 # Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back
 # until the treasury reaches that amount, and `with_previous` runs it in the same tick as the
-# command before it, so a purchase made of several buildings is priced once. Commands queued
-# earlier in the same tick have not spent anything yet, so a wait that comes after one of them
-# is checked again on the next tick, when the treasury already reflects what they cost.
-func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, ran_this_tick: bool) -> bool:
+# command before it, so a purchase made of several buildings is priced once. `queued` are the
+# commands already sent in this tick: they have not run yet, so a wait is checked against the
+# treasury they would leave (see _money_after).
+func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[Dictionary]) -> bool:
 	if entry.get("with_previous", false):
-		return ran_this_tick
+		return not queued.is_empty()
 	if tick_index < int(entry["tick"]):
 		return false
 	if entry.has("wait_for_money"):
-		if ran_this_tick:
-			return false
-		return int(sim.snapshot()["economy"]["money"]) >= int(entry["wait_for_money"])
+		return _money_after(sim, queued) >= int(entry["wait_for_money"])
 	return true
+
+
+# The treasury once the commands queued in this tick have run. Only an accepted build spends:
+# set_tax, set_wheat_purchases and a refused build leave the money as it is. They are tried on a
+# copy of the state with fresh command objects, in the order the simulation will run them.
+func _money_after(sim: Simulation, queued: Array[Dictionary]) -> int:
+	var state: EconomyState = EconomyState.from_dict(sim.snapshot()["economy"])
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	for entry: Dictionary in queued:
+		_make_command(entry).execute(state, _params, rng)
+	return state.money
 
 
 func _initial_state() -> EconomyState:

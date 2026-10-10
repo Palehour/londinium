@@ -288,3 +288,46 @@ func test_a_wait_after_commands_of_the_same_tick_sees_what_they_spent() -> void:
 	# Released on stale funds it would have run at tick 0 and the bakery would have been refused.
 	assert_gt(tick, 0, "it waited for the first chain's profit")
 	assert_eq(result.final_row()["n_wharf"], 2)
+
+
+# A wait that is already satisfied must not lose a tick to commands that cannot change the treasury.
+func _wait_executed_tick(first: Dictionary, tick: int, duration: int) -> int:
+	var waiting: Dictionary = {"tick": tick, "cmd": "set_tax", "rate": 0.4, "wait_for_money": 100}
+	var result: ScenarioResult = _runner.run(_scenario([first, waiting], 42, duration))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+	assert_eq(result.commands.size(), 2)
+	return int(result.commands[1]["executed_tick"])
+
+
+func test_a_wait_is_not_postponed_by_a_set_tax_in_the_same_tick() -> void:
+	assert_eq(_wait_executed_tick({"tick": 0, "cmd": "set_tax", "rate": 0.5}, 0, 60), 0)
+
+
+func test_a_wait_is_not_postponed_by_a_set_wheat_purchases_in_the_same_tick() -> void:
+	assert_eq(_wait_executed_tick({"tick": 0, "cmd": "set_wheat_purchases", "enabled": false}, 0, 60), 0)
+
+
+func test_a_wait_is_not_postponed_by_a_refused_command_in_the_same_tick() -> void:
+	# A wharf on a land cell is refused (requires_river), so it spends nothing.
+	var refused: Dictionary = {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 5],
+		"expect_reject": "requires_river"}
+	assert_eq(_wait_executed_tick(refused, 0, 60), 0)
+
+
+func test_a_wait_on_the_last_tick_still_runs_after_a_non_spending_command() -> void:
+	var result: ScenarioResult = _runner.run(_scenario([{"tick": 9, "cmd": "set_tax", "rate": 0.5},
+		{"tick": 9, "cmd": "set_tax", "rate": 0.4, "wait_for_money": 100}], 42, 10))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary], "not reported as never_ran")
+	assert_eq(int(result.commands[1]["executed_tick"]), 9)
+
+
+func test_a_wait_is_postponed_only_when_an_accepted_build_takes_it_below_the_amount() -> void:
+	# Housing costs 60 and leaves 990, still above 100: nothing to wait for.
+	var cheap: Dictionary = {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]}
+	assert_eq(_wait_executed_tick(cheap, 0, 60), 0)
+	# The same housing against a wait for 1050 (the whole starting treasury) does have to wait.
+	var result: ScenarioResult = _runner.run(_scenario([cheap,
+		{"tick": 0, "cmd": "set_tax", "rate": 0.7, "wait_for_money": 1050}], 42, 600))
+	# With no income the treasury never gets back to 1050, so it may not run at all; what matters is
+	# that it did not run in tick 0 against the 1050 the treasury had before the housing was paid.
+	assert_ne(int(result.commands[1]["executed_tick"]), 0, "60 pence were spent, so 1050 is out of reach at tick 0")
