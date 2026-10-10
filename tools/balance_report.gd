@@ -1,26 +1,27 @@
 extends SceneTree
 
 # Per-minute CSV of the scripted 15-minute games in tests/scenarios/, for tuning data/.
-# Usage: godot --headless --path . -s tools/balance_report.gd -- [--scenario <id>|all] [--out <dir>]
-#        [--seeds <n>] [--summary] [--tax <rate>] [--wheat-price <whole>]
-# Godot prints its version banner on stdout, so use --out for clean files (balance_all.csv and
-# balance_<id>.csv); the same CSV is also printed.
-#
-# Probe mode: --seeds n runs each scenario with seeds 1..n instead of the seed in its file, and
-# --summary prints one row per scenario and metric (min, median, mean, max over the seeds) instead
-# of the per-minute CSV; with --out it is also written to balance_summary.csv, next to
-# balance_seeds.csv (one row per scenario and seed). A run in which a scripted command is refused
-# is left out of both, counted in runs_refused and listed in balance_refused.csv. --tax replaces the
-# rate of every set_tax command and --wheat-price fixes the market price; both only change the
-# probe, never data/ or the scenario files.
+# Run with --help for the options. Godot prints its version banner on stdout, so use --out for clean
+# files (balance_all.csv and balance_<id>.csv); the same CSV is also printed.
 
 const ALL: String = "all"
 const SUMMARY_HEADER: String = "scenario,metric,min,median,mean,max"
 const REFUSED_HEADER: String = "scenario,seed,tick,cmd,reason,money_at_start_of_minute"
 const LAST_MINUTES_FROM: int = 13
-const CHAIN_BUILDINGS: Array[String] = ["wharf", "mill", "bakery"]
-# Same threshold the hunger-emigration rule uses (population.growth.hunger_emigration_threshold).
-const STABLE_COVERAGE_KEY: StringName = &"population.growth.hunger_emigration_threshold"
+const USAGE: String = """Usage: godot --headless --path . -s tools/balance_report.gd -- [options]
+  --scenario <id>|all   scenario to run (default all)
+  --out <dir>           also write the CSV files into <dir>
+  --seeds <n>           run every scenario with seeds 1..n instead of the seed in its file
+                        (needs --summary when n is above 1)
+  --summary             one row per scenario and metric (min, median, mean, max over the seeds)
+                        instead of the per-minute CSV; with --out it also writes
+                        balance_summary.csv, balance_seeds.csv and balance_refused.csv
+  --tax <rate>          replace the rate of every set_tax command, 0 to 1. The defeat_* scenarios
+                        are left alone: their tax rate is part of how they lose
+  --wheat-price <n>     fix the market price of wheat at n
+  --help                show this text
+A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
+runs_refused and listed in balance_refused.csv. Nothing here changes data/ or the scenario files."""
 
 
 func _init() -> void:
@@ -28,6 +29,10 @@ func _init() -> void:
 	if options.has("error"):
 		printerr("balance_report: %s" % options["error"])
 		quit(2)
+		return
+	if options["help"]:
+		print(USAGE)
+		quit(0)
 		return
 	if options["seeds"] > 1 and not options["summary"]:
 		printerr("balance_report: --seeds above 1 needs --summary (the per-minute CSV is for one run)")
@@ -115,13 +120,9 @@ func _run_summary(runner: ScenarioRunner, scenarios: Array[Dictionary], options:
 		if not refused_seeds.is_empty():
 			printerr("balance_report: %s: %d run(s) left out of the summary because a scripted command was refused (seeds %s)"
 				% [id, refused_seeds.size(), str(refused_seeds)])
-	print("
-".join(lines))
+	print("\n".join(lines))
 	if refused_rows.size() > 1:
-		print("
-# Runs left out of the summary (a scripted command was refused)
-%s" % "
-".join(refused_rows))
+		print("\n# Runs left out of the summary (a scripted command was refused)\n%s" % "\n".join(refused_rows))
 	if options["out"] != "" and not _write_summary(options["out"], lines, per_seed, refused_rows):
 		quit(1)
 		return
@@ -149,9 +150,7 @@ func _variants(scenario: Dictionary, options: Dictionary) -> Array[Dictionary]:
 		if seeds > 0:
 			copy["seed"] = index + 1
 		if options["tax"] >= 0.0:
-			for command: Dictionary in copy["commands"]:
-				if command["cmd"] == "set_tax":
-					command["rate"] = options["tax"]
+			copy = ScenarioRunner.with_tax(copy, options["tax"])
 		found.append(copy)
 	return found
 
@@ -159,52 +158,25 @@ func _variants(scenario: Dictionary, options: Dictionary) -> Array[Dictionary]:
 # Everything the issue's acceptance criteria ask about, for one finished game.
 func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	var final: Dictionary = result.final_row()
-	var chain_cost: int = 0
-	for building: String in CHAIN_BUILDINGS:
-		chain_cost += int(runner.param(StringName("building.%s.cost" % building)))
 	var balance: float = result.mean("operating_balance_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
-	var coverage: float = float(final["bread_coverage"])
-	var shrinking: bool = int(final["population"]) < int(result.row(LAST_MINUTES_FROM - 1)["population"])
-	var funded_minute: int = _first_minute_with_money(result, chain_cost)
-	var stable: bool = result.survived() and not shrinking \
-		and coverage >= float(runner.param(STABLE_COVERAGE_KEY))
+	# "Stable" is the simulation's own rule (DefeatSystem.is_city_stable) on the final state.
+	var stable: bool = result.survived() and runner.is_stable(result)
+	# The financing event is the purchase itself: its real tick, not a per-minute row, because a
+	# purchase that waits for its money happens between two rows.
+	var purchase_tick: int = result.second_chain_purchase_tick()
 	return {
 		"survived": 1 if result.survived() else 0,
 		"defeat_tick": result.defeat_tick,
 		"population": final["population"],
 		"money": final["money"],
-		"bread_coverage": coverage,
+		"bread_coverage": final["bread_coverage"],
 		"satisfaction": final["satisfaction"],
 		"operating_balance_last3": balance,
 		"stable": 1 if stable else 0,
 		"stable_and_losing_money": 1 if stable and balance < 0.0 else 0,
-		"chain_cost": chain_cost,
-		"chain_funded": 1 if funded_minute > 0 else 0,
-		"chain_funded_minute": funded_minute,
-		# First minute that ends with two complete chains standing: when the second one was paid for.
-		"second_chain_minute": _first_minute_with_chains(result, 2),
+		"second_chain_tick": purchase_tick,
+		"second_chain_minute": float(purchase_tick) / float(ScenarioRunner.TICKS_PER_MINUTE) if purchase_tick >= 0 else -1.0,
 	}
-
-
-# First minute, counted from the first complete chain (wharf, mill and bakery all standing), with
-# a treasury that pays for one more chain; -1 if there is no first chain or it never gets there.
-func _first_minute_with_money(result: ScenarioResult, cost: int) -> int:
-	var built_from: int = -1
-	for minute: int in range(1, result.rows.size()):
-		var row: Dictionary = result.row(minute)
-		if built_from < 0 and row["n_wharf"] > 0 and row["n_mill"] > 0 and row["n_bakery"] > 0:
-			built_from = minute
-		if built_from >= 0 and int(row["money"]) >= cost:
-			return minute
-	return -1
-
-
-func _first_minute_with_chains(result: ScenarioResult, chains: int) -> int:
-	for minute: int in range(1, result.rows.size()):
-		var row: Dictionary = result.row(minute)
-		if row["n_wharf"] >= chains and row["n_mill"] >= chains and row["n_bakery"] >= chains:
-			return minute
-	return -1
 
 
 func _summary_line(scenario_id: String, metric: String, values: Array) -> String:
@@ -221,12 +193,12 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 
 func _parse(args: PackedStringArray) -> Dictionary:
 	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
-		"tax": -1.0, "wheat_price": 0}
+		"tax": -1.0, "wheat_price": 0, "help": false}
 	var index: int = 0
 	while index < args.size():
 		var flag: String = args[index]
-		if flag == "--summary":
-			options["summary"] = true
+		if flag in ["--summary", "--help"]:
+			options[flag.trim_prefix("--")] = true
 			index += 1
 			continue
 		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price"] or index + 1 >= args.size():
