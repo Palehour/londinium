@@ -129,7 +129,11 @@ func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale:
 func _decay(state: EconomyState, params: Params) -> void:
 	var stock: int = int(state.stocks.get(&"wheat", 0))
 	var rate: float = float(params.get_value(&"market.wheat.decay_fraction_per_minute"))
-	if stock <= 0 or rate <= 0.0:
+	# Loss accrued against stock that is gone does not carry over to the next delivery.
+	if stock <= 0:
+		state.wheat_decay_fraction = 0.0
+		return
+	if rate <= 0.0:
 		return
 	# The configured fraction is what is lost in a minute, so each tick keeps (1 - rate)^(1/60), as the bread does.
 	state.wheat_decay_fraction += float(stock) * (1.0 - pow(1.0 - rate, 1.0 / SECONDS_PER_MINUTE))

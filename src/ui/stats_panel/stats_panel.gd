@@ -4,6 +4,8 @@ extends PanelContainer
 signal restart_requested
 
 const PERCENT: float = 100.0
+# A role can widen the market to thousands of prices; the selectors list this many from the minimum.
+const MAX_PRICE_OPTIONS: int = 12
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 
 var session: GameSession
@@ -24,7 +26,6 @@ var _wheat_row: Label
 # Option index -> price (0 = off / no limit), rebuilt when the market's price range changes.
 var _accumulate_prices: Array[int] = []
 var _max_prices: Array[int] = []
-var _price_range: Vector2i = Vector2i(-1, -1)
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _pause: Button
@@ -171,27 +172,40 @@ func _price_selector(content: VBoxContainer, title: String) -> OptionButton:
 	return selector
 
 
-# The player picks among the market's own prices: a price above the top one could never be paid.
+# The player picks among the market's own prices: a price above the top one could never be paid. Only the
+# first MAX_PRICE_OPTIONS are listed, plus the price the policy already has, so a very wide market
+# never builds thousands of items and an accepted policy is never shown as something else.
 func _rebuild_price_options(market: Dictionary) -> void:
-	var range_now: Vector2i = Vector2i(market["min_price"], market["top_price"])
-	if range_now == _price_range:
-		return
-	_price_range = range_now
-	_accumulate.clear()
-	_max_price.clear()
-	_accumulate_prices = [WheatPolicy.OFF]
-	_max_prices = []
-	_accumulate.add_item(Strings.ACCUMULATE_OFF)
 	# Accumulating at the market's top price is a valid policy (always stockpile), so it is listed;
 	# a maximum at the top price never stops anything, so "no limit" stands for it.
-	for price: int in range(range_now.x, range_now.y + 1):
-		_accumulate_prices.append(price)
-		_accumulate.add_item(Strings.money(price))
-		if price < range_now.y:
-			_max_prices.append(price)
-			_max_price.add_item(Strings.money(price))
-	_max_prices.append(WheatPolicy.NO_LIMIT)
-	_max_price.add_item(Strings.NO_LIMIT)
+	var accumulate_choices: Array[int] = [WheatPolicy.OFF]
+	accumulate_choices.append_array(_price_choices(market, int(market["accumulate_price"]), true))
+	var max_choices: Array[int] = _price_choices(market, int(market["max_price"]), false)
+	max_choices.append(WheatPolicy.NO_LIMIT)
+	if accumulate_choices == _accumulate_prices and max_choices == _max_prices:
+		return
+	_accumulate_prices = accumulate_choices
+	_max_prices = max_choices
+	_accumulate.clear()
+	_max_price.clear()
+	for price: int in _accumulate_prices:
+		_accumulate.add_item(Strings.ACCUMULATE_OFF if price == WheatPolicy.OFF else Strings.money(price))
+	for price: int in _max_prices:
+		_max_price.add_item(Strings.NO_LIMIT if price == WheatPolicy.NO_LIMIT else Strings.money(price))
+
+
+func _price_choices(market: Dictionary, current: int, include_top: bool) -> Array[int]:
+	var low: int = market["min_price"]
+	var top: int = market["top_price"]
+	var last: int = mini(top if include_top else top - 1, low + MAX_PRICE_OPTIONS - 1)
+	var prices: Array[int] = []
+	for price: int in range(low, last + 1):
+		prices.append(price)
+	var listable: bool = current >= low and (current <= top if include_top else current < top)
+	if listable and current not in prices:
+		prices.append(current)
+		prices.sort()
+	return prices
 
 
 func _update_wheat_policy(market: Dictionary, defeated: bool) -> void:

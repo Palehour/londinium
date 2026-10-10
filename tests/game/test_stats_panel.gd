@@ -195,6 +195,22 @@ func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void
 	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 3, "changing another control does not turn accumulating off")
 
 
+func test_a_very_wide_market_does_not_build_thousands_of_price_options() -> void:
+	_session = _new_session([Modifier.new(&"market.wheat.max_price", &"set", 1000000)])
+	_panel = _new_panel(_session)
+	_panel.update_snapshot(_session.get_snapshot())
+	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
+	var maximum: OptionButton = _panel.get("_max_price") as OptionButton
+	assert_lte(accumulate.item_count, StatsPanel.MAX_PRICE_OPTIONS + 2)
+	assert_lte(maximum.item_count, StatsPanel.MAX_PRICE_OPTIONS + 2)
+	_session.submit_command(SetWheatPolicyCommand.new(500, 700, 0, 2))
+	_tick()
+	_session.publish_tick()
+	assert_eq(int(_session.get_snapshot()["economy"]["wheat_accumulate_price"]), 500)
+	assert_eq((_panel.get("_accumulate_prices") as Array)[accumulate.selected], 500, "an accepted price outside the listed ones is still shown")
+	assert_eq((_panel.get("_max_prices") as Array)[maximum.selected], 700)
+
+
 func test_policy_controls_are_blocked_after_defeat() -> void:
 	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),

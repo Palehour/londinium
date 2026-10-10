@@ -148,6 +148,15 @@ func test_the_decay_fraction_is_what_is_lost_in_one_minute() -> void:
 		assert_between(_wheat(sim), floori(100.0 * (1.0 - rate)) - 1, ceili(100.0 * (1.0 - rate)) + 1, "rate %.1f" % rate)
 
 
+func test_spoilage_accrued_against_gone_stock_does_not_hit_the_next_delivery() -> void:
+	var state: EconomyState = _state(2)
+	state.buildings.clear()
+	state.wheat_decay_fraction = 0.9
+	var sim: Simulation = _sim(state, _params([], true))
+	sim.tick()
+	assert_eq(sim.snapshot()["economy"]["wheat_decay_fraction"], 0.0, "nothing is left to spoil, so nothing is owed")
+
+
 func test_decay_goes_on_when_purchases_are_off() -> void:
 	var state: EconomyState = _state(2, [-1, -1, 0], 50)
 	state.buildings.clear()
