@@ -1,6 +1,6 @@
 {
   "id": "crisis_recovery",
-  "description": "Crisis y recuperacion: se demuele el molino en el segundo 240 (falta harina, falta pan) y se reconstruye en el 400, antes de que el motin de hambre llegue a 180 s.",
+  "description": "Crisis y recuperacion (una cadena y una vivienda, para que la ciudad no supere lo que alimenta una cadena): se demuele el molino en el segundo 240 (falta harina, falta pan) y se reconstruye en el 400, antes de que el motin de hambre llegue a 180 s.",
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
@@ -9,7 +9,6 @@
     {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
     {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
     {"tick": 240, "cmd": "demolish", "cell": [2, 5]},
     {"tick": 400, "cmd": "build", "building": "mill", "cell": [2, 5]}
   ]

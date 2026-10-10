@@ -11,10 +11,10 @@
   },
   "growth": {
     "immigration_threshold": 70.0, "emigration_threshold": 30.0,
-    "immigration_per_minute": 2.0, "emigration_per_minute": 4.0,
+    "immigration_per_minute": 4.0, "emigration_per_minute": 4.0,
     "hunger_emigration_threshold": 0.6,
     "hunger_emigration_recovery": 0.75,
     "hunger_emigration_multiplier": 2.0
   },
-  "tax": { "rate": 0.25, "base_per_employed_worker_per_minute": 8 }
+  "tax": { "rate": 0.25, "base_per_employed_worker_per_minute": 11 }
 }

@@ -1,6 +1,7 @@
 {
   "id": "defeat_depopulation",
   "description": "Ciudad abandonada: sin comandos. El pan inicial se acaba, la gente se va y pasada la gracia cuenta la despoblacion.",
+  "tax_override": false,
   "seed": 42,
   "duration_ticks": 900,
   "commands": []

@@ -1,6 +1,7 @@
 {
   "id": "defeat_bankruptcy",
-  "description": "Quiebra: impuesto 0 y dos molinos de mas que solo cuestan mantenimiento. El tesoro pasa a negativo antes de que se acabe el pan.",
+  "description": "Quiebra: impuesto 0 y un molino de mas que solo cuesta mantenimiento. El tesoro pasa a negativo cerca del fin de la gracia, antes de que la despoblacion llegue a su contador.",
+  "tax_override": false,
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
@@ -9,7 +10,6 @@
     {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
     {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [3, 4]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 4]}
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [3, 4]}
   ]
 }

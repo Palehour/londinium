@@ -22,7 +22,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
-		"max_price": "money", "price_update_seconds": "positive_integer"}},
+		"max_price": "money", "price_update_seconds": "positive_integer",
+		"max_step": "positive_integer", "reversion": "fraction"}},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},

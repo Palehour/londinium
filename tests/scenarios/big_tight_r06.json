@@ -1,0 +1,18 @@
+{
+  "id": "big_tight_r06",
+  "description": "El mismo planteo de big_tight con el impuesto que pide el issue #39 (0,6): una cadena y una vivienda al inicio; la segunda cadena y la segunda vivienda se compran juntas, en el mismo tick, apenas la caja llega a 600 (su precio).",
+  "notes": "H1/H5 del PR #40: la compra espera a la plata (wait_for_money) en vez de tener un tick fijo, porque con tick fijo en 8 de 20 semillas la caja estaba entre 529 y 599 y la vivienda se rechazaba. Si falla despues de un cambio en data/, es esperable: hay que recalibrarlo y confirmar con Mason que los criterios del #39 siguen cumplidos o no.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 600},
+    {"tick": 60, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "housing", "cell": [6, 3], "with_previous": true}
+  ]
+}
