@@ -170,16 +170,23 @@ func is_stable(result: ScenarioResult) -> bool:
 	return DefeatSystem.new().is_city_stable(EconomyState.from_dict(result.final_economy), _params)
 
 
-# Copy of `scenario` with every set_tax rate replaced, for probes. A scenario with
+# Copy of `scenario` with every set_tax rate replaced, for probes: the commands and the actions of
+# the rules (otherwise a rule that fires would put its own rate back). A scenario with
 # "tax_override": false is left alone: its tax rate is part of what it demonstrates (the defeat_*
 # ones lose partly because of it), so overriding it would change the scenario itself.
 static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
 	var copy: Dictionary = scenario.duplicate(true)
 	if copy.get("tax_override", true) == false:
 		return copy
-	for command: Dictionary in copy["commands"]:
-		if command["cmd"] == "set_tax":
-			command["rate"] = rate
+	var actions: Array = []
+	actions.append_array(copy["commands"])
+	for rule: Dictionary in copy.get("rules", []):
+		actions.append(rule["then"])
+		if rule.has("otherwise"):
+			actions.append(rule["otherwise"])
+	for action: Dictionary in actions:
+		if action["cmd"] == "set_tax":
+			action["rate"] = rate
 	return copy
 
 

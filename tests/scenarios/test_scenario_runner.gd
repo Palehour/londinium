@@ -251,6 +251,19 @@ func test_with_tax_skips_exactly_the_scenarios_that_say_tax_override_false() -> 
 	assert_eq(ScenarioRunner.with_tax(opted_in, 0.6)["commands"][0]["rate"], 0.6, "the id prefix decides nothing")
 	assert_eq(ScenarioRunner.with_tax(opted_out, 0.6)["commands"][0]["rate"], 0.0)
 	assert_eq(plain["commands"][0]["rate"], 0.0, "the original is not modified")
+	# A rule that sets the tax must follow the override, or it would put its own rate back.
+	var with_rule: Dictionary = {"id": "r", "seed": 1, "duration_ticks": 10, "commands": commands,
+		"rules": [{"id": "x", "when": {"path": "money", "op": "<", "value": 5},
+			"then": {"cmd": "set_tax", "rate": 0.9}, "otherwise": {"cmd": "set_tax", "rate": 0.1}},
+			{"id": "y", "when": {"path": "money", "op": "<", "value": 5},
+				"then": {"cmd": "set_wheat_purchases", "enabled": false}}]}
+	var overridden: Dictionary = ScenarioRunner.with_tax(with_rule, 0.6)
+	assert_eq(overridden["rules"][0]["then"]["rate"], 0.6)
+	assert_eq(overridden["rules"][0]["otherwise"]["rate"], 0.6)
+	assert_eq(overridden["rules"][1]["then"]["enabled"], false, "other actions are untouched")
+	assert_eq(with_rule["rules"][0]["then"]["rate"], 0.9, "the original is not modified")
+	with_rule["tax_override"] = false
+	assert_eq(ScenarioRunner.with_tax(with_rule, 0.6)["rules"][0]["then"]["rate"], 0.9)
 	opted_out["tax_override"] = "no"
 	assert_gt(_runner.validate(opted_out).size(), 0, "tax_override must be a boolean")
 
