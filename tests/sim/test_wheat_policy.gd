@@ -139,6 +139,15 @@ func test_wheat_decays_slowly_and_in_whole_units() -> void:
 	assert_eq(_wheat(small), 1, "a single unit is not erased by rounding on every tick")
 
 
+func test_the_decay_fraction_is_what_is_lost_in_one_minute() -> void:
+	for rate: float in [0.5, 0.9]:
+		var state: EconomyState = _state(2, [0, 0, 0], 100)
+		state.buildings.clear()
+		var sim: Simulation = _sim(state, _params([Modifier.new(&"market.wheat.decay_fraction_per_minute", &"set", rate)], true))
+		_run(sim, 60)
+		assert_between(_wheat(sim), floori(100.0 * (1.0 - rate)) - 1, ceili(100.0 * (1.0 - rate)) + 1, "rate %.1f" % rate)
+
+
 func test_decay_goes_on_when_purchases_are_off() -> void:
 	var state: EconomyState = _state(2, [0, 0, 0], 50)
 	state.buildings.clear()

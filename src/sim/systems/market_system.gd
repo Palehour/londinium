@@ -117,7 +117,8 @@ func _decay(state: EconomyState, params: Params) -> void:
 	var rate: float = float(params.get_value(&"market.wheat.decay_fraction_per_minute"))
 	if stock <= 0 or rate <= 0.0:
 		return
-	state.wheat_decay_fraction += float(stock) * rate / 60.0
+	# The configured fraction is what is lost in a minute, so each tick keeps (1 - rate)^(1/60), as the bread does.
+	state.wheat_decay_fraction += float(stock) * (1.0 - pow(1.0 - rate, 1.0 / SECONDS_PER_MINUTE))
 	var lost: int = mini(stock, ProductionSystem.whole_units(state.wheat_decay_fraction))
 	state.wheat_decay_fraction -= float(lost)
 	state.stocks[&"wheat"] = stock - lost

@@ -158,6 +158,7 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	assert_eq(maximum.get_item_text(2), Strings.NO_LIMIT)
 	assert_eq(maximum.selected, 2, "the default policy has no limit")
 	assert_eq(target.max_value, 100.0)
+	assert_false(target.scrollable or (_panel.get("_reserve") as HSlider).scrollable, "the wheel would not send the command")
 	accumulate.select(1)
 	accumulate.item_selected.emit(1)
 	maximum.select(1)

@@ -115,6 +115,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_target_label)
 	_target = HSlider.new()
 	_target.step = 1.0
+	# The wheel would change the value without a drag end, and the panel would put the old one back.
+	_target.scrollable = false
 	_target.focus_mode = Control.FOCUS_NONE
 	_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target.drag_started.connect(func() -> void: _dragging_target = true)
@@ -125,6 +127,7 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_reserve_label)
 	_reserve = HSlider.new()
 	_reserve.step = 1.0
+	_reserve.scrollable = false
 	_reserve.focus_mode = Control.FOCUS_NONE
 	_reserve.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reserve.drag_started.connect(func() -> void: _dragging_reserve = true)
