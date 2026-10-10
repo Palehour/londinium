@@ -244,6 +244,11 @@ func test_nonfinite_number_is_rejected() -> void:
 	_assert_invalid("base_price: expected a finite money")
 
 
+func test_negative_wheat_base_price_is_rejected_in_data() -> void:
+	_documents["economy/market.json"]["wheat"]["base_price"] = -1
+	_assert_invalid("base_price: invalid money value")
+
+
 func test_money_outside_int64_is_rejected() -> void:
 	_documents["economy/market.json"]["wheat"]["base_price"] = 1e30
 	_assert_invalid("base_price: invalid money")
