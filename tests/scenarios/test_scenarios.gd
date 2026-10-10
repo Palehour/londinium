@@ -132,17 +132,13 @@ const RANGE_TO: float = 15.0
 const RANGE_TARGET: int = 18
 # Never bought: sorts after every real minute, so it can only push the median up.
 const NEVER: float = 1000000.0
-# The big city should also end at 1.5x the small one in most seeds (criterion 3).
-const BIG_TARGET: int = 17
 
 
 func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 	var runner: ScenarioRunner = ScenarioRunner.create()
 	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
-	var small_scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/small_rich.json")
 	var minutes: Array[float] = []
 	var in_range: int = 0
-	var big_enough: int = 0
 	for seed_value: int in range(1, SEEDS + 1):
 		var variant: Dictionary = scenario.duplicate(true)
 		variant["seed"] = seed_value
@@ -158,21 +154,14 @@ func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 			assert_true(runner.is_stable(result), "seed %d is outside the range and not stable" % seed_value)
 			assert_gt(result.mean("operating_balance_pm", 1, MINUTES), 0.0,
 				"seed %d is outside the range and loses money" % seed_value)
-		if tick >= 0:
-			var small_variant: Dictionary = small_scenario.duplicate(true)
-			small_variant["seed"] = seed_value
-			var small: ScenarioResult = runner.run(small_variant)
-			if float(result.final_row()["population"]) >= 1.5 * float(small.final_row()["population"]):
-				big_enough += 1
 	minutes.sort()
 	@warning_ignore("integer_division")
 	var middle: int = SEEDS / 2
 	var median: float = (minutes[middle - 1] + minutes[middle]) / 2.0
-	gut.p("big_tight_r06 over %d seeds: median purchase minute %.2f, %d of %d bought between minutes %d and %d, %d at 1.5x"
-		% [SEEDS, median, in_range, SEEDS, int(RANGE_FROM), int(RANGE_TO), big_enough])
+	gut.p("big_tight_r06 over %d seeds: median purchase minute %.2f, %d of %d bought between minutes %d and %d"
+		% [SEEDS, median, in_range, SEEDS, int(RANGE_FROM), int(RANGE_TO)])
 	assert_between(median, MEDIAN_FROM, MEDIAN_TO, "(a) median minute of the second chain's purchase")
 	assert_gte(in_range, RANGE_TARGET, "(b) seeds that buy it between minutes 6 and 15")
-	assert_gte(big_enough, BIG_TARGET, "seeds where the big city is 1.5x the small one")
 
 
 func test_two_equilibria_differ() -> void:

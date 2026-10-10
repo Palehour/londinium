@@ -175,7 +175,6 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"operating_balance_last3": balance,
 		"stable": 1 if stable else 0,
 		"stable_and_losing_money": 1 if stable and balance < 0.0 else 0,
-		"rule_commands": result.rule_command_count(),
 		"second_chain_tick": purchase_tick,
 		"second_chain_minute": float(purchase_tick) / float(ScenarioRunner.TICKS_PER_MINUTE) if purchase_tick >= 0 else -1.0,
 	}
