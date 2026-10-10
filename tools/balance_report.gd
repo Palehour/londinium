@@ -133,6 +133,8 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	var coverage: float = float(final["bread_coverage"])
 	var shrinking: bool = int(final["population"]) < int(result.row(LAST_MINUTES_FROM - 1)["population"])
 	var funded_minute: int = _first_minute_with_money(result, chain_cost)
+	var housing_cost: int = int(runner.param(&"building.housing.cost"))
+	var stage_minute: int = _first_minute_with_money(result, chain_cost + housing_cost)
 	var stable: bool = result.survived() and not shrinking \
 		and coverage >= float(runner.param(STABLE_COVERAGE_KEY))
 	return {
@@ -149,6 +151,9 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"chain_cost": chain_cost,
 		"chain_funded": 1 if funded_minute > 0 else 0,
 		"chain_funded_minute": funded_minute,
+		# Second chain plus the second housing block, bought together (big_tight_r06).
+		"chain_housing_funded": 1 if stage_minute > 0 else 0,
+		"chain_housing_funded_minute": stage_minute,
 	}
 
 

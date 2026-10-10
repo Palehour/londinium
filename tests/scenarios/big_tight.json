@@ -1,7 +1,7 @@
 {
   "id": "big_tight",
   "description": "Grande y justa de caja: dos cadenas y dos viviendas. Arranca con una cadena y las dos viviendas, financia la segunda cadena con el tesoro en el minuto 12 y llega a ~35 habitantes con el pan cubierto.",
-  "notes": "F1/F2/F7: ya no es la cadena unica con el pan justo del #10. Lo ajustado ahora es la caja: con impuesto 0,7 la segunda cadena (540) se puede pagar entre los minutos 7 y 12 segun el precio del trigo, y la construccion esta fijada en el segundo 720 para que alcance con cualquier semilla. Si este escenario falla despues de un cambio en data/, es esperable: hay que recalibrar el escenario (o avisar a Mason), no es un bug del simulador.",
+  "notes": "F1/F2/F7: ya no es la cadena unica con el pan justo del #10. Lo ajustado ahora es la caja: con impuesto 0,7 la segunda cadena (540) se puede pagar entre los minutos 5 y 9 segun el precio del trigo, y la construccion esta fijada en el segundo 720 para que alcance con cualquier semilla. Si este escenario falla despues de un cambio en data/, es esperable: hay que recalibrar el escenario (o avisar a Mason), no es un bug del simulador.",
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
