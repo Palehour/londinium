@@ -86,6 +86,32 @@ func test_big_tight_second_chain_is_paid_from_profit_between_minutes_8_and_12() 
 	assert_lt(int(result.final_row()["money"]), int(result.row(12)["money"]), "and it was spent on it")
 
 
+# H1/H2 of PR #40: at the tax rate the issue asks for (0.6) the second chain is paid for before
+# minute 8 and the city stays under 1.5x the small one. No script timing fixes that; only a change
+# in data/ does. This pins what happens today so the gap stays visible in the suite. If it fails
+# after a change in data/, check with Mason whether criteria 1 and 3 of #39 are now met.
+func test_big_tight_r06_shows_the_gap_with_the_issue_39_criteria() -> void:
+	var result: ScenarioResult = _result("big_tight_r06")
+	var small: ScenarioResult = _result("small_rich")
+	assert_true(result.survived())
+	var final: Dictionary = result.final_row()
+	assert_eq([final["n_wharf"], final["n_mill"], final["n_bakery"], final["n_housing"]], [2, 2, 2, 2])
+	assert_eq(result.row(1)["tax_rate"], 0.6)
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var chain_cost: int = 0
+	for building: String in ["wharf", "mill", "bakery"]:
+		chain_cost += int(runner.param(StringName("building.%s.cost" % building)))
+	var funded_minute: int = -1
+	for minute: int in range(1, result.rows.size()):
+		if int(result.row(minute)["money"]) >= chain_cost:
+			funded_minute = minute
+			break
+	assert_between(funded_minute, 1, 7, "criterion 1 asks for minutes 8-12; not met at r=0.6")
+	assert_lt(float(final["population"]), 1.5 * float(small.final_row()["population"]),
+		"criterion 3 asks for 1.5x; not met at r=0.6 with this order of building")
+	assert_gte(float(final["bread_coverage"]), 0.95)
+
+
 func test_two_equilibria_differ() -> void:
 	var small: ScenarioResult = _result("small_rich")
 	var big: ScenarioResult = _result("big_tight")
