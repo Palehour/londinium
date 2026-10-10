@@ -383,3 +383,16 @@ func test_invalid_rules_are_rejected() -> void:
 		assert_gt(errors.size(), 0, label)
 	assert_eq(_runner.validate(_with_rules(_chain(), [_price_rule(3)])).size(), 0)
 	assert_eq(_runner.validate(_with_rules(_chain(), [])).size(), 0, "an empty list is fine")
+
+
+func test_a_game_that_ends_mid_minute_gets_a_last_row_with_the_terminal_state() -> void:
+	var result: ScenarioResult = _runner.run(_scenario(_chain(), 42, 90))
+	assert_eq(result.rows.size(), 3, "minute 0, minute 1 and the partial row")
+	assert_eq(result.final_row()["tick"], 90)
+	assert_eq(result.final_row()["minute"], 2)
+	assert_eq(result.final_row()["money"], result.final_economy["money"], "final_row is the terminal state")
+	assert_eq(result.final_row()["population"], result.final_economy["population"])
+	assert_ne(result.row(1)["tick"], result.final_row()["tick"])
+	var whole: ScenarioResult = _runner.run(_scenario(_chain(), 42, 120))
+	assert_eq(whole.rows.size(), 3, "no extra row when the game ends on a whole minute")
+	assert_eq(whole.final_row()["tick"], 120)

@@ -1,7 +1,8 @@
 class_name ScenarioResult
 extends RefCounted
 
-# One CSV row per game minute (0 = before the first tick). Order here is the CSV order.
+# One CSV row per game minute (0 = before the first tick), plus a last row at the final tick when
+# the game does not end on a whole minute. Order here is the CSV order.
 const CSV_COLUMNS: Array[String] = [
 	"scenario", "minute", "tick", "population", "money", "bread_coverage", "satisfaction",
 	"bread_coverage_instant", "satisfaction_target", "tax_rate", "bread_stock",

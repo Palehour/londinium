@@ -148,6 +148,13 @@ func run(scenario: Dictionary) -> ScenarioResult:
 			_observe(result, snapshot, tick_index + 1)
 		if (tick_index + 1) % TICKS_PER_MINUTE == 0:
 			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot))
+	# A game that does not end on a whole minute gets a last, partial-minute row, so final_row()
+	# is the state final_economy describes and not one up to 59 ticks older.
+	var duration_ticks: int = int(scenario["duration_ticks"])
+	if duration_ticks % TICKS_PER_MINUTE != 0:
+		@warning_ignore("integer_division")
+		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
+		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot))
 	result.final_economy = snapshot["economy"]
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
