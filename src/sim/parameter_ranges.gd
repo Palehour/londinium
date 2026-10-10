@@ -53,6 +53,9 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.max_price": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# -1 is the "uninitialised" sentinel of EconomyState.wheat_price, so the base price must not be negative.
+	&"market.wheat.base_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.max_step": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.reversion": {

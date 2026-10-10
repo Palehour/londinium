@@ -44,7 +44,7 @@ func test_add_mul_set_follow_list_order_without_mutating_bases() -> void:
 
 
 func test_money_rounds_once_after_all_modifiers() -> void:
-	var key: StringName = &"market.wheat.base_price"
+	var key: StringName = &"building.wharf.cost"
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(key, &"set", 1), Modifier.new(key, &"mul", 0.5),
 		Modifier.new(key, &"mul", 3)])
@@ -57,6 +57,18 @@ func test_money_rounds_once_after_all_modifiers() -> void:
 	assert_eq(Params.new(_catalog, role).get_value(key), 3)
 	role.modifiers.append(Modifier.new(key, &"set", -2.5))
 	assert_eq(Params.new(_catalog, role).get_value(key), -3)
+
+
+func test_negative_wheat_base_price_is_rejected_after_modifiers() -> void:
+	var key: StringName = &"market.wheat.base_price"
+	for value: float in [-3.0, 1e30]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", value))
+		assert_null(Params.new(_catalog, role).get_value(key))
+		assert_push_error("Params: invalid range for '%s'" % key)
+	var zero_role: RoleDef = RoleDef.new()
+	zero_role.modifiers.append(Modifier.new(key, &"set", 0))
+	assert_eq(Params.new(_catalog, zero_role).get_value(key), 0)
 
 
 func test_unknown_key_is_an_error_not_zero() -> void:
@@ -173,11 +185,11 @@ func test_nonfinite_modifier_result_is_an_error() -> void:
 
 
 func test_money_modifier_result_outside_int64_is_an_error() -> void:
-	var key: StringName = &"market.wheat.base_price"
+	var key: StringName = &"building.wharf.cost"
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(key, &"set", 1e30))
 	assert_null(Params.new(_catalog, role).get_value(key))
-	assert_push_error("Params: money result outside int64 for 'market.wheat.base_price'")
+	assert_push_error("Params: money result outside int64 for 'building.wharf.cost'")
 
 
 func test_role_modifiers_cannot_break_population_parameter_ranges() -> void:
