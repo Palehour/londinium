@@ -20,6 +20,8 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
                         "tax_override": false (the defeat_* ones) are left alone: their tax rate is
                         part of how they lose
   --wheat-price <n>     fix the market price of wheat at n
+  --wheat-max-price <n> raise (or lower) the highest price the wheat market can reach to n
+  --target-stock <n>    replace the target stock of every set_wheat_policy command
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. Nothing here changes data/ or the scenario files."""
@@ -45,6 +47,8 @@ func _init() -> void:
 		return
 	if options["wheat_price"] > 0:
 		runner.pin_wheat_price(options["wheat_price"])
+	if options["wheat_max_price"] > 0:
+		runner.pin_wheat_max_price(options["wheat_max_price"])
 	var wanted: String = options["scenario"]
 	var scenarios: Array[Dictionary] = []
 	for path: String in ScenarioRunner.scenario_paths():
@@ -152,6 +156,8 @@ func _variants(scenario: Dictionary, options: Dictionary) -> Array[Dictionary]:
 			copy["seed"] = index + 1
 		if options["tax"] >= 0.0:
 			copy = ScenarioRunner.with_tax(copy, options["tax"])
+		if options["target_stock"] >= 0:
+			copy = ScenarioRunner.with_target_stock(copy, options["target_stock"])
 		found.append(copy)
 	return found
 
@@ -170,6 +176,7 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"defeat_tick": result.defeat_tick,
 		"population": final["population"],
 		"money": final["money"],
+		"net_worth": runner.net_worth(final),
 		"bread_coverage": final["bread_coverage"],
 		"satisfaction": final["satisfaction"],
 		"operating_balance_last3": balance,
@@ -194,7 +201,7 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 
 func _parse(args: PackedStringArray) -> Dictionary:
 	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
-		"tax": -1.0, "wheat_price": 0, "help": false}
+		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "help": false}
 	var index: int = 0
 	while index < args.size():
 		var flag: String = args[index]
@@ -202,7 +209,8 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			options[flag.trim_prefix("--")] = true
 			index += 1
 			continue
-		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price"] or index + 1 >= args.size():
+		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price",
+				"--wheat-max-price", "--target-stock"] or index + 1 >= args.size():
 			return {"error": "unknown or incomplete option '%s'" % flag}
 		var value: String = args[index + 1]
 		match flag:
@@ -218,6 +226,14 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				if not value.is_valid_int() or int(value) < 1:
 					return {"error": "--wheat-price needs a whole number >= 1"}
 				options["wheat_price"] = int(value)
+			"--wheat-max-price":
+				if not value.is_valid_int() or int(value) < 1:
+					return {"error": "--wheat-max-price needs a whole number >= 1"}
+				options["wheat_max_price"] = int(value)
+			"--target-stock":
+				if not value.is_valid_int() or int(value) < 0:
+					return {"error": "--target-stock needs a whole number >= 0"}
+				options["target_stock"] = int(value)
 			_:
 				options[flag.trim_prefix("--")] = value
 		index += 2
