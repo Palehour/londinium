@@ -141,6 +141,9 @@ func _decay(state: EconomyState, params: Params) -> void:
 	var lost: int = mini(stock, ProductionSystem.whole_units(state.wheat_decay_fraction))
 	state.wheat_decay_fraction -= float(lost)
 	state.stocks[&"wheat"] = stock - lost
+	# Decay that empties the warehouse leaves nothing owed to the delivery that may refill it this tick.
+	if stock - lost <= 0:
+		state.wheat_decay_fraction = 0.0
 
 
 # Mean-reverting walk: one update moves the price by at most market.wheat.max_step and never leaves

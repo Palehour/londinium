@@ -157,6 +157,15 @@ func test_spoilage_accrued_against_gone_stock_does_not_hit_the_next_delivery() -
 	assert_eq(sim.snapshot()["economy"]["wheat_decay_fraction"], 0.0, "nothing is left to spoil, so nothing is owed")
 
 
+func test_decay_that_empties_the_warehouse_leaves_no_carry_for_the_next_delivery() -> void:
+	var state: EconomyState = _state(2, [-1, -1, 0], 1)
+	state.wheat_decay_fraction = 0.9999
+	var sim: Simulation = _sim(state, _params([], true))
+	sim.tick()
+	assert_eq(_wheat(sim), 0, "the last unit spoiled and the wharf has not delivered yet")
+	assert_eq(sim.snapshot()["economy"]["wheat_decay_fraction"], 0.0, "and nothing is carried over")
+
+
 func test_decay_goes_on_when_purchases_are_off() -> void:
 	var state: EconomyState = _state(2, [-1, -1, 0], 50)
 	state.buildings.clear()
