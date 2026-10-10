@@ -135,3 +135,13 @@ func test_scenario_files_are_valid_and_named_after_their_ids() -> void:
 
 func test_missing_file_loads_as_empty() -> void:
 	assert_true(ScenarioRunner.load_file("res://tests/scenarios/nope.json").is_empty())
+
+
+func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner() -> void:
+	_runner.pin_wheat_price(2)
+	var result: ScenarioResult = _runner.run(_scenario(_chain()))
+	for minute: int in range(MINUTES + 1):
+		assert_eq(result.row(minute)["wheat_price"], 2, "minute %d" % minute)
+	var untouched: ScenarioRunner = ScenarioRunner.create()
+	assert_eq(untouched.param(&"market.wheat.min_price"), 1)
+	assert_eq(untouched.param(&"market.wheat.max_price"), 3)

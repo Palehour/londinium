@@ -35,6 +35,14 @@ func param(key: StringName) -> Variant:
 	return _params.get_value(key)
 
 
+# Balance probes only: every draw of the wheat price becomes `price`. It changes this runner's
+# copy of the values, never the files in data/.
+func pin_wheat_price(price: int) -> void:
+	for key: StringName in [&"market.wheat.base_price", &"market.wheat.min_price", &"market.wheat.max_price"]:
+		_catalog.base_values[key] = price
+	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+
+
 static func scenario_paths() -> Array[String]:
 	var found: Array[String] = []
 	var dir: DirAccess = DirAccess.open(SCENARIO_DIR)
