@@ -260,3 +260,113 @@ func test_every_defeat_scenario_opts_out_of_the_tax_override() -> void:
 		var scenario: Dictionary = ScenarioRunner.load_file(path)
 		if String(scenario["id"]).begins_with("defeat_"):
 			assert_eq(scenario.get("tax_override"), false, scenario["id"])
+
+
+# --- Conditional rules ---
+
+func _price_rule(price: int) -> Dictionary:
+	return {"id": "skip_at_%d" % price,
+		"when": {"path": "wheat_price", "op": "==", "value": price},
+		"then": {"cmd": "set_wheat_purchases", "enabled": false},
+		"otherwise": {"cmd": "set_wheat_purchases", "enabled": true}}
+
+
+func _with_rules(commands: Array, rules: Variant, seed_value: int = 42) -> Dictionary:
+	var scenario: Dictionary = _scenario(commands, seed_value)
+	scenario["rules"] = rules
+	return scenario
+
+
+func test_a_rule_fires_in_the_tick_after_its_condition_turns_true() -> void:
+	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
+		{"tick": 100, "cmd": "build", "building": "wharf", "cell": [2, 7]}]
+	var rule: Dictionary = {"id": "low_money", "when": {"path": "money", "op": "<", "value": 900},
+		"then": {"cmd": "set_tax", "rate": 0.9}}
+	var result: ScenarioResult = _runner.run(_with_rules(commands, [rule]))
+	# The wharf is paid in tick 100, so the rule sees 810 pence at the start of tick 101.
+	assert_eq(result.rule_firing_ticks("low_money"), [101] as Array[int])
+	assert_eq(result.final_row()["tax_rate"], 0.9)
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+
+
+func test_a_rule_acts_only_when_the_condition_changes() -> void:
+	var commands: Array = _chain()
+	var result: ScenarioResult = _runner.run(_with_rules(commands, [_price_rule(3)], 5))
+	var expected: Array[int] = []
+	var holds_before: bool = false
+	for minute: int in range(1, MINUTES):
+		var holds: bool = result.row(minute)["wheat_price"] == 3
+		if holds != holds_before:
+			expected.append(minute * 60)
+		holds_before = holds
+	var fired: Array[int] = result.rule_firing_ticks("skip_at_3")
+	assert_gt(fired.size(), 2, "the price changes side more than once in this seed")
+	assert_eq(fired, expected, "one command per change, at the tick after the price update")
+	assert_lt(fired.size(), MINUTES, "no command is repeated while the state keeps its value")
+
+
+func test_a_condition_that_stays_true_fires_once_and_one_that_starts_false_never_fires() -> void:
+	var always: ScenarioRunner = ScenarioRunner.create()
+	always.pin_wheat_price(3)
+	var result: ScenarioResult = always.run(_with_rules(_chain(), [_price_rule(3)]))
+	assert_eq(result.rule_firing_ticks("skip_at_3"), [0] as Array[int])
+	assert_eq(result.final_row()["wheat_spent_pm"], 0.0, "purchases stayed off after the single command")
+	var never: ScenarioRunner = ScenarioRunner.create()
+	never.pin_wheat_price(2)
+	var quiet: ScenarioResult = never.run(_with_rules(_chain(), [_price_rule(3)]))
+	assert_eq(quiet.rule_firing_ticks("skip_at_3"), [] as Array[int], "no 'otherwise' before it ever held")
+
+
+func test_rules_are_deterministic() -> void:
+	var scenario: Dictionary = _with_rules(_chain(), [_price_rule(3)], 5)
+	var first: ScenarioResult = _runner.run(scenario)
+	var second: ScenarioResult = _runner.run(scenario)
+	assert_eq(first.commands, second.commands)
+	assert_eq(first.rows, second.rows)
+
+
+func test_all_and_any_combine_conditions() -> void:
+	var both: Dictionary = {"id": "both", "when": {"all": [
+			{"path": "money", "op": ">=", "value": 1000}, {"path": "population", "op": "==", "value": 20}]},
+		"then": {"cmd": "set_tax", "rate": 0.1}}
+	var either: Dictionary = {"id": "either", "when": {"any": [
+			{"path": "money", "op": "<", "value": 0}, {"path": "population", "op": ">", "value": 19}]},
+		"then": {"cmd": "set_tax", "rate": 0.2}}
+	var neither: Dictionary = {"id": "neither", "when": {"all": [
+			{"path": "money", "op": "<", "value": 0}, {"path": "population", "op": ">", "value": 19}]},
+		"then": {"cmd": "set_tax", "rate": 0.3}}
+	var result: ScenarioResult = _runner.run(_with_rules([], [both, either, neither]))
+	assert_eq(result.rule_firing_ticks("both"), [0] as Array[int])
+	assert_eq(result.rule_firing_ticks("either"), [0] as Array[int])
+	assert_eq(result.rule_firing_ticks("neither"), [] as Array[int])
+
+
+func test_invalid_rules_are_rejected() -> void:
+	var leaf: Dictionary = {"path": "wheat_price", "op": "==", "value": 3}
+	var action: Dictionary = {"cmd": "set_wheat_purchases", "enabled": false}
+	var cases: Dictionary[String, Variant] = {
+		"rules not a list": {"id": "r"},
+		"rule not an object": ["r"],
+		"no id": [{"when": leaf, "then": action}],
+		"duplicate id": [{"id": "r", "when": leaf, "then": action}, {"id": "r", "when": leaf, "then": action}],
+		"unknown rule field": [{"id": "r", "when": leaf, "then": action, "every": 5}],
+		"no when": [{"id": "r", "then": action}],
+		"unknown path": [{"id": "r", "when": {"path": "gold", "op": "==", "value": 3}, "then": action}],
+		"unknown operator": [{"id": "r", "when": {"path": "money", "op": "~", "value": 3}, "then": action}],
+		"value not a number": [{"id": "r", "when": {"path": "money", "op": "<", "value": "3"}, "then": action}],
+		"unknown leaf field": [{"id": "r", "when": {"path": "money", "op": "<", "value": 3, "extra": 1}, "then": action}],
+		"empty all": [{"id": "r", "when": {"all": []}, "then": action}],
+		"all mixed with a leaf": [{"id": "r", "when": {"all": [leaf], "path": "money"}, "then": action}],
+		"too deep": [{"id": "r", "when": {"all": [{"all": [{"all": [leaf]}]}]}, "then": action}],
+		"no then": [{"id": "r", "when": leaf}],
+		"action cmd not allowed": [{"id": "r", "when": leaf, "then": {"cmd": "build", "building": "mill", "cell": [1, 1]}}],
+		"enabled not a boolean": [{"id": "r", "when": leaf, "then": {"cmd": "set_wheat_purchases", "enabled": 0}}],
+		"tax rate missing": [{"id": "r", "when": leaf, "then": {"cmd": "set_tax"}}],
+		"action extra field": [{"id": "r", "when": leaf, "then": {"cmd": "set_tax", "rate": 0.5, "tick": 3}}],
+		"bad otherwise": [{"id": "r", "when": leaf, "then": action, "otherwise": {"cmd": "demolish"}}],
+	}
+	for label: String in cases:
+		var errors: Array[String] = _runner.validate(_with_rules(_chain(), cases[label]))
+		assert_gt(errors.size(), 0, label)
+	assert_eq(_runner.validate(_with_rules(_chain(), [_price_rule(3)])).size(), 0)
+	assert_eq(_runner.validate(_with_rules(_chain(), [])).size(), 0, "an empty list is fine")

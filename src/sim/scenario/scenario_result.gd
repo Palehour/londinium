@@ -65,6 +65,24 @@ func second_chain_purchase_tick() -> int:
 	return -1
 
 
+# Ticks at which the rule `rule_id` issued a command, in order.
+func rule_firing_ticks(rule_id: String) -> Array[int]:
+	var ticks: Array[int] = []
+	for entry: Dictionary in commands:
+		if entry["rule"] == rule_id:
+			ticks.append(int(entry["executed_tick"]))
+	return ticks
+
+
+# Commands issued by any rule of the scenario.
+func rule_command_count() -> int:
+	var total: int = 0
+	for entry: Dictionary in commands:
+		if entry["rule"] != "":
+			total += 1
+	return total
+
+
 func survived() -> bool:
 	return defeat_tick < 0
 
