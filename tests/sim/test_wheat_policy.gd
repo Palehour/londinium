@@ -307,6 +307,17 @@ func test_the_reserve_buying_limit_is_shared_by_capacity_not_split_equally() -> 
 	assert_lte(sim.snapshot()["stats"]["wheat_spent_per_minute"], 30.0, "and never more than the mill grinds")
 
 
+func test_pausing_purchases_is_not_reported_as_the_price_stopping_the_wharf() -> void:
+	var state: EconomyState = _state(3, [0, 2, 0, 0], 0, true)
+	state.wheat_purchases_enabled = false
+	var sim: Simulation = _sim(state)
+	_run(sim, 5)
+	assert_false(sim.snapshot()["market"]["wheat"]["blocked_by_price"], "the toggle is the cause")
+	sim.apply_command(SetWheatPurchasesCommand.new(true))
+	_run(sim, 2)
+	assert_true(sim.snapshot()["market"]["wheat"]["blocked_by_price"], "with purchases on, it is the price")
+
+
 func test_without_a_reserve_the_maximum_applies_in_full() -> void:
 	var sim: Simulation = _sim(_state(3, [0, 2, 0, 0], 0, true))
 	_run(sim, 60)

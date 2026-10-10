@@ -179,11 +179,14 @@ func _rebuild_price_options(market: Dictionary) -> void:
 	_accumulate_prices = [WheatPolicy.OFF]
 	_max_prices = []
 	_accumulate.add_item(Strings.ACCUMULATE_OFF)
-	for price: int in range(range_now.x, range_now.y):
+	# Accumulating at the market's top price is a valid policy (always stockpile), so it is listed;
+	# a maximum at the top price never stops anything, so "no limit" stands for it.
+	for price: int in range(range_now.x, range_now.y + 1):
 		_accumulate_prices.append(price)
 		_accumulate.add_item(Strings.money(price))
-		_max_prices.append(price)
-		_max_price.add_item(Strings.money(price))
+		if price < range_now.y:
+			_max_prices.append(price)
+			_max_price.add_item(Strings.money(price))
 	_max_prices.append(WheatPolicy.NO_LIMIT)
 	_max_price.add_item(Strings.NO_LIMIT)
 

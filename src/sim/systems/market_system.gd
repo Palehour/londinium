@@ -81,9 +81,10 @@ static func reserve_covered(state: EconomyState, params: Params) -> bool:
 	return float(state.stocks.get(&"wheat", 0)) >= reserve
 
 
-# The maximum price really stops the wharf: the price is above it and the reserve is covered.
+# The maximum price really stops the wharf: purchases are on, the price is above it and the reserve is
+# covered. With the toggle off the cause is the toggle, not the price.
 static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
-	return is_blocked_by_price(state) and reserve_covered(state, params)
+	return state.wheat_purchases_enabled and is_blocked_by_price(state) and reserve_covered(state, params)
 
 
 static func is_accumulating(state: EconomyState) -> bool:

@@ -153,7 +153,7 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
 	var maximum: OptionButton = _panel.get("_max_price") as OptionButton
 	var target: HSlider = _panel.get("_target") as HSlider
-	assert_eq(accumulate.item_count, 3, "off, 1 and 2: never the market's top price")
+	assert_eq(accumulate.item_count, 4, "off, 1, 2 and the market's top price 3")
 	assert_eq(maximum.item_count, 3, "1, 2 and no limit")
 	assert_eq(maximum.get_item_text(2), Strings.NO_LIMIT)
 	assert_eq(maximum.selected, 2, "the default policy has no limit")
@@ -178,6 +178,20 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	assert_string_contains(_text("_target_label"), "60")
 	assert_eq(_text("_reserve_label"), Strings.RESERVE_LABEL % 4)
 	assert_true(_session.get("_pending").is_empty(), "resyncing the controls does not resend the command")
+
+
+func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	_session.submit_command(SetWheatPolicyCommand.new(3, 0, 60, 2))
+	_tick()
+	_session.publish_tick()
+	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
+	assert_eq(accumulate.selected, 3, "the top price is not shown as No")
+	var reserve: HSlider = _panel.get("_reserve") as HSlider
+	reserve.value = 5.0
+	reserve.drag_ended.emit(true)
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 3, "changing another control does not turn accumulating off")
 
 
 func test_policy_controls_are_blocked_after_defeat() -> void:
