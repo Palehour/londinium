@@ -331,3 +331,20 @@ func test_a_wait_is_postponed_only_when_an_accepted_build_takes_it_below_the_amo
 	# With no income the treasury never gets back to 1050, so it may not run at all; what matters is
 	# that it did not run in tick 0 against the 1050 the treasury had before the housing was paid.
 	assert_ne(int(result.commands[1]["executed_tick"]), 0, "60 pence were spent, so 1050 is out of reach at tick 0")
+
+
+func test_a_wait_after_a_build_in_a_lost_game_ends_as_simulation_defeated_not_never_ran() -> void:
+	# Nobody lives here, so the city is lost at about tick 480 with the whole 1050 still in the
+	# treasury. On the last tick the build is refused by the defeat; if the preview counted it as
+	# spending 60, the wait for 1050 would be postponed past the end and show up as never_ran.
+	var commands: Array = [
+		{"tick": 599, "cmd": "build", "building": "housing", "cell": [5, 3], "expect_reject": "simulation_defeated"},
+		{"tick": 599, "cmd": "set_tax", "rate": 0.4, "wait_for_money": 1050, "expect_reject": "simulation_defeated"}]
+	var result: ScenarioResult = _runner.run(_scenario(commands, 42, 600))
+	assert_gt(result.defeat_tick, 0, "the game was lost before the last tick")
+	assert_lt(result.defeat_tick, 599)
+	assert_eq(result.final_economy["money"], 1050, "the treasury did not move")
+	assert_eq(result.commands.size(), 2)
+	assert_eq(result.commands[1]["reason"], &"simulation_defeated")
+	assert_eq(int(result.commands[1]["executed_tick"]), 599, "it ran on its tick instead of being left waiting")
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])

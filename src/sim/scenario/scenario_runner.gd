@@ -178,9 +178,14 @@ func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[
 
 # The treasury once the commands queued in this tick have run. Only an accepted build spends:
 # set_tax, set_wheat_purchases and a refused build leave the money as it is. They are tried on a
-# copy of the state with fresh command objects, in the order the simulation will run them.
+# copy of the state with fresh command objects, in the order the simulation will run them. Once the
+# game is lost Simulation.apply_command() refuses every command (simulation_defeated) before the
+# command itself runs, so nothing queued spends and the copy is left as it is.
 func _money_after(sim: Simulation, queued: Array[Dictionary]) -> int:
-	var state: EconomyState = EconomyState.from_dict(sim.snapshot()["economy"])
+	var snapshot: Dictionary = sim.snapshot()
+	var state: EconomyState = EconomyState.from_dict(snapshot["economy"])
+	if not snapshot["defeat"]["causes"].is_empty():
+		return state.money
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	for entry: Dictionary in queued:
 		_make_command(entry).execute(state, _params, rng)
