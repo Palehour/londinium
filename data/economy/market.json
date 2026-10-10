@@ -1,4 +1,5 @@
 {
   "wheat": { "base_price": 2, "min_price": 1, "max_price": 3, "price_update_seconds": 60,
-    "max_step": 1, "reversion": 0.5 }
+    "max_step": 1, "reversion": 0.5,
+    "storage_capacity": 100, "decay_fraction_per_minute": 0.01, "accumulate_factor": 2.0 }
 }

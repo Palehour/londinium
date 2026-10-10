@@ -32,7 +32,8 @@ londinium/
 │   │   ├── goods.json        # wheat, flour, bread, tea, money unit
 │   │   ├── buildings.json    # wharf, mill, bakery, housing, wheat_field: cost, upkeep, jobs, recipe, tags
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
-│   │   ├── market.json       # wheat base price, fluctuation range, imported flour/tea prices (P-011/P-004, solo cuando se aprueben)
+│   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; imported flour/tea prices (P-011/P-004, solo cuando se aprueben)
+│   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
@@ -65,7 +66,9 @@ londinium/
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands.
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery), then the rest by priority bakery → mill → wharf; emigration frees jobs in reverse order (D-021).
-3. Sources: wharf buys wheat at the current (fluctuating) price; wharf buys imported flour that skips the mill
+3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
+   current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
+   under which the max price stops applying; the pause toggle stops all buying). The warehouse has a capacity. The wharf buys imported flour that skips the mill
    (P-011, pending: only once approved); wheat fields on cultivable cells only.
 4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.
 5. Consumption: bread eaten per person; tea if available (only if P-004 approved); stale bread decays.

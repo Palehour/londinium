@@ -9,7 +9,7 @@ const CSV_COLUMNS: Array[String] = [
 	"bread_produced_pm", "bread_consumed_pm", "bread_demand_pm", "taxes_pm", "wages_pm",
 	"upkeep_pm", "wheat_spent_pm", "operating_balance_pm", "construction_pm", "wheat_price",
 	"employed", "unemployed", "housing_capacity", "n_wharf", "n_mill", "n_bakery", "n_housing",
-	"bankruptcy", "hunger", "depopulation", "defeat_causes",
+	"bankruptcy", "hunger", "depopulation", "defeat_causes", "wheat_stock",
 ]
 # Float columns are printed with two decimals; everything else is printed as it is.
 const FLOAT_COLUMNS: Array[String] = [
@@ -52,6 +52,13 @@ func mean(column: String, from_minute: int, to_minute: int) -> float:
 		total += float(rows[minute][column])
 		count += 1
 	return total / float(count) if count > 0 else 0.0
+
+
+func peak(column: String) -> float:
+	var highest: float = -INF
+	for values: Dictionary in rows:
+		highest = maxf(highest, float(values[column]))
+	return highest
 
 
 # Tick (0-based, as in `executed_tick`) at which the second wharf was actually bought, or -1. The
