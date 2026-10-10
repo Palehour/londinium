@@ -44,8 +44,10 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 	_panel.update_snapshot(_session.get_snapshot())
 	assert_true(_session.get("_pending").is_empty(), "binding a snapshot must not submit commands")
 	assert_eq(Strings.money(10000), "£41 13s 4d")
+	assert_eq(Strings.money(1000), "£4 3s 4d")
 	assert_eq(Strings.money(-25), "-£0 2s 1d")
-	assert_string_contains(_text("_economy"), Strings.TREASURY % "£41 13s 4d")
+	var treasury: int = _session.get_snapshot()["economy"]["money"]
+	assert_string_contains(_text("_economy"), Strings.TREASURY % Strings.money(treasury))
 	assert_string_contains(_text("_economy"), Strings.WINDOW_PARTIAL % [0, 60])
 	assert_string_contains(_text("_bread"), Strings.STOCKS % [0, 0, 40])
 	assert_string_contains(_text("_buildings"), Strings.NO_BUILDINGS)

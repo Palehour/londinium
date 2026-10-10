@@ -115,6 +115,23 @@ func test_fractional_money_is_rejected() -> void:
 	_assert_invalid("buildings.json.bakery.cost: invalid money")
 
 
+func test_negative_building_cost_is_rejected() -> void:
+	_documents["economy/buildings.json"]["wharf"]["cost"] = -240
+	_assert_invalid("buildings.json.wharf.cost: invalid money")
+
+
+func test_tax_base_must_be_a_whole_non_negative_amount() -> void:
+	_documents["economy/population.json"]["tax"]["base_per_employed_worker_per_minute"] = 10.5
+	_assert_invalid("base_per_employed_worker_per_minute: invalid money")
+	_documents["economy/population.json"]["tax"]["base_per_employed_worker_per_minute"] = -11
+	_assert_invalid("base_per_employed_worker_per_minute: invalid money")
+
+
+func test_negative_starting_money_is_rejected() -> void:
+	_documents["economy/startup.json"]["money"] = -1000
+	_assert_invalid("startup.json.money: invalid money")
+
+
 func test_unknown_good_reference_is_rejected() -> void:
 	_documents["economy/buildings.json"]["mill"]["recipe"]["inputs"] = {"unknown": 1}
 	_assert_invalid("mill.recipe.inputs.unknown: unknown good")
