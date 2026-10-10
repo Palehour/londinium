@@ -265,8 +265,9 @@ func test_the_market_snapshot_is_an_isolated_copy() -> void:
 
 
 func test_diagnostics_blame_the_price_only_when_the_warehouse_is_empty() -> void:
-	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
 	var state: EconomyState = _state(3, [-1, 2, 0])
+	var wharf: Dictionary = state.buildings[0]
+	wharf["workers"] = 1
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"wheat_price_above_max")
 	state.stocks[&"wheat"] = 5
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "the mills still have wheat")
@@ -346,6 +347,25 @@ func test_zero_is_a_real_price_for_the_maximum_and_for_accumulating() -> void:
 	assert_true(command.accepted, "0 is inside a market that starts at 0")
 
 
+func test_a_price_halt_is_reported_only_when_the_wharf_could_otherwise_buy() -> void:
+	var halted: Simulation = _sim(_state(3, [-1, 2, 0, 0], 5))
+	halted.tick()
+	assert_true(halted.snapshot()["market"]["wheat"]["blocked_by_price"], "staffed, room and money: the price is the cause")
+	var full: Simulation = _sim(_state(3, [-1, 2, 0, 0], 10), _params([Modifier.new(&"market.wheat.storage_capacity", &"set", 10)]))
+	full.tick()
+	assert_false(full.snapshot()["market"]["wheat"]["blocked_by_price"], "a full warehouse buys nothing at any price")
+	var empty_city: EconomyState = _state(3, [-1, 2, 0, 0], 5)
+	empty_city.population = 0
+	var nobody: Simulation = _sim(empty_city)
+	nobody.tick()
+	assert_false(nobody.snapshot()["market"]["wheat"]["blocked_by_price"], "no workers: staffing is the cause")
+	var broke_state: EconomyState = _state(3, [-1, 2, 0, 0], 5)
+	broke_state.money = 0
+	var broke: Simulation = _sim(broke_state)
+	broke.tick()
+	assert_false(broke.snapshot()["market"]["wheat"]["blocked_by_price"], "no money: the treasury is the cause")
+
+
 func test_without_a_reserve_the_maximum_applies_in_full() -> void:
 	var sim: Simulation = _sim(_state(3, [-1, 2, 0, 0], 0, true))
 	_run(sim, 60)
@@ -380,7 +400,7 @@ func test_roles_cannot_make_the_policy_defaults_impossible() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"set", 9))
 	assert_null(Params.new(_catalog, role).get_value(&"policy.wheat.default_max_price"))
-	assert_push_error("Params: maximum price must be 0 (no limit) or inside the market's price range after role modifiers")
+	assert_push_error("Params: maximum price must be -1 (no limit) or inside the market's price range after role modifiers")
 	var fractional: RoleDef = RoleDef.new()
 	fractional.modifiers.append(Modifier.new(&"market.wheat.storage_capacity", &"mul", 1.001))
 	assert_null(Params.new(_catalog, fractional).get_value(&"market.wheat.storage_capacity"))
@@ -412,7 +432,7 @@ func test_data_rejects_an_impossible_policy_or_a_missing_file() -> void:
 	var documents: Dictionary[String, Dictionary] = _documents()
 	documents["economy/policy.json"]["wheat"]["default_max_price"] = 9
 	assert_eq(DataLoader.new().load_documents(documents).errors,
-		["economy/policy.json: maximum price must be 0 (no limit) or inside the market's price range"])
+		["economy/policy.json: maximum price must be -1 (no limit) or inside the market's price range"])
 	documents = _documents()
 	documents["economy/policy.json"]["wheat"]["default_target_stock"] = 101
 	assert_eq(DataLoader.new().load_documents(documents).errors,

@@ -81,10 +81,24 @@ static func reserve_covered(state: EconomyState, params: Params) -> bool:
 	return float(state.stocks.get(&"wheat", 0)) >= reserve
 
 
-# The maximum price really stops the wharf: purchases are on, the price is above it and the reserve is
-# covered. With the toggle off the cause is the toggle, not the price.
+# The maximum price really stops the wharf: purchases are on, the price is above it, the reserve is
+# covered, and without the limit a wharf would buy. With the toggle off, a full warehouse, no workers or
+# no money the cause is that, not the price.
 static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
-	return state.wheat_purchases_enabled and is_blocked_by_price(state) and reserve_covered(state, params)
+	return state.wheat_purchases_enabled and is_blocked_by_price(state) and reserve_covered(state, params) \
+		and could_buy(state, params)
+
+
+# Some wharf has hands, there is room in the warehouse and the treasury pays for a unit.
+static func could_buy(state: EconomyState, params: Params) -> bool:
+	if int(state.stocks.get(&"wheat", 0)) >= int(params.get_value(&"market.wheat.storage_capacity")):
+		return false
+	if affordable_wheat(state, 1) <= 0:
+		return false
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"wharf" and ProductionSystem.staffed_rate(params, building, "outputs.wheat") > 0.0:
+			return true
+	return false
 
 
 static func is_accumulating(state: EconomyState) -> bool:
