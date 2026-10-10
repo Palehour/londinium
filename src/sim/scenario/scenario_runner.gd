@@ -114,18 +114,38 @@ func run(scenario: Dictionary) -> ScenarioResult:
 			_observe(result, snapshot, tick_index + 1)
 		if (tick_index + 1) % TICKS_PER_MINUTE == 0:
 			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot))
+	result.final_economy = snapshot["economy"]
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]
 		result.commands.append({"tick": int(source["tick"]), "executed_tick": int(item["tick"]),
-			"cmd": String(source["cmd"]), "accepted": done.accepted, "reason": done.reason,
+			"cmd": String(source["cmd"]), "building": String(source.get("building", "")),
+			"accepted": done.accepted, "reason": done.reason,
 			"expect_reject": StringName(source.get("expect_reject", ""))})
 	# A command still waiting for its money when the game ends never ran; that counts as a refusal.
 	for pending: int in range(next_command, script.size()):
 		result.commands.append({"tick": int(script[pending]["tick"]), "executed_tick": -1,
-			"cmd": String(script[pending]["cmd"]), "accepted": false, "reason": &"never_ran",
+			"cmd": String(script[pending]["cmd"]), "building": String(script[pending].get("building", "")),
+			"accepted": false, "reason": &"never_ran",
 			"expect_reject": StringName(script[pending].get("expect_reject", ""))})
 	return result
+
+
+# Same predicate the simulation uses for "nobody is leaving", evaluated on the final state.
+func is_stable(result: ScenarioResult) -> bool:
+	return DefeatSystem.new().is_city_stable(EconomyState.from_dict(result.final_economy), _params)
+
+
+# Copy of `scenario` with every set_tax rate replaced, for probes. The defeat_* scenarios are left
+# alone: their tax rate is part of how they lose, so overriding it would turn them into survivors.
+static func with_tax(scenario: Dictionary, rate: float) -> Dictionary:
+	var copy: Dictionary = scenario.duplicate(true)
+	if String(copy.get("id", "")).begins_with("defeat_"):
+		return copy
+	for command: Dictionary in copy["commands"]:
+		if command["cmd"] == "set_tax":
+			command["rate"] = rate
+	return copy
 
 
 # Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back

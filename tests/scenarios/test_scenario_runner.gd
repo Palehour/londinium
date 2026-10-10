@@ -196,3 +196,52 @@ func test_validation_of_wait_for_money_and_with_previous() -> void:
 	for label: String in cases:
 		assert_gt(_runner.validate(_scenario(cases[label])).size(), 0, label)
 	assert_eq(_runner.validate(_scenario(_extra_chain({"wait_for_money": 540}))).size(), 0)
+
+
+func _city_with_mill_crisis(demolish_tick: int, rebuild_tick: int) -> Array:
+	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.5}] + _chain() + [
+		{"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+		{"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
+		{"tick": demolish_tick, "cmd": "demolish", "cell": [2, 5]}]
+	if rebuild_tick > 0:
+		commands.append({"tick": rebuild_tick, "cmd": "build", "building": "mill", "cell": [2, 5]})
+	return commands
+
+
+func test_a_city_recovering_in_minutes_13_to_15_counts_as_stable() -> void:
+	var result: ScenarioResult = _runner.run(_scenario(_city_with_mill_crisis(660, 780)))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+	assert_lt(int(result.final_row()["population"]), int(result.row(12)["population"]),
+		"smaller than at minute 12, which a population-delta proxy would call unstable")
+	assert_gte(float(result.final_row()["bread_coverage"]), 0.95)
+	assert_true(_runner.is_stable(result), "the simulation's own rule: nobody is leaving")
+
+
+func test_a_city_still_starving_at_the_end_is_not_stable() -> void:
+	var result: ScenarioResult = _runner.run(_scenario(_city_with_mill_crisis(780, 0)))
+	assert_lt(float(result.final_row()["bread_coverage"]), 0.6)
+	assert_false(_runner.is_stable(result))
+
+
+func test_second_chain_purchase_tick_is_the_real_tick_not_a_minute_row() -> void:
+	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": 540})))
+	var tick: int = result.second_chain_purchase_tick()
+	var executed: int = -1
+	for entry: Dictionary in result.commands:
+		if entry["tick"] == 60 and entry["building"] == "wharf":
+			executed = entry["executed_tick"]
+	assert_gt(tick, 60)
+	assert_eq(tick, executed)
+	# The purchase falls between two per-minute rows: one chain before, two right after.
+	assert_eq(result.row(tick / 60)["n_wharf"], 1)
+	assert_eq(result.row(tick / 60 + 1)["n_wharf"], 2)
+	assert_eq(_runner.run(_scenario(_chain())).second_chain_purchase_tick(), -1, "one chain only")
+
+
+func test_with_tax_overrides_survival_scenarios_but_not_defeat_ones() -> void:
+	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.0}]
+	var survival: Dictionary = {"id": "small_rich", "seed": 1, "duration_ticks": 10, "commands": commands}
+	var defeat: Dictionary = {"id": "defeat_bankruptcy", "seed": 1, "duration_ticks": 10, "commands": commands}
+	assert_eq(ScenarioRunner.with_tax(survival, 0.6)["commands"][0]["rate"], 0.6)
+	assert_eq(ScenarioRunner.with_tax(defeat, 0.6)["commands"][0]["rate"], 0.0)
+	assert_eq(survival["commands"][0]["rate"], 0.0, "the original is not modified")
