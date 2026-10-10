@@ -99,11 +99,13 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	var snapshot: Dictionary = sim.snapshot()
 	result.rows.append(_row(result.id, 0, 0, snapshot))
 	for tick_index: int in range(int(scenario["duration_ticks"])):
-		while next_command < script.size() and int(script[next_command]["tick"]) == tick_index:
+		var ran_this_tick: bool = false
+		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, ran_this_tick):
 			var entry: Dictionary = script[next_command]
 			var command: SimulationCommand = _make_command(entry)
 			sim.apply_command(command)
-			issued.append({"entry": entry, "command": command})
+			issued.append({"entry": entry, "command": command, "tick": tick_index})
+			ran_this_tick = true
 			next_command += 1
 		sim.tick()
 		# After a defeat the state is frozen, so the last snapshot stays valid.
@@ -115,10 +117,28 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]
-		result.commands.append({"tick": int(source["tick"]), "cmd": String(source["cmd"]),
-			"accepted": done.accepted, "reason": done.reason,
+		result.commands.append({"tick": int(source["tick"]), "executed_tick": int(item["tick"]),
+			"cmd": String(source["cmd"]), "accepted": done.accepted, "reason": done.reason,
 			"expect_reject": StringName(source.get("expect_reject", ""))})
+	# A command still waiting for its money when the game ends never ran; that counts as a refusal.
+	for pending: int in range(next_command, script.size()):
+		result.commands.append({"tick": int(script[pending]["tick"]), "executed_tick": -1,
+			"cmd": String(script[pending]["cmd"]), "accepted": false, "reason": &"never_ran",
+			"expect_reject": StringName(script[pending].get("expect_reject", ""))})
 	return result
+
+
+# Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back
+# until the treasury reaches that amount, and `with_previous` runs it in the same tick as the
+# command before it, so a purchase made of several buildings is priced once.
+func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, ran_this_tick: bool) -> bool:
+	if entry.get("with_previous", false):
+		return ran_this_tick
+	if tick_index < int(entry["tick"]):
+		return false
+	if entry.has("wait_for_money"):
+		return int(sim.snapshot()["economy"]["money"]) >= int(entry["wait_for_money"])
+	return true
 
 
 func _initial_state() -> EconomyState:
@@ -204,6 +224,12 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		errors.append("%s: tick must be an integer in [0, duration_ticks)" % where)
 	elif int(entry["tick"]) < previous_tick:
 		errors.append("%s: ticks must not go backwards" % where)
+	if entry.has("wait_for_money") and (not _is_whole(entry["wait_for_money"]) or int(entry["wait_for_money"]) < 0):
+		errors.append("%s: wait_for_money must be a whole amount of pence >= 0" % where)
+	if entry.has("with_previous") and (entry["with_previous"] is not bool or index == 0):
+		errors.append("%s: with_previous must be true or false and cannot be on the first command" % where)
+	if entry.get("with_previous", false) and entry.has("wait_for_money"):
+		errors.append("%s: with_previous follows the command before it and cannot wait for money" % where)
 	var name: String = String(entry.get("cmd", ""))
 	if name not in COMMAND_NAMES:
 		errors.append("%s: unknown cmd '%s'" % [where, name])

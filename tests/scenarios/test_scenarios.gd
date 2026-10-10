@@ -70,9 +70,20 @@ func test_big_tight_funds_its_second_chain_and_ends_larger() -> void:
 	assert_gt(result.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
 
 
+# First minute with a treasury that pays for `cost`, counted from minute 1; -1 if it never does.
+func _first_minute_with_money(result: ScenarioResult, cost: int) -> int:
+	for minute: int in range(1, result.rows.size()):
+		if int(result.row(minute)["money"]) >= cost:
+			return minute
+	return -1
+
+
 func test_big_tight_second_chain_is_affordable_when_the_script_builds_it() -> void:
 	var result: ScenarioResult = _result("big_tight")
 	var chain_cost: int = _chain_cost()
+	# Loose on purpose: the exact minute moves with the wheat price; the script builds at minute 12.
+	var funded: int = _first_minute_with_money(result, chain_cost)
+	assert_between(funded, 1, 11, "the first chain pays for the second one before minute 12")
 	assert_gte(int(result.row(12)["money"]), chain_cost, "affordable when the script builds it (tick 720)")
 	assert_lt(int(result.final_row()["money"]), int(result.row(12)["money"]), "and it was spent on it")
 
@@ -85,19 +96,10 @@ func _chain_cost() -> int:
 	return total
 
 
-# First minute with a treasury that pays for `cost`, counted from the first minute on.
-func _first_minute_with_money(result: ScenarioResult, cost: int) -> int:
-	for minute: int in range(1, result.rows.size()):
-		if int(result.row(minute)["money"]) >= cost:
-			return minute
-	return -1
-
-
 # Issue #39 at the tax rate it asks for (0.6): the second chain and the second housing block are
-# bought together as soon as the treasury reaches their price (tick 600 for seed 42). The probe over
-# 20 seeds (PR #40) shows the timing is not the same for every seed: in some the treasury is a few
-# pence short at tick 600 and the housing is refused. If this fails after a change in data/, that is
-# expected: recalibrate the scenario (or tell Mason).
+# bought together as soon as the treasury reaches their price (wait_for_money), so the purchase
+# happens when the money is there whatever the wheat price did. If this fails after a change in
+# data/, that is expected: recalibrate the scenario (or tell Mason).
 func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() -> void:
 	var result: ScenarioResult = _result("big_tight_r06")
 	var small: ScenarioResult = _result("small_rich")
@@ -105,9 +107,13 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 	var final: Dictionary = result.final_row()
 	assert_eq([final["n_wharf"], final["n_mill"], final["n_bakery"], final["n_housing"]], [2, 2, 2, 2])
 	assert_eq(result.row(1)["tax_rate"], 0.6)
-	var runner: ScenarioRunner = ScenarioRunner.create()
-	var price: int = _chain_cost() + int(runner.param(&"building.housing.cost"))
-	assert_between(_first_minute_with_money(result, price), 8, 12, "paid from profit in the issue's window")
+	var bought: Array[int] = []
+	for entry: Dictionary in result.commands:
+		if entry["tick"] == 60:
+			bought.append(entry["executed_tick"])
+	assert_eq(bought.size(), 4, "wharf, mill, bakery and housing")
+	assert_eq(bought.count(bought[0]), 4, "all in the same tick")
+	assert_between(float(bought[0]) / 60.0, 8.0, 12.0, "paid from profit in the issue's window (minutes)")
 	assert_gte(float(final["population"]), 1.5 * float(small.final_row()["population"]))
 	assert_gte(float(final["bread_coverage"]), 0.95)
 
@@ -119,8 +125,12 @@ func test_two_equilibria_differ() -> void:
 	assert_gte(int(small.final_row()["money"]), int(big.final_row()["money"]) + 100)
 	assert_gte(float(small.final_row()["bread_coverage"]), 0.95)
 	assert_gte(float(big.final_row()["bread_coverage"]), 0.95)
-	assert_gt(small.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
-	assert_gt(big.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+	var small_balance: float = small.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES)
+	var big_balance: float = big.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES)
+	assert_gt(small_balance, 0.0)
+	assert_gt(big_balance, 0.0)
+	# Relational, not absolute: two staffed chains earn more per minute than one.
+	assert_gt(big_balance, small_balance, "the big city earns more per minute than the small one")
 
 
 # --- Criterio 4: se puede perder por cada condición, con aviso en el panel ---

@@ -145,3 +145,54 @@ func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner()
 	var untouched: ScenarioRunner = ScenarioRunner.create()
 	assert_eq(untouched.param(&"market.wheat.min_price"), 1)
 	assert_eq(untouched.param(&"market.wheat.max_price"), 3)
+
+
+func _extra_chain(first_extra: Dictionary) -> Array:
+	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7]}
+	wharf.merge(first_extra)
+	# A high tax so the first chain's profit can pay for the second one.
+	return [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [wharf,
+		{"tick": 60, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+		{"tick": 60, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}]
+
+
+func test_wait_for_money_buys_the_group_in_one_tick_once_the_treasury_reaches_it() -> void:
+	var price: int = 540
+	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": price})))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+	var executed: Array[int] = []
+	for entry: Dictionary in result.commands:
+		if entry["tick"] == 60:
+			executed.append(entry["executed_tick"])
+	assert_eq(executed.size(), 3)
+	assert_eq(executed[0], executed[1], "with_previous runs in the same tick")
+	assert_eq(executed[1], executed[2])
+	assert_gt(executed[0], 60, "it waited: the treasury is below 540 after the first chain")
+	assert_lt(int(result.row(executed[0] / 60)["money"]), price, "at the start of that minute it did not have the money yet")
+	assert_eq(result.final_row()["n_wharf"], 2)
+	assert_eq(result.final_row()["n_bakery"], 2)
+
+
+func test_command_that_never_gets_its_money_is_reported_as_never_run() -> void:
+	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": 1000000})))
+	var never: Array[Dictionary] = result.unexpected_rejections()
+	assert_eq(never.size(), 3)
+	for entry: Dictionary in never:
+		assert_eq(entry["reason"], &"never_ran")
+		assert_eq(entry["executed_tick"], -1)
+	assert_eq(result.final_row()["n_wharf"], 1)
+
+
+func test_validation_of_wait_for_money_and_with_previous() -> void:
+	var cases: Dictionary[String, Array] = {
+		"negative wait": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "wait_for_money": -1}],
+		"fractional wait": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "wait_for_money": 10.5}],
+		"with_previous first": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "with_previous": true}],
+		"with_previous not a boolean": [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
+			{"tick": 0, "cmd": "set_tax", "rate": 0.4, "with_previous": 1}],
+		"with_previous and wait": [{"tick": 0, "cmd": "set_tax", "rate": 0.5},
+			{"tick": 0, "cmd": "set_tax", "rate": 0.4, "with_previous": true, "wait_for_money": 5}],
+	}
+	for label: String in cases:
+		assert_gt(_runner.validate(_scenario(cases[label])).size(), 0, label)
+	assert_eq(_runner.validate(_scenario(_extra_chain({"wait_for_money": 540}))).size(), 0)
