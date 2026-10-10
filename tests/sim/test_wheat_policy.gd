@@ -430,6 +430,14 @@ func test_a_role_that_inverts_the_price_bounds_leaves_the_same_market_and_policy
 	assert_false(outside.accepted)
 
 
+func test_a_role_cannot_give_the_market_a_negative_price_bound() -> void:
+	for key: StringName in [&"market.wheat.min_price", &"market.wheat.max_price"]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", -1))
+		assert_null(Params.new(_catalog, role).get_value(key), "%s: -1 is the policy's 'none', not a price" % key)
+		assert_push_error("Params: invalid range for '%s'" % key)
+
+
 func test_policy_price_defaults_follow_the_money_rounding_of_roles() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"set", 2))

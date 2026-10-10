@@ -168,7 +168,9 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	assert_eq(target.max_value, 100.0)
 	assert_false(target.scrollable or (_panel.get("_reserve") as HSlider).scrollable, "the wheel would not send the command")
 	accumulate_on.button_pressed = true
+	assert_true(accumulate.editable, "editable at once: a paused game sends no snapshot to enable it")
 	limit_on.button_pressed = true
+	assert_true(limit.editable)
 	limit.value = 2.0
 	target.value = 60.0
 	target.drag_ended.emit(true)

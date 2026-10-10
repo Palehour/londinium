@@ -170,13 +170,16 @@ func _price_row(content: VBoxContainer, title: String) -> Array[Control]:
 	var check: CheckBox = CheckBox.new()
 	check.text = title
 	check.focus_mode = Control.FOCUS_NONE
-	check.toggled.connect(func(_on: bool) -> void: _submit_policy())
 	row.add_child(check)
 	var spin: SpinBox = SpinBox.new()
 	spin.step = 1.0
 	spin.suffix = Strings.PENCE_SUFFIX
 	spin.value_changed.connect(func(_value: float) -> void: _submit_policy())
 	row.add_child(spin)
+	# Editable right away: while the game is paused no snapshot arrives to do it.
+	check.toggled.connect(func(on: bool) -> void:
+		spin.editable = on
+		_submit_policy())
 	content.add_child(row)
 	return [check, spin]
 

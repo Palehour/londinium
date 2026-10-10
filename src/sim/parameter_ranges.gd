@@ -48,6 +48,11 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"population.stats_window_seconds": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# The policy uses -1 for "off" / "no limit" (WheatPolicy), so a price bound must not be negative.
+	&"market.wheat.min_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.wheat.max_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.max_step": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.reversion": {
