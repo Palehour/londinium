@@ -28,6 +28,11 @@ static func create() -> ScenarioRunner:
 	return runner
 
 
+# Read-only view of a parameter, so tests derive timings from data/ instead of copying them.
+func param(key: StringName) -> Variant:
+	return _params.get_value(key)
+
+
 static func scenario_paths() -> Array[String]:
 	var found: Array[String] = []
 	var dir: DirAccess = DirAccess.open(SCENARIO_DIR)

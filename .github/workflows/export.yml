@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (pinned by SHA)
         with:
           lfs: true             # builds need real assets
           fetch-depth: 0        # the tag check below needs main's history
@@ -37,14 +37,26 @@ jobs:
             exit 1
           fi
 
-      # The version shown in the builds lives in export_presets.cfg; remind whoever tags if it lags.
-      - name: Check preset version matches the tag
+      # The version shown in the builds lives in export_presets.cfg and must match the tag, so a
+      # release never ships a build that reports another version. Windows and macOS presets carry
+      # a version; the Linux preset has no version field (its archive is named after the tag).
+      - name: Preset versions must match the tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           expected="${GITHUB_REF_NAME#v}"
-          if ! grep -q "application/short_version=\"$expected\"" export_presets.cfg; then
-            echo "::warning::export_presets.cfg does not say version $expected (macOS short_version)."
-          fi
+          expected="${expected%%-*}"      # v0.2.0-rc1 -> 0.2.0
+          status=0
+          for line in \
+            "application/short_version=\"$expected\"" \
+            "application/version=\"$expected\"" \
+            "application/file_version=\"$expected.0\"" \
+            "application/product_version=\"$expected.0\""; do
+            if ! grep -qxF "$line" export_presets.cfg; then
+              echo "::error::export_presets.cfg is missing '$line' (tag $GITHUB_REF_NAME). Bump the preset versions and retag."
+              status=1
+            fi
+          done
+          exit $status
 
       - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
         with:
@@ -67,14 +79,15 @@ jobs:
           godot --headless --path . --export-release "macOS"           build/macos/Londinium.zip
           godot --headless --path . --export-release "Linux"           build/linux/Londinium.x86_64
 
-      # Boot the real Linux build for a moment: a missing data file or a script error shows up as ERROR.
+      # Boot the real Linux build for a moment. If data/ is missing or invalid from the export, the
+      # map view reports it through _show_load_error, so that is the line to look for.
       - name: Smoke test the Linux build
         run: |
           chmod +x build/linux/Londinium.x86_64
           ./build/linux/Londinium.x86_64 --headless --quit-after 120 > smoke.log 2>&1
           cat smoke.log
-          if grep -E "ERROR" smoke.log; then
-            echo "::error::The exported Linux build logged errors on startup."
+          if grep -F "_show_load_error" smoke.log; then
+            echo "::error::The exported Linux build could not load data/ (see DataLoader errors above)."
             exit 1
           fi
 
@@ -87,11 +100,11 @@ jobs:
           cp build/macos/Londinium.zip "dist/macos/Londinium-${version}-macos.zip"
           tar -czf "dist/linux/Londinium-${version}-linux.tar.gz" -C build/linux Londinium.x86_64
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7 (pinned by SHA)
         with: { name: londinium-windows, path: dist/windows, retention-days: 14 }
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7 (pinned by SHA)
         with: { name: londinium-macos, path: dist/macos, retention-days: 14 }
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7 (pinned by SHA)
         with: { name: londinium-linux, path: dist/linux, retention-days: 14 }
 
   release:

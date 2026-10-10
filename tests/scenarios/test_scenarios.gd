@@ -7,10 +7,12 @@ extends GutTest
 
 const LAST_MINUTES_FROM: int = 13
 const MINUTES: int = 15
-const GRACE_TICKS: int = 300
-const HUNGER_DEFEAT_SECONDS: int = 180
 
 static var _results: Dictionary[String, ScenarioResult] = {}
+# Timings come from data/ (defeat.json), so retuning them does not leave stale copies here.
+static var _grace_ticks: int = 0
+static var _hunger_seconds: int = 0
+static var _depopulation_seconds: int = 0
 
 
 func before_all() -> void:
@@ -18,6 +20,9 @@ func before_all() -> void:
 	assert_not_null(runner, "data/ must load")
 	if runner == null:
 		return
+	_grace_ticks = int(runner.param(&"defeat.grace_seconds"))
+	_hunger_seconds = int(runner.param(&"defeat.hunger.duration_seconds"))
+	_depopulation_seconds = int(runner.param(&"defeat.depopulation.duration_seconds"))
 	for path: String in ScenarioRunner.scenario_paths():
 		var scenario: Dictionary = ScenarioRunner.load_file(path)
 		_results[String(scenario["id"])] = runner.run(scenario)
@@ -87,7 +92,7 @@ func _assert_lost_only_by(result: ScenarioResult, cause: StringName, expected_ti
 		assert_eq(result.defeat_causes[0], cause)
 	assert_almost_eq(float(result.defeat_tick), float(expected_tick), float(tolerance))
 	# Nothing can be lost before the grace period ends plus the condition's own timer.
-	assert_gt(result.defeat_tick, GRACE_TICKS)
+	assert_gt(result.defeat_tick, _grace_ticks)
 	assert_true(result.first_warning_tick.has(cause), "the panel warned about %s" % cause)
 	if result.first_warning_tick.has(cause):
 		assert_lt(result.first_warning_tick[cause], result.defeat_tick, "warning comes before the defeat")
@@ -99,13 +104,13 @@ func test_depopulation_defeat() -> void:
 	assert_eq(_result("defeat_depopulation").final_row()["population"], 0)
 
 
-# F3: the famine only reaches its 180 s timer because it starts right before the grace ends with
+# F3: the famine only reaches its timer because it starts right before the grace ends with
 # ~29 people; hunger emigration (4-8 a minute) empties a smaller city first. Expected behaviour.
 func test_hunger_riot_defeat() -> void:
 	var result: ScenarioResult = _result("defeat_hunger")
 	_assert_lost_only_by(result, &"hunger", 496, 15)
-	assert_eq(result.max_timer[&"hunger"], HUNGER_DEFEAT_SECONDS)
-	assert_lt(result.max_timer[&"depopulation"], 180, "depopulation must not get there first")
+	assert_eq(result.max_timer[&"hunger"], _hunger_seconds)
+	assert_lt(result.max_timer[&"depopulation"], _depopulation_seconds, "depopulation must not get there first")
 
 
 # F5: with the treasury empty the wharf stops buying wheat, and the panel names it.
@@ -124,7 +129,7 @@ func test_crisis_is_caused_explained_and_recovered() -> void:
 	assert_true(result.survived())
 	assert_true(result.first_warning_tick.has(&"hunger"), "the hunger warning showed up")
 	assert_gt(result.max_timer[&"hunger"], 0)
-	assert_lt(result.max_timer[&"hunger"], HUNGER_DEFEAT_SECONDS, "corrected before the riot")
+	assert_lt(result.max_timer[&"hunger"], _hunger_seconds, "corrected before the riot")
 	assert_true(result.bread_cause_pairs.has("mill:missing_building"), "the panel names the missing mill")
 	assert_eq(result.final_row()["hunger"], &"ok")
 	assert_gte(float(result.final_row()["bread_coverage"]), 0.9)
