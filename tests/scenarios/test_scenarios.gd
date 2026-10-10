@@ -123,8 +123,14 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 # big_tight_r06, (a) the median minute at which the second chain is bought is between 8 and 12 and
 # (b) at least 18 of 20 seeds buy it between minutes 6 and 15. A seed that does not buy before the
 # end counts as outside the range, as long as its city stays stable and keeps a positive balance.
+# Criterion 3 at r=0.6: a seed that bought the second chain by minute 12 ends with at least 1.5x the
+# population of small_rich (same seed). A seed that buys later or never is exempt from that, as bad
+# luck with the price accepted in criterion 1, as long as its city is alive, stable and earning.
+# (Criterion 3's reference scenario is big_tight at 0.7, tested above.)
 # The thresholds are the criterion, not what was measured: do not lower them to make the suite green.
 const SEEDS: int = 20
+const ON_TIME_BY: float = 12.0
+const GAP: float = 1.5
 const MEDIAN_FROM: float = 8.0
 const MEDIAN_TO: float = 12.0
 const RANGE_FROM: float = 6.0
@@ -137,8 +143,10 @@ const NEVER: float = 1000000.0
 func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 	var runner: ScenarioRunner = ScenarioRunner.create()
 	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
+	var small_scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/small_rich.json")
 	var minutes: Array[float] = []
 	var in_range: int = 0
+	var on_time: int = 0
 	for seed_value: int in range(1, SEEDS + 1):
 		var variant: Dictionary = scenario.duplicate(true)
 		variant["seed"] = seed_value
@@ -146,20 +154,29 @@ func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 		var tick: int = result.second_chain_purchase_tick()
 		var minute: float = float(tick) / 60.0 if tick >= 0 else NEVER
 		minutes.append(minute)
-		if minute >= RANGE_FROM and minute <= RANGE_TO:
+		var in_window: bool = minute >= RANGE_FROM and minute <= RANGE_TO
+		var bought_in_time: bool = minute <= ON_TIME_BY
+		if in_window:
 			in_range += 1
-		else:
-			# Outside the range only counts if nothing is wrong with the city.
-			assert_true(result.survived(), "seed %d is outside the range but was lost" % seed_value)
-			assert_true(runner.is_stable(result), "seed %d is outside the range and not stable" % seed_value)
+		if bought_in_time:
+			on_time += 1
+			var small_variant: Dictionary = small_scenario.duplicate(true)
+			small_variant["seed"] = seed_value
+			var small: ScenarioResult = runner.run(small_variant)
+			assert_gte(float(result.final_row()["population"]), GAP * float(small.final_row()["population"]),
+				"seed %d bought at minute %.2f, so it should end at %.1fx the small city" % [seed_value, minute, GAP])
+		# Outside the range, or too late for the population gap, the city must still be fine.
+		if not in_window or not bought_in_time:
+			assert_true(result.survived(), "seed %d is outside the range or late, but was lost" % seed_value)
+			assert_true(runner.is_stable(result), "seed %d is outside the range or late, and not stable" % seed_value)
 			assert_gt(result.mean("operating_balance_pm", 1, MINUTES), 0.0,
-				"seed %d is outside the range and loses money" % seed_value)
+				"seed %d is outside the range or late, and loses money" % seed_value)
 	minutes.sort()
 	@warning_ignore("integer_division")
 	var middle: int = SEEDS / 2
 	var median: float = (minutes[middle - 1] + minutes[middle]) / 2.0
-	gut.p("big_tight_r06 over %d seeds: median purchase minute %.2f, %d of %d bought between minutes %d and %d"
-		% [SEEDS, median, in_range, SEEDS, int(RANGE_FROM), int(RANGE_TO)])
+	gut.p("big_tight_r06 over %d seeds: median purchase minute %.2f, %d of %d bought between minutes %d and %d, %d by minute %d"
+		% [SEEDS, median, in_range, SEEDS, int(RANGE_FROM), int(RANGE_TO), on_time, int(ON_TIME_BY)])
 	assert_between(median, MEDIAN_FROM, MEDIAN_TO, "(a) median minute of the second chain's purchase")
 	assert_gte(in_range, RANGE_TARGET, "(b) seeds that buy it between minutes 6 and 15")
 
