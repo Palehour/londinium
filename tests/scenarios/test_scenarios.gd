@@ -384,4 +384,11 @@ func test_net_worth_levers_one_at_a_time() -> void:
 			% [lever["name"], tally["wins"] + tally["ties"], SEEDS, tally["wins"], tally["ties"],
 			tally["losses"], tally["median_gap"], tally["lost_cities"]])
 		assert_eq(tally["lost_cities"], 0, "%s: no city may be lost or unstable" % lever["name"])
+		# The thresholds are the criterion, checked on the policy as it ships (#41). The levers are
+		# measurements for Cristian to judge: they are reported, not asserted, because a lever that
+		# fails the criterion is a valid result of the experiment.
+		if lever["target"] < 0 and lever["max_price"] == 0:
+			assert_gte(tally["wins"] + tally["ties"], NET_WORTH_TARGET, "smart ties or wins in net worth")
+			assert_gte(tally["wins"], MIN_STRICT_WINS, "accumulating must win some seeds")
+			assert_gte(tally["losses"], MIN_STRICT_LOSSES, "accumulating must lose some seeds")
 	gut.p("\n".join(report))
