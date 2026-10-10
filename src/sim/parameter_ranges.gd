@@ -48,6 +48,10 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"population.stats_window_seconds": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.wheat.max_step": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.wheat.reversion": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"population.satisfaction.smoothing_per_second": {
 		"min": 0.0, "max": 1.0, "min_inclusive": false, "max_inclusive": true},
 }
@@ -56,7 +60,7 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 static func is_valid(key: StringName, value: float) -> bool:
 	if key in [&"startup.seed", &"startup.population", &"population.initial_bread", &"defeat.depopulation.duration_seconds", &"defeat.bankruptcy.duration_seconds",
 			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population",
-			&"population.stats_window_seconds"] \
+			&"population.stats_window_seconds", &"market.wheat.max_step"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

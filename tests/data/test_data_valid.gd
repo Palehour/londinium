@@ -68,6 +68,17 @@ func test_wheat_field_loads_with_recipe_tags_and_parameters() -> void:
 		assert_true(float(params.get_value(key)) > 0.0, str(key))
 
 
+func test_wheat_market_walk_parameters_exist_with_their_first_values() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"market.wheat.max_step"), 1)
+	assert_eq(params.get_value(&"market.wheat.reversion"), 0.5)
+	assert_typeof(params.get_value(&"market.wheat.max_step"), TYPE_INT)
+
+
 func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), str(result.errors))
