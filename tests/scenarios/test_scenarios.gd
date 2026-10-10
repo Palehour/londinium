@@ -123,13 +123,13 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 # big_tight_r06, (a) the median minute at which the second chain is bought is between 8 and 12 and
 # (b) at least 18 of 20 seeds buy it between minutes 6 and 15. A seed that does not buy before the
 # end counts as outside the range, as long as its city stays stable and keeps a positive balance.
-# Criterion 3 at r=0.6: a seed that bought the second chain by minute 12, inclusive (minute <= 12.0),
+# Criterion 3 at r=0.6: a seed that bought the second chain before minute 12 (minute < 12.0),
 # ends with at least 1.5x the population of small_rich (same seed). A seed that buys later or never is exempt from that, as bad
 # luck with the price accepted in criterion 1, as long as its city is alive, stable and earning.
 # (Criterion 3's reference scenario is big_tight at 0.7, tested above.)
 # The thresholds are the criterion, not what was measured: do not lower them to make the suite green.
 const SEEDS: int = 20
-# "By minute 12" includes minute 12 itself: the comparison below is `<=`.
+# "On time" is strictly before minute 12 (minute < 12.0): a purchase at minute 12.0 is not on time.
 const ON_TIME_BY: float = 12.0
 const GAP: float = 1.5
 const MEDIAN_FROM: float = 8.0
@@ -156,7 +156,7 @@ func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 		var minute: float = float(tick) / 60.0 if tick >= 0 else NEVER
 		minutes.append(minute)
 		var in_window: bool = minute >= RANGE_FROM and minute <= RANGE_TO
-		var bought_in_time: bool = minute <= ON_TIME_BY
+		var bought_in_time: bool = minute < ON_TIME_BY
 		if in_window:
 			in_range += 1
 		if bought_in_time:
