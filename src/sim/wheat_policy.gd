@@ -13,15 +13,19 @@ const MAX_RESERVE_MINUTES: int = 10
 # Empty string when the combination is valid. Shared by Params, DataLoader and SetWheatPolicyCommand.
 static func validation_error(accumulate_price: int, max_price: int, target_stock: int,
 		reserve_minutes: int, storage_capacity: int, min_price: int, market_max_price: int) -> String:
+	# The market sorts its two endpoints (MarketSystem.next_price), so a role that inverts them still
+	# has the same price range; the policy is judged against that range.
+	var low: int = mini(min_price, market_max_price)
+	var high: int = maxi(min_price, market_max_price)
 	if accumulate_price < OFF or max_price < NO_LIMIT or target_stock < 0:
 		return "wheat policy values cannot be negative"
 	if reserve_minutes < 0 or reserve_minutes > MAX_RESERVE_MINUTES:
 		return "safety reserve must be between 0 and %d minutes of mill" % MAX_RESERVE_MINUTES
-	if accumulate_price > market_max_price:
+	if accumulate_price > high:
 		return "accumulate price is above the market's maximum price"
-	if accumulate_price != OFF and accumulate_price < min_price:
+	if accumulate_price != OFF and accumulate_price < low:
 		return "accumulate price is below the market's minimum price (use %d to turn it off)" % OFF
-	if max_price != NO_LIMIT and (max_price < min_price or max_price > market_max_price):
+	if max_price != NO_LIMIT and (max_price < low or max_price > high):
 		return "maximum price must be %d (no limit) or inside the market's price range" % NO_LIMIT
 	if max_price != NO_LIMIT and accumulate_price > max_price:
 		return "accumulate price cannot be above the maximum price"

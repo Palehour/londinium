@@ -405,6 +405,22 @@ func test_the_reason_appears_only_when_the_maximum_really_stops_the_wharf() -> v
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "under the reserve it buys")
 
 
+func test_a_role_that_inverts_the_price_bounds_leaves_the_same_market_and_policy_range() -> void:
+	var inverted: Array[Modifier] = [Modifier.new(&"market.wheat.min_price", &"set", 3),
+		Modifier.new(&"market.wheat.max_price", &"set", 1)]
+	var sim: Simulation = _sim(_state(2), _params(inverted))
+	var wheat: Dictionary = sim.snapshot()["market"]["wheat"]
+	assert_eq([wheat["min_price"], wheat["top_price"]], [1, 3], "sorted, as the price walk does")
+	var command: SetWheatPolicyCommand = SetWheatPolicyCommand.new(1, 2, 0, 0)
+	sim.apply_command(command)
+	sim.tick()
+	assert_true(command.accepted, "prices 1 and 2 are inside the 1 to 3 market")
+	var outside: SetWheatPolicyCommand = SetWheatPolicyCommand.new(-1, 4, 0, 0)
+	sim.apply_command(outside)
+	sim.tick()
+	assert_false(outside.accepted)
+
+
 func test_policy_price_defaults_follow_the_money_rounding_of_roles() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"policy.wheat.default_max_price", &"set", 2))
