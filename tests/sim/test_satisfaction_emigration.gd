@@ -99,13 +99,14 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 		assert_true(bakery.accepted)
 		var change_tax: SetTaxCommand = SetTaxCommand.new(tax)
 		sim.apply_command(change_tax)
+		var threshold: float = float(_params.get_value(&"population.growth.emigration_threshold"))
 		var saw_emigration: bool = false
 		var stabilization_tick: int = -1
 		for index: int in range(3300):
 			sim.tick()
 			var current: Dictionary = sim.snapshot()["economy"]
 			if tax == 1.0:
-				var active: bool = bool(current["hunger_emigration_active"]) or (float(current["satisfaction"]) < 30.0 and float(current["satisfaction_target"]) < 30.0)
+				var active: bool = bool(current["hunger_emigration_active"]) or (float(current["satisfaction"]) < threshold and float(current["satisfaction_target"]) < threshold)
 				if active:
 					saw_emigration = true
 					stabilization_tick = -1
@@ -200,6 +201,9 @@ func test_real_chain_with_one_house_and_maximum_tax_finishes_with_26_residents()
 		assert_true(command.accepted)
 	var change_tax: SetTaxCommand = SetTaxCommand.new(1.0)
 	sim.apply_command(change_tax)
+	var decay: float = float(_params.get_value(&"defeat.depopulation.peak_decay_per_minute"))
+	var defeat: DefeatSystem = DefeatSystem.new()
+	var previous_peak: float = sim.snapshot()["economy"]["population_peak"]
 	for index: int in range(3300):
 		sim.tick()
 		var current: Dictionary = sim.snapshot()["economy"]
@@ -208,6 +212,11 @@ func test_real_chain_with_one_house_and_maximum_tax_finishes_with_26_residents()
 		assert_eq(current["housing_capacity"], 20)
 		if index >= 2700:
 			assert_eq(current["population"], 26)
+			# Measured on real departures: sustained stability, no flicker at the satisfaction edge.
+			assert_true(defeat.is_city_stable(EconomyState.from_dict(current), _params))
+			assert_almost_eq(float(current["population_peak"]),
+				maxf(26.0, previous_peak * pow(1.0 - decay, 1.0 / 60.0)), 0.00000001)
+		previous_peak = current["population_peak"]
 	assert_true(change_tax.accepted)
 	assert_eq(sim.snapshot()["tick_count"], 3600)
 	assert_eq(sim.snapshot()["economy"]["population"], 26)

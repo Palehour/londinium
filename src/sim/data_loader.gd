@@ -32,7 +32,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
 			"minimum_population": "integer", "duration_seconds": "positive_integer",
-			"peak_decay_per_minute": "fraction"},
+			"peak_decay_per_minute": "fraction", "stability_window_seconds": "positive_integer"},
 		"grace_seconds": "number",
 	},
 }

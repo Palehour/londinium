@@ -5,7 +5,7 @@ const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
 
 func test_defeat_parameters_are_required_and_validate_ranges() -> void:
 	for field: String in ["grace_seconds", "hunger.smoothing", "depopulation.duration_seconds",
-			"depopulation.peak_decay_per_minute"]:
+			"depopulation.peak_decay_per_minute", "depopulation.stability_window_seconds"]:
 		before_each()
 		var parts: PackedStringArray = field.split(".")
 		var section: Dictionary = _documents["economy/defeat.json"]
@@ -18,6 +18,7 @@ func test_defeat_parameters_are_required_and_validate_ranges() -> void:
 		"hunger.smoothing": [0.0, -0.1, 1.01, INF, NAN],
 		"depopulation.duration_seconds": [0.0, -1.0, 1.5, INF, NAN],
 		"depopulation.peak_decay_per_minute": [-0.01, 1.01, INF, NAN],
+		"depopulation.stability_window_seconds": [0.0, -1.0, 1.5, INF, NAN],
 	}
 	for field: String in invalid:
 		for value: float in invalid[field]:

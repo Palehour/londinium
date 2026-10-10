@@ -264,6 +264,20 @@ func test_peak_decay_range_applies_to_final_modifier_value() -> void:
 		assert_eq(Params.new(_catalog, role).get_value(key), boundary)
 
 
+func test_stability_window_range_applies_to_final_modifier_value() -> void:
+	var key: StringName = &"defeat.depopulation.stability_window_seconds"
+	assert_eq(Params.new(_catalog, RoleDef.new()).get_value(key), 60)
+	assert_true(ParameterRanges.BY_KEY.has(key))
+	for invalid: float in [0.0, -1.0, 1.5, INF, NAN]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(key, &"set", invalid))
+		assert_null(Params.new(_catalog, role).get_value(key))
+		assert_push_error("invalid range" if is_finite(invalid) else "nonfinite result")
+	var valid_role: RoleDef = RoleDef.new()
+	valid_role.modifiers.assign([Modifier.new(key, &"set", -5), Modifier.new(key, &"set", 90)])
+	assert_eq(Params.new(_catalog, valid_role).get_value(key), 90)
+
+
 func test_snap_epsilon_validates_final_modified_value_on_read() -> void:
 	var key: StringName = &"population.satisfaction.snap_epsilon"
 	for invalid: float in [0.0, -0.01, INF, NAN]:
