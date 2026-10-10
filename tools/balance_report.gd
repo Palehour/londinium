@@ -152,10 +152,15 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	}
 
 
-# First minute after the first build with a treasury that pays for one more chain; -1 if never.
+# First minute, counted from the first complete chain (wharf, mill and bakery all standing), with
+# a treasury that pays for one more chain; -1 if there is no first chain or it never gets there.
 func _first_minute_with_money(result: ScenarioResult, cost: int) -> int:
+	var built_from: int = -1
 	for minute: int in range(1, result.rows.size()):
-		if int(result.row(minute)["money"]) >= cost:
+		var row: Dictionary = result.row(minute)
+		if built_from < 0 and row["n_wharf"] > 0 and row["n_mill"] > 0 and row["n_bakery"] > 0:
+			built_from = minute
+		if built_from >= 0 and int(row["money"]) >= cost:
 			return minute
 	return -1
 
