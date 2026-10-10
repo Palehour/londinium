@@ -9,12 +9,14 @@ extends SceneTree
 # Probe mode: --seeds n runs each scenario with seeds 1..n instead of the seed in its file, and
 # --summary prints one row per scenario and metric (min, median, mean, max over the seeds) instead
 # of the per-minute CSV; with --out it is also written to balance_summary.csv, next to
-# balance_seeds.csv (one row per scenario and seed). --tax replaces the
+# balance_seeds.csv (one row per scenario and seed). A run in which a scripted command is refused
+# is left out of both, counted in runs_refused and listed in balance_refused.csv. --tax replaces the
 # rate of every set_tax command and --wheat-price fixes the market price; both only change the
 # probe, never data/ or the scenario files.
 
 const ALL: String = "all"
 const SUMMARY_HEADER: String = "scenario,metric,min,median,mean,max"
+const REFUSED_HEADER: String = "scenario,seed,tick,cmd,reason,money_at_start_of_minute"
 const LAST_MINUTES_FROM: int = 13
 const CHAIN_BUILDINGS: Array[String] = ["wharf", "mill", "bakery"]
 # Same threshold the hunger-emigration rule uses (population.growth.hunger_emigration_threshold).
@@ -79,32 +81,63 @@ func _run_csv(runner: ScenarioRunner, scenarios: Array[Dictionary], options: Dic
 func _run_summary(runner: ScenarioRunner, scenarios: Array[Dictionary], options: Dictionary) -> void:
 	var lines: Array[String] = [SUMMARY_HEADER]
 	var per_seed: Array[String] = []
-	var refused: bool = false
+	var refused_rows: Array[String] = [REFUSED_HEADER]
 	for scenario: Dictionary in scenarios:
+		var id: String = String(scenario["id"])
 		var samples: Dictionary[String, Array] = {}
+		var used: int = 0
+		var refused_seeds: Array[int] = []
 		for variant: Dictionary in _variants(scenario, options):
 			var result: ScenarioResult = runner.run(variant)
-			refused = refused or not result.unexpected_rejections().is_empty()
+			var rejections: Array[Dictionary] = result.unexpected_rejections()
+			# A refused command means this run no longer plays the scripted scenario, so it must
+			# not be mixed into the aggregates; it is reported on its own below.
+			if not rejections.is_empty():
+				refused_seeds.append(int(variant["seed"]))
+				refused_rows.append_array(_refused_lines(id, int(variant["seed"]), result, rejections))
+				continue
+			used += 1
 			var metrics: Dictionary = _metrics(runner, result)
 			if per_seed.is_empty():
 				per_seed.append("scenario,seed,%s" % ",".join(PackedStringArray(metrics.keys())))
 			var cells: PackedStringArray = PackedStringArray()
 			for metric: String in metrics:
 				cells.append("%.2f" % float(metrics[metric]))
-			per_seed.append("%s,%d,%s" % [scenario["id"], int(variant["seed"]), ",".join(cells)])
+			per_seed.append("%s,%d,%s" % [id, int(variant["seed"]), ",".join(cells)])
 			for metric: String in metrics:
 				if not samples.has(metric):
 					samples[metric] = []
 				samples[metric].append(float(metrics[metric]))
+		lines.append(_summary_line(id, "runs_used", [float(used)]))
+		lines.append(_summary_line(id, "runs_refused", [float(refused_seeds.size())]))
 		for metric: String in samples:
-			lines.append(_summary_line(String(scenario["id"]), metric, samples[metric]))
-	if refused:
-		printerr("balance_report: a scripted command was refused in some run (script out of date?)")
-	print("\n".join(lines))
-	if options["out"] != "" and not _write_summary(options["out"], lines, per_seed):
+			lines.append(_summary_line(id, metric, samples[metric]))
+		if not refused_seeds.is_empty():
+			printerr("balance_report: %s: %d run(s) left out of the summary because a scripted command was refused (seeds %s)"
+				% [id, refused_seeds.size(), str(refused_seeds)])
+	print("
+".join(lines))
+	if refused_rows.size() > 1:
+		print("
+# Runs left out of the summary (a scripted command was refused)
+%s" % "
+".join(refused_rows))
+	if options["out"] != "" and not _write_summary(options["out"], lines, per_seed, refused_rows):
 		quit(1)
 		return
 	quit(0)
+
+
+# One row per refused command: the treasury of the minute before shows whether it was a cash problem.
+func _refused_lines(scenario_id: String, seed_value: int, result: ScenarioResult,
+		rejections: Array[Dictionary]) -> Array[String]:
+	var found: Array[String] = []
+	for entry: Dictionary in rejections:
+		var tick: int = int(entry["executed_tick"]) if int(entry["executed_tick"]) >= 0 else int(entry["tick"])
+		var minute: int = mini(tick / ScenarioRunner.TICKS_PER_MINUTE, result.rows.size() - 1)
+		found.append("%s,%d,%d,%s,%s,%d" % [scenario_id, seed_value, tick, entry["cmd"],
+			entry["reason"], int(result.row(minute)["money"])])
+	return found
 
 
 # One scenario copy per seed; the original file is never modified.
@@ -133,8 +166,6 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	var coverage: float = float(final["bread_coverage"])
 	var shrinking: bool = int(final["population"]) < int(result.row(LAST_MINUTES_FROM - 1)["population"])
 	var funded_minute: int = _first_minute_with_money(result, chain_cost)
-	var housing_cost: int = int(runner.param(&"building.housing.cost"))
-	var stage_minute: int = _first_minute_with_money(result, chain_cost + housing_cost)
 	var stable: bool = result.survived() and not shrinking \
 		and coverage >= float(runner.param(STABLE_COVERAGE_KEY))
 	return {
@@ -147,13 +178,11 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"operating_balance_last3": balance,
 		"stable": 1 if stable else 0,
 		"stable_and_losing_money": 1 if stable and balance < 0.0 else 0,
-		"commands_refused": result.unexpected_rejections().size(),
 		"chain_cost": chain_cost,
 		"chain_funded": 1 if funded_minute > 0 else 0,
 		"chain_funded_minute": funded_minute,
-		# Second chain plus the second housing block, bought together (big_tight_r06).
-		"chain_housing_funded": 1 if stage_minute > 0 else 0,
-		"chain_housing_funded_minute": stage_minute,
+		# First minute that ends with two complete chains standing: when the second one was paid for.
+		"second_chain_minute": _first_minute_with_chains(result, 2),
 	}
 
 
@@ -166,6 +195,14 @@ func _first_minute_with_money(result: ScenarioResult, cost: int) -> int:
 		if built_from < 0 and row["n_wharf"] > 0 and row["n_mill"] > 0 and row["n_bakery"] > 0:
 			built_from = minute
 		if built_from >= 0 and int(row["money"]) >= cost:
+			return minute
+	return -1
+
+
+func _first_minute_with_chains(result: ScenarioResult, chains: int) -> int:
+	for minute: int in range(1, result.rows.size()):
+		var row: Dictionary = result.row(minute)
+		if row["n_wharf"] >= chains and row["n_mill"] >= chains and row["n_bakery"] >= chains:
 			return minute
 	return -1
 
@@ -227,13 +264,15 @@ func _write_files(out: String, results: Array[ScenarioResult], combined: Array[S
 	return ok
 
 
-func _write_summary(out: String, lines: Array[String], per_seed: Array[String]) -> bool:
+func _write_summary(out: String, lines: Array[String], per_seed: Array[String],
+		refused_rows: Array[String]) -> bool:
 	var directory: String = _directory(out)
 	if DirAccess.make_dir_recursive_absolute(directory) != OK:
 		printerr("balance_report: cannot create %s" % directory)
 		return false
 	var ok: bool = _write(directory.path_join("balance_summary.csv"), lines)
-	return _write(directory.path_join("balance_seeds.csv"), per_seed) and ok
+	ok = _write(directory.path_join("balance_seeds.csv"), per_seed) and ok
+	return _write(directory.path_join("balance_refused.csv"), refused_rows) and ok
 
 
 func _directory(out: String) -> String:
