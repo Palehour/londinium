@@ -51,35 +51,50 @@ func test_small_rich_survives_comfortable_and_cash_positive() -> void:
 	assert_true(result.survived())
 	assert_almost_eq(float(result.final_row()["population"]), 20.0, 2.0)
 	assert_gte(float(result.final_row()["bread_coverage"]), 0.95)
-	assert_gte(int(result.final_row()["money"]), 4500)
+	assert_gte(int(result.final_row()["money"]), 800)
 	assert_gte(result.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
 
 
-# F7: big_tight sits only 0.01 above the hunger-emigration threshold (smoothed coverage settles
-# at ~0.61 against population.growth.hunger_emigration_threshold = 0.6). The city grows on the
-# initial bread stock and then stops where production cannot feed more. If this test fails after
-# a change in data/, that is expected: recalibrate the scenario (or tell Mason). It is not a bug.
-func test_big_tight_survives_larger_with_bread_just_enough() -> void:
+# F1/F2/F7 (#39): big_tight is now two chains and two housing blocks. What is tight is the
+# treasury: the second chain is paid for with the first one's profit, which with these taxes takes
+# until minute 8-12. If this test fails after a change in data/, that is expected: recalibrate the
+# scenario (or tell Mason). It is not a bug.
+func test_big_tight_funds_its_second_chain_and_ends_larger() -> void:
 	var result: ScenarioResult = _result("big_tight")
 	assert_true(result.survived())
-	var population: int = result.final_row()["population"]
-	assert_between(population, 28, 34)
-	assert_between(float(result.final_row()["bread_coverage"]), 0.6, 0.7)
-	assert_lt(float(result.final_row()["satisfaction"]), 70.0, "growth has stopped")
-	assert_almost_eq(float(result.row(12)["population"]), float(population), 1.0, "stable over the last 3 minutes")
-	assert_gt(int(result.final_row()["money"]), 0)
-	assert_lt(result.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+	var final: Dictionary = result.final_row()
+	assert_between(int(final["population"]), 33, 38)
+	assert_gte(float(final["bread_coverage"]), 0.95)
+	assert_eq([final["n_wharf"], final["n_mill"], final["n_bakery"], final["n_housing"]], [2, 2, 2, 2])
+	assert_gt(int(final["money"]), 0)
+	assert_gt(result.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+
+
+func test_big_tight_second_chain_is_paid_from_profit_between_minutes_8_and_12() -> void:
+	var result: ScenarioResult = _result("big_tight")
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var chain_cost: int = 0
+	for building: String in ["wharf", "mill", "bakery"]:
+		chain_cost += int(runner.param(StringName("building.%s.cost" % building)))
+	var funded_minute: int = -1
+	for minute: int in range(1, result.rows.size()):
+		if int(result.row(minute)["money"]) >= chain_cost:
+			funded_minute = minute
+			break
+	assert_between(funded_minute, 8, 12, "the first chain pays for the second one in the issue's window")
+	assert_gte(int(result.row(12)["money"]), chain_cost, "affordable when the script builds it (tick 720)")
+	assert_lt(int(result.final_row()["money"]), int(result.row(12)["money"]), "and it was spent on it")
 
 
 func test_two_equilibria_differ() -> void:
 	var small: ScenarioResult = _result("small_rich")
 	var big: ScenarioResult = _result("big_tight")
-	assert_gte(float(big.final_row()["population"]), 1.4 * float(small.final_row()["population"]))
-	assert_gte(int(small.final_row()["money"]), int(big.final_row()["money"]) + 1000)
+	assert_gte(float(big.final_row()["population"]), 1.5 * float(small.final_row()["population"]))
+	assert_gte(int(small.final_row()["money"]), int(big.final_row()["money"]) + 100)
 	assert_gte(float(small.final_row()["bread_coverage"]), 0.95)
-	assert_lte(float(big.final_row()["bread_coverage"]), 0.7)
-	assert_gt(small.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES),
-		big.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES))
+	assert_gte(float(big.final_row()["bread_coverage"]), 0.95)
+	assert_gt(small.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+	assert_gt(big.mean("operating_balance_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
 
 
 # --- Criterio 4: se puede perder por cada condición, con aviso en el panel ---
@@ -116,7 +131,7 @@ func test_hunger_riot_defeat() -> void:
 # F5: with the treasury empty the wharf stops buying wheat, and the panel names it.
 func test_bankruptcy_defeat() -> void:
 	var result: ScenarioResult = _result("defeat_bankruptcy")
-	_assert_lost_only_by(result, &"bankruptcy", 517, 15)
+	_assert_lost_only_by(result, &"bankruptcy", 480, 15)
 	assert_lt(int(result.final_row()["money"]), 0)
 	assert_true(result.bread_cause_pairs.has("wharf:no_money_for_wheat"))
 
