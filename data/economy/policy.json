@@ -1,0 +1,4 @@
+{
+  "wheat": { "default_accumulate_price": 0, "default_max_price": 0, "default_target_stock": 0,
+    "default_reserve_minutes": 2 }
+}

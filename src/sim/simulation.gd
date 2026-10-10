@@ -50,6 +50,11 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
+	if _context != null and _state.wheat_accumulate_price < 0:
+		_state.wheat_accumulate_price = int(_params.get_value(&"policy.wheat.default_accumulate_price"))
+		_state.wheat_max_price = int(_params.get_value(&"policy.wheat.default_max_price"))
+		_state.wheat_target_stock = int(_params.get_value(&"policy.wheat.default_target_stock"))
+		_state.wheat_reserve_minutes = int(_params.get_value(&"policy.wheat.default_reserve_minutes"))
 	if _context != null and _state.tax_rate < 0.0:
 		_state.tax_rate = float(_params.get_value(&"population.tax.rate"))
 		# Construction initializes diagnostics, but smoothing advances only on ticks.
@@ -113,6 +118,7 @@ func snapshot() -> Dictionary:
 		"economy": _state.to_dict(),
 		"stats": _stats.snapshot(),
 		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
+		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params)},
 		"defeat": _defeat_snapshot(),
 		"tick_count": _tick_count,
 		"seed": _seed,

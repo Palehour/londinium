@@ -8,7 +8,8 @@ extends RefCounted
 
 const SCENARIO_DIR: String = "res://tests/scenarios"
 const TICKS_PER_MINUTE: int = 60
-const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases"]
+const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy"]
+const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 
 var _catalog: DataCatalog
@@ -77,6 +78,7 @@ func validate(scenario: Dictionary) -> Array[String]:
 		return errors
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
+	errors.append_array(_validate_price_schedule(scenario.get("price_schedule", []), duration))
 	var previous_tick: int = 0
 	var command_before_tick: int = -1
 	var index: int = 0
@@ -97,13 +99,21 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	result.id = String(scenario["id"])
 	for condition: StringName in CONDITIONS:
 		result.max_timer[condition] = 0
+	var normal_params: Params = _params
+	var schedule: Array = scenario.get("price_schedule", [])
+	if not schedule.is_empty():
+		_params = _params_without_repricing(int(scenario["duration_ticks"]))
 	var sim: Simulation = Simulation.create_new(_params, _initial_state(), int(scenario["seed"]), _context)
+	var next_price: int = 0
 	var script: Array = scenario["commands"]
 	var issued: Array[Dictionary] = []
 	var next_command: int = 0
 	var snapshot: Dictionary = sim.snapshot()
 	result.rows.append(_row(result.id, 0, 0, snapshot))
 	for tick_index: int in range(int(scenario["duration_ticks"])):
+		while next_price < schedule.size() and int(schedule[next_price]["tick"]) <= tick_index:
+			sim.apply_command(ForceWheatPriceCommand.new(int(schedule[next_price]["price"])))
+			next_price += 1
 		var queued: Array[Dictionary] = []
 		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued):
 			var entry: Dictionary = script[next_command]
@@ -140,7 +150,34 @@ func run(scenario: Dictionary) -> ScenarioResult:
 			"cmd": String(script[pending]["cmd"]), "building": String(script[pending].get("building", "")),
 			"accepted": false, "reason": &"never_ran",
 			"expect_reject": StringName(script[pending].get("expect_reject", ""))})
+	_params = normal_params
 	return result
+
+
+# A scheduled price must stay where the script put it, so the random walk gets an interval that
+# never comes up during the game. Works on a copy of the values: data/ and later runs are untouched.
+func _params_without_repricing(duration_ticks: int) -> Params:
+	var key: StringName = &"market.wheat.price_update_seconds"
+	var saved: Variant = _catalog.base_values[key]
+	_catalog.base_values[key] = duration_ticks + 1
+	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_catalog.base_values[key] = saved
+	return params
+
+
+func _validate_price_schedule(schedule: Variant, duration: int) -> Array[String]:
+	var errors: Array[String] = []
+	if schedule is not Array:
+		return ["price_schedule must be a list"]
+	var previous: int = 0
+	for entry: Variant in schedule:
+		if entry is not Dictionary or not _is_whole(entry.get("tick")) or not _is_whole(entry.get("price")) \
+				or int(entry["tick"]) < previous or int(entry["tick"]) >= duration or int(entry["price"]) < 0:
+			errors.append("price_schedule entries need whole tick (in order, inside the game) and price >= 0")
+			break
+		previous = int(entry["tick"])
+	return errors
+
 
 
 # Same predicate the simulation uses for "nobody is leaving", evaluated on the final state.
@@ -211,6 +248,9 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 			return DemolishCommand.new(Vector2i(int(target[0]), int(target[1])))
 		"set_tax":
 			return SetTaxCommand.new(float(entry["rate"]))
+		"set_wheat_policy":
+			return SetWheatPolicyCommand.new(int(entry["accumulate_price"]), int(entry["max_price"]),
+				int(entry["target_stock"]), int(entry["reserve_minutes"]))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -262,6 +302,7 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"n_housing": counts[&"housing"],
 		"bankruptcy": defeat[&"bankruptcy"]["status"], "hunger": defeat[&"hunger"]["status"],
 		"depopulation": defeat[&"depopulation"]["status"], "defeat_causes": "|".join(causes),
+		"wheat_stock": economy["stocks"].get(&"wheat", 0),
 	}
 
 
@@ -293,6 +334,10 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		"set_tax":
 			if typeof(entry.get("rate")) not in [TYPE_INT, TYPE_FLOAT]:
 				errors.append("%s: rate must be a number" % where)
+		"set_wheat_policy":
+			for field: String in POLICY_FIELDS:
+				if not _is_whole(entry.get(field)) or int(entry[field]) < 0:
+					errors.append("%s: %s must be a whole number >= 0" % [where, field])
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)

@@ -1,25 +1,115 @@
 class_name MarketSystem
 extends RefCounted
 
+const SECONDS_PER_MINUTE: float = 60.0
+const NO_RATE_CAP: float = -1.0
+
 
 func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int) -> void:
 	var interval: int = int(params.get_value(&"market.wheat.price_update_seconds"))
 	# Nonpositive modifier results disable repricing, not purchases at the saved price.
 	if interval > 0 and tick_count % interval == 0:
+		state.wheat_previous_price = state.wheat_price
 		state.wheat_price = next_price(state.wheat_price, params, rng)
+	# Before buying and before the mill runs, so it never touches wheat bought this tick.
+	_decay(state, params)
 	if not state.wheat_purchases_enabled:
 		return
+	var wharves: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
-		if building["definition_id"] != &"wharf":
-			continue
-		var capacity: float = float(building.get("output_fraction", 0.0)) \
-			+ ProductionSystem.staffed_rate(params, building, "outputs.wheat")
-		var units: int = ProductionSystem.whole_units(capacity)
-		building["output_fraction"] = maxf(0.0, capacity - units)
-		units = affordable_wheat(state, units)
-		state.money -= units * state.wheat_price
-		state.wheat_spent_tick += units * state.wheat_price
-		state.stocks[&"wheat"] = state.stocks.get(&"wheat", 0) + units
+		if building["definition_id"] == &"wharf":
+			wharves.append(building)
+	# A price above the player's maximum stops the wharf (it does not bank capacity), unless the stock
+	# is under the safety reserve: then it buys at any price, but only what the mills consume.
+	var rate_cap: float = NO_RATE_CAP
+	if is_blocked_by_price(state):
+		if reserve_covered(state, params):
+			return
+		rate_cap = mill_consumption_per_second(state, params) / float(maxi(1, wharves.size()))
+	for building: Dictionary in wharves:
+		_buy(state, params, building, rate_cap)
+
+
+# Everything the panel shows about wheat, so the UI holds no rules. minutes_covered is -1 when no mill
+# is working (there is no consumption to divide by).
+static func wheat_snapshot(state: EconomyState, params: Params) -> Dictionary:
+	var stock: int = int(state.stocks.get(&"wheat", 0))
+	var consumption: float = mill_consumption_per_second(state, params) * SECONDS_PER_MINUTE
+	return {
+		"stock": stock, "capacity": int(params.get_value(&"market.wheat.storage_capacity")),
+		"price": state.wheat_price,
+		"previous_price": state.wheat_previous_price if state.wheat_previous_price >= 0 else state.wheat_price,
+		"min_price": int(params.get_value(&"market.wheat.min_price")),
+		"top_price": int(params.get_value(&"market.wheat.max_price")),
+		"accumulate_price": state.wheat_accumulate_price, "max_price": state.wheat_max_price,
+		"target_stock": state.wheat_target_stock, "reserve_minutes": state.wheat_reserve_minutes,
+		"max_reserve_minutes": WheatPolicy.MAX_RESERVE_MINUTES,
+		"consumption_per_minute": consumption,
+		"minutes_covered": float(stock) / consumption if consumption > 0.0 else -1.0,
+		"blocked_by_price": is_halted_by_price(state, params),
+	}
+
+
+static func is_blocked_by_price(state: EconomyState) -> bool:
+	return state.wheat_max_price > WheatPolicy.NO_LIMIT and state.wheat_price > state.wheat_max_price
+
+
+# Wheat the staffed mills grind per second; the reserve and the buying cap are measured against it.
+static func mill_consumption_per_second(state: EconomyState, params: Params) -> float:
+	var consumption: float = 0.0
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"mill":
+			consumption += ProductionSystem.staffed_rate(params, building, "inputs.wheat")
+	return consumption
+
+
+# Stock for at least reserve_minutes of mill. With 0 minutes it always is, so the maximum price
+# applies in full (the behaviour before the reserve existed).
+static func reserve_covered(state: EconomyState, params: Params) -> bool:
+	var reserve: float = float(state.wheat_reserve_minutes) * mill_consumption_per_second(state, params) 		* SECONDS_PER_MINUTE
+	return float(state.stocks.get(&"wheat", 0)) >= reserve
+
+
+# The maximum price really stops the wharf: the price is above it and the reserve is covered.
+static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
+	return is_blocked_by_price(state) and reserve_covered(state, params)
+
+
+static func is_accumulating(state: EconomyState) -> bool:
+	return state.wheat_accumulate_price > WheatPolicy.OFF and state.wheat_price <= state.wheat_accumulate_price \
+		and int(state.stocks.get(&"wheat", 0)) < state.wheat_target_stock
+
+
+func _buy(state: EconomyState, params: Params, building: Dictionary, rate_cap: float) -> void:
+	var stock: int = int(state.stocks.get(&"wheat", 0))
+	var rate: float = ProductionSystem.staffed_rate(params, building, "outputs.wheat")
+	var accumulating: bool = is_accumulating(state)
+	if accumulating:
+		rate *= float(params.get_value(&"market.wheat.accumulate_factor"))
+	if rate_cap >= 0.0:
+		rate = minf(rate, rate_cap)
+	var capacity: float = float(building.get("output_fraction", 0.0)) + rate
+	var units: int = ProductionSystem.whole_units(capacity)
+	building["output_fraction"] = maxf(0.0, capacity - units)
+	# Units that do not fit, or that the target no longer needs, are lost like unaffordable ones.
+	units = mini(units, maxi(0, int(params.get_value(&"market.wheat.storage_capacity")) - stock))
+	if accumulating:
+		units = mini(units, state.wheat_target_stock - stock)
+	units = affordable_wheat(state, units)
+	state.money -= units * state.wheat_price
+	state.wheat_spent_tick += units * state.wheat_price
+	state.stocks[&"wheat"] = stock + units
+
+
+func _decay(state: EconomyState, params: Params) -> void:
+	var stock: int = int(state.stocks.get(&"wheat", 0))
+	var rate: float = float(params.get_value(&"market.wheat.decay_fraction_per_minute"))
+	if stock <= 0 or rate <= 0.0:
+		return
+	state.wheat_decay_fraction += float(stock) * rate / 60.0
+	var lost: int = mini(stock, ProductionSystem.whole_units(state.wheat_decay_fraction))
+	state.wheat_decay_fraction -= float(lost)
+	state.stocks[&"wheat"] = stock - lost
 
 
 # Mean-reverting walk: one update moves the price by at most market.wheat.max_step and never leaves

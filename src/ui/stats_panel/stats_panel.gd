@@ -14,6 +14,19 @@ var _alert: Label
 var _restart: Button
 var _tax: SpinBox
 var _wheat: CheckButton
+var _accumulate: OptionButton
+var _max_price: OptionButton
+var _target: HSlider
+var _target_label: Label
+var _reserve: HSlider
+var _reserve_label: Label
+var _wheat_row: Label
+# Option index -> price (0 = off / no limit), rebuilt when the market's price range changes.
+var _accumulate_prices: Array[int] = []
+var _max_prices: Array[int] = []
+var _price_range: Vector2i = Vector2i(-1, -1)
+var _dragging_target: bool = false
+var _dragging_reserve: bool = false
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
@@ -67,7 +80,10 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	var stats: Dictionary = snapshot["stats"]
 	var defeat: Dictionary = snapshot["defeat"]
 	var defeated: bool = not defeat["causes"].is_empty()
+	var market: Dictionary = snapshot["market"]["wheat"]
 	_update_controls(economy, defeated)
+	_update_wheat_policy(market, defeated)
+	_wheat_row.text = _wheat_text(market)
 	_update_alert(defeat)
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
@@ -91,6 +107,30 @@ func _build_controls(content: VBoxContainer) -> void:
 	_wheat.focus_mode = Control.FOCUS_NONE
 	_wheat.toggled.connect(_wheat_toggled)
 	content.add_child(_wheat)
+	_wheat_row = _label("")
+	content.add_child(_wheat_row)
+	_accumulate = _price_selector(content, Strings.ACCUMULATE_LABEL)
+	_max_price = _price_selector(content, Strings.MAX_PRICE_LABEL)
+	_target_label = _label("")
+	content.add_child(_target_label)
+	_target = HSlider.new()
+	_target.step = 1.0
+	_target.focus_mode = Control.FOCUS_NONE
+	_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_target.drag_started.connect(func() -> void: _dragging_target = true)
+	_target.drag_ended.connect(_target_released)
+	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.TARGET_LABEL % int(value))
+	content.add_child(_target)
+	_reserve_label = _label("")
+	content.add_child(_reserve_label)
+	_reserve = HSlider.new()
+	_reserve.step = 1.0
+	_reserve.focus_mode = Control.FOCUS_NONE
+	_reserve.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reserve.drag_started.connect(func() -> void: _dragging_reserve = true)
+	_reserve.drag_ended.connect(_reserve_released)
+	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.RESERVE_LABEL % int(value))
+	content.add_child(_reserve)
 	var speed_row: HBoxContainer = HBoxContainer.new()
 	_pause = _button(Strings.PAUSE, _toggle_pause)
 	speed_row.add_child(_pause)
@@ -115,6 +155,86 @@ func _update_controls(economy: Dictionary, defeated: bool) -> void:
 	if clock.speed != 0:
 		_speed = clock.speed
 	_update_clock_controls()
+
+
+func _price_selector(content: VBoxContainer, title: String) -> OptionButton:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_child(_label(title))
+	var selector: OptionButton = OptionButton.new()
+	selector.focus_mode = Control.FOCUS_NONE
+	selector.item_selected.connect(func(_index: int) -> void: _submit_policy())
+	row.add_child(selector)
+	content.add_child(row)
+	return selector
+
+
+# The player picks among the market's own prices: a price above the top one could never be paid.
+func _rebuild_price_options(market: Dictionary) -> void:
+	var range_now: Vector2i = Vector2i(market["min_price"], market["top_price"])
+	if range_now == _price_range:
+		return
+	_price_range = range_now
+	_accumulate.clear()
+	_max_price.clear()
+	_accumulate_prices = [WheatPolicy.OFF]
+	_max_prices = []
+	_accumulate.add_item(Strings.ACCUMULATE_OFF)
+	for price: int in range(range_now.x, range_now.y):
+		_accumulate_prices.append(price)
+		_accumulate.add_item(Strings.money(price))
+		_max_prices.append(price)
+		_max_price.add_item(Strings.money(price))
+	_max_prices.append(WheatPolicy.NO_LIMIT)
+	_max_price.add_item(Strings.NO_LIMIT)
+
+
+func _update_wheat_policy(market: Dictionary, defeated: bool) -> void:
+	_rebuild_price_options(market)
+	_syncing = true
+	# An unlisted maximum is the market's top price: nothing can exceed it, so it reads as no limit.
+	_accumulate.select(maxi(0, _accumulate_prices.find(int(market["accumulate_price"]))))
+	var max_index: int = _max_prices.find(int(market["max_price"]))
+	_max_price.select(max_index if max_index >= 0 else _max_prices.size() - 1)
+	_target.max_value = market["capacity"]
+	if not _dragging_target:
+		_target.value = market["target_stock"]
+		_target_label.text = Strings.TARGET_LABEL % int(market["target_stock"])
+	_syncing = false
+	for control: Control in [_accumulate, _max_price]:
+		(control as OptionButton).disabled = defeated
+	_reserve.max_value = market["max_reserve_minutes"]
+	if not _dragging_reserve:
+		_reserve.value = market["reserve_minutes"]
+		_reserve_label.text = Strings.RESERVE_LABEL % int(market["reserve_minutes"])
+	_reserve.editable = not defeated
+	_target.editable = not defeated
+
+
+func _wheat_text(market: Dictionary) -> String:
+	var price: int = market["price"]
+	var previous: int = market["previous_price"]
+	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
+	var covered: String = Strings.MINUTES_COVERED % market["minutes_covered"] if market["minutes_covered"] >= 0.0 \
+		else Strings.NO_MILL_COVERAGE
+	var text: String = Strings.WHEAT_ROW % [market["stock"], market["capacity"], Strings.money(price), trend, covered]
+	return text + "\n" + Strings.WHEAT_BLOCKED_NOTE if market["blocked_by_price"] else text
+
+
+func _submit_policy() -> void:
+	if _syncing:
+		return
+	session.submit_command(SetWheatPolicyCommand.new(_accumulate_prices[_accumulate.selected],
+		_max_prices[_max_price.selected], int(_target.value), int(_reserve.value)))
+
+
+func _reserve_released(_changed: bool) -> void:
+	_dragging_reserve = false
+	_submit_policy()
+
+
+func _target_released(_changed: bool) -> void:
+	_dragging_target = false
+	_submit_policy()
 
 
 func _update_clock_controls() -> void:

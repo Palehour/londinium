@@ -35,6 +35,15 @@ var population_peak: float = 0.0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
+# Wharf purchase policy (WheatPolicy); -1 until the simulation loads the defaults from data.
+var wheat_accumulate_price: int = -1
+var wheat_max_price: int = -1
+var wheat_target_stock: int = -1
+var wheat_reserve_minutes: int = -1
+# Price before the last repricing, for the panel's trend arrow; -1 until the first repricing.
+var wheat_previous_price: int = -1
+# Wheat lost to damp and rats accumulates here until it makes a whole unit.
+var wheat_decay_fraction: float = 0.0
 # Per-tick flows feed the stats window; they are transient and never saved.
 var bread_produced_tick: int = 0
 var bread_consumed_tick: float = 0.0
@@ -67,6 +76,10 @@ func to_dict() -> Dictionary:
 		"population_peak": population_peak, "depopulation_active": depopulation_active,
 		"defeat_causes": defeat_causes.duplicate(),
 		"wheat_purchases_enabled": wheat_purchases_enabled,
+		"wheat_accumulate_price": wheat_accumulate_price, "wheat_max_price": wheat_max_price,
+		"wheat_target_stock": wheat_target_stock, "wheat_reserve_minutes": wheat_reserve_minutes,
+		"wheat_previous_price": wheat_previous_price,
+		"wheat_decay_fraction": wheat_decay_fraction,
 		"stocks": stocks.duplicate(),
 		"money": money,
 		"population": population,
@@ -101,6 +114,12 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
 	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
+	result.wheat_accumulate_price = int(values.get("wheat_accumulate_price", -1))
+	result.wheat_max_price = int(values.get("wheat_max_price", -1))
+	result.wheat_target_stock = int(values.get("wheat_target_stock", -1))
+	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
+	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
+	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))
 	for cause: Variant in values.get("defeat_causes", []):
 		result.defeat_causes.append(StringName(cause))
 	result.stocks.assign(values["stocks"])

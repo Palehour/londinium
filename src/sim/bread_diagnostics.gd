@@ -15,7 +15,7 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 		buildings.append({
 			"definition_id": id, "cell": building["cell"].duplicate(),
 			"workers": int(building.get("workers", 0)), "jobs": jobs,
-			"reason": building_reason(state, context, building),
+			"reason": building_reason(state, context, building, params),
 		})
 	var bread_short: bool = state.bread_coverage < 1.0
 	var causes: Array[Dictionary] = _chain_causes(buildings)
@@ -28,13 +28,18 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 	}
 
 
-static func building_reason(state: EconomyState, context: EconomyContext, building: Dictionary) -> StringName:
+static func building_reason(state: EconomyState, context: EconomyContext, building: Dictionary,
+		params: Params) -> StringName:
 	var id: StringName = StringName(building["definition_id"])
 	# The wharf is the only buyer; MarketSystem stops before staffing when purchases are off.
 	if id == &"wharf" and not state.wheat_purchases_enabled:
 		return &"wheat_purchases_disabled"
 	if int(building.get("workers", 0)) <= 0:
 		return &"no_workers"
+	# With stock the mills keep working, so only an empty warehouse makes the price the reason; and
+	# under the safety reserve the wharf buys anyway, so then the price is not stopping it.
+	if id == &"wharf" and MarketSystem.is_halted_by_price(state, params) and int(state.stocks.get(&"wheat", 0)) <= 0:
+		return &"wheat_price_above_max"
 	if id == &"wharf" and MarketSystem.affordable_wheat(state, 1) == 0:
 		return &"no_money_for_wheat"
 	var recipe: RecipeDef = context.buildings[id].recipe if context != null and context.buildings.has(id) else null

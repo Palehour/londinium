@@ -131,6 +131,68 @@ func test_wheat_toggle_sends_command_and_reflects_state() -> void:
 	assert_true(_session.get_snapshot()["economy"]["wheat_purchases_enabled"])
 
 
+func test_wheat_row_shows_stock_price_trend_and_minutes_of_mill() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [0, 100, Strings.money(2), Strings.TREND_FLAT, Strings.NO_MILL_COVERAGE])
+	var market: Dictionary = snapshot["market"]["wheat"]
+	market["stock"] = 60
+	market["previous_price"] = 3
+	market["minutes_covered"] = 6.0
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [60, 100, Strings.money(2), Strings.TREND_DOWN, Strings.MINUTES_COVERED % 6.0])
+	market["previous_price"] = 1
+	market["blocked_by_price"] = true
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_wheat_row"), Strings.TREND_UP)
+	assert_string_contains(_text("_wheat_row"), Strings.WHEAT_BLOCKED_NOTE)
+
+
+func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton
+	var maximum: OptionButton = _panel.get("_max_price") as OptionButton
+	var target: HSlider = _panel.get("_target") as HSlider
+	assert_eq(accumulate.item_count, 3, "off, 1 and 2: never the market's top price")
+	assert_eq(maximum.item_count, 3, "1, 2 and no limit")
+	assert_eq(maximum.get_item_text(2), Strings.NO_LIMIT)
+	assert_eq(maximum.selected, 2, "the default policy has no limit")
+	assert_eq(target.max_value, 100.0)
+	accumulate.select(1)
+	accumulate.item_selected.emit(1)
+	maximum.select(1)
+	maximum.item_selected.emit(1)
+	target.value = 60.0
+	target.drag_ended.emit(true)
+	var reserve: HSlider = _panel.get("_reserve") as HSlider
+	assert_eq([reserve.value, reserve.max_value], [2.0, 10.0], "the default reserve, up to the ten minutes the rules allow")
+	assert_string_contains(_text("_reserve_label"), Strings.RESERVE_LABEL % 2)
+	reserve.value = 4.0
+	reserve.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	var economy: Dictionary = _session.get_snapshot()["economy"]
+	assert_eq([economy["wheat_accumulate_price"], economy["wheat_max_price"], economy["wheat_target_stock"],
+		economy["wheat_reserve_minutes"]], [1, 2, 60, 4])
+	assert_eq([accumulate.selected, maximum.selected, target.value], [1, 1, 60.0])
+	assert_string_contains(_text("_target_label"), "60")
+	assert_eq(_text("_reserve_label"), Strings.RESERVE_LABEL % 4)
+	assert_true(_session.get("_pending").is_empty(), "resyncing the controls does not resend the command")
+
+
+func test_policy_controls_are_blocked_after_defeat() -> void:
+	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+	_panel = _new_panel(_session)
+	_tick()
+	_tick()
+	assert_true((_panel.get("_accumulate") as OptionButton).disabled)
+	assert_true((_panel.get("_max_price") as OptionButton).disabled)
+	assert_false((_panel.get("_target") as HSlider).editable)
+	assert_false((_panel.get("_reserve") as HSlider).editable)
+
+
 func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> void:
 	var speeds: Dictionary = _panel.get("_speed_buttons")
 	var pause: Button = _panel.get("_pause") as Button

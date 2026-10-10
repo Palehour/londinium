@@ -23,7 +23,10 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
 		"max_price": "money", "price_update_seconds": "positive_integer",
-		"max_step": "positive_integer", "reversion": "fraction"}},
+		"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
+			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"}},
+		"policy": {"wheat": {"default_accumulate_price": "money", "default_max_price": "money",
+			"default_target_stock": "integer", "default_reserve_minutes": "integer"}},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
@@ -108,6 +111,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if catalog.base_values.has(threshold_key) and catalog.base_values.has(recovery_key) \
 			and float(catalog.base_values[recovery_key]) < float(catalog.base_values[threshold_key]):
 		_errors.append("economy/population.json: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
+	_check_wheat_policy(catalog)
 	if _errors.is_empty():
 		for role: RoleDef in catalog.roles.values():
 			for message: String in Params.new(catalog, role).validation_errors():
@@ -119,6 +123,17 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if _errors.is_empty():
 		result.catalog = catalog
 	return result
+
+
+func _check_wheat_policy(catalog: DataCatalog) -> void:
+	var values: Array[int] = []
+	for key: StringName in Params.WHEAT_POLICY_KEYS:
+		if not catalog.base_values.has(key):
+			return
+		values.append(int(catalog.base_values[key]))
+	var message: String = Params.wheat_policy_error(values)
+	if not message.is_empty():
+		_errors.append("economy/policy.json: %s" % message)
 
 
 func _object(raw: Variant, fields: Array[String], path: String) -> bool:

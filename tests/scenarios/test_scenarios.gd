@@ -182,6 +182,78 @@ func test_big_tight_r06_financing_across_twenty_seeds() -> void:
 	assert_gte(in_range, RANGE_TARGET, "(b) seeds that buy it between minutes 6 and 15")
 
 
+# Issue #41, the criterion Cristian chose (Mason's option A): the same city with a purchase policy
+# (accumulate at 1, never pay more than 2 above a 2-minute reserve, keep 60) against the blind script,
+# same seed. (a) no city is lost or unstable in 20 seeds; (b) the median minute of the second chain's
+# purchase is at most 1.5 minutes later than the blind script's. The thresholds are the criterion,
+# not what was measured: do not relax them to make the suite green.
+const POLICY_MAX_DELAY_MINUTES: float = 1.5
+
+
+func _purchase_minute(result: ScenarioResult) -> float:
+	var tick: int = result.second_chain_purchase_tick()
+	return float(tick) / 60.0 if tick >= 0 else NEVER
+
+
+func _median(values: Array[float]) -> float:
+	var sorted: Array[float] = values.duplicate()
+	sorted.sort()
+	@warning_ignore("integer_division")
+	var middle: int = sorted.size() / 2
+	return (sorted[middle - 1] + sorted[middle]) / 2.0
+
+
+func test_big_tight_r06_smart_keeps_every_city_safe_and_buys_at_most_a_minute_and_a_half_later() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var blind: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06.json")
+	var smart: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/big_tight_r06_smart.json")
+	var blind_minutes: Array[float] = []
+	var smart_minutes: Array[float] = []
+	var never_bought: int = 0
+	for seed_value: int in range(1, SEEDS + 1):
+		var blind_variant: Dictionary = blind.duplicate(true)
+		blind_variant["seed"] = seed_value
+		var smart_variant: Dictionary = smart.duplicate(true)
+		smart_variant["seed"] = seed_value
+		var blind_result: ScenarioResult = runner.run(blind_variant)
+		var smart_result: ScenarioResult = runner.run(smart_variant)
+		# A seed whose treasury never reaches the second chain's price leaves that purchase unrun
+		# (never_ran). It counts as out of range, not as a broken script.
+		var refused: Array[Dictionary] = smart_result.unexpected_rejections().filter(
+			func(entry: Dictionary) -> bool: return entry["reason"] != &"never_ran")
+		assert_eq(refused, [] as Array[Dictionary], "seed %d (smart): a scripted command was refused" % seed_value)
+		blind_minutes.append(_purchase_minute(blind_result))
+		smart_minutes.append(_purchase_minute(smart_result))
+		if smart_minutes.back() >= NEVER:
+			never_bought += 1
+		assert_true(smart_result.survived(), "(a) seed %d (smart) was lost" % seed_value)
+		assert_true(runner.is_stable(smart_result), "(a) seed %d (smart) is not stable" % seed_value)
+		assert_gt(smart_result.mean("operating_balance_pm", 1, MINUTES), 0.0, "(a) seed %d (smart) loses money" % seed_value)
+	var delay: float = _median(smart_minutes) - _median(blind_minutes)
+	gut.p("big_tight_r06_smart over %d seeds: median purchase minute %.2f (blind %.2f), %.2f min later, %d never bought"
+		% [SEEDS, _median(smart_minutes), _median(blind_minutes), delay, never_bought])
+	assert_lte(delay, POLICY_MAX_DELAY_MINUTES, "(b) median purchase minute, smart minus blind")
+
+
+# Issue #41: with the price at 1 a player can stockpile and live off the stock once it rises.
+func test_wheat_stock_builds_while_cheap_and_feeds_the_mill_when_buying_stops() -> void:
+	var result: ScenarioResult = _result("wheat_stock_price_1_then_3")
+	_assert_scripts_ran_clean(result)
+	assert_true(result.survived())
+	assert_gt(result.peak("wheat_stock"), 50.0, "the stock goes past 50 while the price is 1")
+	var price_rises: int = 6
+	var limit_lifted: int = 11
+	assert_gt(int(result.row(price_rises)["wheat_stock"]), 50)
+	# Minutes 7 to 10 are bought out of nothing: price 3 is above the maximum of 2.
+	for minute: int in range(price_rises + 2, limit_lifted):
+		assert_eq(result.row(minute)["wheat_spent_pm"], 0.0, "no purchases at minute %d" % minute)
+		assert_gt(result.row(minute)["bread_produced_pm"], 0.0, "bread is still baked at minute %d" % minute)
+		assert_lt(int(result.row(minute)["wheat_stock"]), int(result.row(minute - 1)["wheat_stock"]), "the stock is being used")
+	assert_gte(limit_lifted - price_rises, 4, "the mill lived at least 4 minutes on the stock")
+	assert_gt(int(result.row(limit_lifted)["wheat_stock"]), 0, "the stock lasted until the player lifted the limit")
+	assert_gte(float(result.final_row()["bread_coverage"]), 0.95, "buying again at 3 keeps the city fed")
+
+
 func test_two_equilibria_differ() -> void:
 	var small: ScenarioResult = _result("small_rich")
 	var big: ScenarioResult = _result("big_tight")

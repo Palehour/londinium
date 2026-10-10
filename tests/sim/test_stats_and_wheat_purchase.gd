@@ -312,12 +312,12 @@ func test_no_money_reason_uses_the_market_affordability_rule() -> void:
 	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
 	state.wheat_price = 3
 	state.money = 2
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"no_money_for_wheat", "cannot buy one unit")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"no_money_for_wheat", "cannot buy one unit")
 	state.money = 3
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "exactly one unit is affordable")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "exactly one unit is affordable")
 	state.money = 2
 	state.wheat_price = 0
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "free wheat needs no money")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "free wheat needs no money")
 
 
 func _hungry_chain(population: int) -> Dictionary:
