@@ -1,0 +1,81 @@
+# Corre la suite GUT headless en PRs a develop/main y en pushes a develop/main.
+# Linux only: cheapest runner (free for public repos; 2,000 min/month if the repo becomes private).
+name: ci
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  tests:
+    name: tests (headless GUT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0 (pinned by SHA)
+        with:
+          lfs: false            # tests never need art/audio; saves LFS bandwidth
+          persist-credentials: false
+
+      - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false     # GDScript only
+          include-templates: false
+
+      - name: Import project (builds .godot cache / class_name list)
+        run: godot --headless --path . --import
+        timeout-minutes: 5
+
+      - name: Run tests
+        run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
+        timeout-minutes: 8
+
+      # Per-minute CSV of the scripted scenarios (tests/scenarios/) so Mason can tune data/ without Godot.
+      # It never fails on values; the scenario tests above do that.
+      - name: Balance report
+        if: always()
+        run: godot --headless --path . -s tools/balance_report.gd -- --out build/balance
+        timeout-minutes: 3
+
+      - name: Balance summary
+        if: always()
+        run: |
+          {
+            echo "### Balance report (minute 15 of each scenario)"
+            echo
+            echo "| scenario | population | money (pence) | bread coverage | satisfaction | defeat |"
+            echo "|---|---|---|---|---|---|"
+            awk -F, 'NR > 1 && $2 == 15 { printf "| %s | %s | %s | %s | %s | %s |\n", $1, $4, $5, $6, $7, $NF }' build/balance/balance_all.csv
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload balance report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (pinned by SHA)
+        with:
+          name: balance-report
+          path: build/balance
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (pinned by SHA)
+        with:
+          name: gut-results
+          path: gut_results.xml
+          retention-days: 7
+          if-no-files-found: ignore

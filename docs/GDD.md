@@ -38,7 +38,7 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 
 ## Población y necesidades
 
-Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios según una prioridad fija (primero la panadería, después el molino, después el muelle).
+Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería) y después el resto con la prioridad panadería, molino, embarcadero. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
 - **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción y la recaudación.
@@ -61,7 +61,9 @@ La partida se puede perder. Cada condición tiene un aviso previo, para que la c
 |---|---|---|
 | Quiebra | El tesoro queda en negativo | El tesoro sigue en negativo 3 minutos seguidos |
 | Motín de hambre | Menos del 50 % del pan cubierto | Menos del 50 % del pan cubierto durante 3 minutos seguidos |
-| Despoblación | La población cae por debajo del 50 % de su máximo | La población cae por debajo del 25 % de su máximo, o a menos de 10 habitantes |
+| Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |
+
+Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y la satisfacción no está por debajo del umbral de emigración. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación.
 
 Los umbrales y los tiempos son placeholders para balancear.
 

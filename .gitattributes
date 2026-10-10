@@ -1,0 +1,46 @@
+# Normalize line endings: LF in the repo for every text file (Windows + macOS + Linux).
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Godot text formats: always text, LF.
+*.gd   text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.godot text eol=lf
+*.cfg  text eol=lf
+*.uid  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+
+# Small/compressed assets stay in normal git (M1 has none; colored squares only).
+*.png binary
+*.jpg binary
+*.webp binary
+*.svg text eol=lf
+*.ogg binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+
+# --- Git LFS: heavy source assets (art and music to come). ---
+# GitHub Free = 10 GiB LFS storage + 10 GiB/month LFS download. CI test jobs check out with lfs:false
+# so they don't spend bandwidth. Requires `git lfs install` once per machine (Git for Windows ships it;
+# macOS: `brew install git-lfs`). Patterns are active now so the first big file goes to LFS from day one.
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.aif  filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.kra  filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.fbx  filter=lfs diff=lfs merge=lfs -text
+*.glb  filter=lfs diff=lfs merge=lfs -text
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+# Godot binary resources (rare in this project; prefer .tres/.tscn text)
+*.res  filter=lfs diff=lfs merge=lfs -text
+*.scn  filter=lfs diff=lfs merge=lfs -text
