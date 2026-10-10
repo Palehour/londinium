@@ -244,12 +244,11 @@ func test_wheat_stock_builds_while_cheap_and_feeds_the_mill_when_buying_stops() 
 	var price_rises: int = 6
 	var limit_lifted: int = 11
 	assert_gt(int(result.row(price_rises)["wheat_stock"]), 50)
-	# Minutes 7 to 10 are bought out of nothing: price 3 is above the maximum of 2.
-	for minute: int in range(price_rises + 2, limit_lifted):
+	# Minutes 7 to 10: price 3 is above the maximum of 2, so nothing is bought and the mill lives on the stock.
+	for minute: int in range(price_rises + 1, limit_lifted):
 		assert_eq(result.row(minute)["wheat_spent_pm"], 0.0, "no purchases at minute %d" % minute)
 		assert_gt(result.row(minute)["bread_produced_pm"], 0.0, "bread is still baked at minute %d" % minute)
 		assert_lt(int(result.row(minute)["wheat_stock"]), int(result.row(minute - 1)["wheat_stock"]), "the stock is being used")
-	assert_gte(limit_lifted - price_rises, 4, "the mill lived at least 4 minutes on the stock")
 	assert_gt(int(result.row(limit_lifted)["wheat_stock"]), 0, "the stock lasted until the player lifted the limit")
 	assert_gte(float(result.final_row()["bread_coverage"]), 0.95, "buying again at 3 keeps the city fed")
 

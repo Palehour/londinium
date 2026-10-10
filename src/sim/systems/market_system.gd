@@ -77,7 +77,8 @@ static func mill_consumption_per_second(state: EconomyState, params: Params) -> 
 # Stock for at least reserve_minutes of mill. With 0 minutes it always is, so the maximum price
 # applies in full (the behaviour before the reserve existed).
 static func reserve_covered(state: EconomyState, params: Params) -> bool:
-	var reserve: float = float(state.wheat_reserve_minutes) * mill_consumption_per_second(state, params) 		* SECONDS_PER_MINUTE
+	var reserve: float = (float(state.wheat_reserve_minutes) * mill_consumption_per_second(state, params)
+		* SECONDS_PER_MINUTE)
 	return float(state.stocks.get(&"wheat", 0)) >= reserve
 
 
