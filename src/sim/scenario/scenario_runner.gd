@@ -336,8 +336,10 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 				errors.append("%s: rate must be a number" % where)
 		"set_wheat_policy":
 			for field: String in POLICY_FIELDS:
-				if not _is_whole(entry.get(field)) or int(entry[field]) < 0:
-					errors.append("%s: %s must be a whole number >= 0" % [where, field])
+				# accumulate_price and max_price take -1 for "off" and "no limit".
+				var lowest: int = -1 if field in ["accumulate_price", "max_price"] else 0
+				if not _is_whole(entry.get(field)) or int(entry[field]) < lowest:
+					errors.append("%s: %s must be a whole number >= %d" % [where, field, lowest])
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)

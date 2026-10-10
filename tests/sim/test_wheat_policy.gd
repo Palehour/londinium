@@ -27,7 +27,7 @@ func _params(modifiers: Array[Modifier] = [], decay: bool = false) -> Params:
 
 # One fully staffed wharf; `policy` is [accumulate_price, max_price, target_stock, reserve_minutes] and the
 # reserve defaults to 0, the behaviour before it existed. `chain` adds a mill and a bakery.
-func _state(price: int, policy: Array = [0, 0, 0], stock: int = 0, chain: bool = false) -> EconomyState:
+func _state(price: int, policy: Array = [-1, -1, 0], stock: int = 0, chain: bool = false) -> EconomyState:
 	var state: EconomyState = EconomyState.new()
 	state.population = 20
 	state.money = 10000
@@ -68,15 +68,15 @@ func test_default_policy_buys_the_staffed_capacity_as_before() -> void:
 func test_defaults_come_from_data_and_mean_no_policy() -> void:
 	var sim: Simulation = _sim(EconomyState.new())
 	var wheat: Dictionary = sim.snapshot()["market"]["wheat"]
-	assert_eq(wheat["accumulate_price"], 0)
-	assert_eq(wheat["max_price"], 0, "0 is no limit")
+	assert_eq(wheat["accumulate_price"], WheatPolicy.OFF)
+	assert_eq(wheat["max_price"], WheatPolicy.NO_LIMIT, "-1 is no limit")
 	assert_eq(wheat["target_stock"], 0)
 	assert_eq(wheat["reserve_minutes"], 2, "the default reserve only matters once a maximum price is set")
 	assert_eq(wheat["capacity"], 100)
 
 
 func test_accumulating_buys_double_until_the_target_then_goes_back_to_normal() -> void:
-	var sim: Simulation = _sim(_state(1, [1, 0, 60]))
+	var sim: Simulation = _sim(_state(1, [1, -1, 60]))
 	_run(sim, 60)
 	assert_eq(_wheat(sim), 20, "accumulate_factor doubles the capacity")
 	_run(sim, 120)
@@ -86,24 +86,24 @@ func test_accumulating_buys_double_until_the_target_then_goes_back_to_normal() -
 
 
 func test_a_price_above_the_accumulate_price_buys_normally() -> void:
-	var sim: Simulation = _sim(_state(2, [1, 0, 60]))
+	var sim: Simulation = _sim(_state(2, [1, -1, 60]))
 	_run(sim, 60)
 	assert_eq(_wheat(sim), 10)
 
 
 func test_a_price_above_the_maximum_stops_the_wharf_without_banking_capacity() -> void:
-	var sim: Simulation = _sim(_state(3, [0, 2, 0], 5))
+	var sim: Simulation = _sim(_state(3, [-1, 2, 0], 5))
 	_run(sim, 120)
 	assert_eq(_wheat(sim), 5)
 	assert_eq(sim.snapshot()["stats"]["wheat_spent_per_minute"], 0.0)
 	assert_true(sim.snapshot()["market"]["wheat"]["blocked_by_price"])
-	sim.apply_command(SetWheatPolicyCommand.new(0, 0, 0, 0))
+	sim.apply_command(SetWheatPolicyCommand.new(-1, -1, 0, 0))
 	_run(sim, 6)
 	assert_eq(_wheat(sim), 6, "one unit in six ticks: the blocked minutes were not saved up")
 
 
 func test_a_price_at_the_maximum_still_buys() -> void:
-	var sim: Simulation = _sim(_state(2, [0, 2, 0]))
+	var sim: Simulation = _sim(_state(2, [-1, 2, 0]))
 	_run(sim, 60)
 	assert_eq(_wheat(sim), 10)
 
@@ -127,12 +127,12 @@ func test_buying_never_goes_beyond_what_the_treasury_pays() -> void:
 
 
 func test_wheat_decays_slowly_and_in_whole_units() -> void:
-	var state: EconomyState = _state(2, [0, 0, 0], 50)
+	var state: EconomyState = _state(2, [-1, -1, 0], 50)
 	state.buildings.clear()
 	var sim: Simulation = _sim(state, _params([], true))
 	_run(sim, 600)
 	assert_between(_wheat(sim), 44, 46, "about 1 % a minute for ten minutes")
-	var tiny: EconomyState = _state(2, [0, 0, 0], 1)
+	var tiny: EconomyState = _state(2, [-1, -1, 0], 1)
 	tiny.buildings.clear()
 	var small: Simulation = _sim(tiny, _params([], true))
 	_run(small, 60)
@@ -141,7 +141,7 @@ func test_wheat_decays_slowly_and_in_whole_units() -> void:
 
 func test_the_decay_fraction_is_what_is_lost_in_one_minute() -> void:
 	for rate: float in [0.5, 0.9]:
-		var state: EconomyState = _state(2, [0, 0, 0], 100)
+		var state: EconomyState = _state(2, [-1, -1, 0], 100)
 		state.buildings.clear()
 		var sim: Simulation = _sim(state, _params([Modifier.new(&"market.wheat.decay_fraction_per_minute", &"set", rate)], true))
 		_run(sim, 60)
@@ -149,7 +149,7 @@ func test_the_decay_fraction_is_what_is_lost_in_one_minute() -> void:
 
 
 func test_decay_goes_on_when_purchases_are_off() -> void:
-	var state: EconomyState = _state(2, [0, 0, 0], 50)
+	var state: EconomyState = _state(2, [-1, -1, 0], 50)
 	state.buildings.clear()
 	state.wheat_purchases_enabled = false
 	var sim: Simulation = _sim(state, _params([], true))
@@ -181,8 +181,8 @@ func test_the_command_sets_a_valid_policy() -> void:
 
 func test_the_command_rejects_what_the_market_cannot_honour() -> void:
 	var cases: Array[Array] = [
-		[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1],
-		[4, 0, 0, 0], [0, 4, 0, 0], [3, 2, 0, 0], [0, 0, 101, 0], [0, 0, 0, 11],
+		[-2, -1, 0, 0], [-1, -2, 0, 0], [-1, -1, -1, 0], [-1, -1, 0, -1],
+		[4, -1, 0, 0], [-1, 4, 0, 0], [3, 2, 0, 0], [-1, -1, 101, 0], [-1, -1, 0, 11],
 	]
 	for values: Array in cases:
 		var sim: Simulation = _sim(_state(2, [1, 2, 30, 2]))
@@ -198,7 +198,7 @@ func test_the_command_rejects_what_the_market_cannot_honour() -> void:
 
 func test_the_command_limits_follow_the_roles_storage() -> void:
 	var roomy: Params = _params([Modifier.new(&"market.wheat.storage_capacity", &"set", 200)])
-	var command: SetWheatPolicyCommand = SetWheatPolicyCommand.new(0, 0, 150, 0)
+	var command: SetWheatPolicyCommand = SetWheatPolicyCommand.new(-1, -1, 150, 0)
 	var sim: Simulation = _sim(_state(2), roomy)
 	sim.apply_command(command)
 	sim.tick()
@@ -229,17 +229,17 @@ func test_the_policy_survives_saving_and_loading() -> void:
 		[1, 2, 60, 4])
 	assert_eq(loaded.wheat_previous_price, 3)
 	assert_eq(loaded.wheat_decay_fraction, 0.25)
-	assert_eq(EconomyState.from_dict({"stocks": {}, "money": 0, "population": 0, "buildings": []}).wheat_accumulate_price, -1,
+	assert_eq(EconomyState.from_dict({"stocks": {}, "money": 0, "population": 0, "buildings": []}).wheat_reserve_minutes, -1,
 		"older saves load with the defaults pending")
 
 
 func test_the_snapshot_says_how_many_minutes_of_mill_the_stock_covers() -> void:
-	var sim: Simulation = _sim(_state(2, [0, 0, 0], 30, true))
+	var sim: Simulation = _sim(_state(2, [-1, -1, 0], 30, true))
 	sim.tick()
 	var wheat: Dictionary = sim.snapshot()["market"]["wheat"]
 	assert_almost_eq(float(wheat["consumption_per_minute"]), 10.0, 0.001)
 	assert_almost_eq(float(wheat["minutes_covered"]), float(wheat["stock"]) / 10.0, 0.001)
-	var no_mill: Simulation = _sim(_state(2, [0, 0, 0], 30))
+	var no_mill: Simulation = _sim(_state(2, [-1, -1, 0], 30))
 	no_mill.tick()
 	assert_eq(no_mill.snapshot()["market"]["wheat"]["minutes_covered"], -1.0, "no mill, nothing to divide by")
 
@@ -266,7 +266,7 @@ func test_the_market_snapshot_is_an_isolated_copy() -> void:
 
 func test_diagnostics_blame_the_price_only_when_the_warehouse_is_empty() -> void:
 	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
-	var state: EconomyState = _state(3, [0, 2, 0])
+	var state: EconomyState = _state(3, [-1, 2, 0])
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"wheat_price_above_max")
 	state.stocks[&"wheat"] = 5
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "the mills still have wheat")
@@ -283,14 +283,14 @@ func test_diagnostics_blame_the_price_only_when_the_warehouse_is_empty() -> void
 
 # Mill: 10 wheat a minute fully staffed, so a reserve of 2 minutes is 20 units.
 func test_over_the_maximum_the_wharf_waits_while_the_stock_covers_the_reserve() -> void:
-	var sim: Simulation = _sim(_state(3, [0, 2, 0, 2], 40, true))
+	var sim: Simulation = _sim(_state(3, [-1, 2, 0, 2], 40, true))
 	_run(sim, 60)
 	assert_eq(sim.snapshot()["stats"]["wheat_spent_per_minute"], 0.0, "stock 40 down to 30 stays over the 20 units of reserve")
 	assert_true(sim.snapshot()["market"]["wheat"]["blocked_by_price"])
 
 
 func test_under_the_reserve_the_wharf_buys_at_any_price_but_only_what_the_mill_consumes() -> void:
-	var sim: Simulation = _sim(_state(3, [0, 2, 0, 2], 10, true))
+	var sim: Simulation = _sim(_state(3, [-1, 2, 0, 2], 10, true))
 	_run(sim, 120)
 	var wheat: Dictionary = sim.snapshot()["market"]["wheat"]
 	assert_gt(sim.snapshot()["stats"]["wheat_spent_per_minute"], 0.0, "it paid 3 although the maximum is 2")
@@ -302,7 +302,7 @@ func test_under_the_reserve_the_wharf_buys_at_any_price_but_only_what_the_mill_c
 # Wharves staffed 3 of 4 and 1 of 4 can together buy the mill's 10 units a minute; sharing the limit
 # equally between them (5 and 5, the second one unable to use its share) would leave the mill short.
 func test_the_reserve_buying_limit_is_shared_by_capacity_not_split_equally() -> void:
-	var state: EconomyState = _state(3, [0, 2, 0, 2], 10, true)
+	var state: EconomyState = _state(3, [-1, 2, 0, 2], 10, true)
 	state.population = 10
 	state.buildings.insert(1, {"definition_id": &"wharf", "cell": [3, 7]})
 	var sim: Simulation = _sim(state)
@@ -317,7 +317,7 @@ func test_the_reserve_buying_limit_is_shared_by_capacity_not_split_equally() -> 
 
 
 func test_pausing_purchases_is_not_reported_as_the_price_stopping_the_wharf() -> void:
-	var state: EconomyState = _state(3, [0, 2, 0, 0], 0, true)
+	var state: EconomyState = _state(3, [-1, 2, 0, 0], 0, true)
 	state.wheat_purchases_enabled = false
 	var sim: Simulation = _sim(state)
 	_run(sim, 5)
@@ -327,19 +327,38 @@ func test_pausing_purchases_is_not_reported_as_the_price_stopping_the_wharf() ->
 	assert_true(sim.snapshot()["market"]["wheat"]["blocked_by_price"], "with purchases on, it is the price")
 
 
+# A market may have a price of 0 (a role can set the minimum there): 0 must stay a usable price for both
+# the maximum and the accumulate price, distinct from "no limit" and "off".
+func test_zero_is_a_real_price_for_the_maximum_and_for_accumulating() -> void:
+	var free_market: Array[Modifier] = [Modifier.new(&"market.wheat.min_price", &"set", 0)]
+	var capped: Simulation = _sim(_state(1, [WheatPolicy.OFF, 0, 0, 0]), _params(free_market))
+	_run(capped, 60)
+	assert_eq(_wheat(capped), 0, "a maximum of 0 stops the wharf at price 1")
+	var open: Simulation = _sim(_state(1, [WheatPolicy.OFF, WheatPolicy.NO_LIMIT, 0, 0]), _params(free_market))
+	_run(open, 60)
+	assert_eq(_wheat(open), 10, "no limit buys at price 1")
+	var stockpiling: Simulation = _sim(_state(0, [0, WheatPolicy.NO_LIMIT, 60, 0]), _params(free_market))
+	_run(stockpiling, 60)
+	assert_eq(_wheat(stockpiling), 20, "accumulating at price 0 doubles the capacity")
+	var command: SetWheatPolicyCommand = SetWheatPolicyCommand.new(0, 0, 0, 0)
+	capped.apply_command(command)
+	capped.tick()
+	assert_true(command.accepted, "0 is inside a market that starts at 0")
+
+
 func test_without_a_reserve_the_maximum_applies_in_full() -> void:
-	var sim: Simulation = _sim(_state(3, [0, 2, 0, 0], 0, true))
+	var sim: Simulation = _sim(_state(3, [-1, 2, 0, 0], 0, true))
 	_run(sim, 60)
 	assert_eq(sim.snapshot()["stats"]["wheat_spent_per_minute"], 0.0)
 	assert_true(sim.snapshot()["market"]["wheat"]["blocked_by_price"])
 
 
 func test_the_reserve_buying_is_limited_by_space_and_by_the_treasury() -> void:
-	var tight: Simulation = _sim(_state(3, [0, 2, 0, 2], 10, true),
+	var tight: Simulation = _sim(_state(3, [-1, 2, 0, 2], 10, true),
 		_params([Modifier.new(&"market.wheat.storage_capacity", &"set", 10)]))
 	_run(tight, 120)
 	assert_lte(_wheat(tight), 10, "a full warehouse buys nothing")
-	var poor_state: EconomyState = _state(3, [0, 2, 0, 2], 0, true)
+	var poor_state: EconomyState = _state(3, [-1, 2, 0, 2], 0, true)
 	poor_state.money = 4
 	var poor: Simulation = _sim(poor_state)
 	_run(poor, 30)
@@ -347,7 +366,7 @@ func test_the_reserve_buying_is_limited_by_space_and_by_the_treasury() -> void:
 
 
 func test_the_reason_appears_only_when_the_maximum_really_stops_the_wharf() -> void:
-	var state: EconomyState = _state(3, [0, 2, 0, 0], 0, true)
+	var state: EconomyState = _state(3, [-1, 2, 0, 0], 0, true)
 	for building: Dictionary in state.buildings:
 		building["workers"] = 3
 	var wharf: Dictionary = state.buildings[0]

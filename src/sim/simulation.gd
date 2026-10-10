@@ -50,7 +50,7 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
-	if _context != null and _state.wheat_accumulate_price < 0:
+	if _context != null and _state.wheat_reserve_minutes < 0:
 		_state.wheat_accumulate_price = int(_params.get_value(&"policy.wheat.default_accumulate_price"))
 		_state.wheat_max_price = int(_params.get_value(&"policy.wheat.default_max_price"))
 		_state.wheat_target_stock = int(_params.get_value(&"policy.wheat.default_target_stock"))

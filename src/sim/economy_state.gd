@@ -35,10 +35,11 @@ var population_peak: float = 0.0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
-# Wharf purchase policy (WheatPolicy); -1 until the simulation loads the defaults from data.
-var wheat_accumulate_price: int = -1
-var wheat_max_price: int = -1
-var wheat_target_stock: int = -1
+# Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
+# data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).
+var wheat_accumulate_price: int = WheatPolicy.OFF
+var wheat_max_price: int = WheatPolicy.NO_LIMIT
+var wheat_target_stock: int = 0
 var wheat_reserve_minutes: int = -1
 # Price before the last repricing, for the panel's trend arrow; -1 until the first repricing.
 var wheat_previous_price: int = -1
@@ -114,9 +115,9 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
 	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
-	result.wheat_accumulate_price = int(values.get("wheat_accumulate_price", -1))
-	result.wheat_max_price = int(values.get("wheat_max_price", -1))
-	result.wheat_target_stock = int(values.get("wheat_target_stock", -1))
+	result.wheat_accumulate_price = int(values.get("wheat_accumulate_price", WheatPolicy.OFF))
+	result.wheat_max_price = int(values.get("wheat_max_price", WheatPolicy.NO_LIMIT))
+	result.wheat_target_stock = int(values.get("wheat_target_stock", 0))
 	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
 	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
 	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))

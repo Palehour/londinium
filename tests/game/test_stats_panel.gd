@@ -183,7 +183,7 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 
 func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
-	_session.submit_command(SetWheatPolicyCommand.new(3, 0, 60, 2))
+	_session.submit_command(SetWheatPolicyCommand.new(3, WheatPolicy.NO_LIMIT, 60, 2))
 	_tick()
 	_session.publish_tick()
 	var accumulate: OptionButton = _panel.get("_accumulate") as OptionButton

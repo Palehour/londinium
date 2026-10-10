@@ -62,7 +62,7 @@ static func wheat_snapshot(state: EconomyState, params: Params) -> Dictionary:
 
 
 static func is_blocked_by_price(state: EconomyState) -> bool:
-	return state.wheat_max_price > WheatPolicy.NO_LIMIT and state.wheat_price > state.wheat_max_price
+	return state.wheat_max_price != WheatPolicy.NO_LIMIT and state.wheat_price > state.wheat_max_price
 
 
 # Wheat the staffed mills grind per second; the reserve and the buying cap are measured against it.
@@ -88,7 +88,7 @@ static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
 
 
 static func is_accumulating(state: EconomyState) -> bool:
-	return state.wheat_accumulate_price > WheatPolicy.OFF and state.wheat_price <= state.wheat_accumulate_price \
+	return state.wheat_accumulate_price != WheatPolicy.OFF and state.wheat_price <= state.wheat_accumulate_price \
 		and int(state.stocks.get(&"wheat", 0)) < state.wheat_target_stock
 
 

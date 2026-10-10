@@ -25,7 +25,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"max_price": "money", "price_update_seconds": "positive_integer",
 		"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
 			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"}},
-		"policy": {"wheat": {"default_accumulate_price": "money", "default_max_price": "money",
+		"policy": {"wheat": {"default_accumulate_price": "optional_price", "default_max_price": "optional_price",
 			"default_target_stock": "integer", "default_reserve_minutes": "integer"}},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
@@ -170,13 +170,15 @@ func _numbers(raw: Variant, schema: Dictionary, path: String,
 func _number(raw: Variant, kind: String, path: String, key: String, catalog: DataCatalog) -> bool:
 	if kind == "boolean":
 		return _boolean(raw, path, key, catalog)
-	var integral: bool = kind in ["money", "integer", "positive_integer"]
+	var integral: bool = kind in ["money", "integer", "positive_integer", "optional_price"]
 	if typeof(raw) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(raw)):
 		_errors.append("%s: expected a finite %s" % [path, kind])
 		return false
 	var value: float = float(raw)
 	# JSON numbers arrive as doubles; reject values outside int64 before conversion.
-	if value < 0 or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
+	# An optional price may be -1: "none" (see WheatPolicy), outside the price domain.
+	var lowest: float = -1.0 if kind == "optional_price" else 0.0
+	if value < lowest or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
 			or (kind.begins_with("positive") and value <= 0) \
 			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
 			or not ParameterRanges.is_valid(StringName(key), value):

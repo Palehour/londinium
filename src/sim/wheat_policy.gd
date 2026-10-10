@@ -1,10 +1,11 @@
 class_name WheatPolicy
 extends RefCounted
 
-# Purchase policy of the wharf (issue #41). accumulate_price 0 means "do not stockpile";
-# max_price 0 means "no limit" (it must not depend on the market's own top price, which a role may move).
-const OFF: int = 0
-const NO_LIMIT: int = 0
+# Purchase policy of the wharf (issue #41). accumulate_price OFF means "do not stockpile"; max_price
+# NO_LIMIT means "no limit" (it must not depend on the market's own top price, which a role may move).
+# Both sentinels lie outside the price domain: a market can have a price of 0, so 0 is a real price.
+const OFF: int = -1
+const NO_LIMIT: int = -1
 # Safety reserve, in minutes of mill consumption: below it the maximum price stops applying.
 const MAX_RESERVE_MINUTES: int = 10
 
