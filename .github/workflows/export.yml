@@ -1,5 +1,7 @@
 # Builds Windows, macOS and Linux from ONE Linux runner (Godot cross-exports with official templates).
 # Runs only on version tags (v0.1.0, ...) or manually, to save Actions minutes and artifact storage.
+# A pushed v* tag also publishes the three builds as a GitHub pre-release. A manual run
+# (workflow_dispatch) only uploads artifacts and never creates a release.
 name: export
 
 on:
@@ -7,7 +9,7 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
-# Only uploads artifacts (no releases), so read-only is enough.
+# Read-only by default; only the release job below gets write access.
 permissions:
   contents: read
 
@@ -22,7 +24,27 @@ jobs:
       - uses: actions/checkout@v5
         with:
           lfs: true             # builds need real assets
+          fetch-depth: 0        # the tag check below needs main's history
           persist-credentials: false
+
+      # Releases are cut from main (docs/WORKFLOW.md); a tag on a develop-only commit is a mistake.
+      - name: Tag must point at a commit on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main. Merge develop into main first, then tag main."
+            exit 1
+          fi
+
+      # The version shown in the builds lives in export_presets.cfg; remind whoever tags if it lags.
+      - name: Check preset version matches the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          if ! grep -q "application/short_version=\"$expected\"" export_presets.cfg; then
+            echo "::warning::export_presets.cfg does not say version $expected (macOS short_version)."
+          fi
 
       - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
         with:
@@ -45,9 +67,64 @@ jobs:
           godot --headless --path . --export-release "macOS"           build/macos/Londinium.zip
           godot --headless --path . --export-release "Linux"           build/linux/Londinium.x86_64
 
+      # Boot the real Linux build for a moment: a missing data file or a script error shows up as ERROR.
+      - name: Smoke test the Linux build
+        run: |
+          chmod +x build/linux/Londinium.x86_64
+          ./build/linux/Londinium.x86_64 --headless --quit-after 120 > smoke.log 2>&1
+          cat smoke.log
+          if grep -E "ERROR" smoke.log; then
+            echo "::error::The exported Linux build logged errors on startup."
+            exit 1
+          fi
+
+      # Branch names may contain "/", which cannot go in a file name.
+      - name: Package
+        run: |
+          version="${GITHUB_REF_NAME//\//-}"
+          mkdir -p dist/windows dist/macos dist/linux
+          zip -j "dist/windows/Londinium-${version}-windows.zip" build/windows/Londinium.exe
+          cp build/macos/Londinium.zip "dist/macos/Londinium-${version}-macos.zip"
+          tar -czf "dist/linux/Londinium-${version}-linux.tar.gz" -C build/linux Londinium.x86_64
+
       - uses: actions/upload-artifact@v7
-        with: { name: londinium-windows, path: build/windows, retention-days: 14 }
+        with: { name: londinium-windows, path: dist/windows, retention-days: 14 }
       - uses: actions/upload-artifact@v7
-        with: { name: londinium-macos, path: build/macos, retention-days: 14 }
+        with: { name: londinium-macos, path: dist/macos, retention-days: 14 }
       - uses: actions/upload-artifact@v7
-        with: { name: londinium-linux, path: build/linux, retention-days: 14 }
+        with: { name: londinium-linux, path: dist/linux, retention-days: 14 }
+
+  release:
+    needs: export
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write           # create the release
+      actions: read             # download this run's artifacts
+    steps:
+      - name: Download builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir dist
+
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<'EOF'
+          Build jugable del prototipo (hito 1). Sin firmar: cada sistema avisa la primera vez.
+
+          **Windows** — descomprimir y abrir `Londinium.exe`. Si SmartScreen avisa "editor desconocido": Más información → Ejecutar de todas formas.
+
+          **macOS** — descomprimir y mover `Londinium.app` a Aplicaciones. Intentar abrirla una vez (macOS la bloquea). Después: Ajustes del Sistema → Privacidad y seguridad → bajar hasta el aviso sobre Londinium → "Abrir igualmente". Si no aparece, en Terminal:
+
+          ```
+          xattr -dr com.apple.quarantine /Applications/Londinium.app
+          ```
+
+          **Linux** — `tar -xzf Londinium-*-linux.tar.gz && ./Londinium.x86_64` (si hiciera falta, `chmod +x Londinium.x86_64`).
+          EOF
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title "Londinium $TAG" --notes-file notes.md dist/*/*

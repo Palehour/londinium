@@ -1,0 +1,12 @@
+{
+  "id": "small_rich",
+  "description": "Chica y rica: una cadena sin viviendas extra, impuesto alto. La ciudad queda en 20 habitantes con el pan cubierto y el tesoro creciendo.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.7},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]}
+  ]
+}

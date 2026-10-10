@@ -1,0 +1,16 @@
+{
+  "id": "defeat_hunger",
+  "description": "Motin de hambre: ciudad de 29 habitantes a la que se le demuele la panaderia en el segundo 290, cuando la gracia (300 s) esta por terminar.",
+  "notes": "El hambre solo llega a la derrota si empieza casi al final de la gracia y la ciudad tiene ~26+ habitantes: la emigracion por hambre vacia la ciudad en ~200 s (F3, comportamiento esperado).",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.4},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
+    {"tick": 290, "cmd": "demolish", "cell": [3, 5]}
+  ]
+}

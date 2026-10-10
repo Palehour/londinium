@@ -44,6 +44,33 @@ jobs:
         run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
         timeout-minutes: 8
 
+      # Per-minute CSV of the scripted scenarios (tests/scenarios/) so Mason can tune data/ without Godot.
+      # It never fails on values; the scenario tests above do that.
+      - name: Balance report
+        if: always()
+        run: godot --headless --path . -s tools/balance_report.gd -- --out build/balance
+        timeout-minutes: 3
+
+      - name: Balance summary
+        if: always()
+        run: |
+          {
+            echo "### Balance report (minute 15 of each scenario)"
+            echo
+            echo "| scenario | population | money (pence) | bread coverage | satisfaction | defeat |"
+            echo "|---|---|---|---|---|---|"
+            awk -F, 'NR > 1 && $2 == 15 { printf "| %s | %s | %s | %s | %s | %s |\n", $1, $4, $5, $6, $7, $NF }' build/balance/balance_all.csv
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload balance report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: balance-report
+          path: build/balance
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v7

@@ -1,0 +1,15 @@
+{
+  "id": "big_tight",
+  "description": "Grande y ajustada: la misma cadena con 2 viviendas y impuesto bajo. La ciudad crece sobre el pan inicial hasta ~31 habitantes y se queda con el pan justo.",
+  "notes": "F7: el equilibrio depende de un margen de 0,01. La cobertura suavizada se asienta en ~0,61 y el umbral de emigracion por hambre es 0,6 (population.growth.hunger_emigration_threshold). Si este escenario falla despues de un cambio en data/, es esperable: hay que recalibrar el escenario (o avisar a Mason), no es un bug del simulador.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.4},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]}
+  ]
+}

@@ -4,6 +4,7 @@ extends GutTest
 func test_every_project_script_compiles() -> void:
 	var paths: Array[String] = _collect("res://src")
 	paths.append_array(_collect("res://tests"))
+	paths.append_array(_collect("res://tools"))
 	assert_gt(paths.size(), 0, "Expected at least one project script.")
 	for path: String in paths:
 		var script: GDScript = load(path) as GDScript
