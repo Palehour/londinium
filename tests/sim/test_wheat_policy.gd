@@ -290,6 +290,23 @@ func test_under_the_reserve_the_wharf_buys_at_any_price_but_only_what_the_mill_c
 	assert_false(wheat["blocked_by_price"], "it is buying, so the maximum is not what stops it")
 
 
+# Wharves staffed 3 of 4 and 1 of 4 can together buy the mill's 10 units a minute; sharing the limit
+# equally between them (5 and 5, the second one unable to use its share) would leave the mill short.
+func test_the_reserve_buying_limit_is_shared_by_capacity_not_split_equally() -> void:
+	var state: EconomyState = _state(3, [0, 2, 0, 2], 10, true)
+	state.population = 10
+	state.buildings.insert(1, {"definition_id": &"wharf", "cell": [3, 7]})
+	var sim: Simulation = _sim(state)
+	_run(sim, 61)
+	var workers: Array[int] = []
+	for building: Dictionary in sim.snapshot()["economy"]["buildings"]:
+		if building["definition_id"] == &"wharf":
+			workers.append(int(building["workers"]))
+	assert_eq(workers, [3, 1], "the fixture: wharves staffed 3 and 1")
+	assert_gte(sim.snapshot()["stats"]["wheat_spent_per_minute"], 27.0, "about 10 units at 3 pence")
+	assert_lte(sim.snapshot()["stats"]["wheat_spent_per_minute"], 30.0, "and never more than the mill grinds")
+
+
 func test_without_a_reserve_the_maximum_applies_in_full() -> void:
 	var sim: Simulation = _sim(_state(3, [0, 2, 0, 0], 0, true))
 	_run(sim, 60)

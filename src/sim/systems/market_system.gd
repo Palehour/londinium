@@ -2,7 +2,7 @@ class_name MarketSystem
 extends RefCounted
 
 const SECONDS_PER_MINUTE: float = 60.0
-const NO_RATE_CAP: float = -1.0
+const FULL_RATE: float = 1.0
 
 
 func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int) -> void:
@@ -20,14 +20,25 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 		if building["definition_id"] == &"wharf":
 			wharves.append(building)
 	# A price above the player's maximum stops the wharf (it does not bank capacity), unless the stock
-	# is under the safety reserve: then it buys at any price, but only what the mills consume.
-	var rate_cap: float = NO_RATE_CAP
+	# is under the safety reserve: then it buys at any price, but only what the mills consume. The
+	# limit is shared by all the wharves in proportion to what each one can buy.
+	var rate_scale: float = FULL_RATE
 	if is_blocked_by_price(state):
 		if reserve_covered(state, params):
 			return
-		rate_cap = mill_consumption_per_second(state, params) / float(maxi(1, wharves.size()))
+		rate_scale = _emergency_scale(state, params, wharves)
 	for building: Dictionary in wharves:
-		_buy(state, params, building, rate_cap)
+		_buy(state, params, building, rate_scale)
+
+
+# Fraction of every wharf's staffed capacity that keeps the total at what the mills consume.
+func _emergency_scale(state: EconomyState, params: Params, wharves: Array[Dictionary]) -> float:
+	var capacity: float = 0.0
+	for building: Dictionary in wharves:
+		capacity += ProductionSystem.staffed_rate(params, building, "outputs.wheat")
+	if capacity <= 0.0:
+		return FULL_RATE
+	return minf(FULL_RATE, mill_consumption_per_second(state, params) / capacity)
 
 
 # Everything the panel shows about wheat, so the UI holds no rules. minutes_covered is -1 when no mill
@@ -80,14 +91,13 @@ static func is_accumulating(state: EconomyState) -> bool:
 		and int(state.stocks.get(&"wheat", 0)) < state.wheat_target_stock
 
 
-func _buy(state: EconomyState, params: Params, building: Dictionary, rate_cap: float) -> void:
+func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale: float) -> void:
 	var stock: int = int(state.stocks.get(&"wheat", 0))
 	var rate: float = ProductionSystem.staffed_rate(params, building, "outputs.wheat")
 	var accumulating: bool = is_accumulating(state)
 	if accumulating:
 		rate *= float(params.get_value(&"market.wheat.accumulate_factor"))
-	if rate_cap >= 0.0:
-		rate = minf(rate, rate_cap)
+	rate *= rate_scale
 	var capacity: float = float(building.get("output_fraction", 0.0)) + rate
 	var units: int = ProductionSystem.whole_units(capacity)
 	building["output_fraction"] = maxf(0.0, capacity - units)
