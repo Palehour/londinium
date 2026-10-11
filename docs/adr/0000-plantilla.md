@@ -11,8 +11,9 @@ Qué problema o restricción obliga a decidir. Lo mínimo para entender el resto
 Qué se decidió, en presente y sin ambigüedad.
 
 ## Estado
-Propuesto pasa a Aceptado cuando se mergea el PR que lo introduce. Un ADR nuevo reemplaza al anterior y el viejo
-no se borra: se marca "Reemplazado por ADR NNNN".
+Propuesto pasa a Aceptado cuando se mergea el PR que lo introduce. Un ADR que revierte o cambia otro sobre la
+misma decisión lo reemplaza, y el viejo no se borra: se marca "Reemplazado por ADR NNNN". Los ADR de otros temas
+no se tocan.
 
 ## Consecuencias
 Qué se vuelve más fácil, qué se vuelve más difícil y qué reglas siguen de acá (tests, código, datos).

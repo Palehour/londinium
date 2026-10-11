@@ -18,6 +18,7 @@ Aprobado por Cristian (11/10/2026):
 - Los agentes pueden editarlos **solo con autorización explícita de Cristian**.
 - Esa autorización **se cita en un comentario de la PR**, y Bailey la **confirma directamente con Cristian**
   antes de aprobar.
+- La edición autorizada va en **tu rama de tarea** (`<tipo>/<n>-<slug>`); las ramas `docs/` son de los bots.
 - **Sin esa autorización**, el agente propone el texto en la sección **"Decisiones y docs"** de la PR y
   **no lo edita**.
 

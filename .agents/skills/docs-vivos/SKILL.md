@@ -7,8 +7,9 @@ description: Mantiene al día docs, ADRs y skills cuando un PR cambia algo que d
 
 - Si el PR cambia algo que un doc o una skill describe, **se actualiza en el mismo PR**.
   La plantilla de PR tiene la casilla "Docs/ADR/skill actualizados en este PR" o "No aplica: <motivo>".
-- **ADR (`docs/adr/`):** un ADR nuevo **reemplaza** al anterior; el viejo **no se borra**, se marca como
-  Reemplazado por el nuevo. Un ADR Propuesto pasa a Aceptado al mergear el PR.
+- **ADR (`docs/adr/`):** un ADR que revierte o cambia una decisión anterior la **reemplaza**: el viejo **no se
+  borra**, se marca como Reemplazado por el nuevo. Los ADR sobre otros temas no se tocan y siguen vigentes.
+  Un ADR Propuesto pasa a Aceptado al mergear el PR.
 - **`docs/GDD.md` y `docs/DECISIONS.md`:** misma regla que en `decision-diseno`. Solo con autorización
   explícita de Cristian citada en un comentario de la PR (Bailey la confirma con Cristian antes de aprobar);
   sin ella, el texto propuesto va en "Decisiones y docs" y no se edita.

@@ -8,8 +8,9 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
   (`v0.1.0` = primer build jugable del hito 1), que dispara los builds.
 - **Ramas cortas por issue**: `<tipo>/<issue>-<slug>` (`feat/`, `fix/`, `chore/`, `test/`), siempre desde
   `develop` y con PR a `develop`. Viven horas o pocos días; se borran al mergear.
-- **Docs**: `docs/GDD.md` y `docs/DECISIONS.md` solo cambian en ramas `docs/<issue>-<slug>` que preparan Mason o
-  Chronicler; Cristian las aprueba. Los agentes de código solo los editan con autorización explícita de Cristian, citada en un
+- **Docs**: `docs/GDD.md` y `docs/DECISIONS.md` cambian en ramas `docs/<issue>-<slug>` que preparan Mason o
+  Chronicler; Cristian las aprueba. Los agentes de código solo los editan, en su rama de tarea `<tipo>/<n>-<slug>`
+  (nunca en `docs/`, que es de los bots), con autorización explícita de Cristian, citada en un
   comentario de la PR y confirmada por Bailey con Cristian antes de aprobar; sin ella, proponen el texto en la
   sección "Decisiones y docs" de la PR y no lo editan.
 
