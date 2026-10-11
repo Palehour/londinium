@@ -7,7 +7,7 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	if not result.is_ok():
 		return
 	var catalog: DataCatalog = result.catalog
-	assert_eq(catalog.goods.size(), 3)
+	assert_eq(catalog.goods.size(), 4)
 	assert_eq(catalog.buildings.size(), 5)
 	assert_eq(catalog.roles.size(), 1)
 	assert_eq(catalog.maps.size(), 1)
@@ -38,9 +38,12 @@ func test_whitechapel_has_no_cultivation_or_pending_content() -> void:
 	assert_true(map.cultivable_cells.is_empty())
 	assert_false(map.river_cells.is_empty())
 	assert_true(catalog.buildings.has(&"wheat_field"))
-	assert_false(catalog.goods.has(&"tea"))
+	# D-025: tea is a good now; it is imported, never produced, so no building outputs it.
+	assert_true(catalog.goods.has(&"tea"))
 	assert_true(catalog.buildings[&"wharf"].recipe.inputs.is_empty())
 	assert_eq(catalog.buildings[&"wharf"].recipe.outputs, [&"wheat"])
+	# D-026: the imported flour is priced per lot, in whole pence.
+	assert_true(catalog.base_values.has(&"market.imported_flour.price_per_lot"))
 	assert_false(catalog.base_values.has(&"market.imported_flour.price"))
 
 

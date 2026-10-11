@@ -8,7 +8,8 @@ extends RefCounted
 
 const SCENARIO_DIR: String = "res://tests/scenarios"
 const TICKS_PER_MINUTE: int = 60
-const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy"]
+const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
+	"set_tea_imports", "set_flour_imports"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 
@@ -258,6 +259,8 @@ func _initial_state() -> EconomyState:
 	state.money = int(_params.get_value(&"startup.money"))
 	state.population = int(_params.get_value(&"startup.population"))
 	state.wheat_purchases_enabled = _params.get_value(&"startup.wheat_purchases_enabled")
+	state.tea_imports_enabled = _params.get_value(&"startup.tea_imports_enabled")
+	state.flour_imports_enabled = _params.get_value(&"startup.flour_imports_enabled")
 	return state
 
 
@@ -274,6 +277,10 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 		"set_wheat_policy":
 			return SetWheatPolicyCommand.new(int(entry["accumulate_price"]), int(entry["max_price"]),
 				int(entry["target_stock"]), int(entry["reserve_minutes"]))
+		"set_tea_imports":
+			return SetTeaImportsCommand.new(bool(entry["enabled"]))
+		"set_flour_imports":
+			return SetFlourImportsCommand.new(bool(entry["enabled"]))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -326,6 +333,9 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"bankruptcy": defeat[&"bankruptcy"]["status"], "hunger": defeat[&"hunger"]["status"],
 		"depopulation": defeat[&"depopulation"]["status"], "defeat_causes": "|".join(causes),
 		"wheat_stock": economy["stocks"].get(&"wheat", 0),
+		"imports_spent_pm": stats["imports_spent_per_minute"], "tea_spent_pm": stats["tea_spent_per_minute"],
+		"tea_stock": economy["stocks"].get(&"tea", 0), "tea_coverage": economy["tea_coverage"],
+		"flour_stock": economy["stocks"].get(&"flour", 0),
 	}
 
 

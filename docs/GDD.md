@@ -41,7 +41,7 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería) y después el resto con la prioridad panadería, molino, embarcadero. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
-- **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción y la recaudación.
+- **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción, lo que permite cobrar más impuesto sin frenar el crecimiento.
 - **Satisfacción (0 a 100).** Suma el pan cubierto y el té disponible, y resta la carga impositiva y el hacinamiento.
 - **Crecimiento.** Con satisfacción alta y lugar libre en viviendas llegan inmigrantes. Con satisfacción baja la gente se va. Solo los trabajadores empleados pagan impuestos.
 

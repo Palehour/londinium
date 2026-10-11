@@ -23,6 +23,10 @@ var _target_label: Label
 var _reserve: HSlider
 var _reserve_label: Label
 var _wheat_row: Label
+var _tea: CheckButton
+var _flour: CheckButton
+var _tea_row: Label
+var _flour_row: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _pause: Button
@@ -82,6 +86,8 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_update_controls(economy, defeated)
 	_update_wheat_policy(market, defeated)
 	_wheat_row.text = _wheat_text(market)
+	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
+	_flour_row.text = _flour_text(snapshot["imports"]["flour"])
 	_update_alert(defeat)
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
@@ -107,6 +113,14 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_wheat)
 	_wheat_row = _label("")
 	content.add_child(_wheat_row)
+	_tea = _import_switch(content, Strings.TEA_IMPORTS, func(enabled: bool) -> void:
+		session.submit_command(SetTeaImportsCommand.new(enabled)))
+	_tea_row = _label("")
+	content.add_child(_tea_row)
+	_flour = _import_switch(content, Strings.FLOUR_IMPORTS, func(enabled: bool) -> void:
+		session.submit_command(SetFlourImportsCommand.new(enabled)))
+	_flour_row = _label("")
+	content.add_child(_flour_row)
 	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
@@ -154,7 +168,11 @@ func _update_controls(economy: Dictionary, defeated: bool) -> void:
 	if not _tax.get_line_edit().has_focus():
 		_tax.value = roundf(float(economy.get("tax_rate", 0.0)) * PERCENT)
 	_wheat.button_pressed = bool(economy["wheat_purchases_enabled"])
+	_tea.button_pressed = bool(economy["tea_imports_enabled"])
+	_flour.button_pressed = bool(economy["flour_imports_enabled"])
 	_syncing = false
+	_tea.disabled = defeated
+	_flour.disabled = defeated
 	_tax.editable = not defeated
 	_wheat.disabled = defeated
 	if clock.speed != 0:
@@ -224,6 +242,33 @@ func _wheat_text(market: Dictionary) -> String:
 	return text + "\n" + Strings.WHEAT_BLOCKED_NOTE if market["blocked_by_price"] else text
 
 
+func _tea_text(tea: Dictionary) -> String:
+	return Strings.TEA_ROW % [tea["stock"], float(tea["coverage"]) * PERCENT, Strings.money(tea["price"]),
+		tea["satisfaction_bonus"], Strings.reason(tea["reason"])]
+
+
+func _flour_text(flour: Dictionary) -> String:
+	return Strings.FLOUR_ROW % [flour["lot_size"], Strings.money(flour["lot_price"]),
+		_unit_price(flour["unit_price"]), flour["stock"], Strings.reason(flour["reason"])]
+
+
+# A lot is priced in whole pence, so the unit price can carry a fraction of a penny.
+func _unit_price(pence: float) -> String:
+	return Strings.UNIT_PRICE % pence
+
+
+# A switch that reports the player's choice; the snapshot sets it back, so it never loops.
+func _import_switch(content: VBoxContainer, title: String, submit: Callable) -> CheckButton:
+	var button: CheckButton = CheckButton.new()
+	button.text = title
+	button.focus_mode = Control.FOCUS_NONE
+	button.toggled.connect(func(enabled: bool) -> void:
+		if not _syncing:
+			submit.call(enabled))
+	content.add_child(button)
+	return button
+
+
 func _submit_policy() -> void:
 	if _syncing:
 		return
@@ -285,12 +330,13 @@ func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 	var breakdown: Dictionary = economy["satisfaction_breakdown"]
 	var lines: Array[String] = [
 		Strings.POPULATION % [economy["population"], economy["employed"], economy["unemployed"]],
-		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0),
+		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
 			breakdown.get("tax", 0.0), breakdown.get("overcrowding", 0.0)],
 		Strings.TREASURY % Strings.money(economy["money"]),
 		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
 		Strings.BALANCE_BREAKDOWN % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
-			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"])],
+			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"]),
+			_money(stats["imports_spent_per_minute"])],
 		Strings.CONSTRUCTION % _money(stats["construction_spent_per_minute"]),
 		Strings.WHEAT_PRICE % Strings.money(economy.get("wheat_price", 0)),
 	]

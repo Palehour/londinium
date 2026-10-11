@@ -47,6 +47,14 @@ var wheat_reserve_minutes: int = -1
 var wheat_previous_price: int = -1
 # Wheat lost to damp and rats accumulates here until it makes a whole unit.
 var wheat_decay_fraction: float = 0.0
+# Imports (D-025, D-026): both are off until the player switches them on (startup data).
+var tea_imports_enabled: bool = false
+var flour_imports_enabled: bool = false
+# Tea eaten but not yet a whole unit, like bread_fraction.
+var tea_fraction: float = 0.0
+var tea_demand: float = 0.0
+var tea_consumed: float = 0.0
+var tea_coverage: float = 0.0
 # Per-tick flows feed the stats window; they are transient and never saved.
 var bread_produced_tick: int = 0
 var bread_consumed_tick: float = 0.0
@@ -55,6 +63,9 @@ var taxes_tick: int = 0
 var wages_tick: int = 0
 var upkeep_tick: int = 0
 var wheat_spent_tick: int = 0
+# Imports in total (flour and tea), and the tea part of it.
+var imports_spent_tick: int = 0
+var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
 
 
@@ -66,6 +77,8 @@ func reset_flows() -> void:
 	wages_tick = 0
 	upkeep_tick = 0
 	wheat_spent_tick = 0
+	imports_spent_tick = 0
+	tea_spent_tick = 0
 	construction_spent_tick = 0
 
 
@@ -84,6 +97,9 @@ func to_dict() -> Dictionary:
 		"wheat_target_stock": wheat_target_stock, "wheat_reserve_minutes": wheat_reserve_minutes,
 		"wheat_previous_price": wheat_previous_price,
 		"wheat_decay_fraction": wheat_decay_fraction,
+		"tea_imports_enabled": tea_imports_enabled, "flour_imports_enabled": flour_imports_enabled,
+		"tea_fraction": tea_fraction, "tea_demand": tea_demand, "tea_consumed": tea_consumed,
+		"tea_coverage": tea_coverage,
 		"stocks": stocks.duplicate(),
 		"money": money,
 		"population": population,
@@ -125,6 +141,12 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
 	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
 	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))
+	result.tea_imports_enabled = bool(values.get("tea_imports_enabled", false))
+	result.flour_imports_enabled = bool(values.get("flour_imports_enabled", false))
+	result.tea_fraction = float(values.get("tea_fraction", 0.0))
+	result.tea_demand = float(values.get("tea_demand", 0.0))
+	result.tea_consumed = float(values.get("tea_consumed", 0.0))
+	result.tea_coverage = float(values.get("tea_coverage", 0.0))
 	for cause: Variant in values.get("defeat_causes", []):
 		result.defeat_causes.append(StringName(cause))
 	result.stocks.assign(values["stocks"])

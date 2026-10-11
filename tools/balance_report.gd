@@ -171,6 +171,10 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	# The financing event is the purchase itself: its real tick, not a per-minute row, because a
 	# purchase that waits for its money happens between two rows.
 	var purchase_tick: int = result.second_chain_purchase_tick()
+	# What the inputs cost per loaf over the same minutes: wheat bought or flour imported (tea is not an
+	# input of bread), per bread made.
+	var bread: float = result.mean("bread_produced_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
+	var input_spend: float = result.mean("wheat_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		+ result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		- result.mean("tea_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
 	return {
 		"survived": 1 if result.survived() else 0,
 		"defeat_tick": result.defeat_tick,
@@ -184,6 +188,9 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"stable_and_losing_money": 1 if stable and balance < 0.0 else 0,
 		"second_chain_tick": purchase_tick,
 		"second_chain_minute": float(purchase_tick) / float(ScenarioRunner.TICKS_PER_MINUTE) if purchase_tick >= 0 else -1.0,
+		"imports_spent_last3": result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1),
+		"input_cost_per_bread": input_spend / bread if bread > 0.0 else -1.0,
+		"tea_coverage": final["tea_coverage"],
 	}
 
 
