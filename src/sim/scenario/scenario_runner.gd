@@ -333,7 +333,7 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"bankruptcy": defeat[&"bankruptcy"]["status"], "hunger": defeat[&"hunger"]["status"],
 		"depopulation": defeat[&"depopulation"]["status"], "defeat_causes": "|".join(causes),
 		"wheat_stock": economy["stocks"].get(&"wheat", 0),
-		"imports_spent_pm": stats["imports_spent_per_minute"],
+		"imports_spent_pm": stats["imports_spent_per_minute"], "tea_spent_pm": stats["tea_spent_per_minute"],
 		"tea_stock": economy["stocks"].get(&"tea", 0), "tea_coverage": economy["tea_coverage"],
 		"flour_stock": economy["stocks"].get(&"flour", 0),
 	}

@@ -34,6 +34,14 @@ static func bakery_flour_rate(state: EconomyState, params: Params) -> float:
 	return rate
 
 
+static func staffed_bakeries(state: EconomyState) -> int:
+	var count: int = 0
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"bakery" and int(building.get("workers", 0)) > 0:
+			count += 1
+	return count
+
+
 # Flour per second the staffed mills can still make: none once they have no wheat to grind.
 static func mill_flour_rate(state: EconomyState, params: Params) -> float:
 	var rate: float = 0.0
@@ -65,9 +73,10 @@ static func affordable(state: EconomyState, wanted: int, price: int) -> int:
 	return mini(wanted, maxi(0, state.money) / price)
 
 
-# One lot whenever the warehouse has run out of flour and the bakeries would still be left short.
+# One lot whenever the flour in store cannot hand a whole unit to every staffed bakery this tick
+# (each takes one at a time, in order), and the mills would still leave the bakeries short.
 func _import_flour(state: EconomyState, params: Params) -> void:
-	if flour_deficit(state, params) <= DEFICIT_EPSILON or int(state.stocks.get(&"flour", 0)) > 0:
+	if flour_deficit(state, params) <= DEFICIT_EPSILON 			or int(state.stocks.get(&"flour", 0)) >= staffed_bakeries(state):
 		return
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	if affordable(state, 1, price) <= 0:
@@ -90,6 +99,7 @@ func _import_tea(state: EconomyState, params: Params) -> void:
 		return
 	state.money -= units * price
 	state.imports_spent_tick += units * price
+	state.tea_spent_tick += units * price
 	state.stocks[&"tea"] = stock + units
 
 

@@ -370,3 +370,35 @@ func test_data_rejects_invalid_import_values_and_a_numeric_switch() -> void:
 			section = section[fields[index]]
 		section[fields[-1]] = entry[2]
 		assert_false(DataLoader.new().load_documents(documents).is_ok(), str(entry))
+
+
+func test_flour_is_refilled_before_the_stock_falls_short_of_the_bakeries() -> void:
+	# Three staffed bakeries each want a whole unit this tick; two units left would starve the third.
+	var state: EconomyState = _state([&"wharf", &"bakery", &"bakery", &"bakery"], 20)
+	state.stocks[&"flour"] = 2
+	state.flour_imports_enabled = true
+	var params: Params = _params()
+	var lot: int = int(params.get_value(&"market.imported_flour.lot_size"))
+	var sim: Simulation = _run(state, 1, params)
+	assert_gt(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)
+	assert_gte(int(sim.snapshot()["economy"]["stocks"][&"flour"]), 2 + lot - 3)
+
+
+func test_flour_is_not_refilled_while_the_stock_serves_every_bakery() -> void:
+	var state: EconomyState = _state([&"wharf", &"bakery", &"bakery", &"bakery"], 20)
+	state.stocks[&"flour"] = 3
+	state.flour_imports_enabled = true
+	var sim: Simulation = _run(state, 1)
+	assert_eq(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)
+
+
+func test_tea_spending_is_reported_apart_from_the_flour() -> void:
+	var state: EconomyState = _state([&"wharf", &"bakery"])
+	state.tea_imports_enabled = true
+	state.flour_imports_enabled = true
+	var stats: Dictionary = _run(state, 120).snapshot()["stats"]
+	assert_gt(stats["tea_spent_per_minute"], 0.0)
+	assert_gt(stats["imports_spent_per_minute"], stats["tea_spent_per_minute"], "the flour is the rest")
+	var only_flour: EconomyState = _state([&"wharf", &"bakery"])
+	only_flour.flour_imports_enabled = true
+	assert_eq(_run(only_flour, 120).snapshot()["stats"]["tea_spent_per_minute"], 0.0)

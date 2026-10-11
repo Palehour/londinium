@@ -63,7 +63,9 @@ var taxes_tick: int = 0
 var wages_tick: int = 0
 var upkeep_tick: int = 0
 var wheat_spent_tick: int = 0
+# Imports in total (flour and tea), and the tea part of it.
 var imports_spent_tick: int = 0
+var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
 
 
@@ -76,6 +78,7 @@ func reset_flows() -> void:
 	upkeep_tick = 0
 	wheat_spent_tick = 0
 	imports_spent_tick = 0
+	tea_spent_tick = 0
 	construction_spent_tick = 0
 
 

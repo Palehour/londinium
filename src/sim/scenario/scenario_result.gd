@@ -10,14 +10,14 @@ const CSV_COLUMNS: Array[String] = [
 	"upkeep_pm", "wheat_spent_pm", "operating_balance_pm", "construction_pm", "wheat_price",
 	"employed", "unemployed", "housing_capacity", "n_wharf", "n_mill", "n_bakery", "n_housing",
 	"bankruptcy", "hunger", "depopulation", "defeat_causes", "wheat_stock",
-	"imports_spent_pm", "tea_stock", "tea_coverage", "flour_stock",
+	"imports_spent_pm", "tea_spent_pm", "tea_stock", "tea_coverage", "flour_stock",
 ]
 # Float columns are printed with two decimals; everything else is printed as it is.
 const FLOAT_COLUMNS: Array[String] = [
 	"bread_coverage", "satisfaction", "bread_coverage_instant", "satisfaction_target", "tax_rate",
 	"bread_produced_pm", "bread_consumed_pm", "bread_demand_pm", "taxes_pm", "wages_pm",
 	"upkeep_pm", "wheat_spent_pm", "operating_balance_pm", "construction_pm", "imports_spent_pm",
-	"tea_coverage",
+	"tea_spent_pm", "tea_coverage",
 ]
 
 var id: String = ""

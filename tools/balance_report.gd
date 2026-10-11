@@ -171,9 +171,10 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	# The financing event is the purchase itself: its real tick, not a per-minute row, because a
 	# purchase that waits for its money happens between two rows.
 	var purchase_tick: int = result.second_chain_purchase_tick()
-	# What the inputs cost per loaf over the same minutes: wheat bought or flour imported, per bread made.
+	# What the inputs cost per loaf over the same minutes: wheat bought or flour imported (tea is not an
+	# input of bread), per bread made.
 	var bread: float = result.mean("bread_produced_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
-	var input_spend: float = result.mean("wheat_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		+ result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
+	var input_spend: float = result.mean("wheat_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		+ result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		- result.mean("tea_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
 	return {
 		"survived": 1 if result.survived() else 0,
 		"defeat_tick": result.defeat_tick,
