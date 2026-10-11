@@ -485,3 +485,30 @@ func test_diagnostics_blame_the_wharf_when_the_flour_cannot_be_paid() -> void:
 	for cause: Dictionary in diagnostics["bread_causes"]:
 		reasons.append(cause["reason"])
 	assert_has(reasons, &"no_money_for_imports")
+
+
+func test_flour_lots_follow_the_modified_rate_of_the_bakery() -> void:
+	# Half-second recipe: one fully staffed bakery asks for 20 units of flour in a single tick.
+	var fast: Array[Modifier] = [Modifier.new(&"building.bakery.recipe.seconds", &"set", 0.5)]
+	var state: EconomyState = _state([&"wharf", &"bakery"], 20)
+	state.flour_imports_enabled = true
+	var params: Params = _params(fast)
+	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
+	var stats: Dictionary = _run(state, 1, params).snapshot()["stats"]
+	assert_eq(stats["imports_spent_per_minute"], float(2 * price) * 60.0, "20 units = two lots of 10")
+
+
+func test_each_wharf_is_judged_on_its_own_workers_and_money() -> void:
+	# One person: the first wharf gets them (first pass runs wharf by wharf); the second has nobody.
+	var state: EconomyState = _state([&"wharf", &"wharf", &"bakery"], 1)
+	state.flour_imports_enabled = true
+	var wharves: Array[StringName] = []
+	for building: Dictionary in _diagnostics_after_one_tick(state)["buildings"]:
+		if building["definition_id"] == &"wharf":
+			wharves.append(building["reason"])
+	assert_eq(wharves, [&"ok", &"no_workers"] as Array[StringName])
+	var broke: EconomyState = _state([&"wharf", &"bakery"], 20, 0)
+	broke.flour_imports_enabled = true
+	for building: Dictionary in _diagnostics_after_one_tick(broke)["buildings"]:
+		if building["definition_id"] == &"wharf":
+			assert_eq(building["reason"], &"no_money_for_imports")

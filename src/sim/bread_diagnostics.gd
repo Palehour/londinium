@@ -38,9 +38,11 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 static func building_reason(state: EconomyState, context: EconomyContext, building: Dictionary,
 		params: Params) -> StringName:
 	var id: StringName = StringName(building["definition_id"])
-	# A wharf that brings in the flour is working, whatever the wheat purchases do.
-	if id == &"wharf" and ImportSystem.flour_import_active(state):
-		return &"ok"
+	# A staffed wharf that brings in the flour is working, whatever the wheat purchases do, unless it
+	# cannot pay for the flour. An unstaffed one falls through to the usual reasons.
+	if id == &"wharf" and ImportSystem.flour_import_active(state) and int(building.get("workers", 0)) > 0:
+		var flour: StringName = ImportSystem.flour_reason(state, params)
+		return flour if flour == &"no_money_for_imports" else &"ok"
 	# The wharf is the only buyer; MarketSystem stops before staffing when purchases are off.
 	if id == &"wharf" and not state.wheat_purchases_enabled:
 		return &"wheat_purchases_disabled"

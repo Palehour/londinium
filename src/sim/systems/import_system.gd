@@ -34,12 +34,17 @@ static func bakery_flour_rate(state: EconomyState, params: Params) -> float:
 	return rate
 
 
-static func staffed_bakeries(state: EconomyState) -> int:
-	var count: int = 0
+# Whole units of flour the bakeries will take from the store this tick: each reserves one at a time
+# until its modified rate for the tick is covered, counting what it already holds.
+static func bakery_units_needed(state: EconomyState, params: Params) -> int:
+	var units: int = 0
 	for building: Dictionary in state.buildings:
-		if building["definition_id"] == &"bakery" and int(building.get("workers", 0)) > 0:
-			count += 1
-	return count
+		if building["definition_id"] != &"bakery":
+			continue
+		var budget: float = ProductionSystem.staffed_rate(params, building, "inputs.flour")
+		var missing: float = budget - float(building.get("reserved_input", 0.0))
+		units += ceili(maxf(0.0, missing) - ProductionSystem.ROUNDING_EPSILON)
+	return units
 
 
 # Flour per second the staffed mills can still make. A mill keeps working on the unit it already holds;
@@ -82,17 +87,17 @@ static func affordable(state: EconomyState, wanted: int, price: int) -> int:
 	return mini(wanted, maxi(0, state.money) / price)
 
 
-# Whole lots until the flour in store can hand a whole unit to every staffed bakery this tick (each takes
-# one at a time, in order), when the mills would still leave the bakeries short.
+# Whole lots until the flour in store covers the units the bakeries will reserve this tick, when the
+# mills would still leave the bakeries short.
 func _import_flour(state: EconomyState, params: Params) -> void:
 	var stock: int = int(state.stocks.get(&"flour", 0))
-	var bakeries: int = staffed_bakeries(state)
-	if flour_deficit(state, params) <= DEFICIT_EPSILON or stock >= bakeries:
+	var needed: int = bakery_units_needed(state, params)
+	if flour_deficit(state, params) <= DEFICIT_EPSILON or stock >= needed:
 		return
 	var lot: int = int(params.get_value(&"market.imported_flour.lot_size"))
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	@warning_ignore("integer_division")
-	var wanted: int = (bakeries - stock + lot - 1) / lot
+	var wanted: int = (needed - stock + lot - 1) / lot
 	var lots: int = affordable(state, wanted, price)
 	if lots <= 0:
 		return
