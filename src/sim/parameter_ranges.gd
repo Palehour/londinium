@@ -103,7 +103,7 @@ static func is_valid(key: StringName, value: float) -> bool:
 			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population",
 			&"defeat.depopulation.stability_window_seconds", &"population.stats_window_seconds", &"market.wheat.max_step", &"market.wheat.storage_capacity",
 			&"policy.wheat.default_target_stock", &"policy.wheat.default_reserve_minutes",
-				&"market.imported_flour.lot_size"] \
+				&"market.imported_flour.lot_size", &"market.tea.buffer_seconds"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

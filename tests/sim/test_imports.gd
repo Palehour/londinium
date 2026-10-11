@@ -98,7 +98,7 @@ func test_tea_is_shown_in_the_satisfaction_breakdown() -> void:
 	state.tax_rate = 0.25
 	state.tea_coverage = 1.0
 	SatisfactionSystem.new().update_target(state, _params(), _context)
-	assert_eq(state.satisfaction_breakdown["tea"], 15.0)
+	assert_eq(state.satisfaction_breakdown["tea"], 4.0)
 
 
 func test_the_target_never_goes_over_100_with_tea() -> void:
@@ -115,7 +115,7 @@ func test_tea_is_bought_at_the_wharf_at_a_fixed_price_and_covers_the_city() -> v
 	var price: int = int(_params().get_value(&"market.tea.price"))
 	assert_eq(sim.snapshot()["imports"]["tea"]["coverage"], 1.0)
 	assert_gt(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)
-	assert_eq(economy["satisfaction_breakdown"]["tea"], 15.0)
+	assert_eq(economy["satisfaction_breakdown"]["tea"], 4.0)
 	assert_typeof(economy["money"], TYPE_INT)
 	assert_eq(int(sim.snapshot()["stats"]["imports_spent_per_minute"]) % price, 0)
 
@@ -326,7 +326,7 @@ func test_every_new_key_has_a_range_and_rejects_values_out_of_it() -> void:
 		&"market.imported_flour.price_per_lot": [-1.0],
 		&"market.imported_flour.lot_size": [0.0, -1.0, 2.5, 10001.0],
 		&"market.tea.price": [-1.0],
-		&"market.tea.buffer_seconds": [-1.0, 3601.0],
+		&"market.tea.buffer_seconds": [-1.0, 3601.0, 0.5, 59.9],
 		&"population.tea.per_person_per_minute": [0.0, -0.1],
 		&"population.tea.satisfaction_bonus": [-1.0, 100.5],
 	}
@@ -352,6 +352,9 @@ func test_data_rejects_invalid_import_values_and_a_numeric_switch() -> void:
 		["economy/market.json", ["imported_flour", "lot_size"], 0],
 		["economy/market.json", ["imported_flour", "price_per_lot"], -1],
 		["economy/market.json", ["tea", "price"], 1.5],
+		["economy/market.json", ["tea", "buffer_seconds"], 0.5],
+		["economy/market.json", ["tea", "buffer_seconds"], 3601],
+		["economy/market.json", ["tea", "buffer_seconds"], -1],
 		["economy/population.json", ["tea", "per_person_per_minute"], 0],
 		["economy/population.json", ["tea", "satisfaction_bonus"], 101],
 		["economy/startup.json", ["tea_imports_enabled"], 1],
@@ -436,7 +439,7 @@ func test_tea_with_no_buffer_is_still_bought_on_demand() -> void:
 	var sim: Simulation = _run(state, 60, _params(no_buffer))
 	assert_eq(sim.snapshot()["imports"]["tea"]["coverage"], 1.0)
 	assert_gt(sim.snapshot()["stats"]["tea_spent_per_minute"], 0.0)
-	assert_eq(sim.snapshot()["economy"]["satisfaction_breakdown"]["tea"], 15.0)
+	assert_eq(sim.snapshot()["economy"]["satisfaction_breakdown"]["tea"], 4.0)
 
 
 func test_scarce_wheat_is_credited_to_one_mill_only() -> void:

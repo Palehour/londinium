@@ -1,6 +1,6 @@
 {
   "id": "tea_off",
-  "description": "D-025 sin té: ciudad con una cadena y tres viviendas con impuesto 0,85. Sin té la satisfacción objetivo queda en 66, bajo el umbral de inmigración (70): la ciudad no crece. Con tax_override y --tax 0.75 sí crece; con 0.76 ya no.",
+  "description": "D-025 sin té: ciudad con una cadena y tres viviendas con impuesto 0,85. Sin té la satisfacción objetivo queda en 66, bajo el umbral de inmigración (70): la ciudad no crece. Con --tax 0.75 sí crece; con 0.76 ya no.",
   "notes": "Par con tea_on: misma ciudad, solo cambia el interruptor del té. Sirve para medir el objetivo de D-025 con tools/balance_report (--tax barre el impuesto).",
   "seed": 42,
   "duration_ticks": 900,

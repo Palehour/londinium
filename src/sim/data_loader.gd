@@ -28,7 +28,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
 			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"},
 		"imported_flour": {"price_per_lot": "money", "lot_size": "positive_integer"},
-		"tea": {"price": "money", "buffer_seconds": "number"}},
+		"tea": {"price": "money", "buffer_seconds": "integer"}},
 		"policy": {"wheat": {"default_accumulate_price": "optional_price", "default_max_price": "optional_price",
 			"default_target_stock": "integer", "default_reserve_minutes": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number"},

@@ -17,5 +17,5 @@
     "hunger_emigration_multiplier": 2.0
   },
   "tax": { "rate": 0.25, "base_per_employed_worker_per_minute": 11 },
-  "tea": { "per_person_per_minute": 0.2, "satisfaction_bonus": 15.0 }
+  "tea": { "per_person_per_minute": 0.2, "satisfaction_bonus": 4.0 }
 }

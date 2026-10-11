@@ -1,0 +1,13 @@
+{
+  "id": "flour_not_imported",
+  "description": "D-026, la contracara de flour_imported: la misma ciudad sin molino (embarcadero y panadería), pero sin importar harina. La panadería no recibe nada, el pan se acaba y la partida se pierde. Con la importación encendida (flour_imported) sobrevive.",
+  "notes": "Par con flour_imported: lo único que cambia es el interruptor de la harina importada. Sin molino y sin importación no hay harina, por lo tanto tampoco pan.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.7},
+    {"tick": 0, "cmd": "set_wheat_purchases", "enabled": false},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]}
+  ]
+}
