@@ -11,6 +11,7 @@ Revisá en **dos ejes separados** y citá siempre `archivo:línea`.
    su test o paso manual.
 2. **El repo:** qué exigen `AGENTS.md`, `docs/ARCHITECTURE.md` y los ADR Aceptados (sim pura, determinismo,
    dinero en `int`, balance en `data/` vía `Params`, tipado estático, tests no debilitados).
+   Si el PR trae ADR nuevos, pedí que pasen a Aceptado antes del merge (ver `docs-vivos`).
 
 Clasificá cada hallazgo:
 - **Bloqueante:** incumple un criterio o una regla. Incluye: cambió una convención y el doc, ADR o skill

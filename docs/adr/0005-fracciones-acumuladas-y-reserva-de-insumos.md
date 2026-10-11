@@ -14,7 +14,7 @@ Los stocks son enteros y ninguna cantidad fraccionaria se redondea por tick. Hay
 - **Saldo total (consumo y merma del pan, consumo del té):** el stock entero más la fracción (`bread_fraction`, `tea_fraction`) forman un único saldo. Cada tick se descuenta la demanda de ese saldo de inmediato y el resto se vuelve a separar en unidades enteras y fracción. El resto no espera a completar una unidad para descontarse.
 
 ## Estado
-Propuesto hasta el merge del PR #99; pasa a Aceptado al mergear (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
+Propuesto mientras el PR #99 está abierto; se marca Aceptado en un commit de ese PR cuando Cristian lo aprueba, antes del merge (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - No se pierde ni se crea mercancía por redondeo; los tests de producción lo comprueban.

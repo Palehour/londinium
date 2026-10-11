@@ -9,7 +9,9 @@ description: Mantiene al día docs, ADRs y skills cuando un PR cambia algo que d
   La plantilla de PR tiene la casilla "Docs/ADR/skill actualizados en este PR" o "No aplica: <motivo>".
 - **ADR (`docs/adr/`):** un ADR que revierte o cambia una decisión anterior la **reemplaza**: el viejo **no se
   borra**, se marca como Reemplazado por el nuevo. Los ADR sobre otros temas no se tocan y siguen vigentes.
-  Un ADR Propuesto pasa a Aceptado al mergear el PR.
+  Un ADR está Propuesto mientras su PR está abierto. Cuando Cristian aprueba el PR, el autor lo cambia a
+  Aceptado en un commit del mismo PR, **antes del merge** (el merge no reescribe archivos). El revisor no aprueba
+  para mergear un ADR que quedó en Propuesto sin avisar.
 - **`docs/GDD.md` y `docs/DECISIONS.md`:** la regla completa está en `decision-diseno`; no se repite acá.
 - **Corregir dos veces por lo mismo:** si hubo que corregir a un agente dos veces por el mismo error,
   la corrección entra en la sección Gotchas de la skill que corresponda.

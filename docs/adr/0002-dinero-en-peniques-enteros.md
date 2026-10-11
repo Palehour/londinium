@@ -11,7 +11,7 @@ El dinero con decimales binarios acumula error y rompe el determinismo y las com
 El dinero es un `int` en peniques en toda la simulación. La conversión a libras, chelines y peniques es solo de presentación (UI). Los parámetros monetarios se redondean una sola vez, al final de toda la lista de modificadores, al penique más cercano y con los empates alejándose de cero.
 
 ## Estado
-Propuesto hasta el merge del PR #99; pasa a Aceptado al mergear (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
+Propuesto mientras el PR #99 está abierto; se marca Aceptado en un commit de ese PR cuando Cristian lo aprueba, antes del merge (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - El dinero de la tesorería (`money`) y los pagos ya liquidados son `int` en peniques. Los restos de centavo
