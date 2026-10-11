@@ -10,6 +10,7 @@ var _commands: Array[SimulationCommand] = []
 var _context: EconomyContext
 var _workers: WorkersSystem = WorkersSystem.new()
 var _market: MarketSystem = MarketSystem.new()
+var _imports: ImportSystem = ImportSystem.new()
 var _production: ProductionSystem = ProductionSystem.new()
 var _consumption: ConsumptionSystem = ConsumptionSystem.new()
 var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
@@ -89,6 +90,7 @@ func tick() -> void:
 	if _context != null:
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count)
+		_imports.tick(_state, _params)
 		_production.tick(_state, _params, _context)
 		_consumption.tick(_state, _params)
 		_defeat.update_hunger_coverage(_state, _params)
@@ -119,6 +121,7 @@ func snapshot() -> Dictionary:
 		"stats": _stats.snapshot(),
 		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
 		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params)},
+		"imports": ImportSystem.snapshot(_state, _params),
 		"defeat": _defeat_snapshot(),
 		"tick_count": _tick_count,
 		"seed": _seed,

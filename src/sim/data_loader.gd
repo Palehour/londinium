@@ -6,7 +6,8 @@ const BUILDING_FIELDS: Dictionary = {
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
 const ECONOMY_SCHEMAS: Dictionary = {
-	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean"},
+	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
+		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
@@ -20,11 +21,14 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
 			"hunger_emigration_multiplier": "number"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
+		"tea": {"per_person_per_minute": "positive", "satisfaction_bonus": "number"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
 		"max_price": "money", "price_update_seconds": "positive_integer",
 		"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
-			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"}},
+			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"},
+		"imported_flour": {"price_per_lot": "money", "lot_size": "positive_integer"},
+		"tea": {"price": "money", "buffer_seconds": "number"}},
 		"policy": {"wheat": {"default_accumulate_price": "optional_price", "default_max_price": "optional_price",
 			"default_target_stock": "integer", "default_reserve_minutes": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number"},

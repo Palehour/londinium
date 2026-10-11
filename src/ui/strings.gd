@@ -44,9 +44,16 @@ const BREAD_CHAIN_CAUSE: String = "• %s"
 const STOCKS: String = "Stocks: trigo %d · harina %d · pan %d"
 const TREASURY: String = "Tesoro: %s"
 const OPERATING_BALANCE: String = "Balance operativo: %s/min"
-const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s"
+const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s − importaciones %s"
 const CONSTRUCTION: String = "Construcción: %s/min (aparte del balance)"
 const WHEAT_PRICE: String = "Precio del trigo: %s"
+const UNIT_PRICE: String = "%.2f d"
+const TEA_IMPORTS: String = "Importar té"
+const FLOUR_IMPORTS: String = "Importar harina (se saltea el molino)"
+const TEA_ROW: String = "Té: %d en almacén · cobertura %.0f %% · precio %s por unidad · +%.0f de satisfacción
+  %s"
+const FLOUR_ROW: String = "Harina importada: lote de %d a %s (%s por unidad) · harina en almacén %d
+  %s"
 const WINDOW_PARTIAL: String = "Promedios sobre %d de %d s"
 const BUILDINGS: String = "Trabajadores por edificio"
 const NO_BUILDINGS: String = "Sin edificios con puestos."
@@ -85,6 +92,11 @@ const REASONS: Dictionary[StringName, String] = {
 	&"simulation_defeated": "La partida terminó: no se aceptan comandos.",
 	&"wheat_purchases_disabled": "Compra de trigo desactivada.",
 	&"wheat_price_above_max": WHEAT_BLOCKED_NOTE,
+	&"tea_imports_disabled": "Importación de té desactivada.",
+	&"flour_imports_disabled": "Importación de harina desactivada.",
+	&"no_wharf_for_imports": "Hace falta un embarcadero con trabajadores para importar.",
+	&"no_money_for_imports": "Sin dinero para importar.",
+	&"mill_covers_flour": "El molino cubre a las panaderías: no hace falta importar.",
 	&"invalid_wheat_policy": "Política de compra de trigo inválida.",
 	&"no_workers": "Sin trabajadores.",
 	&"no_input": "Sin insumo.",

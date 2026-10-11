@@ -22,11 +22,11 @@ func update_target(state: EconomyState, params: Params, context: EconomyContext)
 		/ state.population if state.population > 0 else 0.0
 	state.satisfaction_breakdown.assign({
 		"bread": state.hunger_smoothed_coverage * float(params.get_value(&"population.satisfaction.bread_weight")),
-		"tea": 0.0,
+		"tea": state.tea_coverage * float(params.get_value(&"population.tea.satisfaction_bonus")),
 		"tax": state.tax_rate * float(params.get_value(&"population.satisfaction.tax_weight")),
 		"overcrowding": state.overcrowding * float(params.get_value(&"population.satisfaction.overcrowding_weight")),
 	})
-	state.satisfaction_target = clampf(state.satisfaction_breakdown["bread"] \
+	state.satisfaction_target = clampf(state.satisfaction_breakdown["bread"] + state.satisfaction_breakdown["tea"] \
 		- state.satisfaction_breakdown["tax"] - state.satisfaction_breakdown["overcrowding"], 0.0, 100.0)
 	state.satisfaction_breakdown["target"] = state.satisfaction_target
 	state.satisfaction_breakdown["smoothed"] = state.satisfaction
