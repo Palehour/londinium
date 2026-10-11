@@ -437,3 +437,51 @@ func test_tea_with_no_buffer_is_still_bought_on_demand() -> void:
 	assert_eq(sim.snapshot()["imports"]["tea"]["coverage"], 1.0)
 	assert_gt(sim.snapshot()["stats"]["tea_spent_per_minute"], 0.0)
 	assert_eq(sim.snapshot()["economy"]["satisfaction_breakdown"]["tea"], 15.0)
+
+
+func test_scarce_wheat_is_credited_to_one_mill_only() -> void:
+	# Two staffed mills, one unit of wheat: only one mill can work, so the two bakeries still run short.
+	var state: EconomyState = _state([&"wharf", &"mill", &"mill", &"bakery", &"bakery"], 20)
+	state.stocks[&"wheat"] = 1
+	state.wheat_purchases_enabled = false
+	state.flour_imports_enabled = true
+	var sim: Simulation = _run(state, 1)
+	assert_gt(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)
+
+
+func _diagnostics_after_one_tick(state: EconomyState) -> Dictionary:
+	var starving: Array[Modifier] = [Modifier.new(&"population.initial_bread", &"set", 0)]
+	return _run(state, 1, _params(starving)).snapshot()["diagnostics"]
+
+
+func test_diagnostics_do_not_ask_for_the_stages_the_imported_flour_skips() -> void:
+	var state: EconomyState = _state([&"wharf", &"bakery"])
+	state.wheat_purchases_enabled = false
+	state.flour_imports_enabled = true
+	var diagnostics: Dictionary = _diagnostics_after_one_tick(state)
+	for cause: Dictionary in diagnostics["bread_causes"]:
+		assert_ne(cause["definition_id"], &"mill")
+		assert_ne(cause["reason"], &"wheat_purchases_disabled")
+	for building: Dictionary in diagnostics["buildings"]:
+		if building["definition_id"] == &"wharf":
+			assert_eq(building["reason"], &"ok")
+
+
+func test_diagnostics_still_ask_for_the_mill_without_the_import() -> void:
+	var state: EconomyState = _state([&"wharf", &"bakery"])
+	state.wheat_purchases_enabled = false
+	var diagnostics: Dictionary = _diagnostics_after_one_tick(state)
+	var stages: Array[StringName] = []
+	for cause: Dictionary in diagnostics["bread_causes"]:
+		stages.append(cause["definition_id"])
+	assert_has(stages, &"mill")
+
+
+func test_diagnostics_blame_the_wharf_when_the_flour_cannot_be_paid() -> void:
+	var state: EconomyState = _state([&"wharf", &"bakery"], 20, 0)
+	state.flour_imports_enabled = true
+	var diagnostics: Dictionary = _diagnostics_after_one_tick(state)
+	var reasons: Array[StringName] = []
+	for cause: Dictionary in diagnostics["bread_causes"]:
+		reasons.append(cause["reason"])
+	assert_has(reasons, &"no_money_for_imports")

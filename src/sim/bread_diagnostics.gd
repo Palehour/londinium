@@ -18,9 +18,16 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 			"reason": building_reason(state, context, building, params),
 		})
 	var bread_short: bool = state.bread_coverage < 1.0
-	var causes: Array[Dictionary] = _chain_causes(buildings)
+	# Imported flour skips the wharf's wheat and the mill, so only the bakery is left in the chain; the
+	# wharf is blamed only when it cannot pay for the flour.
+	var stages: Array[StringName] = CHAIN
+	if ImportSystem.flour_import_active(state):
+		stages = [&"bakery"]
+	var causes: Array[Dictionary] = _chain_causes(buildings, stages)
+	if ImportSystem.flour_import_active(state) and ImportSystem.flour_reason(state, params) == &"no_money_for_imports":
+		causes.push_front({"definition_id": &"wharf", "reason": &"no_money_for_imports"})
 	if bread_short and causes.is_empty():
-		causes = _throughput_causes(buildings)
+		causes = _throughput_causes(buildings, stages)
 	return {
 		"bread_short": bread_short,
 		"bread_causes": causes,
@@ -31,6 +38,9 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 static func building_reason(state: EconomyState, context: EconomyContext, building: Dictionary,
 		params: Params) -> StringName:
 	var id: StringName = StringName(building["definition_id"])
+	# A wharf that brings in the flour is working, whatever the wheat purchases do.
+	if id == &"wharf" and ImportSystem.flour_import_active(state):
+		return &"ok"
 	# The wharf is the only buyer; MarketSystem stops before staffing when purchases are off.
 	if id == &"wharf" and not state.wheat_purchases_enabled:
 		return &"wheat_purchases_disabled"
@@ -51,9 +61,9 @@ static func building_reason(state: EconomyState, context: EconomyContext, buildi
 
 
 # One cause per chain stage: a stage blocks bread only when none of its buildings work.
-static func _chain_causes(buildings: Array[Dictionary]) -> Array[Dictionary]:
+static func _chain_causes(buildings: Array[Dictionary], stages: Array[StringName]) -> Array[Dictionary]:
 	var causes: Array[Dictionary] = []
-	for id: StringName in CHAIN:
+	for id: StringName in stages:
 		var reason: StringName = &"missing_building"
 		for building: Dictionary in buildings:
 			if building["definition_id"] != id:
@@ -68,9 +78,9 @@ static func _chain_causes(buildings: Array[Dictionary]) -> Array[Dictionary]:
 
 # Every stage works but bread still runs short: name the stages missing hands, or else the
 # whole chain is simply too small for the population.
-static func _throughput_causes(buildings: Array[Dictionary]) -> Array[Dictionary]:
+static func _throughput_causes(buildings: Array[Dictionary], stages: Array[StringName]) -> Array[Dictionary]:
 	var causes: Array[Dictionary] = []
-	for id: StringName in CHAIN:
+	for id: StringName in stages:
 		for building: Dictionary in buildings:
 			if building["definition_id"] == id and building["workers"] < building["jobs"]:
 				causes.append({"definition_id": id, "reason": &"understaffed"})

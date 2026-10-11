@@ -42,15 +42,19 @@ static func staffed_bakeries(state: EconomyState) -> int:
 	return count
 
 
-# Flour per second the staffed mills can still make: none once they have no wheat to grind.
+# Flour per second the staffed mills can still make. A mill keeps working on the unit it already holds;
+# every other one needs a whole unit of the stock, and each unit goes to one mill (as in ProductionSystem).
 static func mill_flour_rate(state: EconomyState, params: Params) -> float:
 	var rate: float = 0.0
-	var has_wheat: bool = int(state.stocks.get(&"wheat", 0)) > 0
+	var spare_wheat: int = int(state.stocks.get(&"wheat", 0))
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] != &"mill":
 			continue
-		if has_wheat or float(building.get("reserved_input", 0.0)) > 0.0:
-			rate += ProductionSystem.staffed_rate(params, building, "outputs.flour")
+		if float(building.get("reserved_input", 0.0)) <= 0.0:
+			if spare_wheat <= 0:
+				continue
+			spare_wheat -= 1
+		rate += ProductionSystem.staffed_rate(params, building, "outputs.flour")
 	return rate
 
 
@@ -58,6 +62,11 @@ static func mill_flour_rate(state: EconomyState, params: Params) -> float:
 # is never undercut and a missing one is replaced (D-026).
 static func flour_deficit(state: EconomyState, params: Params) -> float:
 	return maxf(0.0, bakery_flour_rate(state, params) - mill_flour_rate(state, params))
+
+
+# The flour comes through the wharf: the stages before the bakery are bypassed (D-026).
+static func flour_import_active(state: EconomyState) -> bool:
+	return state.flour_imports_enabled and has_staffed_wharf(state)
 
 
 static func tea_demand_per_second(state: EconomyState, params: Params) -> float:

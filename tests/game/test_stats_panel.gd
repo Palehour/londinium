@@ -404,3 +404,10 @@ func test_import_rows_show_tea_stock_and_coverage_flour_price_and_why_there_is_n
 	(_panel.get("_tea") as CheckButton).button_pressed = true
 	_tick()
 	assert_string_contains(_text("_tea_row"), Strings.reason(&"no_wharf_for_imports"))
+
+
+func test_satisfaction_line_adds_the_tea_component_so_the_parts_match_the_total() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["economy"]["satisfaction_breakdown"]["tea"] = 15.0
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_economy"), "té +15")

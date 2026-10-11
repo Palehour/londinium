@@ -330,7 +330,7 @@ func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 	var breakdown: Dictionary = economy["satisfaction_breakdown"]
 	var lines: Array[String] = [
 		Strings.POPULATION % [economy["population"], economy["employed"], economy["unemployed"]],
-		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0),
+		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
 			breakdown.get("tax", 0.0), breakdown.get("overcrowding", 0.0)],
 		Strings.TREASURY % Strings.money(economy["money"]),
 		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
