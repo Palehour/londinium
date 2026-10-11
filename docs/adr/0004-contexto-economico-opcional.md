@@ -8,12 +8,12 @@
 Algunos comandos y diagnósticos necesitan saber qué edificios y qué mapa existen, pero la simulación pura no debería depender de la carga de datos completa.
 
 ## Decisión
-`EconomyContext` agrupa solo las definiciones estructurales (ids, etiquetas, entradas y salidas de recetas) y el mapa. Es opcional al crear la `Simulation`. Los números de balance no están en el contexto: se siguen leyendo con `Params.get_value()`.
+`EconomyContext` agrupa solo las definiciones estructurales (ids, etiquetas, entradas y salidas de recetas) y el mapa. Es opcional al crear la `Simulation`, pero los sistemas económicos lo necesitan: sin contexto, `tick()` solo aplica los comandos en cola y avanza el contador de ticks. Los números de balance no están en el contexto: se siguen leyendo con `Params.get_value()`.
 
 ## Estado
 Aceptado. Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - Las reglas de ubicación (por ejemplo, el campo de trigo solo en casillas cultivables) consultan el contexto.
-- Una simulación sin contexto sigue funcionando para los sistemas que no lo necesitan.
+- Una simulación sin contexto no corre ningún sistema económico (trabajadores, mercado, importaciones, producción, consumo, satisfacción, crecimiento, dinero, derrota ni estadísticas): el estado queda igual salvo el contador de ticks. Un test lo cubre (`test_empty_ticks_only_advance_time`).
 - Agregar un dato estructural al contexto no autoriza a leer valores de balance fuera de `Params`.
