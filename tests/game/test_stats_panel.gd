@@ -374,3 +374,33 @@ func _scene_ready(size: Vector2i) -> Array:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	return parts
+
+
+func test_import_switches_send_commands_and_reflect_state() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var tea: CheckButton = _panel.get("_tea") as CheckButton
+	var flour: CheckButton = _panel.get("_flour") as CheckButton
+	assert_false(tea.button_pressed)
+	assert_false(flour.button_pressed)
+	tea.button_pressed = true
+	flour.button_pressed = true
+	_tick()
+	var economy: Dictionary = _session.get_snapshot()["economy"]
+	assert_true(economy["tea_imports_enabled"])
+	assert_true(economy["flour_imports_enabled"])
+	assert_true(tea.button_pressed)
+	assert_true(flour.button_pressed)
+
+
+func test_import_rows_show_tea_stock_and_coverage_flour_price_and_why_there_is_none() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var imports: Dictionary = _session.get_snapshot()["imports"]
+	assert_string_contains(_text("_tea_row"), Strings.reason(&"tea_imports_disabled"))
+	assert_string_contains(_text("_tea_row"), "cobertura 0 %")
+	var flour: Dictionary = imports["flour"]
+	assert_string_contains(_text("_flour_row"), Strings.money(flour["lot_price"]))
+	assert_string_contains(_text("_flour_row"), Strings.UNIT_PRICE % flour["unit_price"])
+	assert_string_contains(_text("_flour_row"), Strings.reason(&"flour_imports_disabled"))
+	(_panel.get("_tea") as CheckButton).button_pressed = true
+	_tick()
+	assert_string_contains(_text("_tea_row"), Strings.reason(&"no_wharf_for_imports"))
