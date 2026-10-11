@@ -73,25 +73,31 @@ static func affordable(state: EconomyState, wanted: int, price: int) -> int:
 	return mini(wanted, maxi(0, state.money) / price)
 
 
-# One lot whenever the flour in store cannot hand a whole unit to every staffed bakery this tick
-# (each takes one at a time, in order), and the mills would still leave the bakeries short.
+# Whole lots until the flour in store can hand a whole unit to every staffed bakery this tick (each takes
+# one at a time, in order), when the mills would still leave the bakeries short.
 func _import_flour(state: EconomyState, params: Params) -> void:
-	if flour_deficit(state, params) <= DEFICIT_EPSILON 			or int(state.stocks.get(&"flour", 0)) >= staffed_bakeries(state):
+	var stock: int = int(state.stocks.get(&"flour", 0))
+	var bakeries: int = staffed_bakeries(state)
+	if flour_deficit(state, params) <= DEFICIT_EPSILON or stock >= bakeries:
 		return
+	var lot: int = int(params.get_value(&"market.imported_flour.lot_size"))
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
-	if affordable(state, 1, price) <= 0:
+	@warning_ignore("integer_division")
+	var wanted: int = (bakeries - stock + lot - 1) / lot
+	var lots: int = affordable(state, wanted, price)
+	if lots <= 0:
 		return
-	state.money -= price
-	state.imports_spent_tick += price
-	state.stocks[&"flour"] = int(state.stocks.get(&"flour", 0)) \
-		+ int(params.get_value(&"market.imported_flour.lot_size"))
+	state.money -= lots * price
+	state.imports_spent_tick += lots * price
+	state.stocks[&"flour"] = stock + lots * lot
 
 
-# Keeps a small buffer of tea in store, so one empty tick does not drop the coverage.
+# Keeps a small buffer of tea in store, so one empty tick does not drop the coverage. With no buffer it
+# still buys the tea this tick will eat.
 func _import_tea(state: EconomyState, params: Params) -> void:
-	var buffer: float = tea_demand_per_second(state, params) \
-		* float(params.get_value(&"market.tea.buffer_seconds"))
-	var target: int = ceili(buffer - ProductionSystem.ROUNDING_EPSILON)
+	var demand: float = tea_demand_per_second(state, params)
+	var buffer: float = demand * float(params.get_value(&"market.tea.buffer_seconds"))
+	var target: int = ceili(maxf(buffer, demand) - ProductionSystem.ROUNDING_EPSILON)
 	var stock: int = int(state.stocks.get(&"tea", 0))
 	var price: int = int(params.get_value(&"market.tea.price"))
 	var units: int = affordable(state, maxi(0, target - stock), price)

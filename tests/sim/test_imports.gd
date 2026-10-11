@@ -402,3 +402,38 @@ func test_tea_spending_is_reported_apart_from_the_flour() -> void:
 	var only_flour: EconomyState = _state([&"wharf", &"bakery"])
 	only_flour.flour_imports_enabled = true
 	assert_eq(_run(only_flour, 120).snapshot()["stats"]["tea_spent_per_minute"], 0.0)
+
+
+func test_flour_lots_are_bought_until_every_requesting_bakery_gets_a_unit() -> void:
+	var buildings: Array[StringName] = [&"wharf"]
+	for index: int in range(11):
+		buildings.append(&"bakery")
+	var state: EconomyState = _state(buildings, 20)
+	state.flour_imports_enabled = true
+	var params: Params = _params()
+	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
+	var stats: Dictionary = _run(state, 1, params).snapshot()["stats"]
+	# 11 bakeries against lots of 10: two lots, not one. A single tick makes the per-minute rate x60.
+	assert_eq(stats["imports_spent_per_minute"], float(2 * price) * 60.0)
+
+
+func test_flour_lots_are_limited_by_the_money() -> void:
+	var buildings: Array[StringName] = [&"wharf"]
+	for index: int in range(11):
+		buildings.append(&"bakery")
+	var params: Params = _params()
+	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
+	var state: EconomyState = _state(buildings, 20, price + 1)
+	state.flour_imports_enabled = true
+	var stats: Dictionary = _run(state, 1, params).snapshot()["stats"]
+	assert_eq(stats["imports_spent_per_minute"], float(price) * 60.0)
+
+
+func test_tea_with_no_buffer_is_still_bought_on_demand() -> void:
+	var state: EconomyState = _state([&"wharf"])
+	state.tea_imports_enabled = true
+	var no_buffer: Array[Modifier] = [Modifier.new(&"market.tea.buffer_seconds", &"set", 0)]
+	var sim: Simulation = _run(state, 60, _params(no_buffer))
+	assert_eq(sim.snapshot()["imports"]["tea"]["coverage"], 1.0)
+	assert_gt(sim.snapshot()["stats"]["tea_spent_per_minute"], 0.0)
+	assert_eq(sim.snapshot()["economy"]["satisfaction_breakdown"]["tea"], 15.0)
