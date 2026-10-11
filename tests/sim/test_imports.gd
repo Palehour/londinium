@@ -524,3 +524,17 @@ func test_mill_flour_is_capped_by_the_wheat_in_store_when_recipes_are_fast() -> 
 	state.flour_imports_enabled = true
 	var sim: Simulation = _run(state, 1, _params(fast))
 	assert_gt(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)
+
+
+func test_flour_lots_are_sized_on_what_the_mill_does_not_cover() -> void:
+	# The mill makes 10 flour a tick and the bakery takes 20: one lot of 10 closes the gap, not two.
+	var rates: Array[Modifier] = [Modifier.new(&"building.mill.recipe.seconds", &"set", 1),
+		Modifier.new(&"building.bakery.recipe.seconds", &"set", 0.5)]
+	var state: EconomyState = _state([&"wharf", &"mill", &"bakery"], 20)
+	state.stocks[&"wheat"] = 1000
+	state.wheat_purchases_enabled = false
+	state.flour_imports_enabled = true
+	var params: Params = _params(rates)
+	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
+	var stats: Dictionary = _run(state, 1, params).snapshot()["stats"]
+	assert_eq(stats["imports_spent_per_minute"], float(price) * 60.0)
