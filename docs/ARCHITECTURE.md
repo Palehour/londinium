@@ -57,6 +57,7 @@ londinium/
 ├── tests/
 │   ├── sim/                  # unit tests per system (test_production.gd, test_needs.gd, test_defeat.gd …)
 │   ├── data/                 # test_data_valid.gd: every JSON loads, keys exist, no orphan params
+│   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 ├── tools/                    # run_tests.sh / run_tests.ps1, balance report script
 ├── docs/                     # GDD.md, DECISIONS.md (canonical), ARCHITECTURE.md, WORKFLOW.md

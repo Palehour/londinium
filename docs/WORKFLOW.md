@@ -9,7 +9,9 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 - **Ramas cortas por issue**: `<tipo>/<issue>-<slug>` (`feat/`, `fix/`, `chore/`, `test/`), siempre desde
   `develop` y con PR a `develop`. Viven horas o pocos días; se borran al mergear.
 - **Docs**: `docs/GDD.md` y `docs/DECISIONS.md` solo cambian en ramas `docs/<issue>-<slug>` que preparan Mason o
-  Chronicler; Cristian las aprueba. Los agentes de código nunca los tocan.
+  Chronicler; Cristian las aprueba. Los agentes de código solo los editan con autorización explícita de Cristian, citada en un
+  comentario de la PR y confirmada por Bailey con Cristian antes de aprobar; sin ella, proponen el texto en la
+  sección "Decisiones y docs" de la PR y no lo editan.
 
 ### Protección de `main` y `develop`
 - En GitHub, las dos ramas tienen protección clásica: PR obligatoria (0 aprobaciones), también para admins,
