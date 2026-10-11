@@ -31,6 +31,8 @@ var defeat_initialized: bool = false
 var defeat_elapsed_seconds: int = 0
 var hunger_smoothed_coverage: float = 1.0
 var hunger_emigration_active: bool = false
+# Seconds since someone last left because of low satisfaction; -1 means nobody ever has.
+var satisfaction_departure_age_seconds: int = -1
 var population_peak: float = 0.0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
@@ -74,6 +76,7 @@ func to_dict() -> Dictionary:
 		"defeat_elapsed_seconds": defeat_elapsed_seconds,
 		"hunger_smoothed_coverage": hunger_smoothed_coverage,
 		"hunger_emigration_active": hunger_emigration_active,
+		"satisfaction_departure_age_seconds": satisfaction_departure_age_seconds,
 		"population_peak": population_peak, "depopulation_active": depopulation_active,
 		"defeat_causes": defeat_causes.duplicate(),
 		"wheat_purchases_enabled": wheat_purchases_enabled,
@@ -112,6 +115,7 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.defeat_elapsed_seconds = values.get("defeat_elapsed_seconds", 0)
 	result.hunger_smoothed_coverage = values.get("hunger_smoothed_coverage", 1.0)
 	result.hunger_emigration_active = values.get("hunger_emigration_active", false)
+	result.satisfaction_departure_age_seconds = int(values.get("satisfaction_departure_age_seconds", -1))
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
 	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
