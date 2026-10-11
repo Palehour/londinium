@@ -512,3 +512,15 @@ func test_each_wharf_is_judged_on_its_own_workers_and_money() -> void:
 	for building: Dictionary in _diagnostics_after_one_tick(broke)["buildings"]:
 		if building["definition_id"] == &"wharf":
 			assert_eq(building["reason"], &"no_money_for_imports")
+
+
+func test_mill_flour_is_capped_by_the_wheat_in_store_when_recipes_are_fast() -> void:
+	# Half-second recipes: a staffed mill could grind 20 a tick, but one unit of wheat gives 1 of flour.
+	var fast: Array[Modifier] = [Modifier.new(&"building.mill.recipe.seconds", &"set", 0.5),
+		Modifier.new(&"building.bakery.recipe.seconds", &"set", 0.5)]
+	var state: EconomyState = _state([&"wharf", &"mill", &"bakery"], 20)
+	state.stocks[&"wheat"] = 1
+	state.wheat_purchases_enabled = false
+	state.flour_imports_enabled = true
+	var sim: Simulation = _run(state, 1, _params(fast))
+	assert_gt(sim.snapshot()["stats"]["imports_spent_per_minute"], 0.0)

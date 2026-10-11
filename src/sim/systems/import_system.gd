@@ -47,19 +47,23 @@ static func bakery_units_needed(state: EconomyState, params: Params) -> int:
 	return units
 
 
-# Flour per second the staffed mills can still make. A mill keeps working on the unit it already holds;
-# every other one needs a whole unit of the stock, and each unit goes to one mill (as in ProductionSystem).
+# Flour per second the staffed mills can still make. A mill works through the wheat it already holds
+# plus whole units of the stock, up to what its modified rate takes in a tick; each unit goes to one
+# mill (as in ProductionSystem), so scarce wheat limits the flour credited.
 static func mill_flour_rate(state: EconomyState, params: Params) -> float:
 	var rate: float = 0.0
 	var spare_wheat: int = int(state.stocks.get(&"wheat", 0))
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] != &"mill":
 			continue
-		if float(building.get("reserved_input", 0.0)) <= 0.0:
-			if spare_wheat <= 0:
-				continue
-			spare_wheat -= 1
-		rate += ProductionSystem.staffed_rate(params, building, "outputs.flour")
+		var input_budget: float = ProductionSystem.staffed_rate(params, building, "inputs.wheat")
+		if input_budget <= 0.0:
+			continue
+		var held: float = maxf(0.0, float(building.get("reserved_input", 0.0)))
+		var units: int = mini(spare_wheat, ceili(maxf(0.0, input_budget - held) - ProductionSystem.ROUNDING_EPSILON))
+		spare_wheat -= units
+		var processed: float = minf(input_budget, held + float(units))
+		rate += processed * ProductionSystem.staffed_rate(params, building, "outputs.flour") / input_budget
 	return rate
 
 
