@@ -66,7 +66,7 @@ func test_demolish_after_grace_with_workers_refunds_half() -> void:
 	assert_eq(_money(sim), _initial.money - _cost + roundi(_cost * 0.5))
 
 
-func test_building_without_workers_refunds_full_cost_after_grace() -> void:
+func test_bakery_with_jobs_but_no_workers_refunds_full_cost_after_grace() -> void:
 	_initial.population = 0
 	var sim: Simulation = _sim()
 	_build_and_wait(sim, _grace + 30)
