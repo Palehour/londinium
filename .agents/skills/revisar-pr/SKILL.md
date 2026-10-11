@@ -19,12 +19,10 @@ Clasificá cada hallazgo:
 - **Pregunta de diseño:** va a Cristian **sin resolverla vos**.
 
 ## `GDD.md` y `DECISIONS.md`
-- Si el PR los edita, es **bloqueante** salvo que haya una **autorización explícita de Cristian citada en
-  un comentario de la PR**.
-- Aun con la cita, **Bailey la confirma directamente con Cristian antes de aprobar**.
-- Si no hay autorización y el agente propuso el texto en "Decisiones y docs", revisá la propuesta pero
-  no esperes que esté aplicada.
-- Verificá que no se hayan implementado P-xxx sin aprobación.
+Aplicá la regla de `decision-diseno`: si el PR los edita sin la autorización de Cristian citada en un comentario
+de la PR, es **bloqueante**. Si hay autorización, confirmala con Cristian antes de aprobar. Si propusieron el texto
+en "Decisiones y docs", revisá la propuesta sin esperar que esté aplicada. Verificá también que no se hayan
+implementado P-xxx sin aprobación.
 
 **No mergees.**
 

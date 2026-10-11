@@ -15,10 +15,9 @@ Milestone 1 (M1) = the economy loop in `docs/GDD.md` ("Primer hito"). Colored sq
 Cristian does not write code. He reviews PRs and plays builds. Make his review easy.
 
 ## Source of truth
-- `docs/GDD.md` and `docs/DECISIONS.md` are canonical. They are drafted by the designer/historian bots and
-  approved by Cristian. Agents edit them **only with Cristian's explicit authorization**, quoted in a PR comment
-  and confirmed by Bailey with Cristian before approving. Without it, propose the text under "Decisiones y docs"
-  in your PR and do not edit; implement the most conservative reading (see `decision-diseno`).
+- `docs/GDD.md` and `docs/DECISIONS.md` are canonical and drafted by the designer/historian bots; agents edit
+  them only as the `decision-diseno` skill says. If you think a doc is wrong or ambiguous, write it under
+  "Decisiones y docs" in your PR and implement the most conservative reading.
 - Implement only **Decided** items (D-xxx). **Proposals (P-xxx) are not implemented** unless the issue
   says the proposal was approved.
 - All balance numbers live in `data/`. Never hardcode a cost, rate, threshold or weight in code.
@@ -83,5 +82,5 @@ not later. Steps and commands: `abrir-pr`. Agents never merge; PRs are squash-me
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
 2. `tools/run_tests` passes locally and CI is green. No new warnings or errors in the import log (`.godot/import.log`).
 3. No hardcoded balance values; new parameters added to `data/` and read through `Params`.
-4. No edits to `docs/GDD.md` / `docs/DECISIONS.md` without Cristian's authorization quoted in the PR; no P-xxx implemented without approval.
+4. `docs/GDD.md` / `docs/DECISIONS.md` untouched unless `decision-diseno` allows it; no P-xxx implemented without approval.
 5. PR description uses the template: what changed, how to verify (≤ 3 steps), screenshots if UI, "Decisiones y docs".

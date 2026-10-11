@@ -14,6 +14,8 @@ El dinero es un `int` en peniques en toda la simulación. La conversión a libra
 Aceptado. Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
-- Ningún `float` guarda dinero en `EconomyState`.
+- El dinero de la tesorería (`money`) y los pagos ya liquidados son `int` en peniques. Los restos de centavo
+  pendientes (`tax_fraction`, `wage_fraction`, `upkeep_fraction`) son `float` a propósito: se acumulan y
+  `MoneySystem` solo liquida las unidades enteras. No son dinero y no se deben quitar del estado.
 - `Params.get_value()` aplica ese redondeo único a las claves monetarias.
 - Los datos de `data/` expresan costos y precios en peniques enteros.
