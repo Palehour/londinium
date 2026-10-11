@@ -1,0 +1,59 @@
+name: Tarea para agente
+description: Una tarea chica y acotada para un agente de código (un issue = una rama = un PR).
+labels: ["listo-para-agente"]
+body:
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: Objetivo
+      description: Qué se quiere lograr y por qué, en pocas líneas.
+    validations:
+      required: true
+  - type: input
+    id: gdd
+    attributes:
+      label: Sección del GDD
+      description: Sección de docs/GDD.md que respalda la tarea.
+      placeholder: 'Primer hito'
+    validations:
+      required: true
+  - type: input
+    id: decisiones
+    attributes:
+      label: D-xxx
+      description: Decisiones de docs/DECISIONS.md que aplican. Solo decididas; las propuestas (P-xxx) no se implementan.
+      placeholder: 'D-011, D-021'
+    validations:
+      required: true
+  - type: textarea
+    id: alcance
+    attributes:
+      label: Alcance
+      description: Lista de lo que entra.
+      placeholder: '- ...'
+    validations:
+      required: true
+  - type: textarea
+    id: fuera-de-alcance
+    attributes:
+      label: Fuera de alcance
+      description: Lo que no se toca en este issue.
+      placeholder: '- ...'
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Casillas verificables; cada una debería poder ligarse a un test.
+      placeholder: '- [ ] ...'
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests
+      description: Qué tests o pasos manuales demuestran cada criterio.
+      placeholder: '- [ ] ...'
+    validations:
+      required: true

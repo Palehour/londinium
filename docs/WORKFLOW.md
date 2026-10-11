@@ -8,8 +8,9 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
   (`v0.1.0` = primer build jugable del hito 1), que dispara los builds.
 - **Ramas cortas por issue**: `<tipo>/<issue>-<slug>` (`feat/`, `fix/`, `chore/`, `test/`), siempre desde
   `develop` y con PR a `develop`. Viven horas o pocos días; se borran al mergear.
-- **Docs**: `docs/GDD.md` y `docs/DECISIONS.md` solo cambian en ramas `docs/<issue>-<slug>` que preparan Mason o
-  Chronicler; Cristian las aprueba. Los agentes de código nunca los tocan.
+- **Docs**: `docs/GDD.md` y `docs/DECISIONS.md` cambian en ramas `docs/<issue>-<slug>` que preparan Mason o
+  Chronicler; Cristian las aprueba. Los agentes de código solo los editan en su rama de tarea, con la autorización
+  de Cristian que describe la skill `decision-diseno`.
 
 ### Protección de `main` y `develop`
 - En GitHub, las dos ramas tienen protección clásica: PR obligatoria (0 aprobaciones), también para admins,
@@ -27,7 +28,8 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 4. **PR chica** a `develop` con el template (qué cambió, cómo verificarlo en ≤ 3 pasos, dudas de docs).
 5. **CI** (`ci.yml`, job `tests (headless GUT)`): importa el proyecto y corre GUT headless en Linux. Tiene que estar verde.
 6. **Revisión de Cristian**: lee el resumen, prueba los 3 pasos en el PC si toca pantalla, mergea con
-   *squash merge*. Opcional: pedirle a un segundo agente que revise la PR antes.
+   *squash merge*. Bailey revisa la PR antes (ver la skill `revisar-pr`) y confirma con Cristian las autorizaciones de edición de
+   `GDD.md`/`DECISIONS.md`. Opcional: pedirle además a un segundo agente que revise.
 7. Un agente por issue a la vez; issues que tocan los mismos archivos, en serie.
 
 ## Release
