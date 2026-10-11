@@ -53,7 +53,7 @@ Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumido
 4. **Vivienda o producción:** más gente trae más impuestos, pero también más bocas.
 5. **Té o ahorro:** subir la satisfacción contra guardar plata para expandirse.
 
-**Demoler.** Demoler devuelve el 100 % del costo si el edificio no tiene trabajadores o si pasaron 15 s o menos desde que se construyó (es un deshacer, no una venta); pasado ese margen devuelve el 50 %, redondeado (#16, D-023). El costo es el vigente, con los modificadores de rol, no el pagado. El trabajo en curso se pierde, el stock global se conserva y la casilla queda libre. Los edificios iniciales cuentan con el margen vencido. Qué pasa con los edificios sin empleos, como la vivienda, que hoy devuelven siempre el 100 %, se define en el #58.
+**Demoler.** Demoler devuelve el 100 % del costo a cualquier edificio si pasaron 15 s o menos desde que se construyó (es un deshacer, no una venta). Pasado ese margen: los edificios sin empleos, como la vivienda, devuelven el 50 % (`no_jobs_refund_ratio`); los edificios con empleos pero sin trabajadores siguen devolviendo el 100 %; el resto devuelve el 50 % (`refund_ratio`). Todo redondeado (#16, #58, D-023, D-029). El costo es el vigente, con los modificadores de rol, no el pagado. El trabajo en curso se pierde, el stock global se conserva y la casilla queda libre. Los edificios iniciales cuentan con el margen vencido.
 
 ## Derrota
 
