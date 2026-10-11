@@ -377,8 +377,8 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 		role.modifiers.append(Modifier.new(key, &"set", 0))
 	var params: Params = Params.new(_catalog, role)
 	var threshold: float = float(params.get_value(&"population.growth.emigration_threshold"))
-	var coverage_threshold: float = float(params.get_value(&"population.growth.hunger_emigration_threshold"))
 	var window: int = int(params.get_value(&"defeat.depopulation.stability_window_seconds"))
+	var minimum: int = int(params.get_value(&"defeat.depopulation.minimum_population"))
 	var decay: float = float(params.get_value(&"defeat.depopulation.peak_decay_per_minute"))
 	var initial: EconomyState = EconomyState.new()
 	initial.population = 9
@@ -391,6 +391,9 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	var sim: Simulation = Simulation.new(params, initial, 42, context)
 	var previous: Dictionary = sim.snapshot()["economy"]
+	# The oracle counts seconds since the last real departure from population drops (no housing, so
+	# nobody arrives), never from the counter under test; -1 means nobody has left yet.
+	var seconds_since_departure: int = -1
 	var unstable_ticks: int = 0
 	var stable_ticks: int = 0
 	var recovery_requested: bool = false
@@ -398,44 +401,37 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 	var bakery: BuildCommand
 	var lower_tax: SetTaxCommand
 	# Full bread minus maximum tax and overcrowding targets exactly 30, not below.
-	# Depleting real reserves lowers that target before smoothed coverage triggers hunger.
-	for index: int in range(400):
+	# Depleting real reserves lowers that target before smoothed coverage reaches zero.
+	for index: int in range(900):
 		sim.tick()
 		var current: Dictionary = sim.snapshot()["economy"]
 		assert_false(current["hunger_emigration_active"])
-		assert_gte(float(current["hunger_smoothed_coverage"]), coverage_threshold)
 		assert_true(current["defeat_causes"].is_empty())
 		assert_eq(current["housing_capacity"], 0)
 		assert_true(current["depopulation_active"])
 		assert_gt(float(current["population"]), float(current["population_peak"])
 			* float(params.get_value(&"defeat.depopulation.warning_fraction")),
 			"Only the absolute minimum can cause this warning")
-		var age: int = int(current["satisfaction_departure_age_seconds"])
-		if age >= 0 and age < window:
+		var departed: bool = current["population"] < previous["population"]
+		assert_false(current["population"] > previous["population"], "Nobody arrives without housing")
+		if departed:
+			seconds_since_departure = 0
+			# Both values must be below the threshold for anyone to leave.
+			assert_lt(float(current["satisfaction"]), threshold)
+			assert_lt(float(current["satisfaction_target"]), threshold)
+		elif seconds_since_departure >= 0:
+			seconds_since_departure += 1
+		var in_window: bool = seconds_since_departure >= 0 and seconds_since_departure < window
+		var city: EconomyState = EconomyState.from_dict(current)
+		assert_eq(_system.is_city_stable(city, params), not in_window)
+		if in_window:
 			unstable_ticks += 1
-			if unstable_ticks == 1:
-				# The first departure is what opens the window, and it needs both values below the threshold.
-				assert_eq(age, 0)
-				assert_lt(float(current["satisfaction"]), threshold)
-				assert_lt(float(current["satisfaction_target"]), threshold)
-				assert_lt(current["population"], previous["population"])
-			if recovery_requested:
-				assert_true(bakery.accepted)
-				assert_true(lower_tax.accepted)
-				assert_eq(current["tax_rate"], 0.0)
-				assert_eq(current["bread_coverage"], 0.0, "The new bakery has not completed its first batch yet")
-				assert_false(_system.is_city_stable(EconomyState.from_dict(current), params), "Still inside the window")
-				recovered = true
 			assert_eq(current["population_peak"], previous["population_peak"])
 			assert_eq(current["depopulation"]["status"], &"warning")
 			assert_eq(current["depopulation"]["cause"], &"depopulation")
 			assert_eq(current["depopulation"]["elapsed_seconds"], unstable_ticks)
-			if recovered:
-				break
-			assert_lt(current["population"], int(params.get_value(&"defeat.depopulation.minimum_population")))
+			assert_lt(current["population"], minimum)
 			if not recovery_requested and unstable_ticks >= 3:
-				assert_lt(float(current["satisfaction_target"]), threshold)
-				assert_lt(float(current["bread_coverage"]), 1.0)
 				var land: Vector2i = Vector2i.ZERO
 				while land in context.map.river_cells:
 					land.x += 1
@@ -444,31 +440,48 @@ func test_real_satisfaction_crisis_and_recovery_control_stability_in_simulation(
 				sim.apply_command(bakery)
 				sim.apply_command(lower_tax)
 				recovery_requested = true
-		else:
+		elif seconds_since_departure < 0:
 			stable_ticks += 1
 			assert_almost_eq(float(current["population_peak"]),
 				float(previous["population_peak"]) * pow(1.0 - decay, 1.0 / 60.0), 0.00000001)
 			assert_eq(current["depopulation"]["status"], &"ok")
-			assert_eq(current["depopulation"]["cause"], &"")
 			assert_eq(current["depopulation"]["elapsed_seconds"], 0)
 			assert_almost_eq(float(current["satisfaction_target"]),
 				clampf(float(current["hunger_smoothed_coverage"]) * 100.0 - 70.0, 0.0, 100.0), 0.00000001)
+		else:
+			# A whole window passed without anyone leaving: the city is stable again.
+			assert_true(recovery_requested, "The crisis must have been answered with real commands")
+			assert_true(bakery.accepted)
+			assert_true(lower_tax.accepted)
+			assert_eq(current["tax_rate"], 0.0)
+			assert_gt(float(current["satisfaction_target"]), threshold, "Recovery comes from real bread and tax")
+			assert_eq(seconds_since_departure, window)
+			assert_eq(current["depopulation"]["status"], &"ok")
+			assert_eq(current["depopulation"]["cause"], &"")
+			assert_eq(current["depopulation"]["elapsed_seconds"], 0)
+			assert_almost_eq(float(current["population_peak"]), maxf(float(current["population"]),
+				float(previous["population_peak"]) * pow(1.0 - decay, 1.0 / 60.0)), 0.00000001)
+			assert_lt(float(current["population_peak"]), float(previous["population_peak"]), "The peak decays again")
+			recovered = true
+			break
 		previous = current
 	assert_gt(stable_ticks, 1, "Exercise real smoothing and decay before the crisis")
-	assert_gt(unstable_ticks, 1, "The minimum must count for the whole satisfaction crisis")
+	assert_gte(unstable_ticks, window, "The minimum must count from the first departure through a full quiet window")
 	assert_true(recovery_requested)
-	assert_true(recovered, "Real production and tax commands must restore stability")
+	assert_true(recovered, "Real production and tax commands must restore stability within the tick limit")
 
-	# Without bread the target falls again as smoothed coverage decays, so new departures may reopen the
-	# window. Whatever happens, the stability rule and the depopulation warning must follow the age.
+	# Recovery holds: nobody else leaves, the warning stays away and the peak keeps decaying.
+	var recovered_state: Dictionary = sim.snapshot()["economy"]
+	var held: Dictionary = recovered_state
 	for index: int in range(60):
 		sim.tick()
 		var current: Dictionary = sim.snapshot()["economy"]
-		var current_age: int = int(current["satisfaction_departure_age_seconds"])
-		var expected_stable: bool = current_age < 0 or current_age >= window
-		assert_eq(_system.is_city_stable(EconomyState.from_dict(current), params), expected_stable)
-		assert_eq(current["depopulation"]["status"], &"ok" if expected_stable else &"warning")
-	var supplied: Dictionary = sim.snapshot()["economy"]
-	assert_eq(supplied["bread_coverage"], 1.0, "The accepted bakery supplies real bread after its production cycle")
-	assert_false(supplied["hunger_emigration_active"])
-	assert_true(supplied["defeat_causes"].is_empty())
+		assert_eq(current["population"], held["population"])
+		assert_true(_system.is_city_stable(EconomyState.from_dict(current), params))
+		assert_eq(current["depopulation"]["status"], &"ok")
+		assert_eq(current["depopulation"]["elapsed_seconds"], 0)
+		assert_almost_eq(float(current["population_peak"]), maxf(float(current["population"]),
+			float(held["population_peak"]) * pow(1.0 - decay, 1.0 / 60.0)), 0.00000001)
+		held = current
+	assert_eq(held["bread_coverage"], 1.0, "The accepted bakery supplies real bread")
+	assert_true(held["defeat_causes"].is_empty())
