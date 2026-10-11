@@ -25,8 +25,8 @@ description: Abre el PR de un issue de Londinium (plantilla, labels, milestone, 
      - **Un campo por llamada:** `gh project item-edit --id <item-id> --project-id <project-id> --field-id <field-id> --single-select-option-id <option-id>` (así no se rompen los acentos).
    - Si falta el scope `project`: escribí `Tablero: pendiente (sin scope project)` en el PR. No ejecutes
      `gh auth login`; Cristian corre `gh auth refresh -h github.com -s project` una vez. No lo omitas en silencio.
-6. **Nunca mergees.** Los PR van con **squash merge a `develop`**, y lo hace Cristian o quien revise. Después
-   del merge, el Status pasa a `Hecho`.
+6. **Solo Cristian mergea**, o un agente cuando Cristian se lo pide explícitamente. Los PR van con
+   **squash merge a `develop`**. Después del merge, el Status pasa a `Hecho`.
 
 ## Atender la revisión
 1. **Verificá cada comentario antes de aplicarlo.** Comprobalo en el código y en los docs; si es incorrecto o

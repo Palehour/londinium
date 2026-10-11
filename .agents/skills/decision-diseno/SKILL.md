@@ -19,6 +19,8 @@ Aprobado por Cristian (11/10/2026):
 - Esa autorización **se cita en un comentario de la PR**, y Bailey la **confirma directamente con Cristian**
   antes de aprobar.
 - La edición autorizada va en **tu rama de tarea** (`<tipo>/<n>-<slug>`); las ramas `docs/` son de los bots.
+- Si la cita de la autorización **no la escribió Cristian** (la pegó el agente u otra persona), la confirmación de
+  Bailey con Cristian es **obligatoria** antes de aprobar.
 - **Sin esa autorización**, el agente propone el texto en la sección **"Decisiones y docs"** de la PR y
   **no lo edita**.
 

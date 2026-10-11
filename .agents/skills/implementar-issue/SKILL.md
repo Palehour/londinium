@@ -20,8 +20,13 @@ Las reglas de fondo están en `AGENTS.md`; acá solo el orden de trabajo.
    - Aleatoriedad solo con el `RandomNumberGenerator` con semilla de la simulación.
    - Dinero en peniques, `int`.
    - Todo valor de balance en `data/`, leído con `Params.get_value()`.
-7. **Verificar.** Corré `tools/run_tests.ps1` (Windows) o `tools/run_tests.sh` con Godot 4.7.2 (consola).
-   No digas "terminado" sin pegar la salida del comando, y mirá `.godot/import.log`.
+7. **Verificar.** Corré la suite con Godot 4.7.2 y la variable `GODOT` apuntando al binario. No digas
+   "terminado" sin pegar la salida del comando, y mirá `.godot/import.log`.
+   - Windows (PowerShell): `$env:GODOT = "C:\Godot\Godot_v4.7.2-stable_win64_console.exe"` y
+     `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1`.
+   - Linux: `GODOT=/ruta/a/Godot_v4.7.2-stable_linux.x86_64 tools/run_tests.sh`.
+   - macOS: `GODOT=/Applications/Godot.app/Contents/MacOS/Godot tools/run_tests.sh`.
+   - Un solo archivo: agregá `-gtest=res://tests/sim/test_production.gd` al final del comando.
 8. **Entregar** con `abrir-pr`.
 
 ## Gotchas

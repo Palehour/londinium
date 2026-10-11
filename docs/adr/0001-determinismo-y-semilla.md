@@ -1,6 +1,6 @@
 # ADR 0001: Determinismo y semilla
 
-- **Estado:** Aceptado
+- **Estado:** Propuesto
 - **Fecha:** 2026-10-11
 - **Origen:** issue #3
 
@@ -11,7 +11,7 @@ La simulación tiene que poder repetirse, probarse headless y, más adelante, re
 La simulación es determinista. El `RandomNumberGenerator` con semilla es propiedad de la `Simulation`; el código de `src/sim/` no usa `randf()` ni otro generador global. Misma semilla y misma lista de comandos dan el mismo snapshot.
 
 ## Estado
-Aceptado. Registra lo ya decidido y construido; no introduce comportamiento nuevo.
+Propuesto hasta el merge del PR #99; pasa a Aceptado al mergear (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - Hay un test de 900 ticks que compara dos corridas con la misma semilla y los mismos comandos.

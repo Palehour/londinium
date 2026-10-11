@@ -24,7 +24,7 @@ Closes #
 - [ ] Base branch is `develop` (unless this is a release PR to `main`)
 - [ ] `tools/run_tests` green locally, CI green, no new warnings in `.godot/import.log`
 - [ ] No hardcoded balance values (all in `data/`, read via `Params`)
-- [ ] No edits to `docs/GDD.md` / `docs/DECISIONS.md`, or Cristian's authorization is quoted in a PR comment; no P-xxx implemented without approval
+- [ ] No edits to `docs/GDD.md` / `docs/DECISIONS.md`, or Cristian's authorization is quoted in a PR comment and confirmed by Bailey with Cristian; no P-xxx implemented without approval
 - [ ] No tests weakened/skipped; scope limited to the issue
 - [ ] Labels, milestone, assignee and project status are set (see the `abrir-pr` skill)
 - [ ] Docs/ADR/skill actualizados en este PR, o No aplica: <motivo>

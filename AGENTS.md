@@ -76,7 +76,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 
 ## GitHub tracking
 Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
-not later. Steps and commands: `abrir-pr`. Agents never merge; PRs are squash-merged into `develop`.
+not later. Steps and commands: `abrir-pr`. Only Cristian merges (or an agent he explicitly asks to); PRs are squash-merged into `develop`.
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.

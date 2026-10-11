@@ -1,6 +1,6 @@
 name: Tarea para agente
 description: Una tarea chica y acotada para un agente de código (un issue = una rama = un PR).
-labels: ["hito-1", "listo-para-agente"]
+labels: ["listo-para-agente"]
 body:
   - type: textarea
     id: objetivo
