@@ -1,6 +1,7 @@
 extends GutTest
 
 const CELL: Vector2i = Vector2i(1, 1)
+const NO_JOBS_RATIO_KEY: StringName = &"demolish.no_jobs_refund_ratio"
 
 var _catalog: DataCatalog
 var _context: EconomyContext
@@ -122,6 +123,57 @@ func test_refund_is_subtracted_from_construction_spending() -> void:
 	sim.tick()
 	assert_eq(_money(sim), _initial.money)
 	assert_eq(sim.snapshot()["stats"]["construction_spent_per_minute"], 0.0)
+
+
+func _build_housing_and_wait(sim: Simulation, seconds: int) -> void:
+	sim.apply_command(BuildCommand.new(_context, &"housing", CELL))
+	_ticks(sim, seconds)
+
+
+func _housing_cost() -> int:
+	return int(SimTestParams.isolated_params(_catalog).get_value(&"building.housing.cost"))
+
+
+func test_housing_within_grace_refunds_full_cost() -> void:
+	var sim: Simulation = _sim()
+	_build_housing_and_wait(sim, _grace)
+	assert_true(_demolish(sim).accepted)
+	assert_eq(_money(sim), _initial.money)
+
+
+func test_housing_after_grace_refunds_the_no_jobs_fraction() -> void:
+	var sim: Simulation = _sim()
+	_build_housing_and_wait(sim, _grace + 1)
+	assert_true(_demolish(sim).accepted)
+	assert_eq(_money(sim), _initial.money - _housing_cost() + roundi(_housing_cost() * 0.5))
+
+
+func test_initial_housing_without_build_time_refunds_the_no_jobs_fraction() -> void:
+	_initial.buildings.append({"definition_id": &"housing", "cell": [1, 1]})
+	var sim: Simulation = _sim()
+	sim.tick()
+	assert_true(_demolish(sim).accepted)
+	assert_eq(_money(sim), _initial.money + roundi(_housing_cost() * 0.5))
+
+
+func test_role_modifier_changes_the_no_jobs_ratio() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(NO_JOBS_RATIO_KEY, &"set", 0.25)])
+	var sim: Simulation = _sim(role)
+	_build_housing_and_wait(sim, _grace + 1)
+	assert_true(_demolish(sim).accepted)
+	assert_eq(_money(sim), _initial.money - _housing_cost() + roundi(_housing_cost() * 0.25))
+
+
+func test_building_whose_jobs_a_role_zeroes_uses_the_no_jobs_ratio() -> void:
+	# A role that gives the bakery zero job slots turns it into a jobless building.
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.assign([Modifier.new(&"building.bakery.jobs", &"set", 0)])
+	_initial.population = 3
+	var sim: Simulation = _sim(role)
+	_build_and_wait(sim, _grace + 30)
+	assert_true(_demolish(sim).accepted)
+	assert_eq(_money(sim), _initial.money - _cost + roundi(_cost * 0.5))
 
 
 func _bankrupt_sim() -> Simulation:

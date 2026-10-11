@@ -472,7 +472,7 @@ func test_coverage_snap_epsilon_is_required_positive_finite_and_typed() -> void:
 
 
 func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
-	for field: String in ["refund_ratio", "refund_grace_seconds"]:
+	for field: String in ["refund_ratio", "refund_grace_seconds", "no_jobs_refund_ratio"]:
 		before_each()
 		_documents["economy/demolish.json"].erase(field)
 		_assert_invalid(field + ": missing field")
@@ -483,9 +483,15 @@ func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
 		before_each()
 		_documents["economy/demolish.json"]["refund_ratio"] = invalid
 		_assert_invalid("demolish.json.refund_ratio: invalid fraction")
+		before_each()
+		_documents["economy/demolish.json"]["no_jobs_refund_ratio"] = invalid
+		_assert_invalid("demolish.json.no_jobs_refund_ratio: invalid fraction")
 	before_each()
 	_documents["economy/demolish.json"]["refund_grace_seconds"] = -1
 	_assert_invalid("demolish.json.refund_grace_seconds: invalid number")
 	before_each()
 	_set_modifier({"key": "demolish.refund_ratio", "op": "set", "value": 1.5})
 	_assert_invalid("Params: invalid range for 'demolish.refund_ratio'")
+	before_each()
+	_set_modifier({"key": "demolish.no_jobs_refund_ratio", "op": "set", "value": 1.5})
+	_assert_invalid("Params: invalid range for 'demolish.no_jobs_refund_ratio'")

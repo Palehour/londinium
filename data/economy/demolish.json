@@ -1,1 +1,2 @@
-{ "refund_ratio": 0.5, "refund_grace_seconds": 15 }
+{ "refund_ratio": 0.5, "refund_grace_seconds": 15,
+  "no_jobs_refund_ratio": 0.5 }

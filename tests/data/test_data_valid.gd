@@ -158,3 +158,4 @@ func test_demolish_refund_parameters_exist_with_their_first_values() -> void:
 	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
 	assert_eq(params.get_value(&"demolish.refund_ratio"), 0.5)
 	assert_eq(float(params.get_value(&"demolish.refund_grace_seconds")), 15.0)
+	assert_eq(params.get_value(&"demolish.no_jobs_refund_ratio"), 0.5)
