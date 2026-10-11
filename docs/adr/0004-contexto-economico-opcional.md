@@ -1,6 +1,6 @@
 # ADR 0004: Contexto económico opcional
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-11
 - **Origen:** issues #3 y #4; src/sim/economy_context.gd
 
@@ -11,7 +11,7 @@ Algunos comandos y diagnósticos necesitan saber qué edificios y qué mapa exis
 `EconomyContext` agrupa solo las definiciones estructurales (ids, etiquetas, entradas y salidas de recetas) y el mapa. Es opcional al crear la `Simulation`, pero los sistemas económicos lo necesitan: sin contexto, `tick()` solo ejecuta los comandos en cola y avanza el contador de ticks. Los números de balance no están en el contexto: se siguen leyendo con `Params.get_value()`.
 
 ## Estado
-Propuesto mientras el PR #99 está abierto; se marca Aceptado en un commit de ese PR cuando Cristian lo aprueba, antes del merge (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
+Aceptado por Cristian el 2026-10-11 en el PR #99 (confirmado por Bailey). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - Las reglas de ubicación (por ejemplo, el campo de trigo solo en casillas cultivables) consultan el contexto.

@@ -1,6 +1,6 @@
 # ADR 0003: Reloj fijo, tope de 8 ticks por frame y atraso conservado
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-11
 - **Origen:** issue #3; src/game/sim_clock.gd
 
@@ -11,7 +11,7 @@ El juego avanza por frames de duración variable, pero la simulación tiene que 
 Un tick equivale a 1 segundo de juego a 1x. `SimClock` acumula `delta × velocidad` (pausa, 1x, 2x, 3x) y llama a `tick()` en pasos enteros, con un tope de 8 ticks por frame (`max_ticks_per_frame`). El tiempo que no entra por el tope queda en el acumulador: el atraso se conserva y se recupera en los frames siguientes, no se descarta.
 
 ## Estado
-Propuesto mientras el PR #99 está abierto; se marca Aceptado en un commit de ese PR cuando Cristian lo aprueba, antes del merge (ver `docs-vivos`). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
+Aceptado por Cristian el 2026-10-11 en el PR #99 (confirmado por Bailey). Registra lo ya decidido y construido; no introduce comportamiento nuevo.
 
 ## Consecuencias
 - La velocidad real del juego puede quedar por detrás si el equipo no da abasto, pero el estado nunca salta ni pierde segundos.
