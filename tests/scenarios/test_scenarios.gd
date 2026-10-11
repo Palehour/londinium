@@ -392,3 +392,46 @@ func test_net_worth_levers_one_at_a_time() -> void:
 			assert_gte(tally["wins"], MIN_STRICT_WINS, "accumulating must win some seeds")
 			assert_gte(tally["losses"], MIN_STRICT_LOSSES, "accumulating must lose some seeds")
 	gut.p("\n".join(report))
+
+
+# --- Importaciones (#7, D-025 y D-026) ---
+
+# D-025: with the tax at 0.85 the city only grows if it drinks tea. The tax of both games is the
+# same; the only difference is the switch.
+func test_tea_lets_the_city_grow_at_a_tax_of_85_percent_and_without_it_it_does_not() -> void:
+	var off: ScenarioResult = _result("tea_off")
+	var on: ScenarioResult = _result("tea_on")
+	assert_true(off.survived())
+	assert_true(on.survived())
+	assert_eq(on.final_row()["tax_rate"], 0.85)
+	assert_eq(off.final_row()["tax_rate"], 0.85)
+	assert_almost_eq(float(off.final_row()["population"]), 20.0, 0.5)
+	assert_gt(float(on.final_row()["population"]), float(off.final_row()["population"]))
+	assert_eq(float(on.final_row()["tea_coverage"]), 1.0)
+	assert_eq(off.final_row()["tea_stock"], 0)
+
+
+func test_tea_costs_money_and_it_is_in_the_operating_balance() -> void:
+	var on: ScenarioResult = _result("tea_on")
+	assert_gt(on.mean("imports_spent_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+	assert_eq(_result("tea_off").mean("imports_spent_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+
+
+# D-026: the bakery runs on imported flour with no mill, and the flour costs between 20 % and 30 %
+# more than the wheat that would have been milled into it (priced at the base price, 2).
+func test_imported_flour_feeds_the_city_with_no_mill() -> void:
+	var imported: ScenarioResult = _result("flour_imported")
+	assert_true(imported.survived())
+	assert_eq(imported.final_row()["n_mill"], 0)
+	assert_gte(float(imported.final_row()["bread_coverage"]), 0.95)
+	assert_gt(imported.mean("imports_spent_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+	assert_eq(imported.mean("wheat_spent_pm", LAST_MINUTES_FROM, MINUTES), 0.0)
+
+
+func test_imported_flour_costs_a_quarter_more_per_bread_than_milling_at_the_base_price() -> void:
+	var imported: ScenarioResult = _result("flour_imported")
+	var bread: float = imported.mean("bread_produced_pm", LAST_MINUTES_FROM, MINUTES)
+	var per_bread: float = imported.mean("imports_spent_pm", LAST_MINUTES_FROM, MINUTES) / bread
+	# Two loaves per unit of flour; wheat at 2 pence makes 1 penny of input per loaf.
+	assert_gte(per_bread, 1.0 * 1.2)
+	assert_lte(per_bread, 1.0 * 1.3)

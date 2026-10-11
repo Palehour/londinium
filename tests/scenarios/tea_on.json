@@ -1,0 +1,17 @@
+{
+  "id": "tea_on",
+  "description": "D-025 con té: la misma ciudad que tea_off, con la importación de té encendida desde el principio. Con cobertura total la satisfacción objetivo sube 15 (a 81) y la ciudad crece con impuesto 0,85.",
+  "notes": "Par con tea_off. El té se paga en el embarcadero a precio fijo y sale del balance operativo (imports_spent_pm).",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.85},
+    {"tick": 0, "cmd": "set_tea_imports", "enabled": true},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [7, 3]}
+  ]
+}
