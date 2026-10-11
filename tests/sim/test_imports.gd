@@ -538,3 +538,15 @@ func test_flour_lots_are_sized_on_what_the_mill_does_not_cover() -> void:
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	var stats: Dictionary = _run(state, 1, params).snapshot()["stats"]
 	assert_eq(stats["imports_spent_per_minute"], float(price) * 60.0)
+
+
+func test_tea_with_no_buffer_counts_the_fraction_already_in_store() -> void:
+	var state: EconomyState = _state([&"wharf"])
+	state.tea_imports_enabled = true
+	var no_buffer: Array[Modifier] = [Modifier.new(&"market.tea.buffer_seconds", &"set", 0)]
+	var params: Params = _params(no_buffer)
+	var price: int = int(params.get_value(&"market.tea.price"))
+	var sim: Simulation = _run(state, 60, params)
+	# 20 people drink 4 units in a minute; buying a unit every tick would cost 60.
+	assert_lte(sim.snapshot()["stats"]["tea_spent_per_minute"], float(4 * price))
+	assert_eq(sim.snapshot()["imports"]["tea"]["coverage"], 1.0)

@@ -120,14 +120,14 @@ func _import_flour(state: EconomyState, params: Params) -> void:
 
 
 # Keeps a small buffer of tea in store, so one empty tick does not drop the coverage. With no buffer it
-# still buys the tea this tick will eat.
+# still buys the tea this tick will eat. The part of a unit already in tea_fraction counts as stock.
 func _import_tea(state: EconomyState, params: Params) -> void:
 	var demand: float = tea_demand_per_second(state, params)
 	var buffer: float = demand * float(params.get_value(&"market.tea.buffer_seconds"))
-	var target: int = ceili(maxf(buffer, demand) - ProductionSystem.ROUNDING_EPSILON)
 	var stock: int = int(state.stocks.get(&"tea", 0))
+	var shortage: float = maxf(buffer, demand) - (float(stock) + state.tea_fraction)
 	var price: int = int(params.get_value(&"market.tea.price"))
-	var units: int = affordable(state, maxi(0, target - stock), price)
+	var units: int = affordable(state, ceili(maxf(0.0, shortage) - ProductionSystem.ROUNDING_EPSILON), price)
 	if units <= 0:
 		return
 	state.money -= units * price
