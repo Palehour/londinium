@@ -100,6 +100,7 @@ const GOOD_LABELS: Dictionary[StringName, String] = {
 }
 const REASONS: Dictionary[StringName, String] = {
 	&"below_threshold": "Por debajo del umbral.",
+	&"unreachable_threshold": "Ni con todos los bienes cubiertos se llega al umbral.",
 	&"no_cultivable_cells": NO_CULTIVABLE_CELLS,
 	&"unknown_building": "Tipo de edificio desconocido.",
 	&"outside_map": "La ubicación está fuera del mapa.",

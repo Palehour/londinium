@@ -166,6 +166,7 @@ func test_diagnostics_name_the_category_that_is_missing() -> void:
 	assert_false(categories[0]["met"])
 	assert_eq(categories[0]["reason"], &"below_threshold")
 	assert_eq(categories[0]["goods"], [{"good": &"bread", "coverage": 0.5}])
+	assert_eq(categories[0]["missing_goods"], [&"bread"] as Array[StringName])
 	assert_true(categories[1]["met"])
 	var housing: Dictionary = needs["classes"][&"worker"]["housing"]
 	assert_eq([housing["base"], housing["bonus"], housing["max_bonus"]], [20, 0, 0])
@@ -208,3 +209,15 @@ func test_restoring_an_old_snapshot_recomputes_the_needs() -> void:
 	assert_true(needs[&"worker"][&"sustento"]["met"])
 	assert_true(needs[&"worker"][&"comunidad"]["met"])
 	assert_eq(restored.snapshot()["economy"]["housing_capacity"], _state.housing_capacity)
+
+
+func test_diagnostics_flag_a_threshold_no_coverage_can_reach() -> void:
+	_params = _params_with({&"class.worker.need.bread.value": 50})
+	_evaluate(0.5)
+	var category: Dictionary = NeedsDiagnostics.build(_state, _params, _context)["classes"][&"worker"]["categories"][0]
+	assert_eq(category["reason"], &"unreachable_threshold")
+	assert_eq(category["missing_goods"], [&"bread"] as Array[StringName])
+	_params = _params_with({&"class.worker.need.bread.value": 80})
+	_evaluate(0.5)
+	category = NeedsDiagnostics.build(_state, _params, _context)["classes"][&"worker"]["categories"][0]
+	assert_eq(category["reason"], &"below_threshold")

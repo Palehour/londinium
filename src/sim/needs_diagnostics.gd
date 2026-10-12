@@ -5,6 +5,13 @@ extends RefCounted
 # The UI only formats this; ids (class, category, good, reason) are the keys that strings.gd translates.
 
 
+# unreachable_threshold: even with every good fully covered the category could not reach its threshold.
+static func _reason(entry: Dictionary, attainable: float) -> StringName:
+	if entry["met"]:
+		return &"ok"
+	return &"unreachable_threshold" if attainable < float(entry["threshold"]) else &"below_threshold"
+
+
 static func build(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
 	var classes: Dictionary = {}
 	if context == null:
@@ -15,13 +22,20 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 		for category: StringName in evaluated:
 			var entry: Dictionary = evaluated[category]
 			var goods: Array[Dictionary] = []
+			var missing: Array[StringName] = []
+			var attainable: float = 0.0
 			for need: NeedDef in definition.needs:
-				if need.category == category:
-					goods.append({"good": need.good, "coverage": NeedsSystem.coverage(state, need.good)})
+				if need.category != category:
+					continue
+				var coverage: float = NeedsSystem.coverage(state, need.good)
+				goods.append({"good": need.good, "coverage": coverage})
+				if coverage < 1.0:
+					missing.append(need.good)
+				attainable += float(params.get_value(StringName("class.%s.need.%s.value" % [definition.id, need.good])))
 			categories.append({
 				"category": category, "value": entry["value"], "threshold": entry["threshold"],
-				"met": entry["met"], "reason": &"ok" if entry["met"] else &"below_threshold",
-				"goods": goods,
+				"met": entry["met"], "reason": _reason(entry, attainable),
+				"goods": goods, "missing_goods": missing,
 			})
 		classes[definition.id] = {
 			"categories": categories,

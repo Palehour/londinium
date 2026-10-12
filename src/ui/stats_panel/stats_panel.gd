@@ -418,11 +418,10 @@ func _needs_text(needs: Dictionary) -> String:
 				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])
 				continue
 			var missing: Array[String] = []
-			for good: Dictionary in entry["goods"]:
-				if good["coverage"] < 1.0:
-					missing.append(Strings.label(Strings.GOOD_LABELS, good["good"]))
-			# Every good fully covered but worth too little (a modified value): the reason says it.
-			if missing.is_empty():
+			for good: StringName in entry["missing_goods"]:
+				missing.append(Strings.label(Strings.GOOD_LABELS, good))
+			# Nothing to cover that would help (the value is too low to ever reach the threshold): the reason says it.
+			if missing.is_empty() or entry["reason"] == &"unreachable_threshold":
 				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, value,
 					threshold, Strings.reason(entry["reason"])])
 				continue
