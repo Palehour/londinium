@@ -546,3 +546,14 @@ func test_panel_says_the_threshold_is_unreachable_instead_of_naming_a_good() -> 
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
 		% ["Trabajadores", "Sustento", 25.0, 75.0, Strings.reason(&"unreachable_threshold")])
 	assert_false(_text("_needs").contains("falta pan"))
+
+
+func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 62.99999999999999, "threshold": 63.0, "met": true,
+			"reason": &"ok", "goods": [{"good": &"bread", "coverage": 0.7}], "missing_goods": [&"bread"]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_MET % ["Trabajadores", "Sustento", 63.0, 63.0])

@@ -412,7 +412,8 @@ func _needs_text(needs: Dictionary) -> String:
 		for entry: Dictionary in info["categories"]:
 			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
 			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
-			var value: float = _tenths(entry["value"], false)
+			# A met score may sit a hair under its threshold (float drift): it reads as the threshold.
+			var value: float = _tenths(maxf(entry["value"], entry["threshold"]) if entry["met"] else entry["value"], false)
 			var threshold: float = _tenths(entry["threshold"], not entry["met"])
 			if entry["met"]:
 				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])

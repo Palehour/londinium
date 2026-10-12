@@ -61,6 +61,14 @@ func test_a_threshold_reached_exactly_on_paper_is_met_despite_float_drift() -> v
 	assert_false(_category(&"sustento")["met"])
 
 
+func test_a_genuine_shortfall_is_not_forgiven_as_float_drift() -> void:
+	_evaluate(0.749995)
+	assert_false(_category(&"sustento")["met"])
+	_params = _params_with({&"class.worker.housing_max_bonus": 10})
+	_evaluate(0.749995)
+	assert_eq(_state.housing_capacity, 20)
+
+
 func test_category_just_below_the_community_threshold_is_not_met() -> void:
 	_evaluate(1.0, 0.49)
 	assert_false(_category(&"comunidad")["met"])
