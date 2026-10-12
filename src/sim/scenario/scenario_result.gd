@@ -12,6 +12,7 @@ const CSV_COLUMNS: Array[String] = [
 	"bankruptcy", "hunger", "depopulation", "defeat_causes", "wheat_stock",
 	"imports_spent_pm", "tea_spent_pm", "tea_stock", "tea_coverage", "flour_stock",
 	"barley_spent_pm", "barley_stock",
+	"n_malthouse", "n_brewery", "malt_stock", "beer_stock",
 ]
 # Float columns are printed with two decimals; everything else is printed as it is.
 const FLOAT_COLUMNS: Array[String] = [
@@ -37,6 +38,9 @@ var max_timer: Dictionary[StringName, int] = {}
 var first_warning_tick: Dictionary[StringName, int] = {}
 # "building:reason" pairs the panel's bread diagnostics showed at any tick, e.g. "mill:missing_building".
 var bread_cause_pairs: Dictionary[String, bool] = {}
+# Ticks (1-based count of ticks run) at which a staffed building of each type ran out of input while it still
+# had capacity to use, e.g. &"mill" for a mill waiting for wheat (ProductionSystem counts it in _convert).
+var waiting_input_ticks: Dictionary[StringName, Array] = {}
 
 
 func row(minute: int) -> Dictionary:

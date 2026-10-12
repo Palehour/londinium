@@ -56,6 +56,29 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 	assert_false((_panel.get("_restart") as Button).visible)
 
 
+func test_panel_shows_malt_and_beer_stock_with_their_caps() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var market: Dictionary = _session.get_snapshot()["market"]
+	assert_eq(_text("_malt_beer_row"), Strings.MALT_BEER_ROW
+		% [0, market["malt"]["capacity"], 0, market["beer"]["capacity"]])
+
+
+# Issue #51 review: without this control the barley never reaches the malthouse in a normal game.
+func test_the_unloading_slider_sends_the_split_and_follows_the_snapshot() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_eq([slider.value, slider.max_value, slider.scrollable], [0.0, 100.0, false])
+	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 0)
+	slider.value = 30.0
+	slider.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 30)
+	assert_eq(slider.value, 30.0)
+	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 30)
+	assert_true(_session.get("_pending").is_empty(), "resyncing the slider does not resend the command")
+
+
 func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
 	_panel = _new_panel(_session)
@@ -240,6 +263,36 @@ func test_policy_controls_are_blocked_after_defeat() -> void:
 	assert_false((controls["accumulate"] as SpinBox).editable)
 	assert_false((_panel.get("_target") as HSlider).editable)
 	assert_false((_panel.get("_reserve") as HSlider).editable)
+
+
+func test_releasing_the_unloading_slider_where_it_was_sends_nothing() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	slider.drag_ended.emit(false)
+	assert_true(_session.get("_pending").is_empty(), "the value did not change")
+	slider.value = 30.0
+	slider.drag_ended.emit(true)
+	assert_eq(_session.get("_pending").size(), 1, "a changed value is sent once")
+	_tick()
+	_session.publish_tick()
+	slider.drag_ended.emit(false)
+	assert_true(_session.get("_pending").is_empty(), "30 is now the current split: nothing to send")
+
+
+func test_the_unloading_slider_is_blocked_after_defeat() -> void:
+	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+	_panel = _new_panel(_session)
+	_tick()
+	_tick()
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_false(slider.editable)
+	slider.value = 50.0
+	slider.drag_ended.emit(true)
+	assert_true(_session.get("_pending").is_empty(), "no command is sent once the game is lost")
+	_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 0)
 
 
 func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> void:

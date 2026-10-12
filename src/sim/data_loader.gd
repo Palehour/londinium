@@ -31,6 +31,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"max_price": "money", "price_update_seconds": "positive_integer",
 			"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
 			"decay_fraction_per_minute": "fraction"},
+		"malt": {"storage_capacity": "integer", "decay_fraction_per_minute": "fraction"},
+		"beer": {"storage_capacity": "integer", "decay_fraction_per_minute": "fraction"},
 		"imported_flour": {"price_per_lot": "money", "lot_size": "positive_integer",
 			"max_debt_lots": "positive_integer"},
 		"tea": {"price": "money", "buffer_seconds": "integer"}},

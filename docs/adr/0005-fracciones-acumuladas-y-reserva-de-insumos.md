@@ -1,6 +1,6 @@
 # ADR 0005: Fracciones acumuladas y reserva de insumos
 
-- **Estado:** Aceptado
+- **Estado:** Reemplazado por ADR 0006
 - **Fecha:** 2026-10-11
 - **Origen:** issues #3 y #4; src/sim/systems/production_system.gd
 

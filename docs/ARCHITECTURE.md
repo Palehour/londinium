@@ -29,10 +29,10 @@ londinium/
 ├── addons/gut/               # GUT 9.7.x vendored (never edited by agents)
 ├── data/                     # ALL balance + content, JSON, edited by agents/Mason, approved by Cristian
 │   ├── economy/
-│   │   ├── goods.json        # wheat, barley, flour, bread, tea, money unit
-│   │   ├── buildings.json    # wharf, mill, bakery, housing, wheat_field: cost, upkeep, jobs, recipe, tags
+│   │   ├── goods.json        # wheat, barley, flour, bread, malt, beer, tea, money unit
+│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, wheat_field: cost, upkeep, jobs, recipe, tags
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
-│   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); imported flour/tea prices (D-026/D-025)
+│   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
 │   ├── roles/
@@ -66,13 +66,13 @@ londinium/
 
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands.
-2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery), then the rest by priority bakery → mill → wharf; emigration frees jobs in reverse order (D-021).
+2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
    under which the max price stops applying; the pause toggle stops all buying). The warehouse has a capacity. The wharf buys imported flour that skips the mill
    (D-026); wheat fields on cultivable cells only.
    The wharf has one unloading capacity (its staffed wheat output per minute) that wheat, barley and the imported flour share; the tea is exempt (issue #50). A lot of flour is paid at once and leaves a debt of units that the next ticks unload first (`MarketSystem._pay_flour_unloading`); what is left is split by the player's `SetUnloadingSplit` (whole percent to barley, the rest to wheat, which keeps its purchase policy inside its share). Barley's price walks on its own seeded generator so the wheat series does not move.
-4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.
+4. Converters: mill (wheat→flour), bakery (flour→bread), malthouse (barley→malt), brewery (malt→beer), limited by staffed jobs and input stock. Malt and beer have a warehouse cap (`market.malt.*`, `market.beer.*`): a full warehouse stops its producer instead of discarding output (nothing consumes beer until #52), and beer spoils a little each minute. Several producers of a capped good share its room and its fractions (ADR 0006).
 5. Consumption: bread eaten per person; tea if available (D-025); stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
 7. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).

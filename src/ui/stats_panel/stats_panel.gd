@@ -28,8 +28,14 @@ var _flour: CheckButton
 var _tea_row: Label
 var _flour_row: Label
 var _barley_row: Label
+var _malt_beer_row: Label
+var _unloading: HSlider
+var _unloading_label: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
+var _dragging_unloading: bool = false
+# Split the simulation reported last, so releasing the slider where it was sends nothing.
+var _unloading_current: int = 0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
@@ -90,6 +96,8 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
 	_flour_row.text = _flour_text(snapshot["imports"]["flour"])
 	_barley_row.text = _barley_text(snapshot["market"]["barley"])
+	_update_unloading(snapshot["market"]["barley"], defeated)
+	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
@@ -125,6 +133,20 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_flour_row)
 	_barley_row = _label("")
 	content.add_child(_barley_row)
+	_malt_beer_row = _label("")
+	content.add_child(_malt_beer_row)
+	_unloading_label = _label("")
+	content.add_child(_unloading_label)
+	_unloading = HSlider.new()
+	_unloading.step = 1.0
+	_unloading.max_value = 100.0
+	_unloading.scrollable = false
+	_unloading.focus_mode = Control.FOCUS_NONE
+	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_unloading.drag_started.connect(func() -> void: _dragging_unloading = true)
+	_unloading.drag_ended.connect(_unloading_released)
+	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.UNLOADING_LABEL % int(value))
+	content.add_child(_unloading)
 	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
@@ -262,6 +284,28 @@ func _barley_text(barley: Dictionary) -> String:
 	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
 	return Strings.BARLEY_ROW % [barley["stock"], barley["capacity"], Strings.money(price), trend,
 		barley["barley_percent"], barley["wheat_percent"]]
+
+
+# The player's split of the wharf's unloading between barley and wheat (SetUnloadingSplitCommand); without it
+# the barley never arrives and the malthouse has nothing to work with.
+func _update_unloading(barley: Dictionary, defeated: bool) -> void:
+	if not _dragging_unloading:
+		_unloading.value = barley["barley_percent"]
+		_unloading_label.text = Strings.UNLOADING_LABEL % int(barley["barley_percent"])
+	_unloading_current = int(barley["barley_percent"])
+	_unloading.editable = not defeated
+
+
+func _unloading_released(_changed: bool) -> void:
+	_dragging_unloading = false
+	var percent: int = int(_unloading.value)
+	if not _unloading.editable or percent == _unloading_current:
+		return
+	session.submit_command(SetUnloadingSplitCommand.new(percent))
+
+
+func _malt_beer_text(malt: Dictionary, beer: Dictionary) -> String:
+	return Strings.MALT_BEER_ROW % [malt["stock"], malt["capacity"], beer["stock"], beer["capacity"]]
 
 
 # A lot is priced in whole pence, so the unit price can carry a fraction of a penny.

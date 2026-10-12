@@ -97,6 +97,15 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
 	&"market.barley.decay_fraction_per_minute": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": false},
+	# Malt and beer (issue #51): not traded, so only a warehouse cap and a spoilage rate.
+	&"market.malt.storage_capacity": {
+		"min": 0.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
+	&"market.malt.decay_fraction_per_minute": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": false},
+	&"market.beer.storage_capacity": {
+		"min": 0.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
+	&"market.beer.decay_fraction_per_minute": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": false},
 	# Share of the wharf's unloading capacity that goes to barley, in whole percent (0 = all wheat).
 	&"policy.unloading.default_barley_percent": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
@@ -128,6 +137,7 @@ static func is_valid(key: StringName, value: float) -> bool:
 			&"policy.wheat.default_target_stock", &"policy.wheat.default_reserve_minutes",
 				&"market.imported_flour.lot_size", &"market.imported_flour.max_debt_lots", &"market.tea.buffer_seconds",
 				&"market.barley.max_step", &"market.barley.storage_capacity",
+				&"market.malt.storage_capacity", &"market.beer.storage_capacity",
 				&"policy.unloading.default_barley_percent"] \
 			and value != floor(value):
 		return false

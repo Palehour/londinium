@@ -1,0 +1,19 @@
+{
+  "id": "both_chains",
+  "description": "Issue #51: las dos cadenas abiertas a la vez, trigo → harina → pan y cebada → malta → cerveza, con un solo embarcadero al inicio. El jugador le da una parte de la descarga a la cebada (30 %); el segundo embarcadero y la segunda vivienda se compran juntos apenas la caja llega a 300 (su precio más la reserva).",
+  "notes": "Criterios del #51: el pan cubre al menos 0,75 en las 20 semillas y el reparto del embarcadero no deja al molino sin trigo. Hasta el #52 nadie consume cerveza, así que la cervecería se frena al llegar al tope. Si falla después de un cambio en data/, hay que recalibrarlo con Mason.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "set_unloading_split", "barley_percent": 30},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 0, "cmd": "build", "building": "malthouse", "cell": [2, 3]},
+    {"tick": 0, "cmd": "build", "building": "brewery", "cell": [3, 3]},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 300},
+    {"tick": 60, "cmd": "build", "building": "housing", "cell": [6, 3], "with_previous": true}
+  ]
+}

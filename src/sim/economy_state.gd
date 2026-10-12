@@ -52,6 +52,9 @@ var wheat_decay_fraction: float = 0.0
 var barley_price: int = -1
 var barley_previous_price: int = -1
 var barley_decay_fraction: float = 0.0
+# Malt and beer (issue #51) are made, not bought: only their spoilage carries over between ticks.
+var malt_decay_fraction: float = 0.0
+var beer_decay_fraction: float = 0.0
 # Share of the wharf's unloading capacity left after the flour that goes to barley, in whole percent; the
 # rest is wheat. -1 until the simulation loads the default from data (0 = all wheat).
 var unloading_barley_percent: int = -1
@@ -79,6 +82,9 @@ var barley_spent_tick: int = 0
 var imports_spent_tick: int = 0
 var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
+# Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
+# used all its budget on the wheat it had does not count). Transient: never saved.
+var input_starved_tick: Dictionary[StringName, int] = {}
 
 
 func reset_flows() -> void:
@@ -93,6 +99,7 @@ func reset_flows() -> void:
 	imports_spent_tick = 0
 	tea_spent_tick = 0
 	construction_spent_tick = 0
+	input_starved_tick.clear()
 
 
 func to_dict() -> Dictionary:
@@ -111,6 +118,7 @@ func to_dict() -> Dictionary:
 		"wheat_previous_price": wheat_previous_price,
 		"wheat_decay_fraction": wheat_decay_fraction,
 		"barley_previous_price": barley_previous_price, "barley_decay_fraction": barley_decay_fraction,
+		"malt_decay_fraction": malt_decay_fraction, "beer_decay_fraction": beer_decay_fraction,
 		"unloading_barley_percent": unloading_barley_percent,
 		"flour_unloading_debt": flour_unloading_debt,
 		"tea_imports_enabled": tea_imports_enabled, "flour_imports_enabled": flour_imports_enabled,
@@ -162,6 +170,8 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.barley_price = int(values.get("barley_price", -1))
 	result.barley_previous_price = int(values.get("barley_previous_price", -1))
 	result.barley_decay_fraction = float(values.get("barley_decay_fraction", 0.0))
+	result.malt_decay_fraction = float(values.get("malt_decay_fraction", 0.0))
+	result.beer_decay_fraction = float(values.get("beer_decay_fraction", 0.0))
 	result.unloading_barley_percent = int(values.get("unloading_barley_percent", -1))
 	result.flour_unloading_debt = float(values.get("flour_unloading_debt", 0.0))
 	result.tea_imports_enabled = bool(values.get("tea_imports_enabled", false))

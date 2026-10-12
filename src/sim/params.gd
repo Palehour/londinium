@@ -28,6 +28,11 @@ func get_value(key: StringName) -> Variant:
 	return value
 
 
+# True when the data defines the key, so callers can ask about an optional parameter without an error.
+func has_value(key: StringName) -> bool:
+	return _base_values.has(key)
+
+
 func validation_errors() -> Array[String]:
 	# Loading must reject invalid roles without emitting runtime script errors.
 	var errors: Array[String] = []
