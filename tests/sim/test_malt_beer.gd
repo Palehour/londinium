@@ -205,6 +205,27 @@ func test_capped_outputs_are_derived_from_the_goods_that_define_a_storage_capaci
 	assert_false(ProductionSystem.has_storage_cap(_params, &"bread"))
 
 
+# Issue #51 review: two producers of the same capped good share one free space.
+func test_two_breweries_cannot_both_use_the_last_unit_of_room() -> void:
+	_add(&"brewery")
+	_add(&"brewery", [2, 1])
+	var cap: int = int(_params.get_value(&"market.beer.storage_capacity"))
+	_initial.stocks[&"malt"] = 100
+	_initial.stocks[&"beer"] = cap - 1
+	var sim: Simulation = _sim()
+	var state: Dictionary = _ticks(sim, 600)
+	assert_eq(state["stocks"][&"beer"], cap)
+	# One beer of room is half a malt. A malt taken from the stock stays reserved in its brewery until used,
+	# so the malt in store plus the reserved one must add up to exactly 100 minus that half.
+	var pending: float = 0.0
+	var reserved: float = 0.0
+	for building: Dictionary in state["buildings"]:
+		pending += float(building["output_fraction"])
+		reserved += float(building["reserved_input"])
+	assert_almost_eq(pending, 0.0, 0.000001, "no hidden output beyond the cap")
+	assert_almost_eq(float(state["stocks"][&"malt"]) + reserved, 99.5, 0.000001)
+
+
 # --- Spoilage ----------------------------------------------------------------------------------
 
 func test_beer_spoils_and_malt_does_not() -> void:
