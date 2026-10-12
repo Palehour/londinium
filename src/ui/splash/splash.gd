@@ -7,10 +7,7 @@ const VIDEO_PATH: String = "res://assets/branding/palehour-intro/palehour-intro.
 const FALLBACK_IMAGE_PATH: String = "res://assets/branding/palehour-intro/palehour-intro-final.png"
 const MAIN_SCENE_PATH: String = "res://scenes/main.tscn"
 const VIDEO_ASPECT: float = 16.0 / 9.0
-const FADE_SECONDS: float = 0.4
-const FALLBACK_SECONDS: float = 3.0
-# The intro lasts 10 s; if it has not ended by then the stream is stalled, so we show the fallback image.
-const WATCHDOG_SECONDS: float = 15.0
+const FULL_DB: float = 0.0
 const SILENT_DB: float = -60.0
 
 @export var auto_change_scene: bool = true
@@ -25,13 +22,25 @@ var _fade: ColorRect
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
-	_flow = SplashFlow.new(enabled and SplashSettings.is_enabled())
+	var timings: SplashTimings = SplashTimings.new()
+	timings.load_data()
+	var has_timings: bool = timings.errors.is_empty()
+	if not has_timings:
+		# A broken data file must never trap the player on the splash: skip it and go to the game.
+		push_error("Splash: %s. Skipping the intro." % "; ".join(timings.errors))
+	_flow = SplashFlow.new(enabled and has_timings and SplashSettings.is_enabled(), timings)
 	_flow.phase_changed.connect(_on_phase_changed)
 	_flow.completed.connect(_on_completed)
 	if _flow.is_done():
 		_on_completed()
 		return
 	_start_video()
+
+
+func _process(delta: float) -> void:
+	_flow.advance(delta)
+	if _flow.phase == SplashFlow.Phase.FADING:
+		_apply_fade(_flow.fade_progress())
 
 
 func _input(event: InputEvent) -> void:
@@ -77,15 +86,12 @@ func _start_video() -> void:
 		return
 	_player.stream = stream
 	_player.play()
-	get_tree().create_timer(WATCHDOG_SECONDS).timeout.connect(_flow.video_failed)
 
 
 func _on_phase_changed(phase: SplashFlow.Phase) -> void:
 	match phase:
 		SplashFlow.Phase.FALLBACK:
 			_show_fallback()
-		SplashFlow.Phase.FADING:
-			_start_fade()
 
 
 func _show_fallback() -> void:
@@ -94,14 +100,11 @@ func _show_fallback() -> void:
 	if ResourceLoader.exists(FALLBACK_IMAGE_PATH):
 		_image.texture = load(FALLBACK_IMAGE_PATH) as Texture2D
 	_image.visible = _image.texture != null
-	get_tree().create_timer(FALLBACK_SECONDS).timeout.connect(_flow.fallback_elapsed)
 
 
-func _start_fade() -> void:
-	var tween: Tween = create_tween().set_parallel(true)
-	tween.tween_property(_fade, "color:a", 1.0, FADE_SECONDS)
-	tween.tween_property(_player, "volume_db", SILENT_DB, FADE_SECONDS)
-	tween.finished.connect(_flow.fade_finished)
+func _apply_fade(progress: float) -> void:
+	_fade.color = Color(0.0, 0.0, 0.0, progress)
+	_player.volume_db = lerpf(FULL_DB, SILENT_DB, progress)
 
 
 func _on_completed() -> void:
