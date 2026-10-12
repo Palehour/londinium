@@ -389,7 +389,7 @@ func test_the_new_values_come_from_data_with_the_approved_numbers() -> void:
 		&"market.barley.base_price": 2, &"market.barley.min_price": 1, &"market.barley.max_price": 3,
 		&"market.barley.max_step": 1, &"market.barley.reversion": 0.35,
 		&"market.barley.storage_capacity": 80, &"market.barley.decay_fraction_per_minute": 0.01,
-		&"market.barley.price_update_seconds": 60, &"market.barley.accumulate_factor": 2.0,
+		&"market.barley.price_update_seconds": 60,
 		&"policy.unloading.default_barley_percent": 0,
 	}
 	for key: StringName in expected:
@@ -403,7 +403,6 @@ func test_a_role_cannot_push_the_new_values_out_of_their_range() -> void:
 		&"market.barley.reversion": [-0.1, 1.1],
 		&"market.barley.max_step": [0.0, 1.5],
 		&"market.barley.decay_fraction_per_minute": [-0.1, 1.0],
-		&"market.barley.accumulate_factor": [0.5],
 		&"market.barley.base_price": [-1.0],
 		&"market.imported_flour.max_debt_lots": [0.0, 101.0, 1.5],
 	}

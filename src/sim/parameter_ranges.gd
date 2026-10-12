@@ -97,8 +97,6 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
 	&"market.barley.decay_fraction_per_minute": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": false},
-	&"market.barley.accumulate_factor": {
-		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	# Share of the wharf's unloading capacity that goes to barley, in whole percent (0 = all wheat).
 	&"policy.unloading.default_barley_percent": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},

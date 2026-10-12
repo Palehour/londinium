@@ -499,7 +499,7 @@ func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
 
 func test_barley_and_unloading_parameters_are_required_and_validate_ranges() -> void:
 	for field: String in ["base_price", "min_price", "max_price", "price_update_seconds", "max_step", "reversion",
-			"storage_capacity", "decay_fraction_per_minute", "accumulate_factor"]:
+			"storage_capacity", "decay_fraction_per_minute"]:
 		before_each()
 		_documents["economy/market.json"]["barley"].erase(field)
 		_assert_invalid(field + ": missing field")
