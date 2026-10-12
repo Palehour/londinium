@@ -510,3 +510,14 @@ func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> voi
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
 		% ["Trabajadores", "Sustento", 50.0, 75.0, Strings.reason(&"below_threshold")])
+
+
+func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 74.96, "threshold": 75.0, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7496}]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])

@@ -53,16 +53,16 @@ const ECONOMY_SCHEMAS: Dictionary = {
 
 # One era's data is loaded: the engine is the same for every era, only these files change.
 const DEFAULT_ERA: String = "victorian"
-const NEEDS_PATH: String = "eras/victorian/needs.json"
-const CLASSES_PATH: String = "eras/victorian/classes.json"
 
 var _errors: Array[String] = []
+var _era: String = DEFAULT_ERA
 
 
-func load_all(root: String = "res://data") -> DataLoadResult:
+func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoadResult:
 	_errors.clear()
+	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras".path_join(DEFAULT_ERA)]:
+	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era)]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
 		if directory == null:
 			_errors.append("%s/%s: cannot open directory" % [root, folder])
@@ -88,15 +88,16 @@ func load_all(root: String = "res://data") -> DataLoadResult:
 
 
 # Also accepts in-memory documents so invalid fixtures never enter the game's data directory.
-func load_documents(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
+func load_documents(documents: Dictionary[String, Dictionary], era: String = DEFAULT_ERA) -> DataLoadResult:
 	_errors.clear()
+	_era = era
 	return _build(documents)
 
 
 func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	var catalog: DataCatalog = DataCatalog.new()
 	var required: Array[String] = ["economy/goods.json", "economy/buildings.json",
-		"roles/neutral_administrator.json", "maps/whitechapel_1850s.json", NEEDS_PATH, CLASSES_PATH]
+		"roles/neutral_administrator.json", "maps/whitechapel_1850s.json", _needs_path(), _classes_path()]
 	for section: String in ECONOMY_SCHEMAS:
 		required.append("economy/%s.json" % section)
 	for path: String in required:
@@ -111,15 +112,15 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path in [NEEDS_PATH, CLASSES_PATH]:
+		elif path in [_needs_path(), _classes_path()]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			_numbers(raw, ECONOMY_SCHEMAS[section], path, section, catalog)
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
-	_load_needs(documents.get(NEEDS_PATH, {}), catalog)
-	_load_classes(documents.get(CLASSES_PATH, {}), catalog)
+	_load_needs(documents.get(_needs_path(), {}), catalog)
+	_load_classes(documents.get(_classes_path(), {}), catalog)
 	# Roles may precede economy files in the dictionary; resolve keys only after registration.
 	for role: RoleDef in catalog.roles.values():
 		for modifier: Modifier in role.modifiers:
@@ -309,17 +310,26 @@ func _recipe(raw: Variant, path: String, prefix: String, catalog: DataCatalog) -
 	return recipe
 
 
+# The files of the selected era; another era is another folder under data/eras/ and no code edit.
+func _needs_path() -> String:
+	return "eras".path_join(_era).path_join("needs.json")
+
+
+func _classes_path() -> String:
+	return "eras".path_join(_era).path_join("classes.json")
+
+
 func _load_needs(raw: Dictionary, catalog: DataCatalog) -> void:
-	if not _object(raw, ["housing_bonus_per_category", "categories"], NEEDS_PATH):
+	if not _object(raw, ["housing_bonus_per_category", "categories"], _needs_path()):
 		return
-	_number(raw["housing_bonus_per_category"], "integer", NEEDS_PATH + ".housing_bonus_per_category",
+	_number(raw["housing_bonus_per_category"], "integer", _needs_path() + ".housing_bonus_per_category",
 		"needs.housing_bonus_per_category", catalog)
 	var categories: Variant = raw["categories"]
 	if categories is not Dictionary or categories.is_empty():
-		_errors.append("%s.categories: expected categories" % NEEDS_PATH)
+		_errors.append("%s.categories: expected categories" % _needs_path())
 		return
 	for id: String in categories:
-		var path: String = "%s.categories.%s" % [NEEDS_PATH, id]
+		var path: String = "%s.categories.%s" % [_needs_path(), id]
 		if _object(categories[id], ["threshold"], path) \
 				and _number(categories[id]["threshold"], "percent", path + ".threshold", "needs.%s.threshold" % id, catalog):
 			catalog.categories.append(StringName(id))
@@ -327,10 +337,10 @@ func _load_needs(raw: Dictionary, catalog: DataCatalog) -> void:
 
 func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 	if raw.is_empty():
-		_errors.append("%s: expected classes" % CLASSES_PATH)
+		_errors.append("%s: expected classes" % _classes_path())
 	var claimed: Array[StringName] = []
 	for id: String in raw:
-		var path: String = "%s.%s" % [CLASSES_PATH, id]
+		var path: String = "%s.%s" % [_classes_path(), id]
 		if not _object(raw[id], ["housing_building", "housing_max_bonus", "needs"], path):
 			continue
 		var definition: ClassDef = ClassDef.new()

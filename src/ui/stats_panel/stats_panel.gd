@@ -411,8 +411,10 @@ func _needs_text(needs: Dictionary) -> String:
 		var info: Dictionary = needs["classes"][class_id]
 		for entry: Dictionary in info["categories"]:
 			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
+			var value: float = _tenths_down(entry["value"])
+			var threshold: float = _tenths_down(entry["threshold"])
 			if entry["met"]:
-				lines.append(Strings.NEEDS_MET % [class_label, category, entry["value"], entry["threshold"]])
+				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])
 				continue
 			var missing: Array[String] = []
 			for good: Dictionary in entry["goods"]:
@@ -420,16 +422,21 @@ func _needs_text(needs: Dictionary) -> String:
 					missing.append(Strings.label(Strings.GOOD_LABELS, good["good"]))
 			# Every good fully covered but worth too little (a modified value): the reason says it.
 			if missing.is_empty():
-				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, entry["value"],
-					entry["threshold"], Strings.reason(entry["reason"])])
+				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, value,
+					threshold, Strings.reason(entry["reason"])])
 				continue
-			lines.append(Strings.NEEDS_SHORT % [class_label, category, entry["value"], entry["threshold"],
+			lines.append(Strings.NEEDS_SHORT % [class_label, category, value, threshold,
 				", ".join(missing)])
 		var housing: Dictionary = info["housing"]
 		lines.append(Strings.HOUSING_ROW % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
 	if needs["classes"].is_empty():
 		lines.append(Strings.NEEDS_NO_CLASS)
 	return "\n".join(lines)
+
+
+# One decimal, rounded down, so a score just under its threshold never reads as equal to it.
+func _tenths_down(value: float) -> float:
+	return floorf(value * 10.0) / 10.0
 
 
 func _buildings_text(buildings: Array) -> String:

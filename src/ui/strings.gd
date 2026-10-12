@@ -84,9 +84,9 @@ const BUILDING_LABELS: Dictionary[String, String] = {
 	"brewery": "Cervecería",
 }
 const NEEDS_TITLE: String = "Necesidades"
-const NEEDS_MET: String = "%s · %s: %.0f/%.0f ✓"
-const NEEDS_SHORT: String = "%s · %s: %.0f/%.0f · falta %s"
-const NEEDS_SHORT_REASON: String = "%s · %s: %.0f/%.0f · %s"
+const NEEDS_MET: String = "%s · %s: %.1f/%.1f ✓"
+const NEEDS_SHORT: String = "%s · %s: %.1f/%.1f · falta %s"
+const NEEDS_SHORT_REASON: String = "%s · %s: %.1f/%.1f · %s"
 const NEEDS_NO_CLASS: String = "Sin necesidades definidas."
 const HOUSING_ROW: String = "%s · vivienda: base %d + bono %d (máximo %d)"
 const CLASS_LABELS: Dictionary[StringName, String] = {&"worker": "Trabajadores"}

@@ -105,3 +105,12 @@ func test_ranges_match_by_shape_so_a_new_era_needs_no_edit() -> void:
 	assert_false(ParameterRanges.is_valid(&"class.artisan.housing_max_bonus", 4.5))
 	assert_true(ParameterRanges.is_valid(&"class.artisan.need.beer.value", 100.0))
 	assert_false(ParameterRanges.is_valid(&"class.artisan.need.beer.value", -0.1))
+
+
+func test_another_era_loads_from_its_own_folder_without_code_changes() -> void:
+	var era_documents: Dictionary[String, Dictionary] = {}
+	for path: String in _documents:
+		era_documents[path.replace("eras/victorian/", "eras/roman/")] = _documents[path]
+	var result: DataLoadResult = DataLoader.new().load_documents(era_documents, "roman")
+	assert_true(result.is_ok(), str(result.errors))
+	assert_false(DataLoader.new().load_documents(era_documents).is_ok(), "The default era finds no files")
