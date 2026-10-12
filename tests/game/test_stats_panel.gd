@@ -521,3 +521,14 @@ func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
+
+
+func test_panel_keeps_a_fractional_threshold_above_the_score() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 74.95, "threshold": 74.96, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7495}]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])

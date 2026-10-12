@@ -411,8 +411,9 @@ func _needs_text(needs: Dictionary) -> String:
 		var info: Dictionary = needs["classes"][class_id]
 		for entry: Dictionary in info["categories"]:
 			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
-			var value: float = _tenths_down(entry["value"])
-			var threshold: float = _tenths_down(entry["threshold"])
+			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
+			var value: float = _tenths(entry["value"], false)
+			var threshold: float = _tenths(entry["threshold"], not entry["met"])
 			if entry["met"]:
 				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])
 				continue
@@ -434,9 +435,8 @@ func _needs_text(needs: Dictionary) -> String:
 	return "\n".join(lines)
 
 
-# One decimal, rounded down, so a score just under its threshold never reads as equal to it.
-func _tenths_down(value: float) -> float:
-	return floorf(value * 10.0) / 10.0
+func _tenths(value: float, round_up: bool) -> float:
+	return (ceilf(value * 10.0) if round_up else floorf(value * 10.0)) / 10.0
 
 
 func _buildings_text(buildings: Array) -> String:
