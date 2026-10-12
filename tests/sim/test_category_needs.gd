@@ -197,3 +197,14 @@ func test_a_category_value_is_not_capped() -> void:
 	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	_evaluate(1.0, 1.0)
 	assert_eq(_category(&"sustento")["value"], 200.0)
+
+
+func test_restoring_an_old_snapshot_recomputes_the_needs() -> void:
+	_evaluate(1.0, 1.0)
+	var values: Dictionary = _state.to_dict()
+	values.erase("class_needs")
+	var restored: Simulation = Simulation.new(_params, EconomyState.from_dict(values), 1, _context)
+	var needs: Dictionary = restored.snapshot()["economy"]["class_needs"]
+	assert_true(needs[&"worker"][&"sustento"]["met"])
+	assert_true(needs[&"worker"][&"comunidad"]["met"])
+	assert_eq(restored.snapshot()["economy"]["housing_capacity"], _state.housing_capacity)
