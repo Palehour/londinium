@@ -9,7 +9,7 @@ const MAIN_SCENE_PATH: String = "res://scenes/main.tscn"
 const VIDEO_ASPECT: float = 16.0 / 9.0
 const FADE_SECONDS: float = 0.4
 const FALLBACK_SECONDS: float = 3.0
-# The intro lasts 10 s; this only guards against a stream that loads but never ends.
+# The intro lasts 10 s; if it has not ended by then the stream is stalled, so we show the fallback image.
 const WATCHDOG_SECONDS: float = 15.0
 const SILENT_DB: float = -60.0
 
@@ -77,7 +77,7 @@ func _start_video() -> void:
 		return
 	_player.stream = stream
 	_player.play()
-	get_tree().create_timer(WATCHDOG_SECONDS).timeout.connect(_flow.video_finished)
+	get_tree().create_timer(WATCHDOG_SECONDS).timeout.connect(_flow.video_failed)
 
 
 func _on_phase_changed(phase: SplashFlow.Phase) -> void:
