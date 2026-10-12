@@ -197,7 +197,9 @@ func test_new_city_uses_params_and_previews_coverage_without_consumption() -> vo
 func test_empty_new_city_coverage_uses_existing_reserve_lookahead() -> void:
 	var state: EconomyState = EconomyState.new()
 	for reserve: int in [0, 1, 2, 40]:
-		var sim: Simulation = _new_city(state, _with({&"population.initial_bread": reserve}))
+		# Two immigrants a minute need two loaves of reserve; pinned so it does not follow data/.
+		var sim: Simulation = _new_city(state, _with({&"population.initial_bread": reserve,
+			&"population.growth.immigration_per_minute": 2.0}))
 		if sim == null:
 			return
 		var snapshot: Dictionary = sim.snapshot()["economy"]

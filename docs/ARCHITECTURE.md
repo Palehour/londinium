@@ -32,7 +32,8 @@ londinium/
 │   │   ├── goods.json        # wheat, flour, bread, tea, money unit
 │   │   ├── buildings.json    # wharf, mill, bakery, housing, wheat_field: cost, upkeep, jobs, recipe, tags
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
-│   │   ├── market.json       # wheat base price, fluctuation range, imported flour/tea prices (P-011/P-004, solo cuando se aprueben)
+│   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; imported flour/tea prices (D-026/D-025)
+│   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
@@ -56,6 +57,7 @@ londinium/
 ├── tests/
 │   ├── sim/                  # unit tests per system (test_production.gd, test_needs.gd, test_defeat.gd …)
 │   ├── data/                 # test_data_valid.gd: every JSON loads, keys exist, no orphan params
+│   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 ├── tools/                    # run_tests.sh / run_tests.ps1, balance report script
 ├── docs/                     # GDD.md, DECISIONS.md (canonical), ARCHITECTURE.md, WORKFLOW.md
@@ -65,10 +67,12 @@ londinium/
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands.
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery), then the rest by priority bakery → mill → wharf; emigration frees jobs in reverse order (D-021).
-3. Sources: wharf buys wheat at the current (fluctuating) price; wharf buys imported flour that skips the mill
-   (P-011, pending: only once approved); wheat fields on cultivable cells only.
+3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
+   current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
+   under which the max price stops applying; the pause toggle stops all buying). The warehouse has a capacity. The wharf buys imported flour that skips the mill
+   (D-026); wheat fields on cultivable cells only.
 4. Converters: mill (wheat→flour), bakery (flour→bread), limited by staffed jobs and input stock.
-5. Consumption: bread eaten per person; tea if available (only if P-004 approved); stale bread decays.
+5. Consumption: bread eaten per person; tea if available (D-025); stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
 7. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).
 8. Growth: hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction high and housing free, emigration if low.

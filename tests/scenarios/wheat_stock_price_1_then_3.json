@@ -1,0 +1,20 @@
+{
+  "id": "wheat_stock_price_1_then_3",
+  "description": "Mercado determinista del issue #41: el trigo cuesta 1 durante 6 minutos y después 3. Una cadena y una vivienda con acumular en 1, máximo en 2 y objetivo 60: el stock sube mientras está barato y, con las compras frenadas, el molino sigue con lo guardado.",
+  "notes": "price_schedule fija el precio y apaga la caminata aleatoria solo en este escenario. En el minuto 11, con el stock casi vacío, el jugador levanta el máximo y vuelve a comprar a 3 para no quedarse sin pan. Seis minutos y no cinco: una cadena acumula 10 por minuto netos (20 comprados menos 10 molidos), así que en cinco minutos no pasa de 50.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "price_schedule": [
+    {"tick": 0, "price": 1},
+    {"tick": 360, "price": 3}
+  ],
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "set_wheat_policy", "accumulate_price": 1, "max_price": 2, "target_stock": 60, "reserve_minutes": 0},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 660, "cmd": "set_wheat_policy", "accumulate_price": -1, "max_price": -1, "target_stock": 0, "reserve_minutes": 0}
+  ]
+}

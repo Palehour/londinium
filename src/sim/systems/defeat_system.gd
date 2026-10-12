@@ -32,7 +32,7 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	if update_coverage:
 		update_hunger_coverage(state, params)
 	_update_population_history(state, params)
-	var stable: bool = _is_city_stable(state, params)
+	var stable: bool = is_city_stable(state, params)
 	if stable:
 		_decay_population_peak(state, params)
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
@@ -65,10 +65,16 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 		state.depopulation_active = true
 
 
-func _is_city_stable(state: EconomyState, params: Params) -> bool:
+# Nobody is leaving: no hunger emigration, smoothed coverage at or above the emigration threshold
+# and nobody left for low satisfaction within the stability window (measured on actual departures,
+# so a city sitting on the satisfaction edge does not flicker). Public so balance probes use the
+# same rule as the game.
+func is_city_stable(state: EconomyState, params: Params) -> bool:
+	var window: int = int(params.get_value(&"defeat.depopulation.stability_window_seconds"))
+	var age: int = state.satisfaction_departure_age_seconds
 	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) \
-		and not GrowthSystem.is_satisfaction_emigration_active(state, params)
+		and (age < 0 or age >= window)
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:

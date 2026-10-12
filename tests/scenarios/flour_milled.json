@@ -1,0 +1,13 @@
+{
+  "id": "flour_milled",
+  "description": "D-026 de referencia: una cadena completa que muela el trigo (embarcadero, molino, panadería), impuesto 0,7. Se compara con flour_imported.",
+  "notes": "Par con flour_imported. input_cost_per_bread de balance_report mide lo que cuestan los insumos por pan.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.7},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]}
+  ]
+}

@@ -18,12 +18,24 @@ const LOAD_ERROR: String = "No se pudo iniciar la partida. Revisá el registro p
 const PANEL_TITLE: String = "Estadísticas"
 const TAX_LABEL: String = "Impuestos (%)"
 const WHEAT_PURCHASES: String = "Comprar trigo automáticamente"
+const ACCUMULATE_LABEL: String = "Acumular trigo hasta el precio"
+const MAX_PRICE_LABEL: String = "Precio máximo de compra"
+const PENCE_SUFFIX: String = " d"
+const TARGET_LABEL: String = "Stock objetivo: %d"
+const RESERVE_LABEL: String = "Mínimo de seguridad: %d min de molino"
+const WHEAT_ROW: String = "Trigo: %d/%d · precio %s %s · alcanza para %s de molino"
+const WHEAT_BLOCKED_NOTE: String = "Compra frenada por precio máximo."
+const TREND_UP: String = "↑"
+const TREND_DOWN: String = "↓"
+const TREND_FLAT: String = "→"
+const MINUTES_COVERED: String = "%.1f min"
+const NO_MILL_COVERAGE: String = "—"
 const PAUSE: String = "Pausa"
 const RESUME: String = "Reanudar"
 const SPEED_LABELS: Dictionary[int, String] = {1: "1x", 2: "2x", 3: "3x"}
 const RESTART: String = "Reiniciar partida"
 const POPULATION: String = "Población: %d · empleados %d · desempleados %d"
-const SATISFACTION: String = "Satisfacción: %.0f/100 (pan +%.0f · impuestos −%.0f · hacinamiento −%.0f)"
+const SATISFACTION: String = "Satisfacción: %.0f/100 (pan +%.0f · té +%.0f · impuestos −%.0f · hacinamiento −%.0f)"
 const BREAD_RATE: String = "Pan/min: producido %.1f · consumido %.1f · demanda %.1f"
 const BREAD_OK: String = "El pan alcanza."
 const BREAD_SHORT: String = "Falta pan porque:"
@@ -32,9 +44,16 @@ const BREAD_CHAIN_CAUSE: String = "• %s"
 const STOCKS: String = "Stocks: trigo %d · harina %d · pan %d"
 const TREASURY: String = "Tesoro: %s"
 const OPERATING_BALANCE: String = "Balance operativo: %s/min"
-const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s"
+const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s − importaciones %s"
 const CONSTRUCTION: String = "Construcción: %s/min (aparte del balance)"
 const WHEAT_PRICE: String = "Precio del trigo: %s"
+const UNIT_PRICE: String = "%.2f d"
+const TEA_IMPORTS: String = "Importar té"
+const FLOUR_IMPORTS: String = "Importar harina (se saltea el molino)"
+const TEA_ROW: String = "Té: %d en almacén · cobertura %.0f %% · precio %s por unidad · +%.0f de satisfacción
+  %s"
+const FLOUR_ROW: String = "Harina importada: lote de %d a %s (%s por unidad) · harina en almacén %d
+  %s"
 const WINDOW_PARTIAL: String = "Promedios sobre %d de %d s"
 const BUILDINGS: String = "Trabajadores por edificio"
 const NO_BUILDINGS: String = "Sin edificios con puestos."
@@ -72,6 +91,13 @@ const REASONS: Dictionary[StringName, String] = {
 	&"no_building": "No hay edificio para demoler.",
 	&"simulation_defeated": "La partida terminó: no se aceptan comandos.",
 	&"wheat_purchases_disabled": "Compra de trigo desactivada.",
+	&"wheat_price_above_max": WHEAT_BLOCKED_NOTE,
+	&"tea_imports_disabled": "Importación de té desactivada.",
+	&"flour_imports_disabled": "Importación de harina desactivada.",
+	&"no_wharf_for_imports": "Hace falta un embarcadero con trabajadores para importar.",
+	&"no_money_for_imports": "Sin dinero para importar.",
+	&"mill_covers_flour": "El molino cubre a las panaderías: no hace falta importar.",
+	&"invalid_wheat_policy": "Política de compra de trigo inválida.",
 	&"no_workers": "Sin trabajadores.",
 	&"no_input": "Sin insumo.",
 	&"missing_building": "No hay ninguno construido.",

@@ -16,6 +16,30 @@ func tick(state: EconomyState, params: Params) -> void:
 	if state.stocks.has(&"bread") or whole > 0:
 		state.stocks[&"bread"] = whole
 	state.bread_fraction = maxf(0.0, remaining - whole)
+	_consume_tea(state, params)
+
+
+# Tea is optional: a city without any simply gets no bonus. It does not spoil, and the part of a unit
+# already eaten waits in tea_fraction like the bread's.
+func _consume_tea(state: EconomyState, params: Params) -> void:
+	state.tea_demand = ImportSystem.tea_demand_per_second(state, params)
+	var available: float = float(state.stocks.get(&"tea", 0)) + state.tea_fraction
+	state.tea_consumed = minf(available, state.tea_demand)
+	state.tea_coverage = tea_coverage(state, params)
+	var remaining: float = maxf(0.0, available - state.tea_consumed)
+	var whole: int = ProductionSystem.whole_units(remaining)
+	if state.stocks.has(&"tea") or whole > 0:
+		state.stocks[&"tea"] = whole
+	state.tea_fraction = maxf(0.0, remaining - whole)
+
+
+# Share of the tea demand the store covers, without consuming anything.
+func tea_coverage(state: EconomyState, params: Params) -> float:
+	var demand: float = ImportSystem.tea_demand_per_second(state, params)
+	var available: float = float(state.stocks.get(&"tea", 0)) + state.tea_fraction
+	if demand <= 0.0:
+		return 1.0 if available > 0.0 else 0.0
+	return clampf(available / demand, 0.0, 1.0)
 
 
 # Preview supply against demand without consuming, decaying, or advancing the state.

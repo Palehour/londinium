@@ -171,7 +171,7 @@ func test_two_builds_on_same_cell_are_processed_fifo_and_second_is_rejected() ->
 		_initial.money - int(_params.get_value(&"building.bakery.cost")))
 
 
-func test_demolish_is_deferred_preserves_global_stock_and_has_no_refund() -> void:
+func test_demolish_is_deferred_preserves_global_stock_and_refunds_idle_building() -> void:
 	_initial.buildings.append({"definition_id": &"bakery", "cell": [1, 1],
 		"reserved_input": 0.5, "output_fraction": 0.75})
 	_initial.stocks[&"flour"] = 4
@@ -187,7 +187,8 @@ func test_demolish_is_deferred_preserves_global_stock_and_has_no_refund() -> voi
 	var state: Dictionary = sim.snapshot()["economy"]
 	assert_true(state["buildings"].is_empty())
 	assert_eq(state["stocks"], _initial.stocks)
-	assert_eq(state["money"], _initial.money)
+	# Nobody worked there yet, so the whole cost comes back (#16).
+	assert_eq(state["money"], _initial.money + int(_params.get_value(&"building.bakery.cost")))
 
 
 func test_demolish_empty_cell_rejects_without_mutation() -> void:

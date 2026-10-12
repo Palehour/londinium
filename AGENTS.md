@@ -3,15 +3,21 @@
 Rules for every coding agent (Codex, Claude Code, Grok Build, Cursor) working in this repo.
 Short on purpose. If something here conflicts with a task description, this file wins; ask in the PR.
 
+## Skills
+Process lives in six skills under `.agents/skills/<name>/SKILL.md`: `planificar-issue`, `implementar-issue`,
+`decision-diseno`, `abrir-pr`, `revisar-pr`, `docs-vivos`. Codex and Cursor load them on their own; if your
+agent does not (Claude Code does not read `.agents/`), read the matching `SKILL.md` before starting.
+A task prompt only needs the issue number, the skills that apply and, if wanted, plan mode.
+
 ## What this is
 City builder prototype in **Godot 4.7.2 (stable), GDScript only**, no C#/.NET, no runtime AI.
 Milestone 1 (M1) = the economy loop in `docs/GDD.md` ("Primer hito"). Colored squares, no art.
 Cristian does not write code. He reviews PRs and plays builds. Make his review easy.
 
 ## Source of truth
-- `docs/GDD.md` and `docs/DECISIONS.md` are canonical. **Never edit them.** They are drafted by the
-  designer/historian bots and approved by Cristian. If you think a doc is wrong or ambiguous, write it
-  under "Doc questions" in your PR description and implement the most conservative reading.
+- `docs/GDD.md` and `docs/DECISIONS.md` are canonical and drafted by the designer/historian bots; agents edit
+  them only as the `decision-diseno` skill says. If you think a doc is wrong or ambiguous, write it under
+  "Decisiones y docs" in your PR and implement the most conservative reading.
 - Implement only **Decided** items (D-xxx). **Proposals (P-xxx) are not implemented** unless the issue
   says the proposal was approved.
 - All balance numbers live in `data/`. Never hardcode a cost, rate, threshold or weight in code.
@@ -69,19 +75,12 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
 
 ## GitHub tracking
-When you open the PR, update tracking in the same step. Do not leave it for later.
-- On the PR and on the issue: `hito-1`, one `tipo:*`, one `area:*`, one of `p1`/`p2`/`p3`, `agente:codex` or `agente:claude` or `agente:grok`, and `en-revision`. Remove `listo-para-agente` from the issue.
-- Milestone: the current hito. Assignee: `crisesarmiento`.
-- Board: https://github.com/orgs/Palehour/projects/2. Add both to the board. Get the item id: `gh project item-add 2 --owner Palehour --url <url> --format json --jq .id`.
-- Get the project id: `gh project view 2 --owner Palehour --format json --jq .id`.
-- Set Status to `En revisión`, and Prioridad and Agente to match the labels. Get field and option ids with `gh project field-list 2 --owner Palehour --format json`.
-- Set one field per call: `gh project item-edit --id <item-id> --project-id <project-id> --field-id <field-id> --single-select-option-id <option-id>` so accents are not mangled.
-- If `gh project` fails for a missing scope, Cristian runs `gh auth refresh -h github.com -s project` once on that machine. Until then, write `Tablero: pendiente (sin scope project)` in the PR. Do not skip it silently. Cristian or the reviewer updates the board.
-- Agents never merge. After merge, status moves to `Hecho` (Cristian or the reviewer).
+Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
+not later. Steps and commands: `abrir-pr`. Only Cristian merges (or an agent he explicitly asks to); PRs are squash-merged into `develop`.
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
 2. `tools/run_tests` passes locally and CI is green. No new warnings or errors in the import log (`.godot/import.log`).
 3. No hardcoded balance values; new parameters added to `data/` and read through `Params`.
-4. No edits to `docs/GDD.md` / `docs/DECISIONS.md`; no P-xxx implemented without approval.
-5. PR description uses the template: what changed, how to verify (≤ 3 steps), screenshots if UI, doc questions.
+4. `docs/GDD.md` / `docs/DECISIONS.md` untouched unless `decision-diseno` allows it; no P-xxx implemented without approval.
+5. PR description uses the template: what changed, how to verify (≤ 3 steps), screenshots if UI, "Decisiones y docs".

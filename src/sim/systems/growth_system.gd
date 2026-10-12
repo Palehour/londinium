@@ -3,6 +3,9 @@ extends RefCounted
 
 
 func tick(state: EconomyState, params: Params) -> void:
+	# Ages first so the tick of a departure reads 0 and the window counts whole seconds since it.
+	if state.satisfaction_departure_age_seconds >= 0:
+		state.satisfaction_departure_age_seconds += 1
 	var free_housing: int = maxi(0, state.housing_capacity - state.population)
 	if state.hunger_emigration_active:
 		state.hunger_emigration_active = state.hunger_smoothed_coverage \
@@ -29,6 +32,8 @@ func tick(state: EconomyState, params: Params) -> void:
 		state.emigration_fraction += rate / 60.0
 		var departures: int = mini(state.population, ProductionSystem.whole_units(state.emigration_fraction))
 		state.population -= departures
+		if departures > 0 and is_satisfaction_emigration_active(state, params):
+			state.satisfaction_departure_age_seconds = 0
 		state.emigration_fraction = maxf(0.0, state.emigration_fraction - departures) \
 			if state.population > 0 else 0.0
 	else:

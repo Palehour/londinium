@@ -5,7 +5,7 @@ const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
 
 func test_defeat_parameters_are_required_and_validate_ranges() -> void:
 	for field: String in ["grace_seconds", "hunger.smoothing", "depopulation.duration_seconds",
-			"depopulation.peak_decay_per_minute"]:
+			"depopulation.peak_decay_per_minute", "depopulation.stability_window_seconds"]:
 		before_each()
 		var parts: PackedStringArray = field.split(".")
 		var section: Dictionary = _documents["economy/defeat.json"]
@@ -18,6 +18,7 @@ func test_defeat_parameters_are_required_and_validate_ranges() -> void:
 		"hunger.smoothing": [0.0, -0.1, 1.01, INF, NAN],
 		"depopulation.duration_seconds": [0.0, -1.0, 1.5, INF, NAN],
 		"depopulation.peak_decay_per_minute": [-0.01, 1.01, INF, NAN],
+		"depopulation.stability_window_seconds": [0.0, -1.0, 1.5, INF, NAN],
 	}
 	for field: String in invalid:
 		for value: float in invalid[field]:
@@ -115,6 +116,43 @@ func test_fractional_money_is_rejected() -> void:
 	_assert_invalid("buildings.json.bakery.cost: invalid money")
 
 
+func test_negative_building_cost_is_rejected() -> void:
+	_documents["economy/buildings.json"]["wharf"]["cost"] = -240
+	_assert_invalid("buildings.json.wharf.cost: invalid money")
+
+
+func test_tax_base_must_be_a_whole_non_negative_amount() -> void:
+	_documents["economy/population.json"]["tax"]["base_per_employed_worker_per_minute"] = 10.5
+	_assert_invalid("base_per_employed_worker_per_minute: invalid money")
+	_documents["economy/population.json"]["tax"]["base_per_employed_worker_per_minute"] = -11
+	_assert_invalid("base_per_employed_worker_per_minute: invalid money")
+
+
+func test_negative_starting_money_is_rejected() -> void:
+	_documents["economy/startup.json"]["money"] = -1000
+	_assert_invalid("startup.json.money: invalid money")
+
+
+func test_market_walk_parameters_are_validated() -> void:
+	_documents["economy/market.json"]["wheat"]["max_step"] = 0
+	_assert_invalid("wheat.max_step: invalid positive_integer value 0")
+	_documents["economy/market.json"]["wheat"]["max_step"] = 1.5
+	_assert_invalid("wheat.max_step: invalid positive_integer value 1.5")
+	_documents["economy/market.json"]["wheat"]["max_step"] = 1
+	_documents["economy/market.json"]["wheat"]["reversion"] = 1.5
+	_assert_invalid("wheat.reversion: invalid fraction value 1.5")
+	_documents["economy/market.json"]["wheat"]["reversion"] = -0.1
+	_assert_invalid("wheat.reversion: invalid fraction value -0.1")
+
+
+func test_market_walk_parameters_are_required() -> void:
+	_documents["economy/market.json"]["wheat"].erase("max_step")
+	_assert_invalid("max_step")
+	_documents["economy/market.json"]["wheat"]["max_step"] = 1
+	_documents["economy/market.json"]["wheat"].erase("reversion")
+	_assert_invalid("reversion")
+
+
 func test_unknown_good_reference_is_rejected() -> void:
 	_documents["economy/buildings.json"]["mill"]["recipe"]["inputs"] = {"unknown": 1}
 	_assert_invalid("mill.recipe.inputs.unknown: unknown good")
@@ -205,6 +243,11 @@ func test_malformed_map_coordinates_are_rejected() -> void:
 func test_nonfinite_number_is_rejected() -> void:
 	_documents["economy/market.json"]["wheat"]["base_price"] = INF
 	_assert_invalid("base_price: expected a finite money")
+
+
+func test_negative_wheat_base_price_is_rejected_in_data() -> void:
+	_documents["economy/market.json"]["wheat"]["base_price"] = -1
+	_assert_invalid("base_price: invalid money value")
 
 
 func test_money_outside_int64_is_rejected() -> void:
@@ -426,3 +469,29 @@ func test_coverage_snap_epsilon_is_required_positive_finite_and_typed() -> void:
 		before_each()
 		_set_modifier({"key": "population.hunger_coverage_snap_epsilon", "op": "set", "value": invalid})
 		_assert_invalid("snap_epsilon" if is_finite(invalid) else "finite")
+
+
+func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
+	for field: String in ["refund_ratio", "refund_grace_seconds", "no_jobs_refund_ratio"]:
+		before_each()
+		_documents["economy/demolish.json"].erase(field)
+		_assert_invalid(field + ": missing field")
+	before_each()
+	_documents.erase("economy/demolish.json")
+	_assert_invalid("economy/demolish.json: missing file")
+	for invalid: float in [-0.1, 1.5]:
+		before_each()
+		_documents["economy/demolish.json"]["refund_ratio"] = invalid
+		_assert_invalid("demolish.json.refund_ratio: invalid fraction")
+		before_each()
+		_documents["economy/demolish.json"]["no_jobs_refund_ratio"] = invalid
+		_assert_invalid("demolish.json.no_jobs_refund_ratio: invalid fraction")
+	before_each()
+	_documents["economy/demolish.json"]["refund_grace_seconds"] = -1
+	_assert_invalid("demolish.json.refund_grace_seconds: invalid number")
+	before_each()
+	_set_modifier({"key": "demolish.refund_ratio", "op": "set", "value": 1.5})
+	_assert_invalid("Params: invalid range for 'demolish.refund_ratio'")
+	before_each()
+	_set_modifier({"key": "demolish.no_jobs_refund_ratio", "op": "set", "value": 1.5})
+	_assert_invalid("Params: invalid range for 'demolish.no_jobs_refund_ratio'")

@@ -8,7 +8,10 @@ var _state: EconomyState
 func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
-	_params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+	# Pinned so these arithmetic checks do not move when Mason retunes the tax base in data/.
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"population.tax.base_per_employed_worker_per_minute", &"set", 8))
+	_params = Params.new(loaded.catalog, role)
 	_context = EconomyContext.new(loaded.catalog, loaded.catalog.maps[&"whitechapel_1850s"])
 	_state = EconomyState.new()
 	_state.tax_rate = 0.25

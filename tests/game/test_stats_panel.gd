@@ -44,8 +44,10 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 	_panel.update_snapshot(_session.get_snapshot())
 	assert_true(_session.get("_pending").is_empty(), "binding a snapshot must not submit commands")
 	assert_eq(Strings.money(10000), "£41 13s 4d")
+	assert_eq(Strings.money(1000), "£4 3s 4d")
 	assert_eq(Strings.money(-25), "-£0 2s 1d")
-	assert_string_contains(_text("_economy"), Strings.TREASURY % "£41 13s 4d")
+	var treasury: int = _session.get_snapshot()["economy"]["money"]
+	assert_string_contains(_text("_economy"), Strings.TREASURY % Strings.money(treasury))
 	assert_string_contains(_text("_economy"), Strings.WINDOW_PARTIAL % [0, 60])
 	assert_string_contains(_text("_bread"), Strings.STOCKS % [0, 0, 40])
 	assert_string_contains(_text("_buildings"), Strings.NO_BUILDINGS)
@@ -127,6 +129,117 @@ func test_wheat_toggle_sends_command_and_reflects_state() -> void:
 	wheat.button_pressed = true
 	_tick()
 	assert_true(_session.get_snapshot()["economy"]["wheat_purchases_enabled"])
+
+
+func test_wheat_row_shows_stock_price_trend_and_minutes_of_mill() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [0, 100, Strings.money(2), Strings.TREND_FLAT, Strings.NO_MILL_COVERAGE])
+	var market: Dictionary = snapshot["market"]["wheat"]
+	market["stock"] = 60
+	market["previous_price"] = 3
+	market["minutes_covered"] = 6.0
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [60, 100, Strings.money(2), Strings.TREND_DOWN, Strings.MINUTES_COVERED % 6.0])
+	market["previous_price"] = 1
+	market["blocked_by_price"] = true
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_wheat_row"), Strings.TREND_UP)
+	assert_string_contains(_text("_wheat_row"), Strings.WHEAT_BLOCKED_NOTE)
+
+
+func _price_controls() -> Dictionary:
+	return {"accumulate_on": _panel.get("_accumulate_on") as CheckBox, "accumulate": _panel.get("_accumulate_price") as SpinBox,
+		"limit_on": _panel.get("_limit_on") as CheckBox, "limit": _panel.get("_limit_price") as SpinBox}
+
+
+func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var controls: Dictionary = _price_controls()
+	var accumulate_on: CheckBox = controls["accumulate_on"]
+	var accumulate: SpinBox = controls["accumulate"]
+	var limit_on: CheckBox = controls["limit_on"]
+	var limit: SpinBox = controls["limit"]
+	var target: HSlider = _panel.get("_target") as HSlider
+	assert_false(accumulate_on.button_pressed, "the default policy does not stockpile")
+	assert_false(limit_on.button_pressed, "and has no limit")
+	assert_false(accumulate.editable, "a switched-off price cannot be edited")
+	assert_eq([accumulate.min_value, accumulate.max_value], [1.0, 3.0], "the market's own prices")
+	assert_eq(target.max_value, 100.0)
+	assert_false(target.scrollable or (_panel.get("_reserve") as HSlider).scrollable, "the wheel would not send the command")
+	accumulate_on.button_pressed = true
+	assert_true(accumulate.editable, "editable at once: a paused game sends no snapshot to enable it")
+	limit_on.button_pressed = true
+	assert_true(limit.editable)
+	limit.value = 2.0
+	target.value = 60.0
+	target.drag_ended.emit(true)
+	var reserve: HSlider = _panel.get("_reserve") as HSlider
+	assert_eq([reserve.value, reserve.max_value], [2.0, 10.0], "the default reserve, up to the ten minutes the rules allow")
+	assert_string_contains(_text("_reserve_label"), Strings.RESERVE_LABEL % 2)
+	reserve.value = 4.0
+	reserve.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	var economy: Dictionary = _session.get_snapshot()["economy"]
+	assert_eq([economy["wheat_accumulate_price"], economy["wheat_max_price"], economy["wheat_target_stock"],
+		economy["wheat_reserve_minutes"]], [1, 2, 60, 4])
+	assert_eq([accumulate_on.button_pressed, accumulate.value, limit_on.button_pressed, limit.value, target.value],
+		[true, 1.0, true, 2.0, 60.0])
+	assert_string_contains(_text("_target_label"), "60")
+	assert_eq(_text("_reserve_label"), Strings.RESERVE_LABEL % 4)
+	assert_true(_session.get("_pending").is_empty(), "resyncing the controls does not resend the command")
+	limit_on.button_pressed = false
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_max_price"], WheatPolicy.NO_LIMIT, "the switch turns the limit off")
+
+
+func test_a_policy_that_accumulates_at_the_top_price_is_shown_and_kept() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	_session.submit_command(SetWheatPolicyCommand.new(3, WheatPolicy.NO_LIMIT, 60, 2))
+	_tick()
+	_session.publish_tick()
+	var controls: Dictionary = _price_controls()
+	assert_true((controls["accumulate_on"] as CheckBox).button_pressed)
+	assert_eq((controls["accumulate"] as SpinBox).value, 3.0, "the top price is shown as itself")
+	var reserve: HSlider = _panel.get("_reserve") as HSlider
+	reserve.value = 5.0
+	reserve.drag_ended.emit(true)
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 3, "changing another control does not turn accumulating off")
+
+
+func test_a_very_wide_market_keeps_its_whole_price_range_selectable() -> void:
+	_session = _new_session([Modifier.new(&"market.wheat.max_price", &"set", 1000000)])
+	_panel = _new_panel(_session)
+	_panel.update_snapshot(_session.get_snapshot())
+	var controls: Dictionary = _price_controls()
+	var accumulate: SpinBox = controls["accumulate"]
+	var limit: SpinBox = controls["limit"]
+	assert_eq([accumulate.min_value, accumulate.max_value], [1.0, 1000000.0])
+	_session.submit_command(SetWheatPolicyCommand.new(500, 700, 0, 2))
+	_tick()
+	_session.publish_tick()
+	assert_eq([accumulate.value, limit.value], [500.0, 700.0], "an accepted policy is shown as it is")
+	accumulate.value = 600.0
+	_tick()
+	assert_eq(_session.get_snapshot()["economy"]["wheat_accumulate_price"], 600, "any valid price can be chosen")
+	assert_eq(_session.get_snapshot()["economy"]["wheat_max_price"], 700, "and the rest of the policy is kept")
+
+
+func test_policy_controls_are_blocked_after_defeat() -> void:
+	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+	_panel = _new_panel(_session)
+	_tick()
+	_tick()
+	var controls: Dictionary = _price_controls()
+	assert_true((controls["accumulate_on"] as CheckBox).disabled)
+	assert_true((controls["limit_on"] as CheckBox).disabled)
+	assert_false((controls["accumulate"] as SpinBox).editable)
+	assert_false((_panel.get("_target") as HSlider).editable)
+	assert_false((_panel.get("_reserve") as HSlider).editable)
 
 
 func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> void:
@@ -261,3 +374,40 @@ func _scene_ready(size: Vector2i) -> Array:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	return parts
+
+
+func test_import_switches_send_commands_and_reflect_state() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var tea: CheckButton = _panel.get("_tea") as CheckButton
+	var flour: CheckButton = _panel.get("_flour") as CheckButton
+	assert_false(tea.button_pressed)
+	assert_false(flour.button_pressed)
+	tea.button_pressed = true
+	flour.button_pressed = true
+	_tick()
+	var economy: Dictionary = _session.get_snapshot()["economy"]
+	assert_true(economy["tea_imports_enabled"])
+	assert_true(economy["flour_imports_enabled"])
+	assert_true(tea.button_pressed)
+	assert_true(flour.button_pressed)
+
+
+func test_import_rows_show_tea_stock_and_coverage_flour_price_and_why_there_is_none() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var imports: Dictionary = _session.get_snapshot()["imports"]
+	assert_string_contains(_text("_tea_row"), Strings.reason(&"tea_imports_disabled"))
+	assert_string_contains(_text("_tea_row"), "cobertura 0 %")
+	var flour: Dictionary = imports["flour"]
+	assert_string_contains(_text("_flour_row"), Strings.money(flour["lot_price"]))
+	assert_string_contains(_text("_flour_row"), Strings.UNIT_PRICE % flour["unit_price"])
+	assert_string_contains(_text("_flour_row"), Strings.reason(&"flour_imports_disabled"))
+	(_panel.get("_tea") as CheckButton).button_pressed = true
+	_tick()
+	assert_string_contains(_text("_tea_row"), Strings.reason(&"no_wharf_for_imports"))
+
+
+func test_satisfaction_line_adds_the_tea_component_so_the_parts_match_the_total() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["economy"]["satisfaction_breakdown"]["tea"] = 15.0
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_economy"), "té +15")

@@ -1,0 +1,19 @@
+{
+  "id": "big_tight_r06_smart",
+  "description": "big_tight_r06 con la política de compra del #41: acumula trigo cuando cuesta 1, no paga más de 2 salvo que el stock baje de 2 minutos de molino, y guarda hasta 60. Misma semilla, mismos comandos y misma espera de plata que el guion ciego.",
+  "notes": "Criterio decidido por Cristian para el #41 (opción A de Mason): en 20 semillas ninguna ciudad se pierde ni queda inestable, y la mediana del minuto de compra de la segunda cadena es como mucho 1,5 min posterior a la de big_tight_r06. Una semilla que no llega a comprar en 15 min cuenta como fuera de rango si es estable y con balance positivo. Acumular no adelanta la compra con la economía actual: el valor de la política es no quedarse sin pan.",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "set_wheat_policy", "accumulate_price": 1, "max_price": 2, "target_stock": 60, "reserve_minutes": 2},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 600},
+    {"tick": 60, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "housing", "cell": [6, 3], "with_previous": true}
+  ]
+}

@@ -7,7 +7,7 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	if not result.is_ok():
 		return
 	var catalog: DataCatalog = result.catalog
-	assert_eq(catalog.goods.size(), 3)
+	assert_eq(catalog.goods.size(), 4)
 	assert_eq(catalog.buildings.size(), 5)
 	assert_eq(catalog.roles.size(), 1)
 	assert_eq(catalog.maps.size(), 1)
@@ -38,9 +38,12 @@ func test_whitechapel_has_no_cultivation_or_pending_content() -> void:
 	assert_true(map.cultivable_cells.is_empty())
 	assert_false(map.river_cells.is_empty())
 	assert_true(catalog.buildings.has(&"wheat_field"))
-	assert_false(catalog.goods.has(&"tea"))
+	# D-025: tea is a good now; it is imported, never produced, so no building outputs it.
+	assert_true(catalog.goods.has(&"tea"))
 	assert_true(catalog.buildings[&"wharf"].recipe.inputs.is_empty())
 	assert_eq(catalog.buildings[&"wharf"].recipe.outputs, [&"wheat"])
+	# D-026: the imported flour is priced per lot, in whole pence.
+	assert_true(catalog.base_values.has(&"market.imported_flour.price_per_lot"))
 	assert_false(catalog.base_values.has(&"market.imported_flour.price"))
 
 
@@ -68,6 +71,17 @@ func test_wheat_field_loads_with_recipe_tags_and_parameters() -> void:
 		assert_true(float(params.get_value(key)) > 0.0, str(key))
 
 
+func test_wheat_market_walk_parameters_exist_with_their_first_values() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"market.wheat.max_step"), 1)
+	assert_eq(params.get_value(&"market.wheat.reversion"), 0.5)
+	assert_typeof(params.get_value(&"market.wheat.max_step"), TYPE_INT)
+
+
 func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), str(result.errors))
@@ -92,3 +106,56 @@ func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
 	assert_eq(params.get_value(&"defeat.hunger.smoothing"), 0.1)
 	assert_eq(params.get_value(&"defeat.grace_seconds"), 300.0)
 	assert_eq(params.get_value(&"population.growth.hunger_emigration_multiplier"), 2.0)
+
+
+# #39 (F1/F2/F7): building costs, starting money and taxes must live on the same scale as the
+# money flows, otherwise a second chain is out of reach. These are relations, not exact values, so
+# retuning in data/ does not trip them unless the scale itself breaks.
+func _economy_params() -> Params:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	return Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+
+
+func _chain_cost(params: Params) -> int:
+	var total: int = 0
+	for building: String in ["wharf", "mill", "bakery"]:
+		total += int(params.get_value(StringName("building.%s.cost" % building)))
+	return total
+
+
+func test_starting_money_builds_one_chain_but_not_two() -> void:
+	var params: Params = _economy_params()
+	var money: int = int(params.get_value(&"startup.money"))
+	var chain: int = _chain_cost(params)
+	assert_gte(money, chain, "the first chain is affordable from the start")
+	assert_lt(money, 2 * chain, "the second chain has to be financed")
+
+
+func test_a_staffed_chain_pays_for_the_next_one_within_the_game() -> void:
+	var params: Params = _economy_params()
+	var jobs: int = 0
+	var upkeep: int = 0
+	var wages: int = 0
+	for building: String in ["wharf", "mill", "bakery"]:
+		jobs += int(params.get_value(StringName("building.%s.jobs" % building)))
+		upkeep += int(params.get_value(StringName("building.%s.upkeep_per_minute" % building)))
+		wages += int(params.get_value(StringName("building.%s.jobs" % building))) 			* int(params.get_value(StringName("building.%s.wage_per_worker_per_minute" % building)))
+	# At the highest tax the chain's own taxes cover its wages and upkeep with room to save.
+	var taxes: float = float(jobs) * float(params.get_value(&"population.tax.base_per_employed_worker_per_minute"))
+	assert_gt(taxes, float(wages + upkeep), "a staffed chain at 100% tax is profitable")
+	var money: int = int(params.get_value(&"startup.money"))
+	var surplus: float = taxes - float(wages + upkeep)
+	var gap: float = float(2 * _chain_cost(params) - money)
+	assert_lt(gap / surplus, 15.0, "even at the top tax rate the gap closes inside a 15 minute game")
+
+
+func test_demolish_refund_parameters_exist_with_their_first_values() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"demolish.refund_ratio"), 0.5)
+	assert_eq(float(params.get_value(&"demolish.refund_grace_seconds")), 15.0)
+	assert_eq(params.get_value(&"demolish.no_jobs_refund_ratio"), 0.5)

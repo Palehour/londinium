@@ -6,7 +6,8 @@ const BUILDING_FIELDS: Dictionary = {
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
 const ECONOMY_SCHEMAS: Dictionary = {
-	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean"},
+	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
+		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
@@ -20,15 +21,24 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
 			"hunger_emigration_multiplier": "number"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
+		"tea": {"per_person_per_minute": "positive", "satisfaction_bonus": "number"},
 	},
 	"market": {"wheat": {"base_price": "money", "min_price": "money",
-		"max_price": "money", "price_update_seconds": "positive_integer"}},
+		"max_price": "money", "price_update_seconds": "positive_integer",
+		"max_step": "positive_integer", "reversion": "fraction", "storage_capacity": "integer",
+			"decay_fraction_per_minute": "fraction", "accumulate_factor": "number"},
+		"imported_flour": {"price_per_lot": "money", "lot_size": "positive_integer"},
+		"tea": {"price": "money", "buffer_seconds": "integer"}},
+		"policy": {"wheat": {"default_accumulate_price": "optional_price", "default_max_price": "optional_price",
+			"default_target_stock": "integer", "default_reserve_minutes": "integer"}},
+	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
+		"no_jobs_refund_ratio": "fraction"},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
 			"minimum_population": "integer", "duration_seconds": "positive_integer",
-			"peak_decay_per_minute": "fraction"},
+			"peak_decay_per_minute": "fraction", "stability_window_seconds": "positive_integer"},
 		"grace_seconds": "number",
 	},
 }
@@ -107,6 +117,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if catalog.base_values.has(threshold_key) and catalog.base_values.has(recovery_key) \
 			and float(catalog.base_values[recovery_key]) < float(catalog.base_values[threshold_key]):
 		_errors.append("economy/population.json: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
+	_check_wheat_policy(catalog)
 	if _errors.is_empty():
 		for role: RoleDef in catalog.roles.values():
 			for message: String in Params.new(catalog, role).validation_errors():
@@ -118,6 +129,17 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if _errors.is_empty():
 		result.catalog = catalog
 	return result
+
+
+func _check_wheat_policy(catalog: DataCatalog) -> void:
+	var values: Array[int] = []
+	for key: StringName in Params.WHEAT_POLICY_KEYS:
+		if not catalog.base_values.has(key):
+			return
+		values.append(int(catalog.base_values[key]))
+	var message: String = Params.wheat_policy_error(values)
+	if not message.is_empty():
+		_errors.append("economy/policy.json: %s" % message)
 
 
 func _object(raw: Variant, fields: Array[String], path: String) -> bool:
@@ -154,20 +176,22 @@ func _numbers(raw: Variant, schema: Dictionary, path: String,
 func _number(raw: Variant, kind: String, path: String, key: String, catalog: DataCatalog) -> bool:
 	if kind == "boolean":
 		return _boolean(raw, path, key, catalog)
-	var integral: bool = kind in ["money", "integer", "positive_integer"]
+	var integral: bool = kind in ["money", "integer", "positive_integer", "optional_price"]
 	if typeof(raw) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(raw)):
 		_errors.append("%s: expected a finite %s" % [path, kind])
 		return false
 	var value: float = float(raw)
 	# JSON numbers arrive as doubles; reject values outside int64 before conversion.
-	if value < 0 or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
+	# An optional price may be -1: "none" (see WheatPolicy), outside the price domain.
+	var lowest: float = -1.0 if kind == "optional_price" else 0.0
+	if value < lowest or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
 			or (kind.begins_with("positive") and value <= 0) \
 			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
 			or not ParameterRanges.is_valid(StringName(key), value):
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value
-	if kind == "money":
+	if kind in ["money", "optional_price"]:
 		catalog.money_keys.append(StringName(key))
 	return true
 

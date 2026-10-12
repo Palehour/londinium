@@ -4,7 +4,7 @@ Borrador v0.4, 8 oct 2026 (Mason). Incorpora las respuestas de Cristian, la inve
 
 ## Visión (contexto corto)
 
-City builder de estrategia en Londres a través de varias eras. Anno es la inspiración, no el molde. Tono realista, con paralelismos históricos y figuras reales; la tensión viene del folklore de terror londinense. El jugador elige un rol (después del hito 1), el ritmo es moderado, y hay campaña y sandbox. El arte objetivo es grabado victoriano y la música es de Cristian Bergagna (horrorsynth y darkwave). Godot 4, sin IA en runtime, presupuesto casi cero.
+City builder de estrategia en Londres a través de varias eras. Anno es la inspiración, no el molde. Tono realista, con paralelismos históricos y figuras reales; la tensión viene del folklore de terror londinense. El jugador elige un rol (después del hito 1), el ritmo es moderado, y hay campaña y sandbox. El arte objetivo es low poly 3D estilizado, con paleta fría, niebla y un post-proceso de tinta sutil; el grabado completo queda solo en la UI, el Archivo, las fichas y las cartas (D-028). La música es de Cristian Bergagna (horrorsynth y darkwave). Godot 4, sin IA en runtime, presupuesto casi cero.
 
 ## Primer hito: el loop económico mínimo
 
@@ -41,7 +41,7 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería) y después el resto con la prioridad panadería, molino, embarcadero. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
-- **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción y la recaudación.
+- **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción, lo que permite cobrar más impuesto sin frenar el crecimiento.
 - **Satisfacción (0 a 100).** Suma el pan cubierto y el té disponible, y resta la carga impositiva y el hacinamiento.
 - **Crecimiento.** Con satisfacción alta y lugar libre en viviendas llegan inmigrantes. Con satisfacción baja la gente se va. Solo los trabajadores empleados pagan impuestos.
 
@@ -53,6 +53,8 @@ Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumido
 4. **Vivienda o producción:** más gente trae más impuestos, pero también más bocas.
 5. **Té o ahorro:** subir la satisfacción contra guardar plata para expandirse.
 
+**Demoler.** Demoler devuelve el 100 % del costo a cualquier edificio si pasaron 15 s o menos desde que se construyó (es un deshacer, no una venta). Pasado ese margen: los edificios sin empleos, como la vivienda, devuelven el 50 % (`no_jobs_refund_ratio`); los edificios con empleos pero sin trabajadores siguen devolviendo el 100 %; el resto devuelve el 50 % (`refund_ratio`). Todo redondeado (#16, #58, D-023, D-029). El costo es el vigente, con los modificadores de rol, no el pagado. El trabajo en curso se pierde, el stock global se conserva y la casilla queda libre. Los edificios iniciales cuentan con el margen vencido.
+
 ## Derrota
 
 La partida se puede perder. Cada condición tiene un aviso previo, para que la crisis se pueda corregir antes del final:
@@ -63,7 +65,7 @@ La partida se puede perder. Cada condición tiene un aviso previo, para que la c
 | Motín de hambre | Menos del 50 % del pan cubierto | Menos del 50 % del pan cubierto durante 3 minutos seguidos |
 | Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |
 
-Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y la satisfacción no está por debajo del umbral de emigración. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación.
+Una ciudad es estable cuando nadie se está yendo: no hay emigración por hambre, la cobertura de pan suavizada es de 0,6 o más y pasaron 60 s desde la última salida por baja satisfacción (#34, D-022). Si la emigración por satisfacción está activa, cualquier salida cuenta, aunque también haya hambre. Mientras la ciudad está estable, su pico de población baja despacio hasta alcanzar la población actual. Durante la gracia no se muestran avisos de despoblación.
 
 Los umbrales y los tiempos son placeholders para balancear.
 

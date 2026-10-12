@@ -1,6 +1,11 @@
 class_name Params
 extends RefCounted
 
+const WHEAT_POLICY_KEYS: Array[StringName] = [&"policy.wheat.default_accumulate_price",
+	&"policy.wheat.default_max_price", &"policy.wheat.default_target_stock",
+	&"market.wheat.storage_capacity", &"market.wheat.min_price", &"market.wheat.max_price",
+	&"policy.wheat.default_reserve_minutes"]
+
 var _base_values: Dictionary[StringName, Variant] = {}
 var _money_keys: Array[StringName] = []
 var _boolean_keys: Array[StringName] = []
@@ -57,7 +62,27 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 		if recovery < threshold:
 			errors.append("Params: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold after role modifiers")
 			return null
+	if key in WHEAT_POLICY_KEYS:
+		var message: String = _wheat_policy_error(errors)
+		if not message.is_empty():
+			errors.append("Params: %s after role modifiers" % message)
+			return null
 	return value
+
+
+func _wheat_policy_error(errors: Array[String]) -> String:
+	var values: Array[int] = []
+	for key: StringName in WHEAT_POLICY_KEYS:
+		var other: Variant = _get_modified_value(key, errors)
+		if other == null:
+			return "wheat policy parameters are unavailable"
+		values.append(int(other))
+	return wheat_policy_error(values)
+
+
+# Values in WHEAT_POLICY_KEYS order.
+static func wheat_policy_error(values: Array[int]) -> String:
+	return WheatPolicy.validation_error(values[0], values[1], values[2], values[6], values[3], values[4], values[5])
 
 
 func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:

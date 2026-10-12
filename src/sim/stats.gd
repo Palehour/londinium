@@ -2,7 +2,7 @@ class_name Stats
 extends RefCounted
 
 const KEYS: Array[StringName] = [&"bread_produced", &"bread_consumed", &"bread_demand",
-	&"taxes", &"wages", &"upkeep", &"wheat", &"construction"]
+	&"taxes", &"wages", &"upkeep", &"wheat", &"imports", &"tea", &"construction"]
 
 var _window_size: int
 var _samples: Array[Dictionary] = []
@@ -14,13 +14,21 @@ func _init(window_size: int) -> void:
 
 # Loading resumes the per-minute rates where the snapshot left them. Only the newest samples
 # that fit the current window are kept; a malformed window is dropped rather than half-used.
-# Every flow is an amount paid, eaten or made in one tick, so it is finite and never negative.
+# Every flow is an amount paid, eaten or made in one tick, so it is finite and never negative,
+# except construction: it is net of demolition refunds, so a tick can be below zero.
 func restore(window: Array) -> void:
 	_samples.clear()
 	for entry: Variant in window.slice(maxi(0, window.size() - _window_size)):
+		# A window saved before imports existed has no import flows: it paid nothing for them.
+		if entry is Dictionary:
+			entry = entry.duplicate()
+			for key: StringName in [&"imports", &"tea"]:
+				if not entry.has(key):
+					entry[key] = 0.0
 		if entry is not Dictionary or not KEYS.all(func(key: StringName) -> bool:
 				return entry.has(key) and typeof(entry[key]) in [TYPE_INT, TYPE_FLOAT] \
-					and is_finite(float(entry[key])) and float(entry[key]) >= 0.0):
+					and is_finite(float(entry[key])) \
+					and (key == &"construction" or float(entry[key]) >= 0.0)):
 			push_error("Stats: malformed window sample; starting an empty window")
 			_samples.clear()
 			return
@@ -40,6 +48,8 @@ func record(state: EconomyState) -> void:
 		&"wages": float(state.wages_tick),
 		&"upkeep": float(state.upkeep_tick),
 		&"wheat": float(state.wheat_spent_tick),
+		&"imports": float(state.imports_spent_tick),
+		&"tea": float(state.tea_spent_tick),
 		&"construction": float(state.construction_spent_tick),
 	})
 	if _samples.size() > _window_size:
@@ -69,6 +79,9 @@ func snapshot() -> Dictionary:
 		"wages_per_minute": sums[&"wages"] * per_minute,
 		"upkeep_per_minute": sums[&"upkeep"] * per_minute,
 		"wheat_spent_per_minute": sums[&"wheat"] * per_minute,
-		"operating_balance_per_minute": (sums[&"taxes"] - sums[&"wages"] - sums[&"upkeep"] - sums[&"wheat"]) * per_minute,
+		"imports_spent_per_minute": sums[&"imports"] * per_minute,
+		"tea_spent_per_minute": sums[&"tea"] * per_minute,
+		"operating_balance_per_minute": (sums[&"taxes"] - sums[&"wages"] - sums[&"upkeep"] - sums[&"wheat"]
+			- sums[&"imports"]) * per_minute,
 		"construction_spent_per_minute": sums[&"construction"] * per_minute,
 	}

@@ -31,10 +31,30 @@ var defeat_initialized: bool = false
 var defeat_elapsed_seconds: int = 0
 var hunger_smoothed_coverage: float = 1.0
 var hunger_emigration_active: bool = false
+# Seconds since someone last left because of low satisfaction; -1 means nobody ever has.
+var satisfaction_departure_age_seconds: int = -1
 var population_peak: float = 0.0
 var depopulation_active: bool = false
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
+# Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
+# data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).
+var wheat_accumulate_price: int = WheatPolicy.OFF
+var wheat_max_price: int = WheatPolicy.NO_LIMIT
+var wheat_target_stock: int = 0
+var wheat_reserve_minutes: int = -1
+# Price before the last repricing, for the panel's trend arrow; -1 until the first repricing.
+var wheat_previous_price: int = -1
+# Wheat lost to damp and rats accumulates here until it makes a whole unit.
+var wheat_decay_fraction: float = 0.0
+# Imports (D-025, D-026): both are off until the player switches them on (startup data).
+var tea_imports_enabled: bool = false
+var flour_imports_enabled: bool = false
+# Tea eaten but not yet a whole unit, like bread_fraction.
+var tea_fraction: float = 0.0
+var tea_demand: float = 0.0
+var tea_consumed: float = 0.0
+var tea_coverage: float = 0.0
 # Per-tick flows feed the stats window; they are transient and never saved.
 var bread_produced_tick: int = 0
 var bread_consumed_tick: float = 0.0
@@ -43,6 +63,9 @@ var taxes_tick: int = 0
 var wages_tick: int = 0
 var upkeep_tick: int = 0
 var wheat_spent_tick: int = 0
+# Imports in total (flour and tea), and the tea part of it.
+var imports_spent_tick: int = 0
+var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
 
 
@@ -54,6 +77,8 @@ func reset_flows() -> void:
 	wages_tick = 0
 	upkeep_tick = 0
 	wheat_spent_tick = 0
+	imports_spent_tick = 0
+	tea_spent_tick = 0
 	construction_spent_tick = 0
 
 
@@ -64,9 +89,17 @@ func to_dict() -> Dictionary:
 		"defeat_elapsed_seconds": defeat_elapsed_seconds,
 		"hunger_smoothed_coverage": hunger_smoothed_coverage,
 		"hunger_emigration_active": hunger_emigration_active,
+		"satisfaction_departure_age_seconds": satisfaction_departure_age_seconds,
 		"population_peak": population_peak, "depopulation_active": depopulation_active,
 		"defeat_causes": defeat_causes.duplicate(),
 		"wheat_purchases_enabled": wheat_purchases_enabled,
+		"wheat_accumulate_price": wheat_accumulate_price, "wheat_max_price": wheat_max_price,
+		"wheat_target_stock": wheat_target_stock, "wheat_reserve_minutes": wheat_reserve_minutes,
+		"wheat_previous_price": wheat_previous_price,
+		"wheat_decay_fraction": wheat_decay_fraction,
+		"tea_imports_enabled": tea_imports_enabled, "flour_imports_enabled": flour_imports_enabled,
+		"tea_fraction": tea_fraction, "tea_demand": tea_demand, "tea_consumed": tea_consumed,
+		"tea_coverage": tea_coverage,
 		"stocks": stocks.duplicate(),
 		"money": money,
 		"population": population,
@@ -98,9 +131,22 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.defeat_elapsed_seconds = values.get("defeat_elapsed_seconds", 0)
 	result.hunger_smoothed_coverage = values.get("hunger_smoothed_coverage", 1.0)
 	result.hunger_emigration_active = values.get("hunger_emigration_active", false)
+	result.satisfaction_departure_age_seconds = int(values.get("satisfaction_departure_age_seconds", -1))
 	result.population_peak = float(values.get("population_peak", 0.0))
 	result.depopulation_active = values.get("depopulation_active", false)
 	result.wheat_purchases_enabled = bool(values.get("wheat_purchases_enabled", true))
+	result.wheat_accumulate_price = int(values.get("wheat_accumulate_price", WheatPolicy.OFF))
+	result.wheat_max_price = int(values.get("wheat_max_price", WheatPolicy.NO_LIMIT))
+	result.wheat_target_stock = int(values.get("wheat_target_stock", 0))
+	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
+	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
+	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))
+	result.tea_imports_enabled = bool(values.get("tea_imports_enabled", false))
+	result.flour_imports_enabled = bool(values.get("flour_imports_enabled", false))
+	result.tea_fraction = float(values.get("tea_fraction", 0.0))
+	result.tea_demand = float(values.get("tea_demand", 0.0))
+	result.tea_consumed = float(values.get("tea_consumed", 0.0))
+	result.tea_coverage = float(values.get("tea_coverage", 0.0))
 	for cause: Variant in values.get("defeat_causes", []):
 		result.defeat_causes.append(StringName(cause))
 	result.stocks.assign(values["stocks"])

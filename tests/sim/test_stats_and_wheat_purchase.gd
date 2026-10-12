@@ -187,6 +187,20 @@ func test_restore_rejects_nonfinite_or_negative_samples() -> void:
 	assert_eq(accepted.snapshot()["window_seconds"], 60, "zero is a valid flow")
 
 
+func test_restore_keeps_net_construction_samples_made_negative_by_refunds() -> void:
+	var saved: Dictionary = _window_after(75, _params())
+	var window: Array = saved["stats"]["window"].duplicate(true)
+	window[10][&"construction"] = -60.0
+	var stats: Stats = Stats.new(60)
+	stats.restore(window)
+	assert_eq(stats.snapshot()["window_seconds"], 60, "a refund tick is a valid sample")
+	assert_eq(stats.snapshot()["window"][10][&"construction"], -60.0)
+	window[11][&"construction"] = NAN
+	stats.restore(window)
+	assert_push_error("Stats: malformed window sample; starting an empty window")
+	assert_eq(stats.snapshot()["window_seconds"], 0, "construction must still be finite")
+
+
 func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> void:
 	# Plenty of bread keeps the wharf staffed for the whole run.
 	var fed: Params = _params([Modifier.new(&"population.initial_bread", &"set", 100000)])
@@ -312,12 +326,12 @@ func test_no_money_reason_uses_the_market_affordability_rule() -> void:
 	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
 	state.wheat_price = 3
 	state.money = 2
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"no_money_for_wheat", "cannot buy one unit")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"no_money_for_wheat", "cannot buy one unit")
 	state.money = 3
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "exactly one unit is affordable")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "exactly one unit is affordable")
 	state.money = 2
 	state.wheat_price = 0
-	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf), &"ok", "free wheat needs no money")
+	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"ok", "free wheat needs no money")
 
 
 func _hungry_chain(population: int) -> Dictionary:

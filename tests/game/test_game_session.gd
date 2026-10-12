@@ -23,7 +23,8 @@ func _tick() -> void:
 
 func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	var state: Dictionary = _session.get_snapshot()["economy"]
-	assert_eq(state["money"], 10000)
+	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	assert_eq(state["money"], params.get_value(&"startup.money"))
 	assert_eq(state["population"], 20)
 	assert_eq(state["stocks"][&"bread"], 40)
 	assert_true(state["buildings"].is_empty())
