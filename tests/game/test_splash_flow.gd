@@ -123,3 +123,57 @@ func test_splash_scene_instantiates_disabled_without_changing_scene() -> void:
 func test_main_scene_is_the_splash_and_it_leads_to_the_game() -> void:
 	assert_eq(ProjectSettings.get_setting("application/run/main_scene"), "res://src/ui/splash/splash.tscn")
 	assert_true(ResourceLoader.exists(Splash.MAIN_SCENE_PATH))
+
+
+func _real_timings() -> SplashTimings:
+	var timings: SplashTimings = SplashTimings.new()
+	timings.load_data()
+	assert_true(timings.errors.is_empty(), str(timings.errors))
+	return timings
+
+
+func test_stalled_video_goes_to_fallback_then_to_the_main_scene() -> void:
+	var timings: SplashTimings = _real_timings()
+	var flow: SplashFlow = SplashFlow.new(true, timings)
+	watch_signals(flow)
+	flow.advance(timings.watchdog_seconds * 0.99)
+	assert_eq(flow.phase, SplashFlow.Phase.PLAYING, "Not before the maximum time")
+	flow.advance(timings.watchdog_seconds * 0.02)
+	assert_eq(flow.phase, SplashFlow.Phase.FALLBACK, "Watchdog shows the fallback image")
+	assert_signal_not_emitted(flow, "completed")
+	flow.advance(timings.fallback_seconds * 0.99)
+	assert_eq(flow.phase, SplashFlow.Phase.FALLBACK)
+	flow.advance(timings.fallback_seconds * 0.02)
+	assert_eq(flow.phase, SplashFlow.Phase.DONE, "Then it continues to the main scene")
+	assert_signal_emit_count(flow, "completed", 1)
+
+
+func test_video_that_ends_in_time_never_reaches_the_watchdog() -> void:
+	var timings: SplashTimings = _real_timings()
+	var flow: SplashFlow = SplashFlow.new(true, timings)
+	flow.advance(timings.watchdog_seconds * 0.5)
+	flow.video_finished()
+	flow.advance(timings.watchdog_seconds * 2.0)
+	assert_eq(flow.phase, SplashFlow.Phase.DONE)
+
+
+func test_fade_runs_for_its_duration_and_reports_progress() -> void:
+	var timings: SplashTimings = _real_timings()
+	var flow: SplashFlow = SplashFlow.new(true, timings)
+	flow.advance(timings.watchdog_seconds * 0.5)
+	flow.skip_requested()
+	assert_eq(flow.fade_progress(), 0.0, "The fade clock restarts when it begins")
+	flow.advance(timings.fade_seconds * 0.5)
+	assert_almost_eq(flow.fade_progress(), 0.5, 0.001)
+	assert_eq(flow.phase, SplashFlow.Phase.FADING)
+	flow.advance(timings.fade_seconds * 0.6)
+	assert_eq(flow.phase, SplashFlow.Phase.DONE)
+
+
+func test_advance_without_timings_or_after_done_does_nothing() -> void:
+	var flow: SplashFlow = SplashFlow.new(true)
+	flow.advance(1000.0)
+	assert_eq(flow.phase, SplashFlow.Phase.PLAYING)
+	var done: SplashFlow = SplashFlow.new(false, _real_timings())
+	done.advance(1000.0)
+	assert_eq(done.phase, SplashFlow.Phase.DONE)
