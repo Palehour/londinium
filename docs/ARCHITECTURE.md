@@ -35,6 +35,10 @@ londinium/
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
+│   ├── eras/
+│   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
+│   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
+│   │       └── classes.json  # per class: housing building, maximum housing bonus, needs (good → category, value, satisfaction key)
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
 │   └── maps/
@@ -46,7 +50,7 @@ londinium/
 │   │   ├── params.gd         # get_value(key) = base data ∘ role modifiers
 │   │   ├── modifier.gd       # {key, op: add|mul|set, value}
 │   │   ├── data_loader.gd    # JSON → typed defs, with validation errors
-│   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd …
+│   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …
 │   │   ├── systems/          # one file per tick step (see order below)
 │   │   ├── commands/         # command classes / validation
 │   │   └── stats.gd          # rolling 60-tick windows for "per minute" figures
@@ -75,7 +79,7 @@ londinium/
 4. Converters: mill (wheat→flour), bakery (flour→bread), malthouse (barley→malt), brewery (malt→beer), limited by staffed jobs and input stock. Malt and beer have a warehouse cap (`market.malt.*`, `market.beer.*`): a full warehouse stops its producer instead of discarding output (nothing consumes beer until #52), and beer spoils a little each minute. Several producers of a capped good share its room and its fractions (ADR 0006).
 5. Consumption: bread eaten per person; tea if available (D-025); stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
-7. Satisfaction 0–100 with breakdown (bread covered, tea, tax burden, overcrowding).
+7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, capped at 100, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
 8. Growth: hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction high and housing free, emigration if low.
 9. Money: taxes from employed workers only; minus wages and building upkeep.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
@@ -96,6 +100,7 @@ londinium/
 // a future role would add e.g. { "key": "building.bakery.recipe.seconds", "op": "mul", "value": 0.9 }
 ```
 Parameter keys are dotted paths into the data (`building.bakery.jobs`, `defeat.hunger.threshold`).
+Keys with ids from the era's data follow the same rule: `needs.<category>.threshold`, `needs.housing_bonus_per_category`, `class.<class>.housing_max_bonus`, `class.<class>.need.<good>.value`; `ParameterRanges.PATTERNS` validates them by shape, and structure (which good counts in which category, which building houses a class) lives in `ClassDef`/`NeedDef` and reaches the sim through `EconomyContext` (ADR 0007). `EconomyState.class_needs` holds the result per class and category; `snapshot()["needs"]` explains it (`NeedsDiagnostics`).
 `test_data_valid.gd` fails if code asks for a key that doesn't exist or a modifier targets a missing key.
 
 ## Conventions worth stating

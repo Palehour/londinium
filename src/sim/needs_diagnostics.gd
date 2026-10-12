@@ -1,0 +1,35 @@
+class_name NeedsDiagnostics
+extends RefCounted
+
+# Why each class meets or misses its need categories, and what that does to its housing (issue #86).
+# The UI only formats this; ids (class, category, good, reason) are the keys that strings.gd translates.
+
+
+static func build(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
+	var classes: Dictionary = {}
+	if context == null:
+		return {"classes": classes}
+	for definition: ClassDef in context.classes.values():
+		var categories: Array[Dictionary] = []
+		var evaluated: Dictionary = state.class_needs.get(definition.id, {})
+		for category: StringName in evaluated:
+			var entry: Dictionary = evaluated[category]
+			var goods: Array[Dictionary] = []
+			for need: NeedDef in definition.needs:
+				if need.category == category:
+					goods.append({"good": need.good, "coverage": NeedsSystem.coverage(state, need.good)})
+			categories.append({
+				"category": category, "value": entry["value"], "threshold": entry["threshold"],
+				"met": entry["met"], "reason": &"ok" if entry["met"] else &"below_threshold",
+				"goods": goods,
+			})
+		classes[definition.id] = {
+			"categories": categories,
+			"housing": {
+				"building": definition.housing_building,
+				"base": maxi(0, int(params.get_value(StringName("building.%s.capacity" % definition.housing_building)))),
+				"bonus": NeedsSystem.housing_bonus(state, params, definition.id),
+				"max_bonus": int(params.get_value(StringName("class.%s.housing_max_bonus" % definition.id))),
+			},
+		}
+	return {"classes": classes}

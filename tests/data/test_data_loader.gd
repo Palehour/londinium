@@ -39,7 +39,7 @@ var _documents: Dictionary[String, Dictionary] = {}
 
 func before_each() -> void:
 	_documents.clear()
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		var dir: DirAccess = DirAccess.open("res://data/" + folder)
 		for file_name: String in dir.get_files():
 			if file_name.ends_with(".json"):
@@ -172,6 +172,8 @@ func test_housing_tag_works_with_a_different_building_id() -> void:
 	var buildings: Dictionary = _documents["economy/buildings.json"]
 	buildings["worker_housing"] = buildings["housing"]
 	buildings.erase("housing")
+	# The class that lives there follows the rename.
+	_documents["eras/victorian/classes.json"]["worker"]["housing_building"] = "worker_housing"
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	if result.is_ok():
@@ -182,6 +184,10 @@ func test_housing_tag_works_with_a_different_building_id() -> void:
 func test_housing_id_without_housing_tag_loads_as_a_producer() -> void:
 	_documents["economy/buildings.json"]["housing"] = \
 		_documents["economy/buildings.json"]["bakery"].duplicate(true)
+	# A class still needs a real housing building to live in.
+	_documents["economy/buildings.json"]["worker_housing"] = {"cost": 60, "upkeep_per_minute": 1,
+		"wage_per_worker_per_minute": 0, "jobs": 0, "capacity": 20, "tags": ["housing"]}
+	_documents["eras/victorian/classes.json"]["worker"]["housing_building"] = "worker_housing"
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	if result.is_ok():
@@ -291,7 +297,7 @@ func _assert_invalid(message: String) -> void:
 
 
 func _load_file_fixture(text: String) -> DataLoadResult:
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		DirAccess.make_dir_recursive_absolute(FIXTURE_ROOT.path_join(folder))
 	var path: String = FIXTURE_ROOT.path_join("economy/goods.json")
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
@@ -299,7 +305,7 @@ func _load_file_fixture(text: String) -> DataLoadResult:
 	file.close()
 	var result: DataLoadResult = DataLoader.new().load_all(FIXTURE_ROOT)
 	DirAccess.remove_absolute(path)
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "eras"]:
 		DirAccess.remove_absolute(FIXTURE_ROOT.path_join(folder))
 	DirAccess.remove_absolute(FIXTURE_ROOT)
 	return result

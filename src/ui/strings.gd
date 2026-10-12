@@ -83,7 +83,22 @@ const BUILDING_LABELS: Dictionary[String, String] = {
 	"malthouse": "Maltería",
 	"brewery": "Cervecería",
 }
+const NEEDS_TITLE: String = "Necesidades"
+const NEEDS_MET: String = "%s · %s: %.0f/%.0f ✓"
+const NEEDS_SHORT: String = "%s · %s: %.0f/%.0f · falta %s"
+const NEEDS_NO_CLASS: String = "Sin necesidades definidas."
+const HOUSING_ROW: String = "%s · vivienda: base %d + bono %d (máximo %d)"
+const CLASS_LABELS: Dictionary[StringName, String] = {&"worker": "Trabajadores"}
+const CATEGORY_LABELS: Dictionary[StringName, String] = {
+	&"sustento": "Sustento", &"abrigo": "Abrigo", &"salud": "Salud",
+	&"comunidad": "Comunidad o fe", &"estatus": "Estatus",
+}
+const GOOD_LABELS: Dictionary[StringName, String] = {
+	&"wheat": "trigo", &"barley": "cebada", &"flour": "harina", &"bread": "pan",
+	&"malt": "malta", &"beer": "cerveza", &"tea": "té",
+}
 const REASONS: Dictionary[StringName, String] = {
+	&"below_threshold": "Por debajo del umbral.",
 	&"no_cultivable_cells": NO_CULTIVABLE_CELLS,
 	&"unknown_building": "Tipo de edificio desconocido.",
 	&"outside_map": "La ubicación está fuera del mapa.",
@@ -136,6 +151,11 @@ static func money(pence: int) -> String:
 	@warning_ignore("integer_division")
 	var shillings: int = rest / PENCE_PER_SHILLING
 	return "%s£%d %ds %dd" % ["-" if sign < 0 else "", pounds, shillings, rest % PENCE_PER_SHILLING]
+
+
+# Label of an id, falling back to the id itself so a new era's data still reads before its text is written.
+static func label(labels: Dictionary[StringName, String], key: StringName) -> String:
+	return labels.get(key, String(key))
 
 
 static func reason(key: StringName) -> String:

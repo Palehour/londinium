@@ -127,7 +127,18 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 	&"population.satisfaction.smoothing_per_second": {
 		"min": 0.0, "max": 1.0, "min_inclusive": false, "max_inclusive": true},
+	# Bonus of housing capacity for each need category a class meets (issue #86).
+	&"needs.housing_bonus_per_category": {
+		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 }
+
+# Keys with ids in the middle (a category, a class, a good) come from the era's data, so they are matched
+# by shape instead of listed: a new era needs no edit here. Bounds are inclusive.
+const PATTERNS: Array[Dictionary] = [
+	{"prefix": "needs.", "suffix": ".threshold", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 1000.0, "integer": true},
+	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},
+]
 
 
 static func is_valid(key: StringName, value: float) -> bool:
@@ -138,14 +149,23 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"market.imported_flour.lot_size", &"market.imported_flour.max_debt_lots", &"market.tea.buffer_seconds",
 				&"market.barley.max_step", &"market.barley.storage_capacity",
 				&"market.malt.storage_capacity", &"market.beer.storage_capacity",
-				&"policy.unloading.default_barley_percent"] \
+				&"policy.unloading.default_barley_percent", &"needs.housing_bonus_per_category"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):
-		return true
+		return _pattern_allows(key, value)
 	var bounds: Dictionary = BY_KEY[key]
 	var minimum: float = bounds["min"]
 	var maximum: float = bounds["max"]
 	var above_minimum: bool = value >= minimum if bounds["min_inclusive"] else value > minimum
 	var below_maximum: bool = value <= maximum if bounds["max_inclusive"] else value < maximum
 	return above_minimum and below_maximum
+
+
+static func _pattern_allows(key: StringName, value: float) -> bool:
+	for pattern: Dictionary in PATTERNS:
+		if String(key).begins_with(pattern["prefix"]) and String(key).ends_with(pattern["suffix"]):
+			if pattern["integer"] and value != floor(value):
+				return false
+			return value >= pattern["min"] and value <= pattern["max"]
+	return true

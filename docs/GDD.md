@@ -42,6 +42,7 @@ Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumido
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
 - **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción, lo que permite cobrar más impuesto sin frenar el crecimiento.
+- **Categorías de necesidades (D-032).** Cada bien cuenta en una categoría: el pan en sustento (umbral 75) y el té en comunidad (umbral 50). Cumplir el umbral de una categoría agrega +2 a la capacidad de cada vivienda de la clase, hasta un tope por clase; para los trabajadores el tope es 0, así que su vivienda sigue en 20. Pasarse del umbral no da más bono. El panel explica qué categoría falta.
 - **Satisfacción (0 a 100).** Suma el pan cubierto y el té disponible, y resta la carga impositiva y el hacinamiento.
 - **Crecimiento.** Con satisfacción alta y lugar libre en viviendas llegan inmigrantes. Con satisfacción baja la gente se va. Solo los trabajadores empleados pagan impuestos.
 

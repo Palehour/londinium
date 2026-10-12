@@ -16,6 +16,8 @@ var satisfaction: float = 0.0
 var satisfaction_target: float = 0.0
 var satisfaction_breakdown: Dictionary[String, float] = {}
 var housing_capacity: int = 0
+# Per class and category: {value, threshold, met} (issue #86). Derived by NeedsSystem every tick.
+var class_needs: Dictionary[StringName, Dictionary] = {}
 var overcrowding: float = 0.0
 var employed: int = 0
 var unemployed: int = 0
@@ -136,6 +138,7 @@ func to_dict() -> Dictionary:
 		"employed": employed, "unemployed": unemployed,
 		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
 		"tax_fraction": tax_fraction, "wage_fraction": wage_fraction, "upkeep_fraction": upkeep_fraction,
+		"class_needs": class_needs.duplicate(true),
 	}
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
@@ -203,5 +206,6 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.tax_fraction = values.get("tax_fraction", 0.0)
 	result.wage_fraction = values.get("wage_fraction", 0.0)
 	result.upkeep_fraction = values.get("upkeep_fraction", 0.0)
+	result.class_needs.assign(values.get("class_needs", {}).duplicate(true))
 	result.buildings.assign(values["buildings"].duplicate(true))
 	return result

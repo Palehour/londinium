@@ -135,6 +135,7 @@ func snapshot() -> Dictionary:
 		"economy": _state.to_dict(),
 		"stats": _stats.snapshot(),
 		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
+		"needs": NeedsDiagnostics.build(_state, _params, _context),
 		"production": {"input_starved": _state.input_starved_tick.duplicate()},
 		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params),
 			"barley": MarketSystem.barley_snapshot(_state, _params),
