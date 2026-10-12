@@ -265,6 +265,36 @@ func test_policy_controls_are_blocked_after_defeat() -> void:
 	assert_false((_panel.get("_reserve") as HSlider).editable)
 
 
+func test_releasing_the_unloading_slider_where_it_was_sends_nothing() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	slider.drag_ended.emit(false)
+	assert_true(_session.get("_pending").is_empty(), "the value did not change")
+	slider.value = 30.0
+	slider.drag_ended.emit(true)
+	assert_eq(_session.get("_pending").size(), 1, "a changed value is sent once")
+	_tick()
+	_session.publish_tick()
+	slider.drag_ended.emit(false)
+	assert_true(_session.get("_pending").is_empty(), "30 is now the current split: nothing to send")
+
+
+func test_the_unloading_slider_is_blocked_after_defeat() -> void:
+	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+	_panel = _new_panel(_session)
+	_tick()
+	_tick()
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_false(slider.editable)
+	slider.value = 50.0
+	slider.drag_ended.emit(true)
+	assert_true(_session.get("_pending").is_empty(), "no command is sent once the game is lost")
+	_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 0)
+
+
 func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> void:
 	var speeds: Dictionary = _panel.get("_speed_buttons")
 	var pause: Button = _panel.get("_pause") as Button

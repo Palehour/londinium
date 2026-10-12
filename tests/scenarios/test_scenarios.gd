@@ -489,6 +489,12 @@ func test_both_chains_keep_bread_covered_and_the_mill_supplied_across_twenty_see
 		# PR reports how much); from then on the wheat share is 14 per minute and it must never wait again.
 		var bought: int = result.second_chain_purchase_tick() + 1
 		assert_gt(bought, 0, "seed %d bought its second wharf" % seed_value)
+		# ... and it does wait before it: with 7 of its 10 wheat per minute it cannot be fully busy.
+		var waited_before: int = 0
+		for tick: int in result.waiting_input_ticks.get(&"mill", []):
+			if tick <= bought:
+				waited_before += 1
+		assert_gt(waited_before, 0, "seed %d: the mill waits for wheat before the second wharf" % seed_value)
 		for tick: int in result.waiting_input_ticks.get(&"mill", []):
 			assert_lte(tick, bought + SECOND_WHARF_SETTLE_TICKS,
 				"seed %d, tick %d: the mill ran out of wheat after the second wharf" % [seed_value, tick])

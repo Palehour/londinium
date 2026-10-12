@@ -34,6 +34,8 @@ var _unloading_label: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _dragging_unloading: bool = false
+# Split the simulation reported last, so releasing the slider where it was sends nothing.
+var _unloading_current: int = 0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
@@ -290,12 +292,16 @@ func _update_unloading(barley: Dictionary, defeated: bool) -> void:
 	if not _dragging_unloading:
 		_unloading.value = barley["barley_percent"]
 		_unloading_label.text = Strings.UNLOADING_LABEL % int(barley["barley_percent"])
+	_unloading_current = int(barley["barley_percent"])
 	_unloading.editable = not defeated
 
 
 func _unloading_released(_changed: bool) -> void:
 	_dragging_unloading = false
-	session.submit_command(SetUnloadingSplitCommand.new(int(_unloading.value)))
+	var percent: int = int(_unloading.value)
+	if not _unloading.editable or percent == _unloading_current:
+		return
+	session.submit_command(SetUnloadingSplitCommand.new(percent))
 
 
 func _malt_beer_text(malt: Dictionary, beer: Dictionary) -> String:
