@@ -50,6 +50,17 @@ func test_category_exactly_at_threshold_is_met() -> void:
 	assert_eq(_category(&"comunidad")["value"], 50.0)
 
 
+func test_a_threshold_reached_exactly_on_paper_is_met_despite_float_drift() -> void:
+	_params = _params_with({&"class.worker.need.bread.value": 90, &"needs.sustento.threshold": 63})
+	assert_lt(0.7 * 90.0, 63.0, "The raw product really lands under the threshold")
+	_evaluate(0.7)
+	assert_true(_category(&"sustento")["met"])
+	var category: Dictionary = NeedsDiagnostics.build(_state, _params, _context)["classes"][&"worker"]["categories"][0]
+	assert_eq(category["reason"], &"ok")
+	_evaluate(0.69)
+	assert_false(_category(&"sustento")["met"])
+
+
 func test_category_just_below_the_community_threshold_is_not_met() -> void:
 	_evaluate(1.0, 0.49)
 	assert_false(_category(&"comunidad")["met"])

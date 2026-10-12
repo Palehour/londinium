@@ -33,8 +33,14 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 		for category: StringName in categories:
 			var entry: Dictionary = categories[category]
 			entry["threshold"] = float(params.get_value(StringName("needs.%s.threshold" % category)))
-			entry["met"] = entry["value"] >= entry["threshold"]
+			entry["met"] = reaches(entry["value"], entry["threshold"])
 		state.class_needs[definition.id] = categories
+
+
+# A score that is exactly the threshold on paper can land a hair under it in binary floating point
+# (0.7 * 90 is 62.99999999999999, not 63), so equality is approximate.
+static func reaches(value: float, threshold: float) -> bool:
+	return value >= threshold or is_equal_approx(value, threshold)
 
 
 static func met_count(state: EconomyState, class_id: StringName) -> int:

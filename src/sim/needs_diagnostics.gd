@@ -9,7 +9,8 @@ extends RefCounted
 static func _reason(entry: Dictionary, attainable: float) -> StringName:
 	if entry["met"]:
 		return &"ok"
-	return &"unreachable_threshold" if attainable < float(entry["threshold"]) else &"below_threshold"
+	var reachable: bool = NeedsSystem.reaches(attainable, float(entry["threshold"]))
+	return &"below_threshold" if reachable else &"unreachable_threshold"
 
 
 static func build(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
