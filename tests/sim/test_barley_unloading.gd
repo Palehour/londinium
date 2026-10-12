@@ -274,6 +274,20 @@ func test_the_wharf_never_owes_more_than_two_lots_so_the_flour_cannot_skip_the_l
 		assert_lt(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 2.0 * lot)
 
 
+func test_many_bakeries_asking_at_once_cannot_push_the_debt_past_two_lots() -> void:
+	var extra: Array[StringName] = []
+	for index: int in range(21):
+		extra.append(&"bakery")
+	var state: EconomyState = _state(0, 1, extra)
+	state.flour_imports_enabled = true
+	state.population = 400
+	var sim: Simulation = _sim(state)
+	sim.tick()
+	var lot: float = float(_params().get_value(&"market.imported_flour.lot_size"))
+	assert_lte(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 2.0 * lot)
+	assert_gt(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0, "it did buy")
+
+
 func test_the_flour_waits_for_the_wharf_when_it_is_busy() -> void:
 	var state: EconomyState = _flour_state(0)
 	state.flour_unloading_debt = 12.0

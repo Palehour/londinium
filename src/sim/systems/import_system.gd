@@ -10,6 +10,8 @@ extends RefCounted
 const SECONDS_PER_MINUTE: float = 60.0
 # A flour deficit below this is rounding noise, not a reason to buy a lot.
 const DEFICIT_EPSILON: float = 1e-9
+# The wharf never owes more than this many lots of unloading, however many bakeries ask at once.
+const MAX_DEBT_LOTS: int = 2
 
 
 func tick(state: EconomyState, params: Params) -> void:
@@ -116,7 +118,9 @@ func _import_flour(state: EconomyState, params: Params) -> void:
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	@warning_ignore("integer_division")
 	var wanted: int = (needed - stock + lot - 1) / lot
-	var lots: int = affordable(state, wanted, price)
+	# Only as many lots as keep the debt inside its bound, so the flour cannot skip the wharf's limit.
+	var allowed: int = floori((float(MAX_DEBT_LOTS * lot) - state.flour_unloading_debt) / float(lot))
+	var lots: int = affordable(state, mini(wanted, allowed), price)
 	if lots <= 0:
 		return
 	state.money -= lots * price

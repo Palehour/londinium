@@ -348,7 +348,7 @@ func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
 		Strings.BALANCE_BREAKDOWN % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
 			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"]),
-			_money(stats["imports_spent_per_minute"])],
+			_money(stats["barley_spent_per_minute"]), _money(stats["imports_spent_per_minute"])],
 		Strings.CONSTRUCTION % _money(stats["construction_spent_per_minute"]),
 		Strings.WHEAT_PRICE % Strings.money(economy.get("wheat_price", 0)),
 	]
