@@ -136,7 +136,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 # by shape instead of listed: a new era needs no edit here. Bounds are inclusive.
 const PATTERNS: Array[Dictionary] = [
 	{"prefix": "needs.", "suffix": ".threshold", "min": 0.0, "max": 100.0, "integer": false},
-	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 1000.0, "integer": true},
+	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
+	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},
 ]
 

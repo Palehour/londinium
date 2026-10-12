@@ -1,6 +1,6 @@
 # ADR 0007: Necesidades por categoría y clases como datos por era
 
-- **Estado:** Aceptado
+- **Estado:** Propuesto
 - **Fecha:** 2026-10-12
 - **Origen:** issue #86; D-027 (clases y necesidades como datos, sin era fija) y D-032
 
@@ -18,7 +18,7 @@ Hasta #86 la única clase tenía sus necesidades cableadas: el pan y el té entr
 - Los textos salen de ids estables (clase, categoría, bien, motivo) traducidos en `src/ui/strings.gd`.
 
 ## Estado
-Aceptado por Cristian al aprobar el PR #107 (12/10/2026), en un commit del mismo PR y antes del merge. No reemplaza a ningún ADR; amplía el contexto del ADR 0004 con las clases.
+Propuesto mientras el PR #107 está abierto. Cuando Cristian apruebe el PR (y Bailey lo confirme con él), pasa a Aceptado en un commit del mismo PR, antes del merge. No reemplaza a ningún ADR; amplía el contexto del ADR 0004 con las clases.
 
 ## Consecuencias
 - Una clase o una categoría nueva (por ejemplo el artesano en #52) es solo datos, más una rama en `NeedsSystem.coverage` si trae un bien que todavía nadie consume.
