@@ -80,7 +80,15 @@ yF, xF = np.mgrid[0:H, 0:W].astype(np.float32)
 DAWN = np.exp(-((xF - 960) / 640) ** 2 - ((yF - 520) / 210) ** 2).astype(np.float32)
 
 # ---------------- wordmark ----------------
-FONT = '/usr/share/fonts/truetype/sand-box/google/Cormorant Garamond/CormorantGaramond-VariableFont_wght.ttf'
+FONT_FILE = 'CormorantGaramond-VariableFont_wght.ttf'  # Cormorant Garamond (OFL), variable weight
+def find_font():
+    # PALEHOUR_FONT=/path/to/CormorantGaramond-VariableFont_wght.ttf, or drop the file next to this script.
+    for path in (os.environ.get('PALEHOUR_FONT'), os.path.join(OUT, FONT_FILE)):
+        if path and os.path.isfile(path):
+            return path
+    sys.exit(f'Font not found. Download {FONT_FILE} from Google Fonts (Cormorant Garamond) and either '
+             f'place it in {OUT} or set PALEHOUR_FONT to its path.')
+FONT = find_font()
 def make_wordmark():
     SS = 4
     size = int(sys.argv[2]) if len(sys.argv) > 2 else 58
