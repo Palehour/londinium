@@ -28,6 +28,7 @@ var _flour: CheckButton
 var _tea_row: Label
 var _flour_row: Label
 var _barley_row: Label
+var _malt_beer_row: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _pause: Button
@@ -90,6 +91,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
 	_flour_row.text = _flour_text(snapshot["imports"]["flour"])
 	_barley_row.text = _barley_text(snapshot["market"]["barley"])
+	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
@@ -125,6 +127,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	content.add_child(_flour_row)
 	_barley_row = _label("")
 	content.add_child(_barley_row)
+	_malt_beer_row = _label("")
+	content.add_child(_malt_beer_row)
 	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
@@ -262,6 +266,10 @@ func _barley_text(barley: Dictionary) -> String:
 	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
 	return Strings.BARLEY_ROW % [barley["stock"], barley["capacity"], Strings.money(price), trend,
 		barley["barley_percent"], barley["wheat_percent"]]
+
+
+func _malt_beer_text(malt: Dictionary, beer: Dictionary) -> String:
+	return Strings.MALT_BEER_ROW % [malt["stock"], malt["capacity"], beer["stock"], beer["capacity"]]
 
 
 # A lot is priced in whole pence, so the unit price can carry a fraction of a penny.

@@ -56,6 +56,13 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 	assert_false((_panel.get("_restart") as Button).visible)
 
 
+func test_panel_shows_malt_and_beer_stock_with_their_caps() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var market: Dictionary = _session.get_snapshot()["market"]
+	assert_eq(_text("_malt_beer_row"), Strings.MALT_BEER_ROW
+		% [0, market["malt"]["capacity"], 0, market["beer"]["capacity"]])
+
+
 func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
 	_panel = _new_panel(_session)

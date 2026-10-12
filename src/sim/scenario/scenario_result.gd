@@ -12,6 +12,7 @@ const CSV_COLUMNS: Array[String] = [
 	"bankruptcy", "hunger", "depopulation", "defeat_causes", "wheat_stock",
 	"imports_spent_pm", "tea_spent_pm", "tea_stock", "tea_coverage", "flour_stock",
 	"barley_spent_pm", "barley_stock",
+	"n_malthouse", "n_brewery", "malt_stock", "beer_stock",
 ]
 # Float columns are printed with two decimals; everything else is printed as it is.
 const FLOAT_COLUMNS: Array[String] = [

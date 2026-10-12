@@ -22,6 +22,8 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 	# Before buying and before the mill runs, so it never touches wheat bought this tick.
 	_decay(state, params)
 	_decay_barley(state, params)
+	state.malt_decay_fraction = _decayed(state, params, &"malt", state.malt_decay_fraction)
+	state.beer_decay_fraction = _decayed(state, params, &"beer", state.beer_decay_fraction)
 	var wharves: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":
@@ -285,6 +287,14 @@ static func barley_snapshot(state: EconomyState, params: Params) -> Dictionary:
 		"previous_price": state.barley_previous_price if state.barley_previous_price >= 0 else price,
 		"barley_percent": barley_percent(state), "wheat_percent": WHOLE_PERCENT - barley_percent(state),
 		"flour_unloading_debt": state.flour_unloading_debt,
+	}
+
+
+# Stock and cap of a good that is made but not traded (malt, beer), for the panel.
+static func storage_snapshot(state: EconomyState, params: Params, good: StringName) -> Dictionary:
+	return {
+		"stock": int(state.stocks.get(good, 0)),
+		"capacity": int(params.get_value(StringName("market.%s.storage_capacity" % good))),
 	}
 
 

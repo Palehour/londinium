@@ -4,7 +4,7 @@ extends RefCounted
 const PENCE_PER_SHILLING: int = 12
 const PENCE_PER_POUND: int = 240
 
-const HELP: String = "1 %s · 2 %s · 3 %s · 4 %s · 5 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −"
+const HELP: String = "1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −"
 const LOADING: String = "Cargando mapa…"
 const LEGEND: String = "Terrenos:"
 const TERRAIN_LABELS: Dictionary[String, String] = {"land": "Tierra", "river": "Río", "cultivable": "Cultivable"}
@@ -25,6 +25,7 @@ const TARGET_LABEL: String = "Stock objetivo: %d"
 const RESERVE_LABEL: String = "Mínimo de seguridad: %d min de molino"
 const WHEAT_ROW: String = "Trigo: %d/%d · precio %s %s · alcanza para %s de molino"
 const BARLEY_ROW: String = "Cebada: %d/%d · precio %s %s · descarga del embarcadero: %d %% cebada, %d %% trigo"
+const MALT_BEER_ROW: String = "Malta: %d/%d · cerveza: %d/%d"
 const WHEAT_BLOCKED_NOTE: String = "Compra frenada por precio máximo."
 const TREND_UP: String = "↑"
 const TREND_DOWN: String = "↓"
@@ -78,6 +79,8 @@ const BUILDING_LABELS: Dictionary[String, String] = {
 	"bakery": "Panadería",
 	"housing": "Vivienda",
 	"wheat_field": "Campo de trigo",
+	"malthouse": "Maltería",
+	"brewery": "Cervecería",
 }
 const REASONS: Dictionary[StringName, String] = {
 	&"no_cultivable_cells": NO_CULTIVABLE_CELLS,
@@ -103,6 +106,9 @@ const REASONS: Dictionary[StringName, String] = {
 	&"invalid_unloading_split": "Reparto de descarga inválido: va de 0 a 100 %.",
 	&"no_workers": "Sin trabajadores.",
 	&"no_input": "Sin insumo.",
+	&"no_barley": "Sin cebada.",
+	&"no_malt": "Sin malta.",
+	&"storage_full": "Almacén lleno.",
 	&"missing_building": "No hay ninguno construido.",
 	&"understaffed": "Faltan trabajadores para cubrir los puestos.",
 	&"insufficient_capacity": "La cadena hace menos pan del que se come: hacen falta más edificios.",

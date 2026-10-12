@@ -3,5 +3,7 @@
   "barley": { "unit": "unit" },
   "flour": { "unit": "unit" },
   "bread": { "unit": "unit" },
+  "malt": { "unit": "unit" },
+  "beer": { "unit": "unit" },
   "tea": { "unit": "unit" }
 }

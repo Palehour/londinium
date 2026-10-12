@@ -1,6 +1,6 @@
 extends Node2D
 
-const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field"]
+const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery"]
 
 var session: GameSession
 var clock: SimClock
@@ -151,7 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var header_offset: Vector2 = Vector2(0, presentation.layout["header_height"])
 	var zoom_step: float = presentation.camera["zoom_step"]
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode >= KEY_1 and event.keycode <= KEY_5:
+		if event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1:
 			var type: StringName = TYPES[event.keycode - KEY_1]
 			var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(type))
 			_building_type = type if reason.is_empty() else &""

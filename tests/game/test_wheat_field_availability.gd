@@ -105,3 +105,37 @@ func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> v
 	_press(view, KEY_3)
 	assert_eq(view.get("_building_type"), &"")
 	assert_eq((view.get("_status") as Label).text, Strings.NO_CULTIVABLE_CELLS)
+
+
+# Issue #51: the beer chain sits after wheat_field so keys 1 to 5 keep their meaning.
+func test_malthouse_and_brewery_are_built_from_keys_six_and_seven() -> void:
+	var view: Node2D = _fixture(false)
+	var help: String = (view.get("_help") as Label).text
+	assert_string_contains(help, "6 Maltería · 7 Cervecería")
+	assert_false(help.contains("6 Maltería (desactivado"))
+	_press(view, KEY_6)
+	assert_eq(view.get("_building_type"), &"malthouse")
+	_click(view, Vector2i(2, 2))
+	_press(view, KEY_7)
+	assert_eq(view.get("_building_type"), &"brewery")
+	_click(view, Vector2i(3, 2))
+	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
+	assert_eq(buildings.size(), 2)
+	assert_eq(buildings[0]["definition_id"], &"malthouse")
+	assert_eq(buildings[1]["definition_id"], &"brewery")
+
+
+func test_beer_buildings_availability_comes_from_the_catalog_tags_not_their_ids() -> void:
+	var documents: Dictionary[String, Dictionary] = {}
+	for folder: String in ["economy", "roles", "maps"]:
+		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
+			if file_name.ends_with(".json"):
+				var path: String = folder.path_join(file_name)
+				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
+	documents["economy/buildings.json"]["brewery"]["tags"].append("river")
+	documents["maps/whitechapel_1850s.json"]["river_cells"] = []
+	var loaded: DataLoadResult = DataLoader.new().load_documents(documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog, loaded.catalog.maps[&"whitechapel_1850s"])
+	assert_eq(context.building_unavailable_reason(&"malthouse"), &"")
+	assert_eq(context.building_unavailable_reason(&"brewery"), &"requires_river")

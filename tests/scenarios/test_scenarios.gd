@@ -458,3 +458,47 @@ func test_tea_raises_the_growth_ceiling_from_75_to_85_percent() -> void:
 			ScenarioRunner.SCENARIO_DIR.path_join("%s.json" % case[0])), case[1])
 		var result: ScenarioResult = runner.run(scenario)
 		assert_eq(float(result.final_row()["population"]) > 20.0, case[2], "%s at %s" % [case[0], case[1]])
+
+
+# --- Issue #51: both chains open at once ---
+
+# Cristian's criterion: with trigo → pan and cebada → cerveza running together, bread still covers at least
+# this much in every one of the 20 seeds, and the share of the wharf that goes to barley never leaves the mill
+# without wheat.
+const BOTH_CHAINS_MIN_COVERAGE: float = 0.75
+
+
+func test_both_chains_keep_bread_covered_and_the_mill_supplied_across_twenty_seeds() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/both_chains.json")
+	var lowest: float = INF
+	var made_beer: int = 0
+	for seed_value: int in range(1, SEEDS + 1):
+		var variant: Dictionary = scenario.duplicate(true)
+		variant["seed"] = seed_value
+		var result: ScenarioResult = runner.run(variant)
+		_assert_scripts_ran_clean(result)
+		assert_true(result.survived(), "seed %d was lost" % seed_value)
+		var coverage: float = float(result.final_row()["bread_coverage"])
+		lowest = minf(lowest, coverage)
+		assert_gte(coverage, BOTH_CHAINS_MIN_COVERAGE, "seed %d: bread coverage" % seed_value)
+		# A mill left without wheat would show a whole minute without bread being made.
+		for minute: int in range(2, result.rows.size()):
+			assert_gt(float(result.row(minute)["bread_produced_pm"]), 0.0,
+				"seed %d, minute %d: the mill got no wheat" % [seed_value, minute])
+		# Nobody eats beer yet: the brewery fills its warehouse and stops, it never overshoots.
+		assert_lte(result.peak("beer_stock"), float(runner.param(&"market.beer.storage_capacity")))
+		assert_lte(result.peak("malt_stock"), float(runner.param(&"market.malt.storage_capacity")))
+		if float(result.final_row()["beer_stock"]) > 0.0:
+			made_beer += 1
+	gut.p("both_chains over %d seeds: lowest final bread coverage %.2f, %d made beer" % [SEEDS, lowest, made_beer])
+	assert_eq(made_beer, SEEDS, "the beer chain works in every seed")
+
+
+# Parity: a city that builds neither malthouse nor brewery never has malt or beer.
+func test_scenarios_without_the_beer_chain_never_touch_malt_or_beer() -> void:
+	for id: String in ["flour_milled", "big_tight_r06", "small_rich", "tea_on"]:
+		var result: ScenarioResult = _result(id)
+		assert_eq(int(result.final_economy["stocks"].get(&"malt", 0)), 0, id)
+		assert_eq(int(result.final_economy["stocks"].get(&"beer", 0)), 0, id)
+		assert_eq(result.peak("n_malthouse") + result.peak("n_brewery"), 0.0, id)

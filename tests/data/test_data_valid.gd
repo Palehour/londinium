@@ -7,8 +7,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	if not result.is_ok():
 		return
 	var catalog: DataCatalog = result.catalog
-	assert_eq(catalog.goods.size(), 5)
-	assert_eq(catalog.buildings.size(), 5)
+	assert_eq(catalog.goods.size(), 7)
+	assert_eq(catalog.buildings.size(), 7)
 	assert_eq(catalog.roles.size(), 1)
 	assert_eq(catalog.maps.size(), 1)
 	for good: GoodDef in catalog.goods.values():
@@ -19,6 +19,12 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	var bakery: RecipeDef = catalog.buildings[&"bakery"].recipe
 	assert_eq(bakery.inputs, [&"flour"])
 	assert_eq(bakery.outputs, [&"bread"])
+	var malthouse: RecipeDef = catalog.buildings[&"malthouse"].recipe
+	assert_eq(malthouse.inputs, [&"barley"])
+	assert_eq(malthouse.outputs, [&"malt"])
+	var brewery: RecipeDef = catalog.buildings[&"brewery"].recipe
+	assert_eq(brewery.inputs, [&"malt"])
+	assert_eq(brewery.outputs, [&"beer"])
 	assert_null(catalog.buildings[&"housing"].recipe)
 	for role: RoleDef in catalog.roles.values():
 		for modifier: Modifier in role.modifiers:

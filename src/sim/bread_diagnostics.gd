@@ -3,6 +3,8 @@ extends RefCounted
 
 # Same chain order as worker assignment (D-021), so causes read from the root outwards.
 const CHAIN: Array[StringName] = [&"wharf", &"mill", &"bakery"]
+# The beer chain says which input is missing; the bread chain keeps the generic "no_input".
+const MISSING_INPUT_REASONS: Dictionary[StringName, StringName] = {&"barley": &"no_barley", &"malt": &"no_malt"}
 
 
 static func build(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
@@ -57,9 +59,14 @@ static func building_reason(state: EconomyState, context: EconomyContext, buildi
 	var recipe: RecipeDef = context.buildings[id].recipe if context != null and context.buildings.has(id) else null
 	if recipe == null or recipe.inputs.is_empty():
 		return &"ok"
+	# A full warehouse stops a producer whatever it has to work with (issue #51).
+	if ProductionSystem.storage_full(state, params, recipe.outputs[0]):
+		return &"storage_full"
 	var waiting_input: bool = int(state.stocks.get(recipe.inputs[0], 0)) <= 0 \
 		and float(building.get("reserved_input", 0.0)) <= 0.0
-	return &"no_input" if waiting_input else &"ok"
+	if not waiting_input:
+		return &"ok"
+	return MISSING_INPUT_REASONS.get(recipe.inputs[0], &"no_input")
 
 
 # One cause per chain stage: a stage blocks bread only when none of its buildings work.
