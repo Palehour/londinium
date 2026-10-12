@@ -63,6 +63,22 @@ func test_panel_shows_malt_and_beer_stock_with_their_caps() -> void:
 		% [0, market["malt"]["capacity"], 0, market["beer"]["capacity"]])
 
 
+# Issue #51 review: without this control the barley never reaches the malthouse in a normal game.
+func test_the_unloading_slider_sends_the_split_and_follows_the_snapshot() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_eq([slider.value, slider.max_value, slider.scrollable], [0.0, 100.0, false])
+	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 0)
+	slider.value = 30.0
+	slider.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 30)
+	assert_eq(slider.value, 30.0)
+	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 30)
+	assert_true(_session.get("_pending").is_empty(), "resyncing the slider does not resend the command")
+
+
 func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
 	_panel = _new_panel(_session)
