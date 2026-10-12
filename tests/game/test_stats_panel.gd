@@ -498,3 +498,15 @@ func test_panel_names_the_need_category_that_is_missing() -> void:
 	assert_string_contains(needs, Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 50.0, 75.0, "pan"])
 	assert_string_contains(needs, Strings.NEEDS_MET % ["Trabajadores", "Comunidad o fe", 100.0, 50.0])
 	assert_string_contains(needs, Strings.HOUSING_ROW % ["Trabajadores", 20, 0, 0])
+
+
+func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 50.0, "threshold": 75.0, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 1.0}]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
+		% ["Trabajadores", "Sustento", 50.0, 75.0, Strings.reason(&"below_threshold")])

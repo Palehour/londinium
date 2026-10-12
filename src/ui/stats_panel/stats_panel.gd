@@ -418,6 +418,11 @@ func _needs_text(needs: Dictionary) -> String:
 			for good: Dictionary in entry["goods"]:
 				if good["coverage"] < 1.0:
 					missing.append(Strings.label(Strings.GOOD_LABELS, good["good"]))
+			# Every good fully covered but worth too little (a modified value): the reason says it.
+			if missing.is_empty():
+				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, entry["value"],
+					entry["threshold"], Strings.reason(entry["reason"])])
+				continue
 			lines.append(Strings.NEEDS_SHORT % [class_label, category, entry["value"], entry["threshold"],
 				", ".join(missing)])
 		var housing: Dictionary = info["housing"]

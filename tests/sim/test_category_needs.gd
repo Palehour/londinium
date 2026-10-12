@@ -189,3 +189,11 @@ func test_state_without_class_needs_loads_from_an_old_save() -> void:
 	var old: EconomyState = EconomyState.from_dict(values)
 	assert_true(old.class_needs.is_empty())
 	assert_eq(old.housing_capacity, _state.housing_capacity)
+
+
+func test_a_category_value_is_not_capped() -> void:
+	_params = _params_with({&"class.worker.need.bread.value": 100, &"class.worker.need.tea.value": 100})
+	_catalog.classes[&"worker"].needs[1].category = &"sustento"
+	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	_evaluate(1.0, 1.0)
+	assert_eq(_category(&"sustento")["value"], 200.0)

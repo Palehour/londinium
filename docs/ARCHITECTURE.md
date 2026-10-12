@@ -79,7 +79,7 @@ londinium/
 4. Converters: mill (wheat→flour), bakery (flour→bread), malthouse (barley→malt), brewery (malt→beer), limited by staffed jobs and input stock. Malt and beer have a warehouse cap (`market.malt.*`, `market.beer.*`): a full warehouse stops its producer instead of discarding output (nothing consumes beer until #52), and beer spoils a little each minute. Several producers of a capped good share its room and its fractions (ADR 0006).
 5. Consumption: bread eaten per person; tea if available (D-025); stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
-7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, capped at 100, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
+7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
 8. Growth: hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction high and housing free, emigration if low.
 9. Money: taxes from employed workers only; minus wages and building upkeep.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).

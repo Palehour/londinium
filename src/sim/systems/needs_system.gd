@@ -5,8 +5,6 @@ extends RefCounted
 # category that reaches its threshold is met. Every met category grows the capacity of the class's housing.
 # It runs inside step 7 (SatisfactionSystem.update_target), so the order of the tick does not change.
 
-const MAX_CATEGORY_VALUE: float = 100.0
-
 
 # Share of the demand for a good that the store covers, as the earlier steps of this tick left it.
 # Bread uses the smoothed coverage the satisfaction already reads, so a category does not flicker per tick.
@@ -34,7 +32,6 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 			categories[need.category] = entry
 		for category: StringName in categories:
 			var entry: Dictionary = categories[category]
-			entry["value"] = minf(float(entry["value"]), MAX_CATEGORY_VALUE)
 			entry["threshold"] = float(params.get_value(StringName("needs.%s.threshold" % category)))
 			entry["met"] = entry["value"] >= entry["threshold"]
 		state.class_needs[definition.id] = categories
