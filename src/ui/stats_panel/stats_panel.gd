@@ -27,6 +27,7 @@ var _tea: CheckButton
 var _flour: CheckButton
 var _tea_row: Label
 var _flour_row: Label
+var _barley_row: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
 var _pause: Button
@@ -88,6 +89,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_wheat_row.text = _wheat_text(market)
 	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
 	_flour_row.text = _flour_text(snapshot["imports"]["flour"])
+	_barley_row.text = _barley_text(snapshot["market"]["barley"])
 	_update_alert(defeat)
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
@@ -121,6 +123,8 @@ func _build_controls(content: VBoxContainer) -> void:
 		session.submit_command(SetFlourImportsCommand.new(enabled)))
 	_flour_row = _label("")
 	content.add_child(_flour_row)
+	_barley_row = _label("")
+	content.add_child(_barley_row)
 	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
@@ -252,6 +256,14 @@ func _flour_text(flour: Dictionary) -> String:
 		_unit_price(flour["unit_price"]), flour["stock"], Strings.reason(flour["reason"])]
 
 
+func _barley_text(barley: Dictionary) -> String:
+	var price: int = barley["price"]
+	var previous: int = barley["previous_price"]
+	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
+	return Strings.BARLEY_ROW % [barley["stock"], barley["capacity"], Strings.money(price), trend,
+		barley["barley_percent"], barley["wheat_percent"]]
+
+
 # A lot is priced in whole pence, so the unit price can carry a fraction of a penny.
 func _unit_price(pence: float) -> String:
 	return Strings.UNIT_PRICE % pence
@@ -336,7 +348,7 @@ func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
 		Strings.BALANCE_BREAKDOWN % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
 			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"]),
-			_money(stats["imports_spent_per_minute"])],
+			_money(stats["barley_spent_per_minute"]), _money(stats["imports_spent_per_minute"])],
 		Strings.CONSTRUCTION % _money(stats["construction_spent_per_minute"]),
 		Strings.WHEAT_PRICE % Strings.money(economy.get("wheat_price", 0)),
 	]

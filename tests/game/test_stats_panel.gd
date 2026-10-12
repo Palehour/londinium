@@ -411,3 +411,18 @@ func test_satisfaction_line_adds_the_tea_component_so_the_parts_match_the_total(
 	snapshot["economy"]["satisfaction_breakdown"]["tea"] = 15.0
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_economy"), "té +15")
+
+
+func test_barley_row_shows_the_stock_the_price_and_the_split_of_the_wharf() -> void:
+	_session.submit_command(SetUnloadingSplitCommand.new(30))
+	_tick()
+	var barley: Dictionary = _session.get_snapshot()["market"]["barley"]
+	assert_string_contains(_text("_barley_row"), "Cebada: 0/%d" % barley["capacity"])
+	assert_string_contains(_text("_barley_row"), Strings.money(barley["price"]))
+	assert_string_contains(_text("_barley_row"), "30 % cebada, 70 % trigo")
+
+
+func test_balance_breakdown_lists_the_barley_so_the_parts_match_the_total() -> void:
+	_session.submit_command(SetUnloadingSplitCommand.new(100))
+	_tick()
+	assert_string_contains(_text("_economy"), "cebada")

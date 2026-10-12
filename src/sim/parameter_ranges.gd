@@ -82,11 +82,32 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": float(WheatPolicy.MAX_RESERVE_MINUTES), "min_inclusive": true, "max_inclusive": true},
 	&"policy.wheat.default_target_stock": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# Barley (issue #50) walks like wheat, with its own parameters; same bounds as the wheat ones.
+	&"market.barley.min_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.barley.max_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.barley.base_price": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.barley.max_step": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"market.barley.reversion": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
+	&"market.barley.storage_capacity": {
+		"min": 0.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
+	&"market.barley.decay_fraction_per_minute": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": false},
+	# Share of the wharf's unloading capacity that goes to barley, in whole percent (0 = all wheat).
+	&"policy.unloading.default_barley_percent": {
+		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 	# Imports (D-025, D-026). A lot is a whole number of units; the tea buffer may be 0 (buy on demand).
 	&"market.imported_flour.price_per_lot": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.imported_flour.lot_size": {
 		"min": 1.0, "max": 10000.0, "min_inclusive": true, "max_inclusive": true},
+	# How many lots of unloading the wharf may owe at once (issue #50); at least one, or no lot could ever be bought.
+	&"market.imported_flour.max_debt_lots": {
+		"min": 1.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 	&"market.tea.price": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.tea.buffer_seconds": {
@@ -105,7 +126,9 @@ static func is_valid(key: StringName, value: float) -> bool:
 			&"defeat.hunger.duration_seconds", &"defeat.depopulation.minimum_population",
 			&"defeat.depopulation.stability_window_seconds", &"population.stats_window_seconds", &"market.wheat.max_step", &"market.wheat.storage_capacity",
 			&"policy.wheat.default_target_stock", &"policy.wheat.default_reserve_minutes",
-				&"market.imported_flour.lot_size", &"market.tea.buffer_seconds"] \
+				&"market.imported_flour.lot_size", &"market.imported_flour.max_debt_lots", &"market.tea.buffer_seconds",
+				&"market.barley.max_step", &"market.barley.storage_capacity",
+				&"policy.unloading.default_barley_percent"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

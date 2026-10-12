@@ -24,6 +24,7 @@ const PENCE_SUFFIX: String = " d"
 const TARGET_LABEL: String = "Stock objetivo: %d"
 const RESERVE_LABEL: String = "Mínimo de seguridad: %d min de molino"
 const WHEAT_ROW: String = "Trigo: %d/%d · precio %s %s · alcanza para %s de molino"
+const BARLEY_ROW: String = "Cebada: %d/%d · precio %s %s · descarga del embarcadero: %d %% cebada, %d %% trigo"
 const WHEAT_BLOCKED_NOTE: String = "Compra frenada por precio máximo."
 const TREND_UP: String = "↑"
 const TREND_DOWN: String = "↓"
@@ -44,7 +45,7 @@ const BREAD_CHAIN_CAUSE: String = "• %s"
 const STOCKS: String = "Stocks: trigo %d · harina %d · pan %d"
 const TREASURY: String = "Tesoro: %s"
 const OPERATING_BALANCE: String = "Balance operativo: %s/min"
-const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s − importaciones %s"
+const BALANCE_BREAKDOWN: String = "  impuestos %s − salarios %s − mantenimiento %s − trigo %s − cebada %s − importaciones %s"
 const CONSTRUCTION: String = "Construcción: %s/min (aparte del balance)"
 const WHEAT_PRICE: String = "Precio del trigo: %s"
 const UNIT_PRICE: String = "%.2f d"
@@ -96,8 +97,10 @@ const REASONS: Dictionary[StringName, String] = {
 	&"flour_imports_disabled": "Importación de harina desactivada.",
 	&"no_wharf_for_imports": "Hace falta un embarcadero con trabajadores para importar.",
 	&"no_money_for_imports": "Sin dinero para importar.",
+	&"wharf_unloading_busy": "El embarcadero todavía descarga el lote anterior.",
 	&"mill_covers_flour": "El molino cubre a las panaderías: no hace falta importar.",
 	&"invalid_wheat_policy": "Política de compra de trigo inválida.",
+	&"invalid_unloading_split": "Reparto de descarga inválido: va de 0 a 100 %.",
 	&"no_workers": "Sin trabajadores.",
 	&"no_input": "Sin insumo.",
 	&"missing_building": "No hay ninguno construido.",

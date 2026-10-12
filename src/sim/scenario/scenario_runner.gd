@@ -9,7 +9,7 @@ extends RefCounted
 const SCENARIO_DIR: String = "res://tests/scenarios"
 const TICKS_PER_MINUTE: int = 60
 const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
-	"set_tea_imports", "set_flour_imports"]
+	"set_tea_imports", "set_flour_imports", "set_unloading_split"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 
@@ -281,6 +281,8 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 			return SetTeaImportsCommand.new(bool(entry["enabled"]))
 		"set_flour_imports":
 			return SetFlourImportsCommand.new(bool(entry["enabled"]))
+		"set_unloading_split":
+			return SetUnloadingSplitCommand.new(int(entry["barley_percent"]))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -336,6 +338,7 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"imports_spent_pm": stats["imports_spent_per_minute"], "tea_spent_pm": stats["tea_spent_per_minute"],
 		"tea_stock": economy["stocks"].get(&"tea", 0), "tea_coverage": economy["tea_coverage"],
 		"flour_stock": economy["stocks"].get(&"flour", 0),
+		"barley_spent_pm": stats["barley_spent_per_minute"], "barley_stock": economy["stocks"].get(&"barley", 0),
 	}
 
 
@@ -373,6 +376,10 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 				var lowest: int = -1 if field in ["accumulate_price", "max_price"] else 0
 				if not _is_whole(entry.get(field)) or int(entry[field]) < lowest:
 					errors.append("%s: %s must be a whole number >= %d" % [where, field, lowest])
+		"set_unloading_split":
+			if not _is_whole(entry.get("barley_percent")) or int(entry["barley_percent"]) < 0 \
+					or int(entry["barley_percent"]) > 100:
+				errors.append("%s: barley_percent must be a whole number from 0 to 100" % where)
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)
