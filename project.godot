@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Londinium"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://src/ui/splash/splash.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [debug]
@@ -21,6 +21,10 @@ gdscript/warnings/untyped_declaration=2
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[londinium]
+
+splash/enabled=true
 
 [rendering]
 

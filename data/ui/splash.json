@@ -1,0 +1,5 @@
+{
+  "fade_seconds": 0.4,
+  "fallback_seconds": 3,
+  "watchdog_seconds": 15
+}
