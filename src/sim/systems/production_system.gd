@@ -129,6 +129,9 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 			reserved = 0.0
 		if absf(budget) <= ROUNDING_EPSILON:
 			budget = 0.0
+	if budget > ROUNDING_EPSILON:
+		var id: StringName = building["definition_id"]
+		state.input_starved_tick[id] = int(state.input_starved_tick.get(id, 0)) + 1
 	var produced: int = whole_units(fraction)
 	state.stocks[output] = state.stocks.get(output, 0) + produced
 	if output == &"bread":

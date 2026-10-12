@@ -294,11 +294,10 @@ func _observe(result: ScenarioResult, snapshot: Dictionary, tick_count: int) -> 
 		result.max_timer[condition] = maxi(result.max_timer[condition], int(status["elapsed_seconds"]))
 		if status["status"] != &"ok" and not result.first_warning_tick.has(condition):
 			result.first_warning_tick[condition] = tick_count
-	for entry: Dictionary in snapshot["diagnostics"]["buildings"]:
-		if entry["reason"] == &"no_input":
-			var waiting: Array = result.waiting_input_ticks.get(entry["definition_id"], [])
-			waiting.append(tick_count)
-			result.waiting_input_ticks[entry["definition_id"]] = waiting
+	for id: StringName in snapshot["production"]["input_starved"]:
+		var waiting: Array = result.waiting_input_ticks.get(id, [])
+		waiting.append(tick_count)
+		result.waiting_input_ticks[id] = waiting
 	for cause: Dictionary in snapshot["diagnostics"]["bread_causes"]:
 		result.bread_cause_pairs["%s:%s" % [cause["definition_id"], cause["reason"]]] = true
 	if not defeat["causes"].is_empty():

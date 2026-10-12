@@ -82,6 +82,9 @@ var barley_spent_tick: int = 0
 var imports_spent_tick: int = 0
 var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
+# Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
+# used all its budget on the wheat it had does not count). Transient: never saved.
+var input_starved_tick: Dictionary[StringName, int] = {}
 
 
 func reset_flows() -> void:
@@ -96,6 +99,7 @@ func reset_flows() -> void:
 	imports_spent_tick = 0
 	tea_spent_tick = 0
 	construction_spent_tick = 0
+	input_starved_tick.clear()
 
 
 func to_dict() -> Dictionary:

@@ -115,6 +115,20 @@ func test_full_chain_turns_every_barley_into_two_beers_without_rounding_loss() -
 		assert_almost_eq(float(building["output_fraction"]), 0.0, 0.000001)
 
 
+# Issue #51 review: the tick that uses the last of the reserved input is not a starved tick, even though the
+# end-of-tick diagnostics already say there is no input.
+func test_a_mill_that_uses_its_last_wheat_in_a_tick_is_not_counted_as_starved() -> void:
+	_initial.buildings.append({"definition_id": &"mill", "cell": [1, 1]})
+	_initial.stocks[&"wheat"] = 10
+	var sim: Simulation = _sim()
+	for index: int in range(60):
+		sim.tick()
+		assert_eq(sim.snapshot()["production"]["input_starved"].get(&"mill", 0), 0, "tick %d" % (index + 1))
+	assert_eq(_reason(sim, &"mill"), &"no_input", "the diagnostics already say so at the end of tick 60")
+	sim.tick()
+	assert_eq(sim.snapshot()["production"]["input_starved"].get(&"mill", 0), 1, "tick 61 has nothing to grind")
+
+
 # --- Stopped, and why --------------------------------------------------------------------------
 
 func test_without_barley_the_malthouse_stops_and_says_so() -> void:
