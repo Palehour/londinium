@@ -1,6 +1,6 @@
 # ADR 0006: Fracciones acumuladas, con pozo compartido en los bienes con tope de almacén
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-12
 - **Origen:** issue #51, PR #105; src/sim/systems/production_system.gd. Reemplaza al ADR 0005.
 
