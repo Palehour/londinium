@@ -38,12 +38,12 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 
 ## Población y necesidades
 
-Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería, maltería, cervecería) y después el resto con la prioridad panadería, molino, embarcadero, maltería, cervecería. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
+Una sola clase en la fase 1: trabajadores (las clases y sus necesidades son datos por era, D-027 y D-032). Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería, maltería, cervecería) y después el resto con la prioridad panadería, molino, embarcadero, maltería, cervecería. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
 - **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción, lo que permite cobrar más impuesto sin frenar el crecimiento.
 - **Categorías de necesidades (D-032).** Cada bien cuenta en una categoría: el pan en sustento (umbral 75) y el té en comunidad (umbral 50). Cumplir el umbral de una categoría agrega +2 a la capacidad de cada vivienda de la clase, hasta un tope por clase; para los trabajadores el tope es 0, así que su vivienda sigue en 20. Pasarse del umbral no da más bono. El panel explica qué categoría falta.
-- **Satisfacción (0 a 100).** Suma el pan cubierto y el té disponible, y resta la carga impositiva y el hacinamiento.
+- **Satisfacción (0 a 100).** El pan (categoría sustento) y el té (categoría comunidad) suman según lo cubierto que esté cada uno, y se resta la carga impositiva y el hacinamiento. La capacidad de las viviendas crece con las categorías cumplidas (hoy 0 para los trabajadores).
 - **Crecimiento.** Con satisfacción alta y lugar libre en viviendas llegan inmigrantes. Con satisfacción baja la gente se va. Solo los trabajadores empleados pagan impuestos.
 
 ## Decisiones interesantes del jugador
