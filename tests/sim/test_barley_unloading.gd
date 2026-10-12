@@ -358,6 +358,29 @@ func test_the_safety_reserve_still_measures_against_the_mill_with_part_of_the_ca
 	assert_lte(_stock(sim, &"barley"), 5)
 
 
+func test_the_panel_does_not_blame_the_price_when_wheat_has_no_share_of_the_wharf() -> void:
+	for percent: int in [0, 100]:
+		var state: EconomyState = _state(percent)
+		state.wheat_price = 3
+		state.wheat_max_price = 2
+		state.stocks[&"wheat"] = 5
+		var sim: Simulation = _sim(state)
+		_run(sim, 5)
+		assert_eq(sim.snapshot()["market"]["wheat"]["blocked_by_price"], percent == 0,
+			"at %d %% barley the price is the cause only if wheat could buy" % percent)
+
+
+func test_the_panel_does_not_blame_the_price_while_the_flour_keeps_the_whole_wharf() -> void:
+	var state: EconomyState = _state(0)
+	state.wheat_price = 3
+	state.wheat_max_price = 2
+	state.stocks[&"wheat"] = 5
+	state.flour_unloading_debt = 15.0
+	var sim: Simulation = _sim(state)
+	sim.tick()
+	assert_false(sim.snapshot()["market"]["wheat"]["blocked_by_price"], "15 units owed, 10 a minute of capacity")
+
+
 # --- Data ---------------------------------------------------------------------------------
 
 func test_the_new_values_come_from_data_with_the_approved_numbers() -> void:

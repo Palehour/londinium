@@ -136,9 +136,12 @@ static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
 		and could_buy(state, params)
 
 
-# Some wharf has hands, there is room in the warehouse and the treasury pays for a unit.
+# Some wharf has hands, wheat has a share of the unloading capacity, there is room in the warehouse and the
+# treasury pays for a unit.
 static func could_buy(state: EconomyState, params: Params) -> bool:
 	if int(state.stocks.get(&"wheat", 0)) >= int(params.get_value(&"market.wheat.storage_capacity")):
+		return false
+	if wheat_share(state) <= 0.0 or _flour_takes_all_capacity(state, params):
 		return false
 	if affordable_wheat(state, 1) <= 0:
 		return false
@@ -146,6 +149,17 @@ static func could_buy(state: EconomyState, params: Params) -> bool:
 		if building["definition_id"] == &"wharf" and ProductionSystem.staffed_rate(params, building, "outputs.wheat") > 0.0:
 			return true
 	return false
+
+
+# The lots of flour still to unload keep the whole capacity of the next tick, so the wheat gets none of it.
+static func _flour_takes_all_capacity(state: EconomyState, params: Params) -> bool:
+	if state.flour_unloading_debt <= 0.0:
+		return false
+	var wharves: Array[Dictionary] = []
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"wharf":
+			wharves.append(building)
+	return state.flour_unloading_debt >= unloading_capacity(params, wharves)
 
 
 static func is_accumulating(state: EconomyState) -> bool:
