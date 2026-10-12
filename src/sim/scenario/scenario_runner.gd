@@ -338,6 +338,7 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"imports_spent_pm": stats["imports_spent_per_minute"], "tea_spent_pm": stats["tea_spent_per_minute"],
 		"tea_stock": economy["stocks"].get(&"tea", 0), "tea_coverage": economy["tea_coverage"],
 		"flour_stock": economy["stocks"].get(&"flour", 0),
+		"barley_spent_pm": stats["barley_spent_per_minute"], "barley_stock": economy["stocks"].get(&"barley", 0),
 	}
 
 

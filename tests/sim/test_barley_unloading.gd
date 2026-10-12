@@ -394,3 +394,19 @@ func test_a_role_cannot_push_the_new_values_out_of_their_range() -> void:
 		var role: RoleDef = RoleDef.new()
 		role.modifiers.append(Modifier.new(&"policy.unloading.default_barley_percent", &"set", edge))
 		assert_eq(Params.new(_catalog, role).get_value(&"policy.unloading.default_barley_percent"), edge)
+
+
+func test_the_scenario_csv_exports_the_barley_so_the_columns_reconcile_with_the_balance() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = {
+		"id": "barley_csv", "description": "x", "notes": "x", "seed": 42, "duration_ticks": 180,
+		"commands": [
+			{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+			{"tick": 0, "cmd": "set_unloading_split", "barley_percent": 100}],
+	}
+	assert_eq(runner.validate(scenario), [])
+	var row: Dictionary = runner.run(scenario).final_row()
+	assert_gt(row["barley_stock"], 0)
+	assert_gt(row["barley_spent_pm"], 0.0)
+	assert_true("barley_spent_pm" in ScenarioResult.CSV_COLUMNS)
+	assert_true("barley_spent_pm" in ScenarioResult.FLOAT_COLUMNS)
