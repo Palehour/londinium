@@ -38,6 +38,9 @@ var max_timer: Dictionary[StringName, int] = {}
 var first_warning_tick: Dictionary[StringName, int] = {}
 # "building:reason" pairs the panel's bread diagnostics showed at any tick, e.g. "mill:missing_building".
 var bread_cause_pairs: Dictionary[String, bool] = {}
+# Ticks (1-based count of ticks run) at which a staffed building of each type had no input to work with,
+# e.g. "mill" for a mill waiting for wheat. A building that stopped for another reason is not counted.
+var waiting_input_ticks: Dictionary[StringName, Array] = {}
 
 
 func row(minute: int) -> Dictionary:

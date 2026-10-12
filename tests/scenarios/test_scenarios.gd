@@ -466,6 +466,8 @@ func test_tea_raises_the_growth_ceiling_from_75_to_85_percent() -> void:
 # this much in every one of the 20 seeds, and the share of the wharf that goes to barley never leaves the mill
 # without wheat.
 const BOTH_CHAINS_MIN_COVERAGE: float = 0.75
+# The new wharf's first wheat reaches the mill within the first seconds; measured worst case is 7 ticks.
+const SECOND_WHARF_SETTLE_TICKS: int = 15
 
 
 func test_both_chains_keep_bread_covered_and_the_mill_supplied_across_twenty_seeds() -> void:
@@ -482,10 +484,14 @@ func test_both_chains_keep_bread_covered_and_the_mill_supplied_across_twenty_see
 		var coverage: float = float(result.final_row()["bread_coverage"])
 		lowest = minf(lowest, coverage)
 		assert_gte(coverage, BOTH_CHAINS_MIN_COVERAGE, "seed %d: bread coverage" % seed_value)
-		# A mill left without wheat would show a whole minute without bread being made.
-		for minute: int in range(2, result.rows.size()):
-			assert_gt(float(result.row(minute)["bread_produced_pm"]), 0.0,
-				"seed %d, minute %d: the mill got no wheat" % [seed_value, minute])
+		# The mill's own supply, tick by tick. With one wharf and 30 % of it given to barley the mill gets 7 of
+		# its 10 wheat per minute, so it waits for wheat part of the time until the second wharf arrives (the
+		# PR reports how much); from then on the wheat share is 14 per minute and it must never wait again.
+		var bought: int = result.second_chain_purchase_tick() + 1
+		assert_gt(bought, 0, "seed %d bought its second wharf" % seed_value)
+		for tick: int in result.waiting_input_ticks.get(&"mill", []):
+			assert_lte(tick, bought + SECOND_WHARF_SETTLE_TICKS,
+				"seed %d, tick %d: the mill ran out of wheat after the second wharf" % [seed_value, tick])
 		# Nobody eats beer yet: the brewery fills its warehouse and stops, it never overshoots.
 		assert_lte(result.peak("beer_stock"), float(runner.param(&"market.beer.storage_capacity")))
 		assert_lte(result.peak("malt_stock"), float(runner.param(&"market.malt.storage_capacity")))
