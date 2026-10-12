@@ -125,6 +125,11 @@ func get_rng_state() -> int:
 	return _rng.state
 
 
+# The barley price walk has a generator of its own (see BARLEY_SEED_SALT); same rule as get_rng_state().
+func get_barley_rng_state() -> int:
+	return _barley_rng.state
+
+
 func snapshot() -> Dictionary:
 	return {
 		"economy": _state.to_dict(),
@@ -137,6 +142,7 @@ func snapshot() -> Dictionary:
 		"tick_count": _tick_count,
 		"seed": _seed,
 		"rng_state": get_rng_state(),
+		"barley_rng_state": get_barley_rng_state(),
 	}
 
 

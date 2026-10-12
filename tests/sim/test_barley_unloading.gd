@@ -165,6 +165,23 @@ func test_the_barley_price_walks_on_its_own_generator_within_its_range() -> void
 		assert_between(shown, 1, 3)
 
 
+func test_the_snapshot_shows_the_barley_generator_and_it_moves_only_with_the_barley_walk() -> void:
+	var sim: Simulation = _sim(_state(0), _params([], false))
+	var start: Dictionary = sim.snapshot()
+	assert_true(start.has("barley_rng_state"))
+	var expected: RandomNumberGenerator = RandomNumberGenerator.new()
+	expected.seed = 42 ^ Simulation.BARLEY_SEED_SALT
+	assert_eq(start["barley_rng_state"], expected.state, "seeded from the game's seed")
+	_run(sim, 59)
+	assert_eq(sim.snapshot()["barley_rng_state"], start["barley_rng_state"], "no repricing yet")
+	_run(sim, 1)
+	assert_ne(sim.snapshot()["barley_rng_state"], start["barley_rng_state"], "the first repricing draws")
+	assert_eq(sim.get_barley_rng_state(), sim.snapshot()["barley_rng_state"])
+	var frozen: Simulation = _sim(_state(0))
+	_run(frozen, 120)
+	assert_eq(frozen.snapshot()["barley_rng_state"], start["barley_rng_state"], "a frozen walk draws nothing")
+
+
 func test_barley_is_paid_at_its_own_price_and_stops_at_the_warehouse_or_the_treasury() -> void:
 	var state: EconomyState = _state(100)
 	state.barley_price = 3
