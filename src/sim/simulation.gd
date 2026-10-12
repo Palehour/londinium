@@ -1,7 +1,12 @@
 class_name Simulation
 extends RefCounted
 
+# Salt of the barley price generator: derived from the seed, but a stream of its own, so the barley walk
+# never moves a draw of the wheat one.
+const BARLEY_SEED_SALT: int = 0x6A09E667
+
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _barley_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _state: EconomyState
 var _params: Params
 var _seed: int
@@ -44,6 +49,7 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_state = EconomyState.from_dict(initial_state.to_dict())
 	_seed = seed_value
 	_rng.seed = seed_value
+	_barley_rng.seed = seed_value ^ BARLEY_SEED_SALT
 	_context = context.copy() if context != null else null
 	_stats = Stats.new(int(_params.get_value(&"population.stats_window_seconds")))
 	_stats.restore(stats_window)
@@ -51,6 +57,10 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
+	if _context != null and _state.barley_price < 0:
+		_state.barley_price = int(_params.get_value(&"market.barley.base_price"))
+	if _context != null and _state.unloading_barley_percent < 0:
+		_state.unloading_barley_percent = int(_params.get_value(&"policy.unloading.default_barley_percent"))
 	if _context != null and _state.wheat_reserve_minutes < 0:
 		_state.wheat_accumulate_price = int(_params.get_value(&"policy.wheat.default_accumulate_price"))
 		_state.wheat_max_price = int(_params.get_value(&"policy.wheat.default_max_price"))
@@ -89,7 +99,7 @@ func tick() -> void:
 	_tick_count += 1
 	if _context != null:
 		_workers.tick(_state, _params)
-		_market.tick(_state, _params, _rng, _tick_count)
+		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
 		_imports.tick(_state, _params)
 		_production.tick(_state, _params, _context)
 		_consumption.tick(_state, _params)
@@ -120,7 +130,8 @@ func snapshot() -> Dictionary:
 		"economy": _state.to_dict(),
 		"stats": _stats.snapshot(),
 		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
-		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params)},
+		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params),
+			"barley": MarketSystem.barley_snapshot(_state, _params)},
 		"imports": ImportSystem.snapshot(_state, _params),
 		"defeat": _defeat_snapshot(),
 		"tick_count": _tick_count,

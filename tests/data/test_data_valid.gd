@@ -7,7 +7,7 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	if not result.is_ok():
 		return
 	var catalog: DataCatalog = result.catalog
-	assert_eq(catalog.goods.size(), 4)
+	assert_eq(catalog.goods.size(), 5)
 	assert_eq(catalog.buildings.size(), 5)
 	assert_eq(catalog.roles.size(), 1)
 	assert_eq(catalog.maps.size(), 1)

@@ -495,3 +495,32 @@ func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
 	before_each()
 	_set_modifier({"key": "demolish.no_jobs_refund_ratio", "op": "set", "value": 1.5})
 	_assert_invalid("Params: invalid range for 'demolish.no_jobs_refund_ratio'")
+
+
+func test_barley_and_unloading_parameters_are_required_and_validate_ranges() -> void:
+	for field: String in ["base_price", "min_price", "max_price", "price_update_seconds", "max_step", "reversion",
+			"storage_capacity", "decay_fraction_per_minute", "accumulate_factor"]:
+		before_each()
+		_documents["economy/market.json"]["barley"].erase(field)
+		_assert_invalid(field + ": missing field")
+	before_each()
+	_documents["economy/policy.json"]["unloading"].erase("default_barley_percent")
+	_assert_invalid("default_barley_percent: missing field")
+	for invalid: float in [-1.0, 101.0, 12.5]:
+		before_each()
+		_documents["economy/policy.json"]["unloading"]["default_barley_percent"] = invalid
+		_assert_invalid("policy.json.unloading.default_barley_percent: invalid integer")
+	for invalid: float in [INF, NAN]:
+		before_each()
+		_documents["economy/policy.json"]["unloading"]["default_barley_percent"] = invalid
+		_assert_invalid("policy.json.unloading.default_barley_percent: expected a finite integer")
+	for invalid: float in [-0.1, 1.5]:
+		before_each()
+		_documents["economy/market.json"]["barley"]["reversion"] = invalid
+		_assert_invalid("market.json.barley.reversion: invalid fraction")
+	before_each()
+	_documents["economy/market.json"]["barley"]["storage_capacity"] = 10001
+	_assert_invalid("market.json.barley.storage_capacity: invalid integer")
+	before_each()
+	_set_modifier({"key": "policy.unloading.default_barley_percent", "op": "set", "value": 101})
+	_assert_invalid("Params: invalid range for 'policy.unloading.default_barley_percent'")

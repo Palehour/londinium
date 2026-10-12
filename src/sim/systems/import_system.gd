@@ -1,8 +1,11 @@
 class_name ImportSystem
 extends RefCounted
 
-# Imports bought at the wharf at a fixed price (D-025 tea, D-026 flour). They need a staffed wharf but
-# take none of its wheat capacity, and each one is a switch the player turns on: they start off.
+# Imports bought at the wharf at a fixed price (D-025 tea, D-026 flour). They need a staffed wharf and
+# each one is a switch the player turns on: they start off. The tea is a small volume and is exempt from
+# the wharf's unloading capacity; the flour shares it with wheat and barley (issue #50): a lot is paid for
+# at once and leaves a debt of units that the capacity of the next ticks unloads (MarketSystem), so a new
+# lot waits while the debt is a lot or more.
 
 const SECONDS_PER_MINUTE: float = 60.0
 # A flour deficit below this is rounding noise, not a reason to buy a lot.
@@ -108,6 +111,8 @@ func _import_flour(state: EconomyState, params: Params) -> void:
 	if flour_deficit(state, params) <= DEFICIT_EPSILON or stock >= needed:
 		return
 	var lot: int = int(params.get_value(&"market.imported_flour.lot_size"))
+	if unloading_is_busy(state, lot):
+		return
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	@warning_ignore("integer_division")
 	var wanted: int = (needed - stock + lot - 1) / lot
@@ -117,6 +122,7 @@ func _import_flour(state: EconomyState, params: Params) -> void:
 	state.money -= lots * price
 	state.imports_spent_tick += lots * price
 	state.stocks[&"flour"] = stock + lots * lot
+	state.flour_unloading_debt += float(lots * lot)
 
 
 # Keeps a small buffer of tea in store, so one empty tick does not drop the coverage. With no buffer it
@@ -134,6 +140,11 @@ func _import_tea(state: EconomyState, params: Params) -> void:
 	state.imports_spent_tick += units * price
 	state.tea_spent_tick += units * price
 	state.stocks[&"tea"] = stock + units
+
+
+# The wharf still has a lot or more to unload, so it takes no new flour until the capacity catches up.
+static func unloading_is_busy(state: EconomyState, lot: int) -> bool:
+	return state.flour_unloading_debt >= float(lot)
 
 
 # Why the tea import is not (fully) working, as a panel reason; &"ok" when it is.
@@ -154,6 +165,9 @@ static func flour_reason(state: EconomyState, params: Params) -> StringName:
 		return &"no_wharf_for_imports"
 	if flour_deficit(state, params) <= DEFICIT_EPSILON:
 		return &"mill_covers_flour"
+	if int(state.stocks.get(&"flour", 0)) <= 0 \
+			and unloading_is_busy(state, int(params.get_value(&"market.imported_flour.lot_size"))):
+		return &"wharf_unloading_busy"
 	if int(state.stocks.get(&"flour", 0)) <= 0 \
 			and affordable(state, 1, int(params.get_value(&"market.imported_flour.price_per_lot"))) <= 0:
 		return &"no_money_for_imports"
@@ -179,6 +193,7 @@ static func snapshot(state: EconomyState, params: Params) -> Dictionary:
 			"enabled": state.flour_imports_enabled, "stock": int(state.stocks.get(&"flour", 0)),
 			"lot_size": lot, "lot_price": lot_price,
 			"unit_price": float(lot_price) / float(lot),
+			"unloading_debt": state.flour_unloading_debt,
 			"reason": flour_reason(state, params),
 		},
 	}

@@ -47,6 +47,17 @@ var wheat_reserve_minutes: int = -1
 var wheat_previous_price: int = -1
 # Wheat lost to damp and rats accumulates here until it makes a whole unit.
 var wheat_decay_fraction: float = 0.0
+# Barley (issue #50): walks like wheat with its own parameters. The price is -1 until the simulation
+# loads it from data, like the wheat one; the stock lives in stocks[&"barley"].
+var barley_price: int = -1
+var barley_previous_price: int = -1
+var barley_decay_fraction: float = 0.0
+# Share of the wharf's unloading capacity left after the flour that goes to barley, in whole percent; the
+# rest is wheat. -1 until the simulation loads the default from data (0 = all wheat).
+var unloading_barley_percent: int = -1
+# Imported flour is paid for at once, but the wharf has to unload it: the units still owed take the
+# capacity of the next ticks before wheat and barley get any (issue #50).
+var flour_unloading_debt: float = 0.0
 # Imports (D-025, D-026): both are off until the player switches them on (startup data).
 var tea_imports_enabled: bool = false
 var flour_imports_enabled: bool = false
@@ -63,6 +74,7 @@ var taxes_tick: int = 0
 var wages_tick: int = 0
 var upkeep_tick: int = 0
 var wheat_spent_tick: int = 0
+var barley_spent_tick: int = 0
 # Imports in total (flour and tea), and the tea part of it.
 var imports_spent_tick: int = 0
 var tea_spent_tick: int = 0
@@ -77,6 +89,7 @@ func reset_flows() -> void:
 	wages_tick = 0
 	upkeep_tick = 0
 	wheat_spent_tick = 0
+	barley_spent_tick = 0
 	imports_spent_tick = 0
 	tea_spent_tick = 0
 	construction_spent_tick = 0
@@ -97,6 +110,9 @@ func to_dict() -> Dictionary:
 		"wheat_target_stock": wheat_target_stock, "wheat_reserve_minutes": wheat_reserve_minutes,
 		"wheat_previous_price": wheat_previous_price,
 		"wheat_decay_fraction": wheat_decay_fraction,
+		"barley_previous_price": barley_previous_price, "barley_decay_fraction": barley_decay_fraction,
+		"unloading_barley_percent": unloading_barley_percent,
+		"flour_unloading_debt": flour_unloading_debt,
 		"tea_imports_enabled": tea_imports_enabled, "flour_imports_enabled": flour_imports_enabled,
 		"tea_fraction": tea_fraction, "tea_demand": tea_demand, "tea_consumed": tea_consumed,
 		"tea_coverage": tea_coverage,
@@ -116,6 +132,8 @@ func to_dict() -> Dictionary:
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
 		values["wheat_price"] = wheat_price
+	if barley_price >= 0:
+		values["barley_price"] = barley_price
 	if tax_rate >= 0.0:
 		values["tax_rate"] = tax_rate
 	return values
@@ -141,6 +159,11 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
 	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
 	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))
+	result.barley_price = int(values.get("barley_price", -1))
+	result.barley_previous_price = int(values.get("barley_previous_price", -1))
+	result.barley_decay_fraction = float(values.get("barley_decay_fraction", 0.0))
+	result.unloading_barley_percent = int(values.get("unloading_barley_percent", -1))
+	result.flour_unloading_debt = float(values.get("flour_unloading_debt", 0.0))
 	result.tea_imports_enabled = bool(values.get("tea_imports_enabled", false))
 	result.flour_imports_enabled = bool(values.get("flour_imports_enabled", false))
 	result.tea_fraction = float(values.get("tea_fraction", 0.0))

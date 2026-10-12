@@ -172,7 +172,7 @@ func test_decay_during_grace_round_trips_without_extra_initialization_step() -> 
 func test_simulation_snapshot_preserves_fractional_peak_and_continuation() -> void:
 	var params: Params = _params({&"population.growth.immigration_per_minute": 0,
 		&"population.growth.emigration_per_minute": 0,
-		&"market.wheat.price_update_seconds": 100000})
+		&"market.wheat.price_update_seconds": 100000, &"market.barley.price_update_seconds": 100000})
 	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
 	var state: EconomyState = _state()
 	state.money = 10000
