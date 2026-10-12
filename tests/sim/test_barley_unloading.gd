@@ -272,6 +272,7 @@ func test_the_wharf_never_owes_more_than_two_lots_so_the_flour_cannot_skip_the_l
 	for index: int in range(900):
 		sim.tick()
 		assert_lt(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 2.0 * lot)
+	assert_eq(_params().get_value(&"market.imported_flour.max_debt_lots"), 2, "two lots, from data")
 
 
 func test_many_bakeries_asking_at_once_cannot_push_the_debt_past_two_lots() -> void:
@@ -286,6 +287,19 @@ func test_many_bakeries_asking_at_once_cannot_push_the_debt_past_two_lots() -> v
 	var lot: float = float(_params().get_value(&"market.imported_flour.lot_size"))
 	assert_lte(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 2.0 * lot)
 	assert_gt(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0, "it did buy")
+	# The bound is a datum: a role that allows three lots gets three.
+	var wide: Simulation = _sim(_wide_state(extra),
+		_params([Modifier.new(&"market.imported_flour.max_debt_lots", &"set", 3)]))
+	wide.tick()
+	assert_lte(wide.snapshot()["market"]["barley"]["flour_unloading_debt"], 3.0 * lot)
+	assert_gt(wide.snapshot()["market"]["barley"]["flour_unloading_debt"], 2.0 * lot)
+
+
+func _wide_state(extra: Array[StringName]) -> EconomyState:
+	var state: EconomyState = _state(0, 1, extra)
+	state.flour_imports_enabled = true
+	state.population = 400
+	return state
 
 
 func test_the_flour_waits_for_the_wharf_when_it_is_busy() -> void:
@@ -368,6 +382,7 @@ func test_a_role_cannot_push_the_new_values_out_of_their_range() -> void:
 		&"market.barley.decay_fraction_per_minute": [-0.1, 1.0],
 		&"market.barley.accumulate_factor": [0.5],
 		&"market.barley.base_price": [-1.0],
+		&"market.imported_flour.max_debt_lots": [0.0, 101.0, 1.5],
 	}
 	for key: StringName in invalid:
 		for value: float in invalid[key]:
