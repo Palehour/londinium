@@ -194,6 +194,17 @@ func test_a_full_warehouse_is_the_reason_even_when_the_input_is_gone() -> void:
 	assert_eq(_reason(sim, &"brewery"), &"storage_full")
 
 
+func test_capped_outputs_are_derived_from_the_goods_that_define_a_storage_capacity() -> void:
+	var capped: Array[StringName] = ProductionSystem.capped_outputs(_params, _context)
+	assert_eq(capped.size(), 2)
+	assert_true(&"malt" in capped)
+	assert_true(&"beer" in capped)
+	# Wheat has a cap too, but no converter makes it; flour and bread have none.
+	assert_true(ProductionSystem.has_storage_cap(_params, &"wheat"))
+	assert_false(ProductionSystem.has_storage_cap(_params, &"flour"))
+	assert_false(ProductionSystem.has_storage_cap(_params, &"bread"))
+
+
 # --- Spoilage ----------------------------------------------------------------------------------
 
 func test_beer_spoils_and_malt_does_not() -> void:
