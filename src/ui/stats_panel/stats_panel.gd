@@ -11,6 +11,7 @@ var clock: SimClock
 var _speed: int = 1
 var _syncing: bool = false
 var _alert: Label
+var _notice: Label
 var _restart: Button
 var _tax: SpinBox
 var _wheat: CheckButton
@@ -58,6 +59,9 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_alert = _label("")
 	_alert.visible = false
 	root.add_child(_alert)
+	_notice = _label("")
+	_notice.visible = false
+	root.add_child(_notice)
 	_restart = _button(Strings.RESTART, func() -> void: restart_requested.emit())
 	_restart.visible = false
 	root.add_child(_restart)
@@ -101,6 +105,8 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_update_unloading(snapshot["market"]["barley"], defeated)
 	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
+	_notice.text = _mobility_text(stats, snapshot["needs"])
+	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
@@ -364,6 +370,29 @@ func _update_alert(defeat: Dictionary) -> void:
 				names.append(Strings.CONDITION_LABELS[key] + _timer_text(defeat[key]))
 		_alert.text = Strings.ALERT_WARNING % ", ".join(names) if not names.is_empty() else ""
 	_alert.visible = not _alert.text.is_empty()
+
+
+# Who rose or fell between classes in the last minute; empty when nobody did. The counts cover every class with
+# mobility; the names are those of the first one (the only one in the victorian era).
+func _mobility_text(stats: Dictionary, needs: Dictionary) -> String:
+	var promoted: int = stats["promotions_in_window"]
+	var demoted: int = stats["demotions_in_window"]
+	if promoted == 0 and demoted == 0:
+		return ""
+	var lower: String = ""
+	var upper: String = ""
+	for class_id: StringName in needs["classes"]:
+		var mobility: Dictionary = needs["classes"][class_id]["mobility"]
+		if not mobility.is_empty():
+			lower = Strings.label(Strings.CLASS_LABELS, mobility["from"])
+			upper = Strings.label(Strings.CLASS_LABELS, class_id)
+			break
+	var lines: Array[String] = []
+	if promoted > 0:
+		lines.append(Strings.MOBILITY_PROMOTED % [promoted, lower, upper])
+	if demoted > 0:
+		lines.append(Strings.MOBILITY_DEMOTED % [demoted, upper, lower])
+	return "\n".join(lines)
 
 
 func _bread_text(economy: Dictionary, stats: Dictionary, diagnostics: Dictionary) -> String:

@@ -55,5 +55,6 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 				"bonus": NeedsSystem.housing_bonus(state, params, definition.id),
 				"max_bonus": int(params.get_value(StringName("class.%s.housing_max_bonus" % definition.id))),
 			},
+			"mobility": MobilitySystem.diagnostics(state, params, context, definition),
 		}
 	return {"classes": classes}

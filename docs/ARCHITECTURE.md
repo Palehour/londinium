@@ -38,7 +38,7 @@ londinium/
 │   ├── eras/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
-│   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates, head tax, needs (good → category, value, satisfaction and consumption keys); a field is a Params key that exists or a number that becomes class.<class>.*
+│   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates, head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
 │   └── maps/
@@ -82,6 +82,7 @@ londinium/
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
 7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
 8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008).
+   Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
 11. Stats + snapshot emitted.

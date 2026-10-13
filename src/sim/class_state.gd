@@ -18,6 +18,11 @@ var emigration_fraction: float = 0.0
 var hunger_emigration_active: bool = false
 # Seconds since someone last left because of low satisfaction; -1 means nobody ever has.
 var satisfaction_departure_age_seconds: int = -1
+# Mobility (issue #53), kept on the class people rise into: the part of a person already on the way up or
+# down, and how many seconds in a row the demotion category has been under its score.
+var promotion_fraction: float = 0.0
+var demotion_fraction: float = 0.0
+var demotion_seconds_below: int = 0
 
 
 func to_dict() -> Dictionary:
@@ -29,6 +34,8 @@ func to_dict() -> Dictionary:
 		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
 		"hunger_emigration_active": hunger_emigration_active,
 		"satisfaction_departure_age_seconds": satisfaction_departure_age_seconds,
+		"promotion_fraction": promotion_fraction, "demotion_fraction": demotion_fraction,
+		"demotion_seconds_below": demotion_seconds_below,
 	}
 
 
@@ -45,4 +52,7 @@ static func from_dict(values: Dictionary) -> ClassState:
 	result.emigration_fraction = float(values.get("emigration_fraction", 0.0))
 	result.hunger_emigration_active = bool(values.get("hunger_emigration_active", false))
 	result.satisfaction_departure_age_seconds = int(values.get("satisfaction_departure_age_seconds", -1))
+	result.promotion_fraction = float(values.get("promotion_fraction", 0.0))
+	result.demotion_fraction = float(values.get("demotion_fraction", 0.0))
+	result.demotion_seconds_below = int(values.get("demotion_seconds_below", 0))
 	return result

@@ -180,3 +180,69 @@ func test_a_role_may_not_target_an_artisan_key_that_does_not_exist() -> void:
 	_documents["roles/neutral_administrator.json"]["modifiers"] = [
 		{"key": "class.artisan.need.gin.value", "op": "set", "value": 10}]
 	assert_string_contains("\n".join(_load().errors), "unknown key 'class.artisan.need.gin.value'")
+
+
+# Mobility (issue #53, D-061): approved by Cristian on 2026-10-13; sustenance and demotion point at #86's thresholds.
+func test_mobility_values_come_from_the_data() -> void:
+	var result: DataLoadResult = _load()
+	assert_true(result.is_ok(), str(result.errors))
+	var values: Dictionary[StringName, Variant] = result.catalog.base_values
+	var artisans: ClassDef = result.catalog.classes[&"artisan"]
+	assert_eq(artisans.mobility_from, &"worker")
+	assert_eq(values[artisans.promotion_min_score_keys[&"comunidad"]], 80.0)
+	assert_eq(artisans.promotion_min_score_keys[&"sustento"], &"needs.sustento.threshold")
+	assert_eq(values[artisans.promotion_min_score_keys[&"sustento"]], 75.0)
+	assert_eq(values[&"class.artisan.mobility.promotion.source_satisfaction"], 70.0)
+	assert_eq(values[&"class.artisan.mobility.promotion.per_minute"], 2.0)
+	assert_eq(artisans.demotion_category, &"comunidad")
+	assert_eq(artisans.demotion_below_key, &"needs.comunidad.threshold")
+	assert_eq(values[artisans.demotion_below_key], 50.0)
+	assert_eq(values[&"class.artisan.mobility.demotion.seconds"], 60)
+	assert_eq(values[&"class.artisan.mobility.demotion.per_minute"], 2.0)
+	assert_false(result.catalog.classes[&"worker"].has_mobility())
+
+
+func test_mobility_values_out_of_range_are_rejected() -> void:
+	var cases: Array[Array] = [
+		[["artisan", "mobility", "promotion", "min_scores", "comunidad"], 101],
+		[["artisan", "mobility", "promotion", "min_scores", "comunidad"], -1],
+		[["artisan", "mobility", "promotion", "source_satisfaction"], 101],
+		[["artisan", "mobility", "promotion", "per_minute"], -1],
+		[["artisan", "mobility", "demotion", "below"], 101],
+		[["artisan", "mobility", "demotion", "seconds"], 0],
+		[["artisan", "mobility", "demotion", "seconds"], 1.5],
+		[["artisan", "mobility", "demotion", "per_minute"], -1],
+	]
+	for entry: Array in cases:
+		before_each()
+		_edit(entry[0], entry[1])
+		assert_false(_load().is_ok(), "%s = %s" % [entry[0], entry[1]])
+
+
+func test_mobility_must_name_another_class_and_categories_of_its_needs() -> void:
+	_edit(["artisan", "mobility", "from"], "artisan")
+	assert_string_contains("\n".join(_load().errors), "mobility.from: expected another class")
+	before_each()
+	_edit(["artisan", "mobility", "from"], "noble")
+	assert_string_contains("\n".join(_load().errors), "mobility.from: expected another class")
+	before_each()
+	_edit(["artisan", "mobility", "promotion", "min_scores", "estatus"], 10)
+	assert_string_contains("\n".join(_load().errors), "not a category of this class's needs")
+	before_each()
+	_edit(["artisan", "mobility", "demotion", "category"], "salud")
+	assert_string_contains("\n".join(_load().errors), "demotion.category: not a category of this class's needs")
+	before_each()
+	_edit(["artisan", "mobility", "speed"], 1)
+	assert_string_contains("\n".join(_load().errors), "mobility.speed: unknown field")
+	before_each()
+	_documents[CLASSES]["artisan"]["mobility"]["demotion"].erase("seconds")
+	assert_string_contains("\n".join(_load().errors), "demotion.seconds: missing field")
+
+
+func test_mobility_role_modifiers_inside_the_ranges_are_valid() -> void:
+	var errors: Array[String] = _validation_errors([
+		Modifier.new(&"class.artisan.mobility.promotion.comunidad.min_score", &"set", 60),
+		Modifier.new(&"class.artisan.mobility.promotion.per_minute", &"mul", 1.5),
+		Modifier.new(&"class.artisan.mobility.demotion.seconds", &"add", 30),
+	])
+	assert_eq(errors, [] as Array[String])
