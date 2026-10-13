@@ -2,7 +2,7 @@ class_name MoneySystem
 extends RefCounted
 
 
-func tick(state: EconomyState, params: Params) -> void:
+func tick(state: EconomyState, params: Params, context: EconomyContext = null) -> void:
 	var employed: int = 0
 	var wages: float = 0.0
 	var upkeep: float = 0.0
@@ -12,8 +12,12 @@ func tick(state: EconomyState, params: Params) -> void:
 		employed += workers
 		wages += workers * float(params.get_value(StringName(prefix + ".wage_per_worker_per_minute")))
 		upkeep += float(params.get_value(StringName(prefix + ".upkeep_per_minute")))
-	state.tax_fraction += employed * state.tax_rate \
-		* float(params.get_value(&"population.tax.base_per_employed_worker_per_minute")) / 60.0
+	# Head tax per class: on the jobs its members hold or on all of its residents (the data says which).
+	for def: ClassDef in ClassStates.defs(context):
+		var heads: int = employed if def.tax_basis == ClassDef.TAX_EMPLOYED else ClassStates.population_of(state, def)
+		var collected: float = heads * state.tax_rate * float(params.get_value(def.tax_base_key)) / 60.0
+		state.tax_fraction += collected
+		state.class_tax_tick[def.id] = collected
 	state.wage_fraction += wages / 60.0
 	state.upkeep_fraction += upkeep / 60.0
 	var taxes_paid: int = ProductionSystem.whole_units(state.tax_fraction)

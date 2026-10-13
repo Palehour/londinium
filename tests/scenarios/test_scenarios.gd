@@ -507,6 +507,53 @@ func test_both_chains_keep_bread_covered_and_the_mill_supplied_across_twenty_see
 	assert_eq(made_beer, SEEDS, "the beer chain works in every seed")
 
 
+# --- Issue #52: artisans ---
+
+# The beer chain starts to pay for itself when its first building is up; the payback counts from then, with
+# the tax of the artisans (the chain without their housing). The criterion of Mason, approved by Cristian on
+# 2026-10-13, is over 20 seeds (median under 10 min, at least 17 seeds under 12 min); those 70-minute games do
+# not fit in CI, so they live in tests/scenarios/long/long_test_artisans_beer.gd (tools/run_long_tests). Here
+# one game with the seed of the file keeps every seed's checks in the short suite.
+const ARTISANS_PAYBACK_SEED_LIMIT: float = 12.0
+
+
+func test_artisans_beer_keeps_bread_covered_and_the_artisans_pay_the_chain() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/artisans_beer.json")
+	assert_eq(runner.validate(scenario), [] as Array[String])
+	assert_eq(String(scenario["id"]), "artisans_beer")
+	var result: ScenarioResult = runner.run(scenario)
+	_assert_scripts_ran_clean(result)
+	assert_true(result.survived(), "the city was lost")
+	assert_gt(result.chain_start_tick, 0, "the beer chain was built")
+	assert_gt(int(result.final_row()["artisan_population"]), 0, "artisans moved in")
+	assert_gt(float(result.peak("beer_consumed_pm")), 0.0, "the artisans drink beer")
+	# Bread stays covered while the artisans pay the chain back: the ten minutes after it starts.
+	@warning_ignore("integer_division")
+	var from_minute: int = result.chain_start_tick / ScenarioRunner.TICKS_PER_MINUTE
+	var coverage: float = result.lowest("bread_coverage", from_minute, from_minute + 10)
+	assert_gte(coverage, BOTH_CHAINS_MIN_COVERAGE, "bread coverage")
+	var payback: float = result.payback_minutes(false)
+	assert_gte(payback, 0.0, "the tax of the artisans pays the chain back")
+	assert_lt(payback, ARTISANS_PAYBACK_SEED_LIMIT, "payback")
+	assert_gt(result.payback_minutes(true), payback, "the houses cost more")
+	gut.p("artisans_beer, seed %d: bread coverage %.2f, payback %.2f min" % [int(scenario["seed"]), coverage, payback])
+
+
+# Parity (issue #52): a city that builds no artisan housing has no artisans, drinks no beer and collects no
+# head tax from them, in every scenario that existed before the class.
+func test_scenarios_without_artisan_housing_never_have_artisans() -> void:
+	for id: String in _results:
+		if id == "artisans_beer":
+			continue
+		var result: ScenarioResult = _result(id)
+		assert_eq(result.peak("artisan_population"), 0.0, id)
+		assert_eq(result.peak("n_artisan_housing"), 0.0, id)
+		assert_eq(result.peak("beer_consumed_pm"), 0.0, id)
+		assert_eq(result.peak("artisan_taxes_pm"), 0.0, id)
+		assert_eq(result.payback_minutes(false), -1.0, id)
+
+
 # Parity: a city that builds neither malthouse nor brewery never has malt or beer.
 func test_scenarios_without_the_beer_chain_never_touch_malt_or_beer() -> void:
 	for id: String in ["flour_milled", "big_tight_r06", "small_rich", "tea_on"]:

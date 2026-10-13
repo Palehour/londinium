@@ -107,6 +107,19 @@ func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> v
 	assert_eq((view.get("_status") as Label).text, Strings.NO_CULTIVABLE_CELLS)
 
 
+# Issue #52: the housing of the artisans is the eighth building, so keys 1 to 7 keep their meaning.
+func test_artisan_housing_is_built_from_key_eight() -> void:
+	var view: Node2D = _fixture(false)
+	var help: String = (view.get("_help") as Label).text
+	assert_string_contains(help, "8 Vivienda de artesanos")
+	_press(view, KEY_8)
+	assert_eq(view.get("_building_type"), &"artisan_housing")
+	_click(view, Vector2i(4, 2))
+	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
+	assert_eq(buildings.size(), 1)
+	assert_eq(buildings[0]["definition_id"], &"artisan_housing")
+
+
 # Issue #51: the beer chain sits after wheat_field so keys 1 to 5 keep their meaning.
 func test_malthouse_and_brewery_are_built_from_keys_six_and_seven() -> void:
 	var view: Node2D = _fixture(false)

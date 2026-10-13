@@ -23,8 +23,8 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 
 
 # Outputs of the converters whose good has a warehouse cap (market.<good>.storage_capacity in the data):
-# their producer stops when it is full instead of throwing the output away, because nothing consumes them
-# yet (issue #51). Derived from the data, so a good gets a cap by defining one.
+# their producer stops when it is full instead of throwing the output away, because they are consumed only
+# when someone lives who needs them (issue #51, #52). Derived from the data, so a good gets a cap by defining one.
 static func capped_outputs(params: Params, context: EconomyContext) -> Array[StringName]:
 	var found: Array[StringName] = []
 	for id: StringName in CONVERTERS:
@@ -108,9 +108,10 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 	var budget: float = staffed_rate(params, building, "inputs.%s" % input)
 	var fraction: float = float(building.get("output_fraction", 0.0))
 	if pending != NOT_CAPPED:
-		# Output already owed by every producer of this good counts against the room, so a full warehouse never overshoots.
+		# Output already owed by every producer of this good counts against the room, so a full warehouse never
+		# overshoots; so does the part of a unit people left after drinking from it.
 		var capacity: int = int(params.get_value(_capacity_key(output)))
-		var room: float = float(capacity - int(state.stocks.get(output, 0))) - pending
+		var room: float = float(capacity - int(state.stocks.get(output, 0))) - pending 			- ConsumptionSystem.stored_fraction(state, output)
 		budget = minf(budget, maxf(0.0, room) * input_amount / output_amount)
 		if budget <= ROUNDING_EPSILON:
 			budget = 0.0

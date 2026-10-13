@@ -40,8 +40,15 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 				"met": entry["met"], "reason": _reason(entry, attainable),
 				"goods": goods, "missing_goods": missing,
 			})
+		var entry: ClassState = ClassStates.checkout(state, definition)
 		classes[definition.id] = {
 			"categories": categories,
+			"population": ClassStates.population_of(state, definition),
+			"satisfaction": {
+				"current": entry.satisfaction, "target": entry.satisfaction_target,
+				"breakdown": entry.satisfaction_breakdown.duplicate(),
+			},
+			"growth": {"reason": GrowthSystem.reason(state, params, definition, entry)},
 			"housing": {
 				"building": definition.housing_building,
 				"base": maxi(0, int(params.get_value(StringName("building.%s.capacity" % definition.housing_building)))),

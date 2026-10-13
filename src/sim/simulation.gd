@@ -23,6 +23,8 @@ var _growth: GrowthSystem = GrowthSystem.new()
 var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
 var _stats: Stats
+# Classes this simulation had to add to the state it was given; primed once the needs are evaluated.
+var _new_classes: Array[ClassDef] = []
 
 
 # New-game defaults are explicit so loading a snapshot never grants supplies or resets happiness.
@@ -34,11 +36,10 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	state.bread_consumed = 0.0
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
-	state.bread_coverage = ConsumptionSystem.new().coverage(state, params)
+	state.bread_coverage = ConsumptionSystem.new().coverage(state, params, context)
 	state.hunger_smoothed_coverage = state.bread_coverage
 	SatisfactionSystem.new().update_target(state, params, context)
-	state.satisfaction = state.satisfaction_target
-	state.satisfaction_breakdown["smoothed"] = state.satisfaction
+	SatisfactionSystem.new().snap_to_target(state, context)
 	return Simulation.new(params, state, seed_value, context)
 
 
@@ -54,6 +55,7 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_stats = Stats.new(int(_params.get_value(&"population.stats_window_seconds")))
 	_stats.restore(stats_window)
 	if _context != null:
+		_new_classes = ClassStates.ensure(_state, _context)
 		_defeat.initialize(_state, _params)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
@@ -75,6 +77,8 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		# Derived from the restored state, so a save from before the needs existed still explains itself,
 		# even if it is already defeated and never ticks again.
 		NeedsSystem.evaluate(_state, _params, _context)
+		for def: ClassDef in _new_classes:
+			_satisfaction.prime_class(_state, _params, _context, def)
 
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
@@ -103,19 +107,37 @@ func tick() -> void:
 	if _context != null:
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
-		_imports.tick(_state, _params)
+		_imports.tick(_state, _params, _context)
 		_production.tick(_state, _params, _context)
-		_consumption.tick(_state, _params)
+		_consumption.tick(_state, _params, _context)
 		_defeat.update_hunger_coverage(_state, _params)
 		_satisfaction.tick(_state, _params, _context)
-		_growth.tick(_state, _params)
-		_money.tick(_state, _params)
+		_growth.tick(_state, _params, _context)
+		_money.tick(_state, _params, _context)
 		_defeat.tick(_state, _params, false)
 		if not _state.defeat_causes.is_empty():
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)
 			_commands.clear()
 		_stats.record(_state)
+
+
+# The treasury, without building a snapshot.
+func treasury() -> int:
+	return _state.money
+
+
+# What the last tick moved, for balance probes that need every tick (the snapshot is too coarse for them):
+# the head tax each class paid, the barley bought, the beer drunk, and the buildings with their workers.
+func tick_flows() -> Dictionary:
+	var buildings: Dictionary = {}
+	for building: Dictionary in _state.buildings:
+		var entry: Dictionary = buildings.get(building["definition_id"], {"count": 0, "workers": 0})
+		entry["count"] += 1
+		entry["workers"] += int(building.get("workers", 0))
+		buildings[building["definition_id"]] = entry
+	return {"class_tax": _state.class_tax_tick.duplicate(), "barley_spent": _state.barley_spent_tick,
+		"beer_consumed": _state.beer_consumed, "buildings": buildings}
 
 
 func _reject_after_defeat(command: SimulationCommand) -> void:
@@ -144,7 +166,7 @@ func snapshot() -> Dictionary:
 			"barley": MarketSystem.barley_snapshot(_state, _params),
 			"malt": MarketSystem.storage_snapshot(_state, _params, &"malt"),
 			"beer": MarketSystem.storage_snapshot(_state, _params, &"beer")},
-		"imports": ImportSystem.snapshot(_state, _params),
+		"imports": ImportSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"tick_count": _tick_count,
 		"seed": _seed,

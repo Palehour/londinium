@@ -61,7 +61,8 @@ func test_an_unknown_category_good_or_building_is_rejected() -> void:
 	assert_string_contains(_errors(), "unknown category")
 	before_each()
 	_documents["eras/victorian/classes.json"]["worker"]["needs"]["gin"] = {
-		"category": "sustento", "value": 10, "satisfaction_key": "population.tea.satisfaction_bonus"}
+		"category": "sustento", "value": 10, "satisfaction_key": "population.tea.satisfaction_bonus",
+		"consumption_key": "population.tea.per_person_per_minute"}
 	assert_string_contains(_errors(), "unknown good")
 	before_each()
 	_documents["eras/victorian/classes.json"]["worker"]["housing_building"] = "nowhere"

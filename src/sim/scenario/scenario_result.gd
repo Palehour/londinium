@@ -13,6 +13,8 @@ const CSV_COLUMNS: Array[String] = [
 	"imports_spent_pm", "tea_spent_pm", "tea_stock", "tea_coverage", "flour_stock",
 	"barley_spent_pm", "barley_stock",
 	"n_malthouse", "n_brewery", "malt_stock", "beer_stock",
+	"artisan_population", "artisan_satisfaction", "artisan_housing_capacity", "n_artisan_housing",
+	"beer_coverage", "beer_consumed_pm", "artisan_taxes_pm",
 ]
 # Float columns are printed with two decimals; everything else is printed as it is.
 const FLOAT_COLUMNS: Array[String] = [
@@ -20,6 +22,7 @@ const FLOAT_COLUMNS: Array[String] = [
 	"bread_produced_pm", "bread_consumed_pm", "bread_demand_pm", "taxes_pm", "wages_pm",
 	"upkeep_pm", "wheat_spent_pm", "operating_balance_pm", "construction_pm", "imports_spent_pm",
 	"tea_spent_pm", "tea_coverage", "barley_spent_pm",
+	"artisan_satisfaction", "beer_coverage", "beer_consumed_pm", "artisan_taxes_pm",
 ]
 
 var id: String = ""
@@ -41,6 +44,13 @@ var bread_cause_pairs: Dictionary[String, bool] = {}
 # Ticks (1-based count of ticks run) at which a staffed building of each type ran out of input while it still
 # had capacity to use, e.g. &"mill" for a mill waiting for wheat (ProductionSystem counts it in _convert).
 var waiting_input_ticks: Dictionary[StringName, Array] = {}
+# Issue #52: what the head tax of the artisans pays back. The clock starts when the first building of the
+# beer chain (malthouse, brewery) or of the artisans is up; it ends when the tax collected from the artisans
+# reaches what that chain has cost since: "with housing" counts the artisan housing too, "without" leaves it
+# out (the houses are what the beer is for). -1 until it happens.
+var chain_start_tick: int = -1
+var payback_tick_with_housing: int = -1
+var payback_tick_without_housing: int = -1
 
 
 func row(minute: int) -> Dictionary:
@@ -61,6 +71,14 @@ func mean(column: String, from_minute: int, to_minute: int) -> float:
 	return total / float(count) if count > 0 else 0.0
 
 
+# Lowest value of one column over minutes [from_minute, to_minute], both included.
+func lowest(column: String, from_minute: int, to_minute: int) -> float:
+	var found: float = INF
+	for minute: int in range(from_minute, mini(to_minute, rows.size() - 1) + 1):
+		found = minf(found, float(rows[minute][column]))
+	return found
+
+
 func peak(column: String) -> float:
 	var highest: float = -INF
 	for values: Dictionary in rows:
@@ -78,6 +96,14 @@ func second_chain_purchase_tick() -> int:
 			if wharves == 2:
 				return int(entry["executed_tick"])
 	return -1
+
+
+# Minutes from the start of the beer chain to the payback; -1 when there was none.
+func payback_minutes(with_housing: bool) -> float:
+	var tick: int = payback_tick_with_housing if with_housing else payback_tick_without_housing
+	if tick < 0 or chain_start_tick < 0:
+		return -1.0
+	return float(tick - chain_start_tick) / 60.0
 
 
 func survived() -> bool:
