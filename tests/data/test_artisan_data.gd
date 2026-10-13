@@ -54,7 +54,7 @@ func test_the_artisan_values_are_the_approved_ones() -> void:
 	assert_eq(values[&"class.artisan.satisfaction.overcrowding_weight"], 30.0)
 	assert_eq(values[&"class.artisan.growth.immigration_threshold"], 75.0)
 	assert_eq(values[&"class.artisan.growth.emigration_threshold"], 35.0)
-	assert_eq(values[&"class.artisan.growth.immigration_per_minute"], 2.0)
+	assert_eq(values[&"class.artisan.growth.immigration_per_minute"], 3.0)
 	assert_eq(values[&"class.artisan.growth.emigration_per_minute"], 2.0)
 	assert_eq(values[&"class.artisan.growth.hunger_emigration_threshold"], 0.6)
 	assert_eq(values[&"class.artisan.growth.hunger_emigration_recovery"], 0.75)

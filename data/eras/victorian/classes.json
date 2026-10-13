@@ -47,7 +47,7 @@
     "growth": {
       "immigration_threshold": 75,
       "emigration_threshold": 35,
-      "immigration_per_minute": 2,
+      "immigration_per_minute": 3,
       "emigration_per_minute": 2,
       "hunger_emigration_threshold": 0.6,
       "hunger_emigration_recovery": 0.75,

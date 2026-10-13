@@ -39,6 +39,11 @@ func _artisans() -> ClassState:
 	return _state.class_states[&"artisan"]
 
 
+# Artisans that arrive in a minute, from data/ (Mason's value, so retuning it leaves no stale copy here).
+func _arrivals_per_minute() -> int:
+	return int(_params.get_value(&"class.artisan.growth.immigration_per_minute"))
+
+
 func _workers() -> int:
 	return _state.population - _artisans().population
 
@@ -60,12 +65,12 @@ func _grow(seconds: int) -> void:
 func test_artisans_arrive_only_with_free_artisan_housing() -> void:
 	_set_artisans(0, 90.0)
 	_grow(60)
-	assert_eq(_artisans().population, 2, "Two a minute")
+	assert_eq(_artisans().population, _arrivals_per_minute(), "One minute of arrivals")
 	assert_eq(_workers(), 0, "Workers are not moved by artisans arriving")
-	assert_eq(_state.population, 2)
+	assert_eq(_state.population, _arrivals_per_minute())
 	_state.buildings.remove_at(1)
 	_grow(60)
-	assert_eq(_artisans().population, 2, "No artisan housing, nobody new")
+	assert_eq(_artisans().population, _arrivals_per_minute(), "No artisan housing, nobody new")
 
 
 func test_artisans_stop_arriving_when_their_housing_is_full() -> void:
@@ -81,7 +86,7 @@ func test_artisans_arrive_only_at_a_satisfaction_of_75() -> void:
 	assert_eq(_artisans().population, 0)
 	_set_artisans(0, 75.0)
 	_grow(60)
-	assert_eq(_artisans().population, 2)
+	assert_eq(_artisans().population, _arrivals_per_minute())
 
 
 func test_artisans_leave_below_35_and_leave_the_city() -> void:
