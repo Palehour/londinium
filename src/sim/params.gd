@@ -10,6 +10,11 @@ var _base_values: Dictionary[StringName, Variant] = {}
 var _money_keys: Array[StringName] = []
 var _boolean_keys: Array[StringName] = []
 var _modifiers: Array[Modifier] = []
+# Values that already passed validation. Base values and modifiers never change after _init, so a key that
+# validated once always gives the same value; the systems ask for the same keys many times a tick (once per
+# class since issue #52), and validating every time was the slowest part of a tick. Failed reads are not
+# kept, so every one of them still reports its errors.
+var _validated: Dictionary[StringName, Variant] = {}
 
 
 func _init(catalog: DataCatalog, role: RoleDef) -> void:
@@ -21,10 +26,14 @@ func _init(catalog: DataCatalog, role: RoleDef) -> void:
 
 
 func get_value(key: StringName) -> Variant:
+	if _validated.has(key):
+		return _validated[key]
 	var errors: Array[String] = []
 	var value: Variant = _get_validated_value(key, errors)
 	for message: String in errors:
 		push_error(message)
+	if errors.is_empty():
+		_validated[key] = value
 	return value
 
 
