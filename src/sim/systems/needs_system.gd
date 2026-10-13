@@ -14,8 +14,10 @@ static func coverage(state: EconomyState, good: StringName) -> float:
 			return state.hunger_smoothed_coverage
 		&"tea":
 			return state.tea_coverage
+		&"beer":
+			return state.beer_coverage
 		_:
-			# Nothing consumes the other goods yet (beer arrives with the artisans, issue #52).
+			# Nothing else is consumed yet.
 			return 0.0
 
 
@@ -79,4 +81,19 @@ static func housing_capacity(state: EconomyState, params: Params, context: Econo
 		if not bonuses.has(class_id):
 			bonuses[class_id] = housing_bonus(state, params, class_id)
 		total += maxi(0, int(params.get_value(StringName("building.%s.capacity" % id)))) + bonuses[class_id]
+	return total
+
+
+# Capacity of the housing of one class: its buildings' base plus the class bonus. Housing no class claims
+# belongs to the base class, so the classes' capacities add up to housing_capacity().
+static func class_housing_capacity(state: EconomyState, params: Params, context: EconomyContext, def: ClassDef) -> int:
+	var bonus: int = housing_bonus(state, params, def.id)
+	var total: int = 0
+	for building: Dictionary in state.buildings:
+		var id: StringName = building["definition_id"]
+		if "housing" not in context.buildings[id].tags:
+			continue
+		var owner: StringName = context.class_of_housing(id)
+		if owner == def.id or (def.base and owner == &""):
+			total += maxi(0, int(params.get_value(StringName("building.%s.capacity" % id)))) + bonus
 	return total

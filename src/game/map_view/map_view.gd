@@ -1,6 +1,6 @@
 extends Node2D
 
-const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery"]
+const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
 
 var session: GameSession
 var clock: SimClock

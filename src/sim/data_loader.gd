@@ -335,21 +335,106 @@ func _load_needs(raw: Dictionary, catalog: DataCatalog) -> void:
 			catalog.categories.append(StringName(id))
 
 
+const CLASS_FIELDS: Array[String] = ["base", "takes_jobs", "housing_building", "housing_max_bonus",
+	"satisfaction", "growth", "tax", "needs"]
+# Per block of a class: field -> number kind. Each field either points at an existing Params key (a string)
+# or is a number that becomes the key class.<id>.<block>.<field>.
+const CLASS_SATISFACTION: Dictionary = {"tax_weight": "number", "overcrowding_weight": "number",
+	"smoothing_per_second": "number", "snap_epsilon": "positive"}
+const CLASS_GROWTH: Dictionary = {"immigration_threshold": "percent", "emigration_threshold": "percent",
+	"immigration_per_minute": "number", "emigration_per_minute": "number",
+	"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
+	"hunger_emigration_multiplier": "number"}
+
+
 func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 	if raw.is_empty():
 		_errors.append("%s: expected classes" % _classes_path())
 	var claimed: Array[StringName] = []
+	var bases: int = 0
 	for id: String in raw:
 		var path: String = "%s.%s" % [_classes_path(), id]
-		if not _object(raw[id], ["housing_building", "housing_max_bonus", "needs"], path):
+		if not _object(raw[id], CLASS_FIELDS, path):
 			continue
 		var definition: ClassDef = ClassDef.new()
 		definition.id = StringName(id)
+		if raw[id]["base"] is not bool or raw[id]["takes_jobs"] is not bool:
+			_errors.append("%s: base and takes_jobs must be booleans" % path)
+		else:
+			definition.base = raw[id]["base"]
+			definition.takes_jobs = raw[id]["takes_jobs"]
+		if definition.base:
+			bases += 1
+			if not definition.takes_jobs:
+				_errors.append("%s: the base class must take jobs" % path)
 		_number(raw[id]["housing_max_bonus"], "integer", path + ".housing_max_bonus",
 			"class.%s.housing_max_bonus" % id, catalog)
 		definition.housing_building = _housing_building(raw[id]["housing_building"], path, claimed, catalog)
+		_load_class_blocks(raw[id], path, definition, catalog)
 		_load_class_needs(raw[id]["needs"], path + ".needs", definition, catalog)
 		catalog.classes[definition.id] = definition
+	if not raw.is_empty() and bases != 1:
+		_errors.append("%s: exactly one class must be the base class" % _classes_path())
+	_check_class_hunger(catalog)
+
+
+func _load_class_blocks(raw: Dictionary, path: String, definition: ClassDef, catalog: DataCatalog) -> void:
+	var satisfaction: Dictionary = _class_block(raw["satisfaction"], CLASS_SATISFACTION, path + ".satisfaction",
+		"class.%s.satisfaction" % definition.id, catalog)
+	var growth: Dictionary = _class_block(raw["growth"], CLASS_GROWTH, path + ".growth",
+		"class.%s.growth" % definition.id, catalog)
+	definition.tax_weight_key = satisfaction.get("tax_weight", &"")
+	definition.overcrowding_weight_key = satisfaction.get("overcrowding_weight", &"")
+	definition.smoothing_key = satisfaction.get("smoothing_per_second", &"")
+	definition.snap_epsilon_key = satisfaction.get("snap_epsilon", &"")
+	definition.immigration_threshold_key = growth.get("immigration_threshold", &"")
+	definition.emigration_threshold_key = growth.get("emigration_threshold", &"")
+	definition.immigration_per_minute_key = growth.get("immigration_per_minute", &"")
+	definition.emigration_per_minute_key = growth.get("emigration_per_minute", &"")
+	definition.hunger_threshold_key = growth.get("hunger_emigration_threshold", &"")
+	definition.hunger_recovery_key = growth.get("hunger_emigration_recovery", &"")
+	definition.hunger_multiplier_key = growth.get("hunger_emigration_multiplier", &"")
+	var tax: Variant = raw["tax"]
+	if not _object(tax, ["basis", "base"], path + ".tax"):
+		return
+	if tax["basis"] not in [ClassDef.TAX_EMPLOYED, ClassDef.TAX_RESIDENTS]:
+		_errors.append("%s.tax.basis: expected employed or residents" % path)
+	else:
+		definition.tax_basis = StringName(tax["basis"])
+	definition.tax_base_key = _key_or_number(tax["base"], "money", path + ".tax.base",
+		"class.%s.tax.base" % definition.id, catalog)
+
+
+# Resolves every field of a block to the Params key it uses; a missing or bad field is left out and reported.
+func _class_block(raw: Variant, schema: Dictionary, path: String, prefix: String, catalog: DataCatalog) -> Dictionary:
+	var fields: Array[String] = []
+	fields.assign(schema.keys())
+	var keys: Dictionary = {}
+	if not _object(raw, fields, path):
+		return keys
+	for field: String in schema:
+		var key: StringName = _key_or_number(raw[field], schema[field], "%s.%s" % [path, field],
+			"%s.%s" % [prefix, field], catalog)
+		if key != &"":
+			keys[field] = key
+	return keys
+
+
+# A string is the key of a numeric parameter that already exists; a number is a new parameter under own_key.
+func _key_or_number(raw: Variant, kind: String, path: String, own_key: String, catalog: DataCatalog) -> StringName:
+	if typeof(raw) in [TYPE_INT, TYPE_FLOAT]:
+		return StringName(own_key) if _number(raw, kind, path, own_key, catalog) else &""
+	if raw is String and typeof(catalog.base_values.get(StringName(raw))) in [TYPE_INT, TYPE_FLOAT]:
+		return StringName(raw)
+	_errors.append("%s: expected the key of a numeric parameter" % path)
+	return &""
+
+
+# Recovery below the threshold would make the hunger flag flip every tick (same rule as the worker's, per class).
+func _check_class_hunger(catalog: DataCatalog) -> void:
+	for definition: ClassDef in catalog.classes.values():
+		if catalog.base_values.has(definition.hunger_threshold_key) and catalog.base_values.has(definition.hunger_recovery_key) 				and float(catalog.base_values[definition.hunger_recovery_key]) < float(catalog.base_values[definition.hunger_threshold_key]):
+			_errors.append("%s.%s.growth: hunger_emigration_recovery must be >= hunger_emigration_threshold" % [_classes_path(), definition.id])
 
 
 func _housing_building(raw: Variant, path: String, claimed: Array[StringName], catalog: DataCatalog) -> StringName:
@@ -372,7 +457,7 @@ func _load_class_needs(raw: Variant, path: String, definition: ClassDef, catalog
 		return
 	for good: String in raw:
 		var location: String = "%s.%s" % [path, good]
-		if not _object(raw[good], ["category", "value", "satisfaction_key"], location):
+		if not _object(raw[good], ["category", "value", "satisfaction_key", "consumption_key"], location):
 			continue
 		var need: NeedDef = NeedDef.new()
 		need.good = StringName(good)
@@ -381,10 +466,10 @@ func _load_class_needs(raw: Variant, path: String, definition: ClassDef, catalog
 		need.category = StringName(str(raw[good]["category"]))
 		if need.category not in catalog.categories:
 			_errors.append("%s.category: unknown category" % location)
-		need.satisfaction_key = StringName(str(raw[good]["satisfaction_key"]))
-		if raw[good]["satisfaction_key"] is not String \
-				or typeof(catalog.base_values.get(need.satisfaction_key)) not in [TYPE_INT, TYPE_FLOAT]:
-			_errors.append("%s.satisfaction_key: expected the key of a numeric parameter" % location)
+		need.satisfaction_key = _key_or_number(raw[good]["satisfaction_key"], "number",
+			location + ".satisfaction_key", "class.%s.need.%s.satisfaction_weight" % [definition.id, good], catalog)
+		need.consumption_key = _key_or_number(raw[good]["consumption_key"], "positive",
+			location + ".consumption_key", "class.%s.need.%s.per_person_per_minute" % [definition.id, good], catalog)
 		_number(raw[good]["value"], "percent", location + ".value",
 			"class.%s.need.%s.value" % [definition.id, good], catalog)
 		definition.needs.append(need)

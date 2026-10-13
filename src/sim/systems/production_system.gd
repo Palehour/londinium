@@ -23,8 +23,8 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 
 
 # Outputs of the converters whose good has a warehouse cap (market.<good>.storage_capacity in the data):
-# their producer stops when it is full instead of throwing the output away, because nothing consumes them
-# yet (issue #51). Derived from the data, so a good gets a cap by defining one.
+# their producer stops when it is full instead of throwing the output away, because they are consumed only
+# when someone lives who needs them (issue #51, #52). Derived from the data, so a good gets a cap by defining one.
 static func capped_outputs(params: Params, context: EconomyContext) -> Array[StringName]:
 	var found: Array[StringName] = []
 	for id: StringName in CONVERTERS:

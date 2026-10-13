@@ -9,7 +9,8 @@ const EXTRA_ROUND: Array[StringName] = [&"bakery", &"mill", &"wharf", &"malthous
 
 
 func tick(state: EconomyState, params: Params) -> void:
-	var available: int = maxi(0, state.population)
+	# Only the classes that take jobs look for one (D-021): artisans never fill a post.
+	var available: int = maxi(0, ClassStates.job_seekers(state))
 	for building: Dictionary in state.buildings:
 		building["workers"] = 0
 	# Staff the complete chain before expanding any one stage.
@@ -35,12 +36,12 @@ static func refresh_counts(state: EconomyState) -> void:
 	state.employed = 0
 	for building: Dictionary in state.buildings:
 		state.employed += int(building.get("workers", 0))
-	state.unemployed = maxi(0, state.population - state.employed)
+	state.unemployed = maxi(0, ClassStates.job_seekers(state) - state.employed)
 
 
 static func trim_to_population(state: EconomyState) -> void:
 	refresh_counts(state)
-	var excess: int = maxi(0, state.employed - state.population)
+	var excess: int = maxi(0, state.employed - ClassStates.job_seekers(state))
 	# Reverse extras first, then the first-worker pass; no assignment log is needed.
 	excess = _release_workers(state, excess, _reversed(EXTRA_ROUND), 1)
 	_release_workers(state, excess, _reversed(FIRST_ROUND), 0)

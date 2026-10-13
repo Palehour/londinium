@@ -67,12 +67,36 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 		if recovery < threshold:
 			errors.append("Params: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold after role modifiers")
 			return null
+	var partner: StringName = _class_hunger_partner(key)
+	if partner != &"":
+		var other_hunger: Variant = _get_modified_value(partner, errors)
+		if other_hunger == null:
+			return null
+		var is_threshold: bool = String(key).ends_with("hunger_emigration_threshold")
+		var class_threshold: float = float(value if is_threshold else other_hunger)
+		var class_recovery: float = float(other_hunger if is_threshold else value)
+		if class_recovery < class_threshold:
+			errors.append("Params: %s must be >= %s after role modifiers" % [
+				key if not is_threshold else partner, partner if not is_threshold else key])
+			return null
 	if key in WHEAT_POLICY_KEYS:
 		var message: String = _wheat_policy_error(errors)
 		if not message.is_empty():
 			errors.append("Params: %s after role modifiers" % message)
 			return null
 	return value
+
+
+# The other key of the hunger hysteresis pair of a class (class.<id>.growth.*), or &"" for any other key.
+func _class_hunger_partner(key: StringName) -> StringName:
+	var text: String = String(key)
+	if not text.begins_with("class."):
+		return &""
+	if text.ends_with(".growth.hunger_emigration_threshold"):
+		return StringName(text.trim_suffix("threshold") + "recovery")
+	if text.ends_with(".growth.hunger_emigration_recovery"):
+		return StringName(text.trim_suffix("recovery") + "threshold")
+	return &""
 
 
 func _wheat_policy_error(errors: Array[String]) -> String:

@@ -18,16 +18,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 			copy.recipe.outputs.assign(definition.recipe.outputs)
 		buildings[copy.id] = copy
 	for definition: ClassDef in catalog.classes.values():
-		var class_copy: ClassDef = ClassDef.new()
-		class_copy.id = definition.id
-		class_copy.housing_building = definition.housing_building
-		for need: NeedDef in definition.needs:
-			var need_copy: NeedDef = NeedDef.new()
-			need_copy.good = need.good
-			need_copy.category = need.category
-			need_copy.satisfaction_key = need.satisfaction_key
-			class_copy.needs.append(need_copy)
-		classes[class_copy.id] = class_copy
+		classes[definition.id] = definition.copy()
 	map = MapDef.new()
 	map.id = selected_map.id
 	map.width = selected_map.width

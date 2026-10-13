@@ -14,6 +14,7 @@
     "housing": {"color": "#88b8bc"},
     "wheat_field": {"color": "#b5cf68"},
     "malthouse": {"color": "#c9a45c"},
-    "brewery": {"color": "#9c6b3f"}
+    "brewery": {"color": "#9c6b3f"},
+    "artisan_housing": {"color": "#8f9fd1"}
   }
 }
