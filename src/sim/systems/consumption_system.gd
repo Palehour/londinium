@@ -70,6 +70,12 @@ func _consume_beer(state: EconomyState, params: Params, context: EconomyContext)
 	state.beer_fraction = maxf(0.0, remaining - whole)
 
 
+# The part of a unit of a good still in the warehouse after people drank from it: it takes room and spoils
+# like the whole units (PR #108). Only beer has a cap and is drunk in fractions.
+static func stored_fraction(state: EconomyState, good: StringName) -> float:
+	return state.beer_fraction if good == &"beer" else 0.0
+
+
 # Share of the tea demand the store covers, without consuming anything.
 func tea_coverage(state: EconomyState, params: Params, context: EconomyContext = null) -> float:
 	return _stock_coverage(state, params, context, &"tea", state.tea_fraction)

@@ -108,9 +108,10 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 	var budget: float = staffed_rate(params, building, "inputs.%s" % input)
 	var fraction: float = float(building.get("output_fraction", 0.0))
 	if pending != NOT_CAPPED:
-		# Output already owed by every producer of this good counts against the room, so a full warehouse never overshoots.
+		# Output already owed by every producer of this good counts against the room, so a full warehouse never
+		# overshoots; so does the part of a unit people left after drinking from it.
 		var capacity: int = int(params.get_value(_capacity_key(output)))
-		var room: float = float(capacity - int(state.stocks.get(output, 0))) - pending
+		var room: float = float(capacity - int(state.stocks.get(output, 0))) - pending 			- ConsumptionSystem.stored_fraction(state, output)
 		budget = minf(budget, maxf(0.0, room) * input_amount / output_amount)
 		if budget <= ROUNDING_EPSILON:
 			budget = 0.0

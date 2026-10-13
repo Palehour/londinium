@@ -133,6 +133,32 @@ func test_beer_consumption_leaves_the_stock_whole_when_nobody_drinks_it() -> voi
 	assert_eq(_state.beer_fraction, 0.0)
 
 
+# PR #108 review: the part of a unit left after drinking is still in the warehouse, so it takes room.
+func test_the_beer_left_after_drinking_counts_against_the_warehouse_cap() -> void:
+	var cap: int = int(_params.get_value(&"market.beer.storage_capacity"))
+	_state.buildings.append({"definition_id": &"brewery", "workers": 3})
+	_state.stocks[&"malt"] = 40
+	_state.stocks[&"beer"] = cap - 1
+	_state.beer_fraction = 0.6
+	for index: int in range(120):
+		ProductionSystem.new().tick(_state, _params, _context)
+		assert_true(float(_state.stocks[&"beer"]) + _state.beer_fraction <= float(cap) + 0.0000001,
+			"tick %d: %d + %f is above the cap of %d" % [index, _state.stocks[&"beer"], _state.beer_fraction, cap])
+
+
+# PR #108 review: that part spoils at the same rate as the whole units.
+func test_the_beer_left_after_drinking_spoils_like_the_rest() -> void:
+	var rate: float = float(_params.get_value(&"market.beer.decay_fraction_per_minute"))
+	_state.wheat_price = 2
+	_state.barley_price = 2
+	_state.stocks[&"beer"] = 0
+	_state.beer_fraction = 0.6
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	for index: int in range(60):
+		MarketSystem.new().tick(_state, _params, rng, index + 1, RandomNumberGenerator.new())
+	assert_almost_eq(_state.beer_fraction, 0.6 * (1.0 - rate), 0.0000001)
+
+
 func test_artisan_satisfaction_uses_its_own_weights() -> void:
 	_live(0, 5)
 	_evaluate(1.0, 0.0, 1.0)
