@@ -40,6 +40,7 @@ var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
 var _economy: Label
+var _needs: Label
 var _buildings: Label
 var _crises: Label
 
@@ -70,9 +71,10 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_build_controls(content)
 	_bread = _label("")
 	_economy = _label("")
+	_needs = _label("")
 	_buildings = _label("")
 	_crises = _label("")
-	for label: Label in [_bread, _economy, _buildings, _crises]:
+	for label: Label in [_bread, _economy, _needs, _buildings, _crises]:
 		content.add_child(label)
 
 
@@ -102,6 +104,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_restart.visible = defeated
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
+	_needs.text = _needs_text(snapshot["needs"])
 	_buildings.text = _buildings_text(snapshot["diagnostics"]["buildings"])
 	_crises.text = _crises_text(defeat)
 
@@ -399,6 +402,41 @@ func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 	if not stats["complete"]:
 		lines.append(Strings.WINDOW_PARTIAL % [stats["window_seconds"], stats["window_size"]])
 	return "\n".join(lines)
+
+
+func _needs_text(needs: Dictionary) -> String:
+	var lines: Array[String] = [Strings.NEEDS_TITLE]
+	for class_id: StringName in needs["classes"]:
+		var class_label: String = Strings.label(Strings.CLASS_LABELS, class_id)
+		var info: Dictionary = needs["classes"][class_id]
+		for entry: Dictionary in info["categories"]:
+			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
+			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
+			# A met score may sit a hair under its threshold (float drift): it reads as the threshold.
+			var value: float = _tenths(maxf(entry["value"], entry["threshold"]) if entry["met"] else entry["value"], false)
+			var threshold: float = _tenths(entry["threshold"], not entry["met"])
+			if entry["met"]:
+				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])
+				continue
+			var missing: Array[String] = []
+			for good: StringName in entry["missing_goods"]:
+				missing.append(Strings.label(Strings.GOOD_LABELS, good))
+			# Nothing to cover that would help (the value is too low to ever reach the threshold): the reason says it.
+			if missing.is_empty() or entry["reason"] == &"unreachable_threshold":
+				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, value,
+					threshold, Strings.reason(entry["reason"])])
+				continue
+			lines.append(Strings.NEEDS_SHORT % [class_label, category, value, threshold,
+				", ".join(missing)])
+		var housing: Dictionary = info["housing"]
+		lines.append(Strings.HOUSING_ROW % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
+	if needs["classes"].is_empty():
+		lines.append(Strings.NEEDS_NO_CLASS)
+	return "\n".join(lines)
+
+
+func _tenths(value: float, round_up: bool) -> float:
+	return (ceilf(value * 10.0) if round_up else floorf(value * 10.0)) / 10.0
 
 
 func _buildings_text(buildings: Array) -> String:

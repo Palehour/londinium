@@ -13,20 +13,22 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 
 
 func update_target(state: EconomyState, params: Params, context: EconomyContext) -> void:
-	state.housing_capacity = 0
-	for building: Dictionary in state.buildings:
-		var id: StringName = building["definition_id"]
-		if "housing" in context.buildings[id].tags:
-			state.housing_capacity += maxi(0, int(params.get_value(StringName("building.%s.capacity" % id))))
+	NeedsSystem.evaluate(state, params, context)
+	state.housing_capacity = NeedsSystem.housing_capacity(state, params, context)
 	state.overcrowding = float(maxi(0, state.population - state.housing_capacity)) \
 		/ state.population if state.population > 0 else 0.0
-	state.satisfaction_breakdown.assign({
-		"bread": state.hunger_smoothed_coverage * float(params.get_value(&"population.satisfaction.bread_weight")),
-		"tea": state.tea_coverage * float(params.get_value(&"population.tea.satisfaction_bonus")),
-		"tax": state.tax_rate * float(params.get_value(&"population.satisfaction.tax_weight")),
-		"overcrowding": state.overcrowding * float(params.get_value(&"population.satisfaction.overcrowding_weight")),
-	})
-	state.satisfaction_target = clampf(state.satisfaction_breakdown["bread"] + state.satisfaction_breakdown["tea"] \
-		- state.satisfaction_breakdown["tax"] - state.satisfaction_breakdown["overcrowding"], 0.0, 100.0)
+	var breakdown: Dictionary[String, float] = {}
+	# Terms follow the order the data declares the needs in, so the sum is the same on every run.
+	var needs_total: float = 0.0
+	for definition: ClassDef in context.classes.values():
+		for need: NeedDef in definition.needs:
+			var term: float = NeedsSystem.coverage(state, need.good) * float(params.get_value(need.satisfaction_key))
+			breakdown[String(need.good)] = breakdown.get(String(need.good), 0.0) + term
+			needs_total += term
+	breakdown["tax"] = state.tax_rate * float(params.get_value(&"population.satisfaction.tax_weight"))
+	breakdown["overcrowding"] = state.overcrowding * float(params.get_value(&"population.satisfaction.overcrowding_weight"))
+	state.satisfaction_breakdown.assign(breakdown)
+	state.satisfaction_target = clampf(needs_total - state.satisfaction_breakdown["tax"] \
+		- state.satisfaction_breakdown["overcrowding"], 0.0, 100.0)
 	state.satisfaction_breakdown["target"] = state.satisfaction_target
 	state.satisfaction_breakdown["smoothed"] = state.satisfaction

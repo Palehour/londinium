@@ -32,7 +32,7 @@ func test_missing_labels_and_invalid_colors_fail_cleanly() -> void:
 
 func test_startup_data_is_required_and_rejects_invalid_values() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
@@ -65,7 +65,7 @@ func test_building_labels_resolve_by_id_and_reject_unknown_ids() -> void:
 
 func test_invalid_startup_role_modifiers_are_rejected() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

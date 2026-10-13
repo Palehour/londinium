@@ -479,3 +479,81 @@ func test_balance_breakdown_lists_the_barley_so_the_parts_match_the_total() -> v
 	_session.submit_command(SetUnloadingSplitCommand.new(100))
 	_tick()
 	assert_string_contains(_text("_economy"), "cebada")
+
+
+func test_panel_names_the_need_category_that_is_missing() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [
+			{"category": &"sustento", "value": 50.0, "threshold": 75.0, "met": false,
+				"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.5}], "missing_goods": [&"bread"]},
+			{"category": &"comunidad", "value": 100.0, "threshold": 50.0, "met": true,
+				"reason": &"ok", "goods": [{"good": &"tea", "coverage": 1.0}], "missing_goods": []},
+		],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	var needs: String = _text("_needs")
+	assert_string_contains(needs, Strings.NEEDS_TITLE)
+	assert_string_contains(needs, Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 50.0, 75.0, "pan"])
+	assert_string_contains(needs, Strings.NEEDS_MET % ["Trabajadores", "Comunidad o fe", 100.0, 50.0])
+	assert_string_contains(needs, Strings.HOUSING_ROW % ["Trabajadores", 20, 0, 0])
+
+
+func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 50.0, "threshold": 75.0, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 1.0}], "missing_goods": []}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
+		% ["Trabajadores", "Sustento", 50.0, 75.0, Strings.reason(&"below_threshold")])
+
+
+func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 74.96, "threshold": 75.0, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7496}], "missing_goods": [&"bread"]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
+
+
+func test_panel_keeps_a_fractional_threshold_above_the_score() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 74.95, "threshold": 74.96, "met": false,
+			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7495}], "missing_goods": [&"bread"]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
+
+
+func test_panel_says_the_threshold_is_unreachable_instead_of_naming_a_good() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 25.0, "threshold": 75.0, "met": false,
+			"reason": &"unreachable_threshold", "goods": [{"good": &"bread", "coverage": 0.5}],
+			"missing_goods": [&"bread"]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
+		% ["Trabajadores", "Sustento", 25.0, 75.0, Strings.reason(&"unreachable_threshold")])
+	assert_false(_text("_needs").contains("falta pan"))
+
+
+func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"classes": {&"worker": {
+		"categories": [{"category": &"sustento", "value": 62.99999999999999, "threshold": 63.0, "met": true,
+			"reason": &"ok", "goods": [{"good": &"bread", "coverage": 0.7}], "missing_goods": [&"bread"]}],
+		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+	}}}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_needs"), Strings.NEEDS_MET % ["Trabajadores", "Sustento", 63.0, 63.0])

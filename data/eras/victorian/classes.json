@@ -1,0 +1,10 @@
+{
+  "worker": {
+    "housing_building": "housing",
+    "housing_max_bonus": 0,
+    "needs": {
+      "bread": { "category": "sustento", "value": 100, "satisfaction_key": "population.satisfaction.bread_weight" },
+      "tea": { "category": "comunidad", "value": 100, "satisfaction_key": "population.tea.satisfaction_bonus" }
+    }
+  }
+}

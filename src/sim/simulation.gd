@@ -72,6 +72,9 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		_satisfaction.update_target(_state, _params, _context)
 	if _context != null:
 		WorkersSystem.refresh_counts(_state)
+		# Derived from the restored state, so a save from before the needs existed still explains itself,
+		# even if it is already defeated and never ticks again.
+		NeedsSystem.evaluate(_state, _params, _context)
 
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
@@ -135,6 +138,7 @@ func snapshot() -> Dictionary:
 		"economy": _state.to_dict(),
 		"stats": _stats.snapshot(),
 		"diagnostics": BreadDiagnostics.build(_state, _params, _context),
+		"needs": NeedsDiagnostics.build(_state, _params, _context),
 		"production": {"input_starved": _state.input_starved_tick.duplicate()},
 		"market": {"wheat": MarketSystem.wheat_snapshot(_state, _params),
 			"barley": MarketSystem.barley_snapshot(_state, _params),
