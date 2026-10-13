@@ -1,6 +1,6 @@
 # ADR 0008: Población, satisfacción, crecimiento e impuesto por clase
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-13
 - **Origen:** issue #52 (clase artesano); D-027 y D-033; amplía el ADR 0007
 
@@ -44,9 +44,9 @@ que el motor sea el mismo para todas las clases y las eras, sin "artesano" ni "t
   en su satisfacción objetivo (`SatisfactionSystem.prime_class`), no en cero.
 
 ## Estado
-Propuesto mientras el PR del issue #52 está abierto. Con la aprobación de Cristian, el autor lo cambia a Aceptado en un
-commit del mismo PR, antes del merge. No reemplaza a ningún ADR: amplía el 0007 (las clases son datos) y respeta el
-0004 (contexto) y el 0005 (saldo total).
+Aceptado. Cristian lo aprobó en la PR #108 (issue #52) el 2026-10-13, confirmado por Bailey; el cambio a Aceptado
+entra en un commit de esa misma PR, antes del merge. No reemplaza a ningún ADR: amplía el 0007 (las clases son
+datos) y respeta el 0004 (contexto) y el 0005 (saldo total).
 
 ## Consecuencias
 - Una clase más es solo datos (y una rama en `NeedsSystem.coverage` si trae un bien que nadie consume todavía).
