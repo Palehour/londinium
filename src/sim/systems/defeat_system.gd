@@ -67,14 +67,17 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 
 # Nobody is leaving: no hunger emigration, smoothed coverage at or above the emigration threshold
 # and nobody left for low satisfaction within the stability window (measured on actual departures,
-# so a city sitting on the satisfaction edge does not flicker). Public so balance probes use the
-# same rule as the game.
+# so a city sitting on the satisfaction edge does not flicker). Every class counts (issue #52): a city
+# where artisans are leaving is not stable. Public so balance probes use the same rule as the game.
 func is_city_stable(state: EconomyState, params: Params) -> bool:
 	var window: int = int(params.get_value(&"defeat.depopulation.stability_window_seconds"))
-	var age: int = state.satisfaction_departure_age_seconds
-	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
-		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) \
-		and (age < 0 or age >= window)
+	var ages: Array[int] = [state.satisfaction_departure_age_seconds]
+	var hunger_active: bool = state.hunger_emigration_active
+	for entry: ClassState in state.class_states.values():
+		ages.append(entry.satisfaction_departure_age_seconds)
+		# A class with nobody in it cannot be leaving, whatever its hunger flag says.
+		hunger_active = hunger_active or (entry.hunger_emigration_active and entry.population > 0)
+	return not hunger_active and state.hunger_smoothed_coverage 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) 		and ages.all(func(age: int) -> bool: return age < 0 or age >= window)
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:

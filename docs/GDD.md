@@ -89,10 +89,10 @@ Todos los números del prototipo son placeholders para balancear, no datos hist�
 
 ## Siguiente fase y fuera de alcance
 
-**Fase 2 (decidida):** una cervecería como segunda cadena, con promoción a artesanos. Truman's está en Brick Lane, así que encaja con Whitechapel. La tensión nueva es que el grano se disputa entre el pan y la cerveza. Históricamente la cerveza se hacía con cebada malteada, que bajaba por el Lea desde Hertfordshire, y no con trigo. Por eso los dos granos entran por el embarcadero y se disputan su capacidad, el dinero y los trabajadores, en lugar de usar el mismo trigo (D-031). La cerveza sería la necesidad que permite que un trabajador ascienda a artesano (P-014).
+**Fase 2 (decidida):** una cervecería como segunda cadena, con la clase artesano, que vive en viviendas propias y consume pan y cerveza (D-033); la promoción desde el trabajador sigue pendiente (P-014, #53). Truman's está en Brick Lane, así que encaja con Whitechapel. La tensión nueva es que el grano se disputa entre el pan y la cerveza. Históricamente la cerveza se hacía con cebada malteada, que bajaba por el Lea desde Hertfordshire, y no con trigo. Por eso los dos granos entran por el embarcadero y se disputan su capacidad, el dinero y los trabajadores, en lugar de usar el mismo trigo (D-031). La cerveza ya es la necesidad de comunidad del artesano (D-033) y sería la que permite que un trabajador ascienda a artesano (P-014).
 
 **Fuera del hito 1:** roles (más allá del gancho), eras, eventos históricos (el primero va a ser el cólera de 1866, D-016), folklore, transporte físico, arte final y música integrada.
 
 ## Preguntas abiertas
 
-Ninguna que bloquee el hito 1. Para la fase 2 falta confirmar qué hace ascender a un trabajador a artesano (P-014); cómo se disputa el grano ya está decidido (D-031).
+Ninguna que bloquee el hito 1. Para la fase 2 el ascenso de un trabajador a artesano sigue pendiente (P-014, #53); la cerveza como necesidad del artesano ya está decidida (D-033), igual que cómo se disputa el grano (D-031).

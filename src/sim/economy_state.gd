@@ -19,6 +19,9 @@ var housing_capacity: int = 0
 # Per class and category: {value, threshold, met} (issue #86). Derived by NeedsSystem every tick.
 var class_needs: Dictionary[StringName, Dictionary] = {}
 var overcrowding: float = 0.0
+# Every class but the base one (issue #52). The base class keeps its values in the flat fields of this state
+# (satisfaction, overcrowding, growth fractions...); population is the total of every class.
+var class_states: Dictionary[StringName, ClassState] = {}
 var employed: int = 0
 var unemployed: int = 0
 var immigration_fraction: float = 0.0
@@ -71,6 +74,11 @@ var tea_fraction: float = 0.0
 var tea_demand: float = 0.0
 var tea_consumed: float = 0.0
 var tea_coverage: float = 0.0
+# Beer (issue #52) is eaten like tea: the part of a unit already eaten waits in beer_fraction.
+var beer_fraction: float = 0.0
+var beer_demand: float = 0.0
+var beer_consumed: float = 0.0
+var beer_coverage: float = 0.0
 # Per-tick flows feed the stats window; they are transient and never saved.
 var bread_produced_tick: int = 0
 var bread_consumed_tick: float = 0.0
@@ -84,6 +92,8 @@ var barley_spent_tick: int = 0
 var imports_spent_tick: int = 0
 var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
+# Head tax each class added to the treasury this tick, before rounding to whole pence (balance probes only).
+var class_tax_tick: Dictionary[StringName, float] = {}
 # Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
 # used all its budget on the wheat it had does not count). Transient: never saved.
 var input_starved_tick: Dictionary[StringName, int] = {}
@@ -101,6 +111,7 @@ func reset_flows() -> void:
 	imports_spent_tick = 0
 	tea_spent_tick = 0
 	construction_spent_tick = 0
+	class_tax_tick.clear()
 	input_starved_tick.clear()
 
 
@@ -139,6 +150,9 @@ func to_dict() -> Dictionary:
 		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
 		"tax_fraction": tax_fraction, "wage_fraction": wage_fraction, "upkeep_fraction": upkeep_fraction,
 		"class_needs": class_needs.duplicate(true),
+		"beer_fraction": beer_fraction, "beer_demand": beer_demand, "beer_consumed": beer_consumed,
+		"beer_coverage": beer_coverage,
+		"class_states": _class_states_dict(),
 	}
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
@@ -148,6 +162,13 @@ func to_dict() -> Dictionary:
 	if tax_rate >= 0.0:
 		values["tax_rate"] = tax_rate
 	return values
+
+
+func _class_states_dict() -> Dictionary:
+	var result: Dictionary = {}
+	for id: StringName in class_states:
+		result[id] = class_states[id].to_dict()
+	return result
 
 
 # Internal conversion: expects the complete value schema produced by to_dict().
@@ -207,5 +228,12 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.wage_fraction = values.get("wage_fraction", 0.0)
 	result.upkeep_fraction = values.get("upkeep_fraction", 0.0)
 	result.class_needs.assign(values.get("class_needs", {}).duplicate(true))
+	result.beer_fraction = float(values.get("beer_fraction", 0.0))
+	result.beer_demand = float(values.get("beer_demand", 0.0))
+	result.beer_consumed = float(values.get("beer_consumed", 0.0))
+	result.beer_coverage = float(values.get("beer_coverage", 0.0))
+	var saved_classes: Dictionary = values.get("class_states", {})
+	for id: Variant in saved_classes:
+		result.class_states[StringName(id)] = ClassState.from_dict(saved_classes[id])
 	result.buildings.assign(values["buildings"].duplicate(true))
 	return result

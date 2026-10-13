@@ -51,7 +51,9 @@ func _init() -> void:
 		runner.pin_wheat_max_price(options["wheat_max_price"])
 	var wanted: String = options["scenario"]
 	var scenarios: Array[Dictionary] = []
-	for path: String in ScenarioRunner.scenario_paths():
+	var paths: Array[String] = ScenarioRunner.scenario_paths()
+	paths.append_array(ScenarioRunner.long_scenario_paths())
+	for path: String in paths:
 		var scenario: Dictionary = ScenarioRunner.load_file(path)
 		var errors: Array[String] = runner.validate(scenario)
 		if not errors.is_empty():
@@ -191,6 +193,14 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"imports_spent_last3": result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1),
 		"input_cost_per_bread": input_spend / bread if bread > 0.0 else -1.0,
 		"tea_coverage": final["tea_coverage"],
+		# Issue #52. The payback is in minutes from the start of the beer chain (-1: never, or no artisans):
+		# the tax of the artisans against the chain without their housing (the one the issue asks about) and
+		# with it.
+		"artisan_population": final["artisan_population"],
+		"artisan_satisfaction": final["artisan_satisfaction"],
+		"beer_coverage": final["beer_coverage"],
+		"artisan_payback_minute": result.payback_minutes(false),
+		"artisan_payback_minute_with_housing": result.payback_minutes(true),
 	}
 
 

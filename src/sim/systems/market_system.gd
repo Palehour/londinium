@@ -24,6 +24,9 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 	_decay_barley(state, params)
 	state.malt_decay_fraction = _decayed(state, params, &"malt", state.malt_decay_fraction)
 	state.beer_decay_fraction = _decayed(state, params, &"beer", state.beer_decay_fraction)
+	# The part of a unit left after drinking spoils at the same rate as the whole units (PR #108).
+	state.beer_fraction *= pow(1.0 - float(params.get_value(&"market.beer.decay_fraction_per_minute")),
+		1.0 / SECONDS_PER_MINUTE)
 	var wharves: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":

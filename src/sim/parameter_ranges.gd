@@ -139,6 +139,26 @@ const PATTERNS: Array[Dictionary] = [
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},
+	# Satisfaction of a class (issue #52): weights of what it adds or takes away, and how fast it follows its target.
+	{"prefix": "class.", "suffix": ".satisfaction_weight", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".satisfaction.tax_weight", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".satisfaction.overcrowding_weight", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".satisfaction.smoothing_per_second", "min": 0.0, "max": 1.0, "integer": false,
+		"min_exclusive": true},
+	{"prefix": "class.", "suffix": ".satisfaction.snap_epsilon", "min": 0.0, "max": INF, "integer": false,
+		"min_exclusive": true},
+	# Growth of a class: thresholds in satisfaction points, hunger ones in coverage (0 to 1), rates per minute.
+	{"prefix": "class.", "suffix": ".growth.immigration_threshold", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.emigration_threshold", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.immigration_per_minute", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.emigration_per_minute", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.hunger_emigration_threshold", "min": 0.0, "max": 1.0, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.hunger_emigration_recovery", "min": 0.0, "max": 1.0, "integer": false},
+	{"prefix": "class.", "suffix": ".growth.hunger_emigration_multiplier", "min": 1.0, "max": INF, "integer": false},
+	# Consumption and head tax of a class.
+	{"prefix": "class.", "suffix": ".per_person_per_minute", "min": 0.0, "max": INF, "integer": false,
+		"min_exclusive": true},
+	{"prefix": "class.", "suffix": ".tax.base", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": false},
 ]
 
 
@@ -168,5 +188,6 @@ static func _pattern_allows(key: StringName, value: float) -> bool:
 		if String(key).begins_with(pattern["prefix"]) and String(key).ends_with(pattern["suffix"]):
 			if pattern["integer"] and value != floor(value):
 				return false
-			return value >= pattern["min"] and value <= pattern["max"]
+			var above: bool = value > pattern["min"] if pattern.get("min_exclusive", false) else value >= pattern["min"]
+			return above and value <= pattern["max"]
 	return true
