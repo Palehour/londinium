@@ -61,6 +61,24 @@ func test_a_threshold_reached_exactly_on_paper_is_met_despite_float_drift() -> v
 	assert_false(_category(&"sustento")["met"])
 
 
+func test_a_tiny_threshold_is_not_swallowed_by_the_drift_tolerance() -> void:
+	_params = _params_with({&"needs.sustento.threshold": 5e-10})
+	_evaluate(0.0)
+	assert_false(_category(&"sustento")["met"])
+	_evaluate(0.00000001)
+	assert_true(_category(&"sustento")["met"])
+
+
+func test_diagnostics_do_not_blame_a_good_worth_nothing() -> void:
+	_params = _params_with({&"class.worker.need.tea.value": 0})
+	_catalog.classes[&"worker"].needs[1].category = &"sustento"
+	_context = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	_evaluate(0.5, 0.0)
+	var category: Dictionary = NeedsDiagnostics.build(_state, _params, _context)["classes"][&"worker"]["categories"][0]
+	assert_eq(category["reason"], &"below_threshold")
+	assert_eq(category["missing_goods"], [&"bread"] as Array[StringName])
+
+
 func test_a_genuine_shortfall_is_not_forgiven_as_float_drift() -> void:
 	_evaluate(0.749995)
 	assert_false(_category(&"sustento")["met"])

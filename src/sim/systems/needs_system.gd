@@ -37,15 +37,16 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 		state.class_needs[definition.id] = categories
 
 
-# Largest gap that is arithmetic drift and not a real shortfall: a score is a handful of products and sums
-# of numbers near 100, whose double rounding error is around 1e-14. It is not a balance value.
-const DRIFT_TOLERANCE: float = 1e-9
+# Largest share of the threshold that is arithmetic drift and not a real shortfall: a score is a handful of
+# products and sums of doubles, whose rounding error is about 1e-16 of their size. Relative, so a tiny
+# threshold is never swallowed. It is not a balance value.
+const DRIFT_TOLERANCE: float = 1e-12
 
 
 # A score that is exactly the threshold on paper can land a hair under it in binary floating point
 # (0.7 * 90 is 62.99999999999999, not 63), so the comparison forgives only that drift.
 static func reaches(value: float, threshold: float) -> bool:
-	return value >= threshold - DRIFT_TOLERANCE
+	return value >= threshold * (1.0 - DRIFT_TOLERANCE)
 
 
 static func met_count(state: EconomyState, class_id: StringName) -> int:

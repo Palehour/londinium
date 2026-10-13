@@ -29,10 +29,12 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 				if need.category != category:
 					continue
 				var coverage: float = NeedsSystem.coverage(state, need.good)
+				var worth: float = float(params.get_value(StringName("class.%s.need.%s.value" % [definition.id, need.good])))
 				goods.append({"good": need.good, "coverage": coverage})
-				if coverage < 1.0:
+				# A good worth nothing cannot raise the score, so covering it is never what is missing.
+				if coverage < 1.0 and worth > 0.0:
 					missing.append(need.good)
-				attainable += float(params.get_value(StringName("class.%s.need.%s.value" % [definition.id, need.good])))
+				attainable += worth
 			categories.append({
 				"category": category, "value": entry["value"], "threshold": entry["threshold"],
 				"met": entry["met"], "reason": _reason(entry, attainable),
