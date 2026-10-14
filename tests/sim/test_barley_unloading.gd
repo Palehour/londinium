@@ -394,6 +394,15 @@ func test_the_scenario_probe_respects_the_warehouse_cap_and_empties_the_eaten_pa
 	assert_eq(state.beer_fraction, 0.0)
 
 
+func test_the_scenario_probe_warns_when_a_good_has_no_warehouse_cap() -> void:
+	var state: EconomyState = _state(0)
+	var params: Params = _params()
+	assert_false(params.has_value(&"market.bread.storage_capacity"), "the bread has no cap in data/")
+	ForceStockCommand.new(&"bread", 500).execute(state, params, RandomNumberGenerator.new())
+	assert_push_warning("market.bread.storage_capacity")
+	assert_eq(int(state.stocks[&"bread"]), 500, "without a cap the scripted amount is kept")
+
+
 func test_the_tea_is_exempt_from_the_unloading_capacity() -> void:
 	var state: EconomyState = _state(0)
 	state.tea_imports_enabled = true

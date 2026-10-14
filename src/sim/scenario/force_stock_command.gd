@@ -14,12 +14,15 @@ func _init(good: StringName, amount: int) -> void:
 
 
 func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
-	state.stocks[_good] = _amount
 	# A real warehouse never holds more than its cap (issue #116), and the part of a unit already eaten
 	# belongs to the stock that was emptied.
 	var cap_key: StringName = StringName("market.%s.storage_capacity" % _good)
 	if params.has_value(cap_key):
 		state.stocks[_good] = mini(_amount, int(params.get_value(cap_key)))
+	else:
+		# A good without a cap in data/ is a script or data mistake; say so instead of storing any amount quietly.
+		push_warning("set_stock: %s has no %s in data/; the stock is not capped" % [_good, cap_key])
+		state.stocks[_good] = _amount
 	if _good == &"beer":
 		state.beer_fraction = 0.0
 	accepted = true
