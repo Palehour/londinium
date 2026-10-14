@@ -7,7 +7,9 @@ extends GutTest
 # (a) the mean tax collected per minute from minute 50 to 70, median of 20 seeds, differs by at least 30 %
 #     between the stable splits of 0 % and 30 % barley;
 # (b) beer cut for 5 minutes: no defeat, and in 17 of 20 seeds the artisans are back to 80 % of their number
-#     before the cut within 10 minutes of the beer coming back.
+#     before the cut within 10 minutes of the beer coming back. Decided by Cristian in PR #117: the cut starts a
+#     fixed time after the first artisans arrive; a seed where they never arrive cuts nothing, is reported apart
+#     and does not count as recovered.
 
 const SEEDS: int = 20
 const LONG_DIR: String = "res://tests/scenarios/long"
@@ -52,6 +54,9 @@ func test_every_scenario_plays_twenty_seeds_without_refusals_or_defeats() -> voi
 		assert_eq(_results[id].size(), SEEDS, id)
 		for index: int in range(_results[id].size()):
 			var result: ScenarioResult = _results[id][index]
+			# With no artisans the crisis commands wait forever (never_ran): reported in the crisis test, not here.
+			if id == "beer_crisis" and result.first_artisan_tick < 0:
+				continue
 			assert_eq(result.unexpected_rejections(), [] as Array[Dictionary],
 				"%s seed %d: a scripted command was refused; the script no longer fits data/" % [id, index + 1])
 			assert_true(result.survived(), "%s seed %d was lost" % [id, index + 1])
@@ -71,16 +76,23 @@ func test_grain_splits_differ_by_thirty_percent_in_collected_tax() -> void:
 
 
 func test_beer_crisis_demotes_artisans_and_they_come_back_before_losing() -> void:
-	var before: Array[float] = _measured("beer_crisis", "artisans_before_cut")
-	var lost: Array[float] = _measured("beer_crisis", "artisans_lost_in_cut")
-	var minutes: Array[float] = _measured("beer_crisis", "artisans_recovery_minutes")
-	var recovered: int = _measured("beer_crisis", "artisans_recovered").count(1.0)
+	var scenario: Dictionary = ScenarioRunner.load_file(LONG_DIR.path_join("beer_crisis.json"))
+	var recovered: int = 0
+	var without_artisans: Array[int] = []
 	for index: int in range(SEEDS):
-		gut.p("beer_crisis seed %d: %d artisans before the cut, %d lost, back to 80 %% after %d min (-1: not within 10)"
-			% [index + 1, int(before[index]), int(lost[index]), int(minutes[index])])
-		assert_gt(before[index], 0.0, "seed %d: artisans before the cut" % (index + 1))
-		assert_gt(lost[index], 0.0, "seed %d: the cut demotes artisans" % (index + 1))
-	gut.p("beer_crisis: %d of %d seeds recover 80 %% within 10 min" % [recovered, SEEDS])
+		var result: ScenarioResult = _results["beer_crisis"][index]
+		if result.first_artisan_tick < 0:
+			without_artisans.append(index + 1)
+			continue
+		var found: Dictionary = result.measured(scenario["measure"])
+		gut.p("beer_crisis seed %d: first artisans at min %.1f, cut at min %.1f for %.1f min, %d artisans before, %d lost, back to 80 %% after %d min (-1: not within 10)"
+			% [index + 1, found["first_artisans_minute"], found["beer_cut_minute"], found["beer_cut_minutes"],
+			int(found["artisans_before_cut"]), int(found["artisans_lost_in_cut"]), int(found["artisans_recovery_minutes"])])
+		assert_gt(float(found["artisans_before_cut"]), 0.0, "seed %d: artisans before the cut" % (index + 1))
+		assert_gt(float(found["artisans_lost_in_cut"]), 0.0, "seed %d: the cut demotes artisans" % (index + 1))
+		recovered += int(found["artisans_recovered"])
+	gut.p("beer_crisis: %d of %d seeds recover 80 %% within 10 min; seeds with no artisans (no cut, not recovered): %s"
+		% [recovered, SEEDS, str(without_artisans)])
 	assert_gte(recovered, RECOVERED_SEEDS_REQUIRED, "seeds that recover")
 
 

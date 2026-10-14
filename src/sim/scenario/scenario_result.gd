@@ -51,6 +51,8 @@ var waiting_input_ticks: Dictionary[StringName, Array] = {}
 var chain_start_tick: int = -1
 var payback_tick_with_housing: int = -1
 var payback_tick_without_housing: int = -1
+# First tick that ended with artisans in the city (issue #55: the beer crisis starts relative to it); -1: never.
+var first_artisan_tick: int = -1
 
 
 func row(minute: int) -> Dictionary:
@@ -137,26 +139,49 @@ func measured(measure: Dictionary) -> Dictionary:
 	return found
 
 
-# Artisans before the beer is cut, the fewest until the window ends, and how many minutes after the beer is
-# back they reach `recovered_share` of the population before (-1: not within the window).
+# The beer is cut by the first accepted demolish and comes back with the first accepted build after it; both
+# follow the game (the cut waits for the first artisans), so their minutes come from the commands. Reported:
+# artisans before the cut, the fewest until the window ends, and how many minutes after the beer is back they
+# reach `recovered_share` of the population before (-1: not within the window). A game whose cut never ran, or
+# that had no artisans before it, has nothing to recover and never counts as recovered.
 func _beer_cut_metrics(cut: Dictionary) -> Dictionary:
-	var from_minute: int = int(cut["from_minute"])
-	var back_minute: int = int(cut["back_minute"])
+	var found: Dictionary = {
+		"first_artisans_minute": float(first_artisan_tick) / 60.0 if first_artisan_tick >= 0 else -1.0,
+		"beer_cut_minute": -1.0, "beer_cut_minutes": -1.0,
+		"artisans_before_cut": 0.0, "artisans_lowest_after_cut": 0.0, "artisans_lost_in_cut": 0.0,
+		"artisans_recovery_minutes": -1, "artisans_recovered": 0,
+	}
+	var cut_tick: int = _executed_tick("demolish", 0)
+	var back_tick: int = _executed_tick("build", cut_tick + 1) if cut_tick >= 0 else -1
+	if back_tick < 0:
+		return found
+	@warning_ignore("integer_division")
+	var from_minute: int = cut_tick / 60
+	@warning_ignore("integer_division")
+	var back_minute: int = (back_tick + 59) / 60
 	var window_end: int = back_minute + int(cut["recovery_minutes"])
 	var before: float = float(row(from_minute)["artisan_population"])
 	var fewest: float = lowest("artisan_population", from_minute, window_end)
-	# With no artisans before the cut there is nothing to recover: 80 % of zero must not count as a recovery.
 	var recovered_at: int = -1
 	if before > 0.0:
 		recovered_at = first_minute_at_least("artisan_population", before * float(cut["recovered_share"]),
 			back_minute, window_end)
-	return {
-		"artisans_before_cut": before,
-		"artisans_lowest_after_cut": fewest,
-		"artisans_lost_in_cut": before - fewest,
-		"artisans_recovery_minutes": recovered_at - back_minute if recovered_at >= 0 else -1,
-		"artisans_recovered": 1 if recovered_at >= 0 else 0,
-	}
+	found["beer_cut_minute"] = float(cut_tick) / 60.0
+	found["beer_cut_minutes"] = float(back_tick - cut_tick) / 60.0
+	found["artisans_before_cut"] = before
+	found["artisans_lowest_after_cut"] = fewest
+	found["artisans_lost_in_cut"] = before - fewest
+	found["artisans_recovery_minutes"] = recovered_at - back_minute if recovered_at >= 0 else -1
+	found["artisans_recovered"] = 1 if recovered_at >= 0 else 0
+	return found
+
+
+# Executed tick of the first accepted command `cmd` that ran at `from_tick` or later; -1 when none did.
+func _executed_tick(cmd: String, from_tick: int) -> int:
+	for entry: Dictionary in commands:
+		if entry["cmd"] == cmd and entry["accepted"] and int(entry["executed_tick"]) >= from_tick:
+			return int(entry["executed_tick"])
+	return -1
 
 
 # Drift over long games: from the end of the first hour (the city is still being built) to the end. Money per

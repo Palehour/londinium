@@ -1,11 +1,10 @@
 {
   "id": "beer_crisis",
-  "description": "Issue #55, crisis de cerveza: la ciudad de bread_vs_beer_30. En el minuto 45, con los artesanos asentados, se demuele la cervecería y una sonda de escenario (stock_schedule) vacía la cerveza del almacén en el mismo tick, así que son 5 minutos exactos sin cerveza. En el minuto 50 se reconstruye en la misma celda. Mide cuántos artesanos descienden y si vuelven al 80 % dentro de los 10 minutos siguientes.",
-  "notes": "Criterio (b) del #55, aprobado por Cristian el 2026-10-13 (sujeto a validación): cerveza cortada 5 min; cumple si no hay derrota y en 17 de 20 semillas los artesanos recuperan el 80 % de la población previa dentro de los 10 min de vuelta la cerveza. Medido: NO CUMPLE, 8 de 20. Ninguna derrota. En las semillas 4, 5 y 6 no hay artesanos en el minuto 45 (según la semilla, la cadena de cerveza se compra entre el minuto 36 y el 51), y en la 6 y la 11 no queda dinero para reconstruir la cervecería en el minuto 50. En las otras 9 que no se recuperan se pierden de 2 a 18 artesanos y quedan frenados por el pan de la ciudad de 30 % (alrededor de 0,69 desde el minuto 52): los trabajadores no llegan a 70 de satisfacción para ascender y los artesanos no llegan a 75 para inmigrar. Las 8 que se recuperan lo hacen a los 2 minutos de volver la cerveza. Hay que recalibrarlo con Mason; data/ no se tocó.",
+  "description": "Issue #55, crisis de cerveza (decisiones de Cristian en la PR #117, 2026-10-14): la ciudad de bread_vs_beer_30 (sin harina importada, 30 % de cebada) con un cuarto embarcadero (nota del #116: con el pan a ~0,69 los artesanos no pueden volver). Diez minutos después de que llegan los primeros artesanos se demuele la cervecería y set_stock (una sonda de escenario) vacía la cerveza del almacén en el mismo tick. Cinco minutos después se reconstruye en la misma celda, esperando el dinero si no alcanza. Mide cuántos artesanos descienden y si vuelven al 80 % dentro de los 10 minutos siguientes. Una semilla en la que nunca llegan artesanos no corta nada: se informa aparte (comandos never_ran) y no cuenta como recuperada.",
+  "notes": "Criterio (b) del #55, aprobado por Cristian el 2026-10-13: cerveza cortada 5 min; cumple si no hay derrota y en 17 de 20 semillas los artesanos recuperan el 80 % de la población previa dentro de los 10 min de vuelta la cerveza. Corte relativo, espera de dinero y cuarto embarcadero: decisiones de Cristian en la PR #117 (2026-10-14); los 10 minutos después de los primeros artesanos los eligió el agente para que la vivienda de artesanos se llene antes del corte. Medido con 20 semillas: CUMPLE, 20 de 20, sin derrotas. Los primeros artesanos llegan entre el minuto 29,5 y el 51,8; el corte dura 5,0 min en todas (nunca falta dinero para reconstruir); se pierden de 7 a 8 de 28 artesanos y vuelven al 80 % a los 1 o 2 minutos. Al final quedan 23 artesanos en todas las semillas y el pan termina entre 0,73 y 0,86. Como dato informativo, con --barley-percent 20 también se recuperan 20 de 20 y el pan termina entre 0,84 y 0,86. Las 20 semillas se corren con tools/run_long_tests (long_test_hito2.gd); la suite corta juega la semilla de este archivo.",
   "seed": 42,
-  "duration_ticks": 3600,
-  "stock_schedule": [{"tick": 2700, "good": "beer", "amount": 0}],
-  "measure": {"beer_cut": {"from_minute": 45, "back_minute": 50, "recovery_minutes": 10, "recovered_share": 0.8}},
+  "duration_ticks": 6000,
+  "measure": {"beer_cut": {"recovery_minutes": 10, "recovered_share": 0.8}},
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
     {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
@@ -25,7 +24,9 @@
     {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
     {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 30, "with_previous": true},
     {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true},
-    {"tick": 2700, "cmd": "demolish", "cell": [3, 3]},
-    {"tick": 3000, "cmd": "build", "building": "brewery", "cell": [3, 3]}
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [0, 7], "wait_for_money": 240},
+    {"tick": 30, "cmd": "demolish", "cell": [3, 3], "after_artisans_ticks": 600},
+    {"tick": 30, "cmd": "set_stock", "good": "beer", "amount": 0, "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "after_previous_ticks": 300, "wait_for_money": 160}
   ]
 }

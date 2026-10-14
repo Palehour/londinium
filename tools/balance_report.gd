@@ -28,7 +28,7 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
-metrics: tax_window (taxes_pm_window), beer_cut (artisans_*) and hourly (money_drift_per_hour,
+metrics: tax_window (taxes_pm_window), beer_cut (first_artisans_minute, beer_cut_*, artisans_*) and hourly (money_drift_per_hour,
 *_coverage_lowest_after_hour1, minutes_in_debt). Nothing here changes data/ or the scenario files."""
 
 
