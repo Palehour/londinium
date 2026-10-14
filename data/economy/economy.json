@@ -1,4 +1,4 @@
 {
   "administration": { "per_building": 0.03, "free_buildings": 12, "max_multiplier": 2.0 },
-  "construction_escalation": { "per_building": 0.15, "max_multiplier": 3.0 }
+  "construction_escalation": { "free_copies": 2, "per_building": 0.15, "max_multiplier": 3.0 }
 }

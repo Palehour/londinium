@@ -356,16 +356,14 @@ func test_the_agreed_starting_values_are_in_data() -> void:
 	assert_eq(_params.get_value(&"building.malthouse.cost"), 200)
 	assert_eq(_params.get_value(&"building.malthouse.jobs"), 3)
 	assert_eq(_catalog.base_values[&"building.malthouse.upkeep_per_minute"], 3)
-	# 3 since issue #118 (approved by Cristian on 2026-10-14; it was 2).
-	assert_eq(_catalog.base_values[&"building.malthouse.wage_per_worker_per_minute"], 3)
+	assert_eq(_catalog.base_values[&"building.malthouse.wage_per_worker_per_minute"], 2)
 	assert_eq(_catalog.base_values[&"building.malthouse.recipe.inputs.barley"], 4.0)
 	assert_eq(_catalog.base_values[&"building.malthouse.recipe.outputs.malt"], 4.0)
 	assert_eq(_catalog.base_values[&"building.malthouse.recipe.seconds"], 60)
 	assert_eq(_catalog.base_values[&"building.brewery.cost"], 160)
 	assert_eq(_catalog.base_values[&"building.brewery.jobs"], 3)
 	assert_eq(_catalog.base_values[&"building.brewery.upkeep_per_minute"], 2)
-	# 3 since issue #118 (approved by Cristian on 2026-10-14; it was 2).
-	assert_eq(_catalog.base_values[&"building.brewery.wage_per_worker_per_minute"], 3)
+	assert_eq(_catalog.base_values[&"building.brewery.wage_per_worker_per_minute"], 2)
 	assert_eq(_catalog.base_values[&"building.brewery.recipe.inputs.malt"], 4.0)
 	assert_eq(_catalog.base_values[&"building.brewery.recipe.outputs.beer"], 8.0)
 	assert_eq(_catalog.base_values[&"building.brewery.recipe.seconds"], 60)

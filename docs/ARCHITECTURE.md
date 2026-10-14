@@ -70,7 +70,7 @@ londinium/
 ```
 
 ## Tick order (one place, `simulation.gd`)
-1. Apply queued commands. A build charges `BuildingCosts.construction_cost`: each copy of a type already standing makes the next one `economy.construction_escalation.per_building` dearer than the one before (compounded, up to `max_multiplier` times the base cost); the building keeps what it `paid` and demolition refunds on that (issue #118).
+1. Apply queued commands. A build charges `BuildingCosts.construction_cost`: the first `economy.construction_escalation.free_copies` of a type cost the base price, and each copy after them is `per_building` dearer than the one before (compounded, up to `max_multiplier` times the base cost); the building keeps what it `paid` and demolition refunds on that (issue #118).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,

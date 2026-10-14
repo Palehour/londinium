@@ -112,6 +112,11 @@ func test_money_sink_free_buildings_must_be_whole() -> void:
 	_assert_invalid("economy/economy.json.administration.free_buildings: invalid integer value 1.5")
 
 
+func test_free_copies_must_be_whole() -> void:
+	_documents["economy/economy.json"]["construction_escalation"]["free_copies"] = 2.5
+	_assert_invalid("economy/economy.json.construction_escalation.free_copies: invalid integer value 2.5")
+
+
 func test_construction_escalation_cannot_be_negative() -> void:
 	_documents["economy/economy.json"]["construction_escalation"]["per_building"] = -0.1
 	_assert_invalid("economy/economy.json.construction_escalation.per_building: invalid number value -0.1")

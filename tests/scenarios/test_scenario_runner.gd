@@ -147,11 +147,6 @@ func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner()
 	assert_eq(untouched.param(&"market.wheat.max_price"), 3)
 
 
-# What the second wharf, mill and bakery cost together: each is a second copy, 15 % dearer than the first
-# (issue #118): 276 + 207 + 138. It was 540 before construction escalation.
-const SECOND_CHAIN_PRICE: int = 621
-
-
 func _extra_chain(first_extra: Dictionary) -> Array:
 	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7]}
 	wharf.merge(first_extra)
@@ -162,7 +157,7 @@ func _extra_chain(first_extra: Dictionary) -> Array:
 
 
 func test_wait_for_money_buys_the_group_in_one_tick_once_the_treasury_reaches_it() -> void:
-	var price: int = SECOND_CHAIN_PRICE
+	var price: int = 540
 	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": price})))
 	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
 	var executed: Array[int] = []
@@ -172,7 +167,7 @@ func test_wait_for_money_buys_the_group_in_one_tick_once_the_treasury_reaches_it
 	assert_eq(executed.size(), 3)
 	assert_eq(executed[0], executed[1], "with_previous runs in the same tick")
 	assert_eq(executed[1], executed[2])
-	assert_gt(executed[0], 60, "it waited: the treasury is below the price after the first chain")
+	assert_gt(executed[0], 60, "it waited: the treasury is below 540 after the first chain")
 	assert_lt(int(result.row(executed[0] / 60)["money"]), price, "at the start of that minute it did not have the money yet")
 	assert_eq(result.final_row()["n_wharf"], 2)
 	assert_eq(result.final_row()["n_bakery"], 2)
@@ -202,7 +197,7 @@ func test_validation_of_wait_for_money_and_with_previous() -> void:
 	}
 	for label: String in cases:
 		assert_gt(_runner.validate(_scenario(cases[label])).size(), 0, label)
-	assert_eq(_runner.validate(_scenario(_extra_chain({"wait_for_money": SECOND_CHAIN_PRICE}))).size(), 0)
+	assert_eq(_runner.validate(_scenario(_extra_chain({"wait_for_money": 540}))).size(), 0)
 
 
 func _city_with_mill_crisis(demolish_tick: int, rebuild_tick: int) -> Array:
@@ -231,7 +226,7 @@ func test_a_city_still_starving_at_the_end_is_not_stable() -> void:
 
 
 func test_second_chain_purchase_tick_is_the_real_tick_not_a_minute_row() -> void:
-	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": SECOND_CHAIN_PRICE})))
+	var result: ScenarioResult = _runner.run(_scenario(_extra_chain({"wait_for_money": 540})))
 	var tick: int = result.second_chain_purchase_tick()
 	var executed: int = -1
 	for entry: Dictionary in result.commands:
@@ -281,10 +276,10 @@ func test_a_game_that_ends_mid_minute_gets_a_last_row_with_the_terminal_state() 
 
 
 func test_a_wait_after_commands_of_the_same_tick_sees_what_they_spent() -> void:
-	# The first chain is queued at tick 0 and has not touched the treasury yet. A wait for the second chain's price
-	# behind it must not be released by the 1050 of the starting treasury: after the chain only 510 is left.
+	# The first chain is queued at tick 0 and has not touched the treasury yet. A wait for 540 behind
+	# it must not be released by the 1050 of the starting treasury: after the chain only 510 is left.
 	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [
-		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": SECOND_CHAIN_PRICE},
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 540},
 		{"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
 		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}]
 	var result: ScenarioResult = _runner.run(_scenario(commands))

@@ -44,7 +44,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
-		"construction_escalation": {"per_building": "number", "max_multiplier": "number"},
+		"construction_escalation": {"free_copies": "integer", "per_building": "number", "max_multiplier": "number"},
 	},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},

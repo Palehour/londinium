@@ -1,8 +1,8 @@
 extends GutTest
 
-# Money sinks of issue #118 (approved by Cristian on 2026-10-14): administration makes every building's upkeep
-# grow past the free ones, each copy of a building costs 15 % more than the one before (compounded, up to 3 times
-# the base cost; decided in the plan of #118) and the malthouse and brewery pay 3 per worker.
+# Money sinks of issue #118 (approved by Cristian on 2026-10-14, revised the same day): administration makes every
+# building's upkeep grow past the free ones, and from the third copy of a type each one costs 15 % more than the one
+# before (compounded, up to 3 times the base cost). Wages stay as they were.
 
 var _catalog: DataCatalog
 var _context: EconomyContext
@@ -60,7 +60,7 @@ func test_administration_starts_after_the_twelfth_building_and_stops_at_twice() 
 	assert_eq(BuildingCosts.administration_multiplier(_params, 200), 2.0)
 
 
-func test_upkeep_is_multiplied_by_administration_but_wages_are_not() -> void:
+func test_upkeep_is_multiplied_by_administration() -> void:
 	# Housing has no jobs, so the minute's bill is upkeep alone: 12 x 1 at x1, then 22 x 1 at x1.3.
 	assert_eq(_upkeep_paid_in_a_minute(_state_with(&"housing", 12), _params), 12)
 	var bigger: EconomyState = _state_with(&"housing", 22)
@@ -78,14 +78,15 @@ func test_a_role_modifier_changes_administration() -> void:
 # --- Construction escalation ---
 
 func test_the_approved_escalation_values_are_in_data() -> void:
+	assert_eq(_params.get_value(&"economy.construction_escalation.free_copies"), 2)
 	assert_eq(_params.get_value(&"economy.construction_escalation.per_building"), 0.15)
 	assert_eq(_params.get_value(&"economy.construction_escalation.max_multiplier"), 3.0)
 
 
-func test_each_copy_costs_fifteen_percent_more_than_the_one_before_up_to_three_times() -> void:
+func test_from_the_third_copy_each_costs_fifteen_percent_more_up_to_three_times() -> void:
 	var base: int = int(_params.get_value(&"building.bakery.cost"))
 	assert_eq(base, 120)
-	var expected: Array[int] = [120, 138, 159, 183, 210, 241, 278, 319, 360, 360]
+	var expected: Array[int] = [120, 120, 138, 159, 183, 210, 241, 278, 319, 360, 360]
 	for copies: int in range(expected.size()):
 		assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"bakery", copies), &"bakery"),
 			expected[copies], "bakery number %d" % (copies + 1))
@@ -95,17 +96,24 @@ func test_buildings_of_another_type_do_not_make_it_dearer() -> void:
 	assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"housing", 5), &"bakery"), 120)
 
 
-func test_build_charges_the_escalated_price_and_keeps_it_on_the_building() -> void:
+func test_the_second_copy_still_costs_the_base_price() -> void:
 	var state: EconomyState = _state_with(&"housing", 1)
+	assert_true(_build(state, &"housing", Vector2i(3, 3)).accepted)
+	assert_eq(state.money, 100000 - 60)
+	assert_eq(state.buildings[1]["paid"], 60)
+
+
+func test_build_charges_the_escalated_price_and_keeps_it_on_the_building() -> void:
+	var state: EconomyState = _state_with(&"housing", 2)
 	var command: BuildCommand = _build(state, &"housing", Vector2i(3, 3))
 	assert_true(command.accepted)
-	assert_eq(state.money, 100000 - 69, "the second housing costs 60 x 1.15")
+	assert_eq(state.money, 100000 - 69, "the third housing costs 60 x 1.15")
 	assert_eq(state.construction_spent_tick, 69)
-	assert_eq(state.buildings[1]["paid"], 69)
+	assert_eq(state.buildings[2]["paid"], 69)
 
 
 func test_insufficient_money_is_judged_on_the_escalated_price() -> void:
-	var state: EconomyState = _state_with(&"housing", 1)
+	var state: EconomyState = _state_with(&"housing", 2)
 	state.money = 68
 	var refused: BuildCommand = _build(state, &"housing", Vector2i(3, 3))
 	assert_false(refused.accepted)
@@ -118,13 +126,14 @@ func test_demolishing_a_copy_makes_the_next_one_cheaper_again() -> void:
 	var state: EconomyState = _state_with(&"housing", 0)
 	_build(state, &"housing", Vector2i(1, 1))
 	_build(state, &"housing", Vector2i(2, 1))
+	_build(state, &"housing", Vector2i(3, 1))
 	assert_eq(BuildingCosts.construction_cost(_params, state, &"housing"), 79)
-	DemolishCommand.new(Vector2i(2, 1)).execute(state, _params, RandomNumberGenerator.new())
+	DemolishCommand.new(Vector2i(3, 1)).execute(state, _params, RandomNumberGenerator.new())
 	assert_eq(BuildingCosts.construction_cost(_params, state, &"housing"), 69)
 
 
 func test_demolition_within_grace_refunds_what_was_paid() -> void:
-	var state: EconomyState = _state_with(&"housing", 1)
+	var state: EconomyState = _state_with(&"housing", 2)
 	_build(state, &"housing", Vector2i(3, 3))
 	var demolish: DemolishCommand = DemolishCommand.new(Vector2i(3, 3))
 	demolish.execute(state, _params, RandomNumberGenerator.new())
@@ -133,7 +142,7 @@ func test_demolition_within_grace_refunds_what_was_paid() -> void:
 
 
 func test_demolition_after_grace_refunds_the_ratio_of_what_was_paid() -> void:
-	var state: EconomyState = _state_with(&"housing", 1)
+	var state: EconomyState = _state_with(&"housing", 2)
 	_build(state, &"housing", Vector2i(3, 3))
 	state.defeat_elapsed_seconds += int(_params.get_value(&"demolish.refund_grace_seconds")) + 1
 	var ratio: float = float(_params.get_value(&"demolish.no_jobs_refund_ratio"))
@@ -149,12 +158,9 @@ func test_a_building_without_a_recorded_price_refunds_on_the_base_cost() -> void
 	assert_eq(state.money, 100000 + 60)
 
 
-# --- Wages of the beer chain ---
+# --- Wages ---
 
-func test_malthouse_and_brewery_workers_are_paid_three() -> void:
-	assert_eq(_catalog.base_values[&"building.malthouse.wage_per_worker_per_minute"], 3)
-	assert_eq(_catalog.base_values[&"building.brewery.wage_per_worker_per_minute"], 3)
-	var state: EconomyState = _state_with(&"malthouse", 1)
-	state.buildings[0]["workers"] = 3
-	var upkeep: int = int(_params.get_value(&"building.malthouse.upkeep_per_minute"))
-	assert_eq(_upkeep_paid_in_a_minute(state, _params), 3 * 3 + upkeep, "three workers at 3 plus the upkeep")
+func test_the_beer_chain_keeps_paying_two_per_worker() -> void:
+	# The 3 of the first approval broke the artisans' payback (D-061); Cristian's revision kept 2.
+	assert_eq(_catalog.base_values[&"building.malthouse.wage_per_worker_per_minute"], 2)
+	assert_eq(_catalog.base_values[&"building.brewery.wage_per_worker_per_minute"], 2)

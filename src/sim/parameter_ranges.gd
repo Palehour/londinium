@@ -137,6 +137,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"economy.administration.max_multiplier": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"economy.construction_escalation.free_copies": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"economy.construction_escalation.per_building": {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
 	&"economy.construction_escalation.max_multiplier": {
@@ -192,7 +194,8 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"market.barley.max_step", &"market.barley.storage_capacity",
 				&"market.malt.storage_capacity", &"market.beer.storage_capacity",
 				&"policy.unloading.default_barley_percent", &"policy.unloading.step_percent",
-				&"needs.housing_bonus_per_category", &"economy.administration.free_buildings"] \
+				&"needs.housing_bonus_per_category", &"economy.administration.free_buildings",
+				&"economy.construction_escalation.free_copies"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):
