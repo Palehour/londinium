@@ -159,6 +159,13 @@ const PATTERNS: Array[Dictionary] = [
 	{"prefix": "class.", "suffix": ".per_person_per_minute", "min": 0.0, "max": INF, "integer": false,
 		"min_exclusive": true},
 	{"prefix": "class.", "suffix": ".tax.base", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": false},
+	# Mobility between classes (issue #53): scores and satisfaction in points, rates per minute, whole seconds.
+	{"prefix": "class.", "suffix": ".min_score", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".mobility.promotion.source_satisfaction", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".mobility.promotion.per_minute", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "class.", "suffix": ".mobility.demotion.below", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "class.", "suffix": ".mobility.demotion.seconds", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true},
+	{"prefix": "class.", "suffix": ".mobility.demotion.per_minute", "min": 0.0, "max": INF, "integer": false},
 ]
 
 

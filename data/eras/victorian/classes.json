@@ -65,6 +65,20 @@
         "satisfaction_key": 40,
         "consumption_key": 0.4
       }
+    },
+    "mobility": {
+      "from": "worker",
+      "promotion": {
+        "min_scores": { "comunidad": 80, "sustento": "needs.sustento.threshold" },
+        "source_satisfaction": 70,
+        "per_minute": 2
+      },
+      "demotion": {
+        "category": "comunidad",
+        "below": "needs.comunidad.threshold",
+        "seconds": 60,
+        "per_minute": 2
+      }
     }
   }
 }

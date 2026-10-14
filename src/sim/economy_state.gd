@@ -94,6 +94,9 @@ var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
 # Head tax each class added to the treasury this tick, before rounding to whole pence (balance probes only).
 var class_tax_tick: Dictionary[StringName, float] = {}
+# People who rose into another class or fell back from one this tick (issue #53), over every class.
+var promotions_tick: int = 0
+var demotions_tick: int = 0
 # Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
 # used all its budget on the wheat it had does not count). Transient: never saved.
 var input_starved_tick: Dictionary[StringName, int] = {}
@@ -112,6 +115,8 @@ func reset_flows() -> void:
 	tea_spent_tick = 0
 	construction_spent_tick = 0
 	class_tax_tick.clear()
+	promotions_tick = 0
+	demotions_tick = 0
 	input_starved_tick.clear()
 
 

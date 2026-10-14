@@ -345,6 +345,10 @@ const CLASS_GROWTH: Dictionary = {"immigration_threshold": "percent", "emigratio
 	"immigration_per_minute": "number", "emigration_per_minute": "number",
 	"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
 	"hunger_emigration_multiplier": "number"}
+# Optional block of a class (issue #53): how people of another class rise into it and fall back.
+const CLASS_MOBILITY_FIELDS: Array[String] = ["from", "promotion", "demotion"]
+const CLASS_PROMOTION: Dictionary = {"source_satisfaction": "percent", "per_minute": "number"}
+const CLASS_DEMOTION: Dictionary = {"below": "percent", "seconds": "positive_integer", "per_minute": "number"}
 
 
 func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
@@ -352,9 +356,14 @@ func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 		_errors.append("%s: expected classes" % _classes_path())
 	var claimed: Array[StringName] = []
 	var bases: int = 0
+	var mobility: Dictionary[StringName, Variant] = {}
 	for id: String in raw:
 		var path: String = "%s.%s" % [_classes_path(), id]
-		if not _object(raw[id], CLASS_FIELDS, path):
+		var fields: Array[String] = CLASS_FIELDS.duplicate()
+		if raw[id] is Dictionary and raw[id].has("mobility"):
+			fields.append("mobility")
+			mobility[StringName(id)] = raw[id]["mobility"]
+		if not _object(raw[id], fields, path):
 			continue
 		var definition: ClassDef = ClassDef.new()
 		definition.id = StringName(id)
@@ -375,6 +384,10 @@ func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 		catalog.classes[definition.id] = definition
 	if not raw.is_empty() and bases != 1:
 		_errors.append("%s: exactly one class must be the base class" % _classes_path())
+	# Mobility names another class, so it resolves once every class is known.
+	for id: StringName in mobility:
+		if catalog.classes.has(id):
+			_load_class_mobility(mobility[id], "%s.%s.mobility" % [_classes_path(), id], catalog.classes[id], catalog)
 	_check_class_hunger(catalog)
 
 
@@ -428,6 +441,60 @@ func _key_or_number(raw: Variant, kind: String, path: String, own_key: String, c
 		return StringName(raw)
 	_errors.append("%s: expected the key of a numeric parameter" % path)
 	return &""
+
+
+func _load_class_mobility(raw: Variant, path: String, definition: ClassDef, catalog: DataCatalog) -> void:
+	if not _object(raw, CLASS_MOBILITY_FIELDS, path):
+		return
+	var source: StringName = StringName(str(raw["from"]))
+	if source == definition.id or not catalog.classes.has(source):
+		_errors.append("%s.from: expected another class" % path)
+		return
+	var own_categories: Array[StringName] = []
+	for need: NeedDef in definition.needs:
+		own_categories.append(need.category)
+	var prefix: String = "class.%s.mobility" % definition.id
+	var promotion: Variant = raw["promotion"]
+	var promotion_fields: Array[String] = ["min_scores"]
+	promotion_fields.append_array(CLASS_PROMOTION.keys())
+	if not _object(promotion, promotion_fields, path + ".promotion"):
+		return
+	# The numeric fields resolve like any class block; the categories are read below.
+	var numbers: Dictionary = promotion.duplicate()
+	numbers.erase("min_scores")
+	var keys: Dictionary = _class_block(numbers, CLASS_PROMOTION, path + ".promotion", prefix + ".promotion", catalog)
+	var scores: Variant = promotion["min_scores"]
+	if scores is not Dictionary or scores.is_empty():
+		_errors.append("%s.promotion.min_scores: expected categories" % path)
+		return
+	for category: String in scores:
+		var location: String = "%s.promotion.min_scores.%s" % [path, category]
+		# A category the class has no need in never gets a score, so nobody could ever rise.
+		if StringName(category) not in own_categories:
+			_errors.append("%s: not a category of this class's needs" % location)
+			continue
+		var key: StringName = _key_or_number(scores[category], "percent", location,
+			"%s.promotion.%s.min_score" % [prefix, category], catalog)
+		if key != &"":
+			definition.promotion_min_score_keys[StringName(category)] = key
+	var demotion: Dictionary = {}
+	var demotion_fields: Array[String] = ["category"]
+	demotion_fields.append_array(CLASS_DEMOTION.keys())
+	if _object(raw["demotion"], demotion_fields, path + ".demotion"):
+		var demotion_numbers: Dictionary = raw["demotion"].duplicate()
+		demotion_numbers.erase("category")
+		demotion = _class_block(demotion_numbers, CLASS_DEMOTION, path + ".demotion", prefix + ".demotion", catalog)
+		definition.demotion_category = StringName(str(raw["demotion"]["category"]))
+		if definition.demotion_category not in own_categories:
+			_errors.append("%s.demotion.category: not a category of this class's needs" % path)
+	if keys.size() != CLASS_PROMOTION.size() or demotion.size() != CLASS_DEMOTION.size():
+		return
+	definition.mobility_from = source
+	definition.promotion_source_satisfaction_key = keys["source_satisfaction"]
+	definition.promotion_per_minute_key = keys["per_minute"]
+	definition.demotion_below_key = demotion["below"]
+	definition.demotion_seconds_key = demotion["seconds"]
+	definition.demotion_per_minute_key = demotion["per_minute"]
 
 
 # Recovery below the threshold would make the hunger flag flip every tick (same rule as the worker's, per class).

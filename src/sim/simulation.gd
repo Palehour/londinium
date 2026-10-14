@@ -20,6 +20,7 @@ var _production: ProductionSystem = ProductionSystem.new()
 var _consumption: ConsumptionSystem = ConsumptionSystem.new()
 var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
 var _growth: GrowthSystem = GrowthSystem.new()
+var _mobility: MobilitySystem = MobilitySystem.new()
 var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
 var _stats: Stats
@@ -113,6 +114,7 @@ func tick() -> void:
 		_defeat.update_hunger_coverage(_state, _params)
 		_satisfaction.tick(_state, _params, _context)
 		_growth.tick(_state, _params, _context)
+		_mobility.tick(_state, _params, _context)
 		_money.tick(_state, _params, _context)
 		_defeat.tick(_state, _params, false)
 		if not _state.defeat_causes.is_empty():

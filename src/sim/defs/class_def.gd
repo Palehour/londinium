@@ -28,6 +28,18 @@ var hunger_recovery_key: StringName
 var hunger_multiplier_key: StringName
 var tax_basis: StringName = TAX_EMPLOYED
 var tax_base_key: StringName
+# Mobility (issue #53): the class people of mobility_from rise into, and fall back from. Empty when the class
+# has none. Every key is a Params key, like the blocks above.
+var mobility_from: StringName
+# Category -> key of the lowest score of this class's category that lets people rise into it.
+var promotion_min_score_keys: Dictionary[StringName, StringName] = {}
+var promotion_source_satisfaction_key: StringName
+var promotion_per_minute_key: StringName
+# People fall back when this category stays under the key's score for the key's seconds.
+var demotion_category: StringName
+var demotion_below_key: StringName
+var demotion_seconds_key: StringName
+var demotion_per_minute_key: StringName
 
 
 # The only class of a context that has none (tests that build a bare context): the legacy population keys.
@@ -48,6 +60,10 @@ static func legacy() -> ClassDef:
 	result.hunger_multiplier_key = &"population.growth.hunger_emigration_multiplier"
 	result.tax_base_key = &"population.tax.base_per_employed_worker_per_minute"
 	return result
+
+
+func has_mobility() -> bool:
+	return mobility_from != &""
 
 
 func copy() -> ClassDef:
@@ -76,4 +92,12 @@ func copy() -> ClassDef:
 	result.hunger_multiplier_key = hunger_multiplier_key
 	result.tax_basis = tax_basis
 	result.tax_base_key = tax_base_key
+	result.mobility_from = mobility_from
+	result.promotion_min_score_keys = promotion_min_score_keys.duplicate()
+	result.promotion_source_satisfaction_key = promotion_source_satisfaction_key
+	result.promotion_per_minute_key = promotion_per_minute_key
+	result.demotion_category = demotion_category
+	result.demotion_below_key = demotion_below_key
+	result.demotion_seconds_key = demotion_seconds_key
+	result.demotion_per_minute_key = demotion_per_minute_key
 	return result

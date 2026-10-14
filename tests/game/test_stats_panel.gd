@@ -557,3 +557,20 @@ func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_MET % ["Trabajadores", "Sustento", 63.0, 63.0])
+
+
+# Issue #53: a notice at the top of the panel while anyone rose or fell between classes in the last minute.
+func test_mobility_notice_uses_strings() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	_panel.update_snapshot(snapshot)
+	assert_false(_panel.get("_notice").visible, "Nobody moved: no notice")
+	snapshot["stats"]["promotions_in_window"] = 2
+	_panel.update_snapshot(snapshot)
+	var workers: String = Strings.CLASS_LABELS[&"worker"]
+	var artisans: String = Strings.CLASS_LABELS[&"artisan"]
+	assert_true(_panel.get("_notice").visible)
+	assert_eq(_text("_notice"), Strings.MOBILITY_PROMOTED % [2, workers, artisans])
+	snapshot["stats"]["demotions_in_window"] = 1
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_notice"), "\n".join([Strings.MOBILITY_PROMOTED % [2, workers, artisans],
+		Strings.MOBILITY_DEMOTED % [1, artisans, workers]]))

@@ -3,7 +3,7 @@ extends RefCounted
 
 const KEYS: Array[StringName] = [&"bread_produced", &"bread_consumed", &"bread_demand",
 	&"taxes", &"wages", &"upkeep", &"wheat", &"imports", &"tea", &"construction",
-	&"barley"]
+	&"barley", &"promotions", &"demotions"]
 
 var _window_size: int
 var _samples: Array[Dictionary] = []
@@ -20,10 +20,10 @@ func _init(window_size: int) -> void:
 func restore(window: Array) -> void:
 	_samples.clear()
 	for entry: Variant in window.slice(maxi(0, window.size() - _window_size)):
-		# A window saved before imports (or barley) existed has no such flows: it paid nothing for them.
+		# A window saved before imports (or barley, or mobility) existed has no such flows: nothing moved.
 		if entry is Dictionary:
 			entry = entry.duplicate()
-			for key: StringName in [&"imports", &"tea", &"barley"]:
+			for key: StringName in [&"imports", &"tea", &"barley", &"promotions", &"demotions"]:
 				if not entry.has(key):
 					entry[key] = 0.0
 		if entry is not Dictionary or not KEYS.all(func(key: StringName) -> bool:
@@ -53,6 +53,8 @@ func record(state: EconomyState) -> void:
 		&"tea": float(state.tea_spent_tick),
 		&"construction": float(state.construction_spent_tick),
 		&"barley": float(state.barley_spent_tick),
+		&"promotions": float(state.promotions_tick),
+		&"demotions": float(state.demotions_tick),
 	})
 	if _samples.size() > _window_size:
 		_samples.pop_front()
@@ -87,4 +89,7 @@ func snapshot() -> Dictionary:
 		"operating_balance_per_minute": (sums[&"taxes"] - sums[&"wages"] - sums[&"upkeep"] - sums[&"wheat"]
 			- sums[&"imports"] - sums[&"barley"]) * per_minute,
 		"construction_spent_per_minute": sums[&"construction"] * per_minute,
+		# People, not a rate: how many rose or fell between classes in the seconds the window covers.
+		"promotions_in_window": int(sums[&"promotions"]),
+		"demotions_in_window": int(sums[&"demotions"]),
 	}

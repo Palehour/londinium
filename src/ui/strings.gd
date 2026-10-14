@@ -90,6 +90,8 @@ const NEEDS_SHORT: String = "%s · %s: %.1f/%.1f · falta %s"
 const NEEDS_SHORT_REASON: String = "%s · %s: %.1f/%.1f · %s"
 const NEEDS_NO_CLASS: String = "Sin necesidades definidas."
 const HOUSING_ROW: String = "%s · vivienda: base %d + bono %d (máximo %d)"
+const MOBILITY_PROMOTED: String = "↑ Ascensos en el último minuto: %d (%s → %s)"
+const MOBILITY_DEMOTED: String = "↓ Descensos en el último minuto: %d (%s → %s)"
 const CLASS_LABELS: Dictionary[StringName, String] = {&"worker": "Trabajadores", &"artisan": "Artesanos"}
 const CATEGORY_LABELS: Dictionary[StringName, String] = {
 	&"sustento": "Sustento", &"abrigo": "Abrigo", &"salud": "Salud",
@@ -106,6 +108,9 @@ const REASONS: Dictionary[StringName, String] = {
 	&"hungry_leaving": "Se van por hambre.",
 	&"unhappy_leaving": "Se van por la baja satisfacción.",
 	&"stable": "Sin cambios.",
+	&"no_source_population": "No hay nadie en la clase de origen.",
+	&"category_below": "Una necesidad no llega al mínimo para ascender.",
+	&"source_satisfaction_low": "La satisfacción de la clase de origen no alcanza para ascender.",
 	&"below_threshold": "Por debajo del umbral.",
 	&"unreachable_threshold": "Ni con todos los bienes cubiertos se llega al umbral.",
 	&"no_cultivable_cells": NO_CULTIVABLE_CELLS,
