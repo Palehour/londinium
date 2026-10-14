@@ -1,0 +1,31 @@
+{
+  "id": "beer_crisis",
+  "description": "Issue #55, crisis de cerveza: la ciudad de bread_vs_beer_30. En el minuto 45, con los artesanos asentados, se demuele la cervecería y una sonda de escenario (stock_schedule) vacía la cerveza del almacén en el mismo tick, así que son 5 minutos exactos sin cerveza. En el minuto 50 se reconstruye en la misma celda. Mide cuántos artesanos descienden y si vuelven al 80 % dentro de los 10 minutos siguientes.",
+  "notes": "Criterio (b) del #55, aprobado por Cristian el 2026-10-13 (sujeto a validación): cerveza cortada 5 min; cumple si no hay derrota y en 17 de 20 semillas los artesanos recuperan el 80 % de la población previa dentro de los 10 min de vuelta la cerveza. Medido: NO CUMPLE, 11 de 20. Ninguna derrota. En las semillas 4, 5 y 6 no hay artesanos en el minuto 45 (según la semilla, la cadena de cerveza se compra entre el minuto 36 y el 51), y en la 6 y la 11 no queda dinero para reconstruir la cervecería en el minuto 50. Donde sí hay artesanos, se pierden de 6 a 18; los que no se recuperan quedan frenados por el pan de la ciudad de 30 % (alrededor de 0,69 desde el minuto 52): los trabajadores no llegan a 70 de satisfacción para ascender y los artesanos no llegan a 75 para inmigrar. Hay que recalibrarlo con Mason; data/ no se tocó.",
+  "seed": 42,
+  "duration_ticks": 3600,
+  "stock_schedule": [{"tick": 2700, "good": "beer", "amount": 0}],
+  "measure": {"beer_cut": {"from_minute": 45, "back_minute": 50, "recovery_minutes": 10, "recovered_share": 0.8}},
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 510},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 180},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [2, 3], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [6, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 30, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true},
+    {"tick": 2700, "cmd": "demolish", "cell": [3, 3]},
+    {"tick": 3000, "cmd": "build", "building": "brewery", "cell": [3, 3]}
+  ]
+}

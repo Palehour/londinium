@@ -19,6 +19,9 @@ const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"
 const ARTISAN_CLASS: StringName = &"artisan"
 const BEER_CHAIN: Array[StringName] = [&"malthouse", &"brewery"]
 const ARTISAN_HOUSING: StringName = &"artisan_housing"
+# The keys a scenario's "measure" may hold; balance_report adds their metrics (issue #55).
+const MEASURES: Array[String] = ["tax_window", "beer_cut", "hourly"]
+const MINUTES_PER_HOUR: int = 60
 
 var _catalog: DataCatalog
 var _params: Params
@@ -108,7 +111,11 @@ func validate(scenario: Dictionary) -> Array[String]:
 		return errors
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
+	if scenario.has("in_all") and scenario["in_all"] is not bool:
+		errors.append("in_all must be true or false")
 	errors.append_array(_validate_price_schedule(scenario.get("price_schedule", []), duration))
+	errors.append_array(_validate_stock_schedule(scenario.get("stock_schedule", []), duration))
+	errors.append_array(_validate_measure(scenario.get("measure", {}), duration))
 	var previous_tick: int = 0
 	var command_before_tick: int = -1
 	var index: int = 0
@@ -135,6 +142,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		_params = _params_without_repricing(int(scenario["duration_ticks"]))
 	var sim: Simulation = Simulation.create_new(_params, _initial_state(), int(scenario["seed"]), _context)
 	var next_price: int = 0
+	var stock_schedule: Array = scenario.get("stock_schedule", [])
+	var next_stock: int = 0
 	var script: Array = scenario["commands"]
 	var issued: Array[Dictionary] = []
 	var next_command: int = 0
@@ -145,6 +154,10 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		while next_price < schedule.size() and int(schedule[next_price]["tick"]) <= tick_index:
 			sim.apply_command(ForceWheatPriceCommand.new(int(schedule[next_price]["price"])))
 			next_price += 1
+		while next_stock < stock_schedule.size() and int(stock_schedule[next_stock]["tick"]) <= tick_index:
+			var entry: Dictionary = stock_schedule[next_stock]
+			sim.apply_command(ForceStockCommand.new(StringName(entry["good"]), int(entry["amount"])))
+			next_stock += 1
 		var queued: Array[Dictionary] = []
 		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued):
 			var entry: Dictionary = script[next_command]
@@ -213,6 +226,53 @@ func _validate_price_schedule(schedule: Variant, duration: int) -> Array[String]
 	return errors
 
 
+# Same checks as the price schedule, plus a good the catalog knows (issue #55: the beer crisis).
+func _validate_stock_schedule(schedule: Variant, duration: int) -> Array[String]:
+	if schedule is not Array:
+		return ["stock_schedule must be a list"]
+	var previous: int = 0
+	for entry: Variant in schedule:
+		if entry is not Dictionary or not _is_whole(entry.get("tick")) or not _is_whole(entry.get("amount")) 				or int(entry["tick"]) < previous or int(entry["tick"]) >= duration or int(entry["amount"]) < 0 				or not _catalog.goods.has(StringName(str(entry.get("good", "")))):
+			return ["stock_schedule entries need a whole tick (in order, inside the game), a known good and amount >= 0"]
+		previous = int(entry["tick"])
+	return []
+
+
+# What balance_report measures on top of the usual metrics (issue #55). Every window must fit in the game.
+func _validate_measure(measure: Variant, duration: int) -> Array[String]:
+	if measure is not Dictionary:
+		return ["measure must be an object"]
+	var errors: Array[String] = []
+	@warning_ignore("integer_division")
+	var minutes: int = duration / TICKS_PER_MINUTE
+	for key: Variant in measure:
+		if key not in MEASURES:
+			errors.append("measure: unknown key '%s'" % str(key))
+	if measure.has("tax_window"):
+		var window: Variant = measure["tax_window"]
+		if window is not Array or window.size() != 2 or not _is_whole(window[0]) or not _is_whole(window[1]) 				or int(window[0]) < 0 or int(window[0]) > int(window[1]) or int(window[1]) > minutes:
+			errors.append("measure.tax_window must be [from_minute, to_minute] inside the game")
+	if measure.has("beer_cut"):
+		errors.append_array(_validate_beer_cut(measure["beer_cut"], minutes))
+	if measure.has("hourly") and (measure["hourly"] is not bool or minutes < 2 * MINUTES_PER_HOUR):
+		errors.append("measure.hourly must be true or false, in a game of two hours or more")
+	return errors
+
+
+func _validate_beer_cut(cut: Variant, minutes: int) -> Array[String]:
+	var message: String = "measure.beer_cut needs whole from_minute < back_minute, recovery_minutes >= 1 inside the game and a recovered_share in (0, 1]"
+	if cut is not Dictionary:
+		return [message]
+	for field: String in ["from_minute", "back_minute", "recovery_minutes"]:
+		if not _is_whole(cut.get(field)):
+			return [message]
+	var share: Variant = cut.get("recovered_share")
+	if typeof(share) not in [TYPE_INT, TYPE_FLOAT] or float(share) <= 0.0 or float(share) > 1.0:
+		return [message]
+	if int(cut["from_minute"]) < 0 or int(cut["from_minute"]) >= int(cut["back_minute"]) 			or int(cut["recovery_minutes"]) < 1 or int(cut["back_minute"]) + int(cut["recovery_minutes"]) > minutes:
+		return [message]
+	return []
+
 
 # Same predicate the simulation uses for "nobody is leaving", evaluated on the final state.
 func is_stable(result: ScenarioResult) -> bool:
@@ -238,6 +298,15 @@ static func with_target_stock(scenario: Dictionary, target_stock: int) -> Dictio
 	for command: Dictionary in copy["commands"]:
 		if command["cmd"] == "set_wheat_policy":
 			command["target_stock"] = target_stock
+	return copy
+
+
+# Copy of `scenario` with the barley share of every set_unloading_split replaced, for the grain sweep (issue #55).
+static func with_barley_percent(scenario: Dictionary, percent: int) -> Dictionary:
+	var copy: Dictionary = scenario.duplicate(true)
+	for command: Dictionary in copy["commands"]:
+		if command["cmd"] == "set_unloading_split":
+			command["barley_percent"] = percent
 	return copy
 
 
