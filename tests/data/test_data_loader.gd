@@ -530,3 +530,16 @@ func test_barley_and_unloading_parameters_are_required_and_validate_ranges() -> 
 	before_each()
 	_set_modifier({"key": "policy.unloading.default_barley_percent", "op": "set", "value": 101})
 	_assert_invalid("Params: invalid range for 'policy.unloading.default_barley_percent'")
+
+
+# Issue #54: the notch of the on-screen split is data, a whole percent from 1 to 100 (0 would never move).
+func test_the_unloading_step_is_required_and_validates_its_range() -> void:
+	_documents["economy/policy.json"]["unloading"].erase("step_percent")
+	_assert_invalid("step_percent: missing field")
+	for invalid: float in [0.0, 101.0, 12.5]:
+		before_each()
+		_documents["economy/policy.json"]["unloading"]["step_percent"] = invalid
+		_assert_invalid("policy.json.unloading.step_percent: invalid integer")
+	before_each()
+	_set_modifier({"key": "policy.unloading.step_percent", "op": "set", "value": 0})
+	_assert_invalid("Params: invalid range for 'policy.unloading.step_percent'")

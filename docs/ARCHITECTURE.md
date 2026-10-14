@@ -33,7 +33,7 @@ londinium/
 │   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field: cost, upkeep, jobs, recipe, tags
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
-│   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`)
+│   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
 │   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
 │   ├── eras/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)

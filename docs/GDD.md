@@ -76,7 +76,7 @@ Los roles llegan después del hito 1, pero el código ya los prevé. Todos los p
 
 ## Panel de estadísticas
 
-Población, satisfacción con su desglose, producción y consumo de pan por minuto, stocks, dinero y balance por minuto, precio del trigo, trabajadores por edificio y el estado de cada condición de derrota.
+Población, satisfacción con su desglose, producción y consumo de pan por minuto, stocks, dinero y balance por minuto, precio del trigo, trabajadores por edificio y el estado de cada condición de derrota. Desde la fase 2 muestra además, para cada clase, su población, su satisfacción y la cobertura de cada bien que consume, y por qué nadie asciende a la clase siguiente (falta de vivienda, de cerveza o de pan, o trabajadores poco satisfechos). Ahí también está el control del reparto de la descarga del embarcadero entre cebada y trigo, en pasos de 10 % (D-031).
 
 ## Criterios de éxito del hito
 

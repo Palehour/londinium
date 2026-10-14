@@ -84,7 +84,16 @@ const BUILDING_LABELS: Dictionary[String, String] = {
 	"brewery": "Cervecería",
 	"artisan_housing": "Vivienda de artesanos",
 }
-const NEEDS_TITLE: String = "Necesidades"
+const NEEDS_TITLE: String = "Clases y necesidades"
+const CLASS_HEADER: String = "%s: %d habitantes · satisfacción %.0f"
+const COVERAGE_ROW: String = "%s · cobertura: %s"
+const GOOD_COVERAGE: String = "%s %.0f %%"
+const PROMOTION_ACTIVE: String = "Ascenso a %s: %.1f por minuto"
+const PROMOTION_BLOCKED: String = "Por qué nadie asciende a %s:"
+const PROMOTION_BLOCKER: String = "  · %s"
+const PROMOTION_CATEGORY_BELOW: String = "%s %.1f/%.1f · falta %s"
+const PROMOTION_CATEGORY_REASON: String = "%s %.1f/%.1f · %s"
+const PROMOTION_SATISFACTION_LOW: String = "Satisfacción de %s %.0f/%.0f"
 const NEEDS_MET: String = "%s · %s: %.1f/%.1f ✓"
 const NEEDS_SHORT: String = "%s · %s: %.1f/%.1f · falta %s"
 const NEEDS_SHORT_REASON: String = "%s · %s: %.1f/%.1f · %s"

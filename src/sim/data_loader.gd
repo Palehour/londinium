@@ -38,7 +38,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"tea": {"price": "money", "buffer_seconds": "integer"}},
 		"policy": {"wheat": {"default_accumulate_price": "optional_price", "default_max_price": "optional_price",
 			"default_target_stock": "integer", "default_reserve_minutes": "integer"},
-			"unloading": {"default_barley_percent": "integer"}},
+			"unloading": {"default_barley_percent": "integer", "step_percent": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
 		"no_jobs_refund_ratio": "fraction"},
 	"defeat": {

@@ -109,6 +109,9 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	# Share of the wharf's unloading capacity that goes to barley, in whole percent (0 = all wheat).
 	&"policy.unloading.default_barley_percent": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	# How far one notch of the on-screen split moves it, in whole percent (issue #54); 0 would never move.
+	&"policy.unloading.step_percent": {
+		"min": 1.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 	# Imports (D-025, D-026). A lot is a whole number of units; the tea buffer may be 0 (buy on demand).
 	&"market.imported_flour.price_per_lot": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
@@ -177,7 +180,8 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"market.imported_flour.lot_size", &"market.imported_flour.max_debt_lots", &"market.tea.buffer_seconds",
 				&"market.barley.max_step", &"market.barley.storage_capacity",
 				&"market.malt.storage_capacity", &"market.beer.storage_capacity",
-				&"policy.unloading.default_barley_percent", &"needs.housing_bonus_per_category"] \
+				&"policy.unloading.default_barley_percent", &"policy.unloading.step_percent",
+				&"needs.housing_bonus_per_category"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

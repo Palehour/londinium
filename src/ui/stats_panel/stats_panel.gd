@@ -37,6 +37,8 @@ var _dragging_reserve: bool = false
 var _dragging_unloading: bool = false
 # Split the simulation reported last, so releasing the slider where it was sends nothing.
 var _unloading_current: int = 0
+# Notch of the control, from data (issue #54).
+var _unloading_notch: float = 1.0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
@@ -147,12 +149,11 @@ func _build_controls(content: VBoxContainer) -> void:
 	_unloading_label = _label("")
 	content.add_child(_unloading_label)
 	_unloading = HSlider.new()
-	_unloading.step = 1.0
 	_unloading.max_value = 100.0
 	_unloading.scrollable = false
 	_unloading.focus_mode = Control.FOCUS_NONE
 	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_unloading.drag_started.connect(func() -> void: _dragging_unloading = true)
+	_unloading.drag_started.connect(_unloading_grabbed)
 	_unloading.drag_ended.connect(_unloading_released)
 	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.UNLOADING_LABEL % int(value))
 	content.add_child(_unloading)
@@ -298,11 +299,23 @@ func _barley_text(barley: Dictionary) -> String:
 # The player's split of the wharf's unloading between barley and wheat (SetUnloadingSplitCommand); without it
 # the barley never arrives and the malthouse has nothing to work with.
 func _update_unloading(barley: Dictionary, defeated: bool) -> void:
+	var percent: int = int(barley["barley_percent"])
+	_unloading_notch = float(barley["step_percent"])
 	if not _dragging_unloading:
-		_unloading.value = barley["barley_percent"]
-		_unloading_label.text = Strings.UNLOADING_LABEL % int(barley["barley_percent"])
-	_unloading_current = int(barley["barley_percent"])
+		# A split off the notch (a scenario's 15 %) shows as it is, not rounded, until the player grabs the
+		# slider; the step is set before the value so the value is not snapped.
+		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 else 1.0
+		_unloading.value = percent
+		_unloading_label.text = Strings.UNLOADING_LABEL % percent
+	_unloading_current = percent
 	_unloading.editable = not defeated
+
+
+# From here on the slider moves in notches; setting the step leaves the value where it was, so a release without
+# moving still sends nothing.
+func _unloading_grabbed() -> void:
+	_dragging_unloading = true
+	_unloading.step = _unloading_notch
 
 
 func _unloading_released(_changed: bool) -> void:
@@ -438,6 +451,9 @@ func _needs_text(needs: Dictionary) -> String:
 	for class_id: StringName in needs["classes"]:
 		var class_label: String = Strings.label(Strings.CLASS_LABELS, class_id)
 		var info: Dictionary = needs["classes"][class_id]
+		# Rounded down like the promotion's satisfaction check, so the two never disagree on screen.
+		lines.append(Strings.CLASS_HEADER % [class_label, info["population"], floorf(info["satisfaction"]["current"])])
+		lines.append(Strings.COVERAGE_ROW % [class_label, _coverage_text(info["categories"])])
 		for entry: Dictionary in info["categories"]:
 			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
 			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
@@ -459,9 +475,58 @@ func _needs_text(needs: Dictionary) -> String:
 				", ".join(missing)])
 		var housing: Dictionary = info["housing"]
 		lines.append(Strings.HOUSING_ROW % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
+		if not info["mobility"].is_empty():
+			lines.append_array(_promotion_lines(class_label, info["mobility"]))
 	if needs["classes"].is_empty():
 		lines.append(Strings.NEEDS_NO_CLASS)
 	return "\n".join(lines)
+
+
+# How much of each good the class wants it gets, in the order its categories list them. Rounded down, so a good
+# that is not fully covered never reads as 100 %.
+func _coverage_text(categories: Array) -> String:
+	var parts: Array[String] = []
+	for entry: Dictionary in categories:
+		for good: Dictionary in entry["goods"]:
+			parts.append(Strings.GOOD_COVERAGE % [Strings.label(Strings.GOOD_LABELS, good["good"]),
+				floorf(float(good["coverage"]) * PERCENT)])
+	return " · ".join(parts)
+
+
+# Why nobody rises into the class, one line per condition that fails (MobilitySystem.promotion_blockers), or the
+# rate when none does.
+func _promotion_lines(class_label: String, mobility: Dictionary) -> Array[String]:
+	var promotion: Dictionary = mobility["promotion"]
+	if promotion["active"]:
+		return [Strings.PROMOTION_ACTIVE % [class_label, promotion["per_minute"]]]
+	var lines: Array[String] = [Strings.PROMOTION_BLOCKED % class_label]
+	var source_label: String = Strings.label(Strings.CLASS_LABELS, mobility["from"])
+	for blocker: Dictionary in promotion["blockers"]:
+		lines.append(Strings.PROMOTION_BLOCKER % _blocker_text(blocker, source_label))
+	return lines
+
+
+func _blocker_text(blocker: Dictionary, source_label: String) -> String:
+	if blocker["reason"] == MobilitySystem.REASON_CATEGORY_BELOW:
+		return _category_blocker_text(blocker)
+	if blocker["reason"] == MobilitySystem.REASON_SOURCE_SATISFACTION_LOW:
+		# Rounded apart, so a satisfaction just under the minimum never reads as reaching it.
+		return Strings.PROMOTION_SATISFACTION_LOW % [source_label, floorf(blocker["satisfaction"]),
+			ceilf(blocker["minimum"])]
+	return Strings.reason(blocker["reason"])
+
+
+func _category_blocker_text(blocker: Dictionary) -> String:
+	var category: String = Strings.label(Strings.CATEGORY_LABELS, blocker["category"])
+	# Same rounding as the needs rows: a score under its minimum never reads as equal to it.
+	var value: float = _tenths(blocker["value"], false)
+	var minimum: float = _tenths(blocker["minimum"], true)
+	var missing: Array[String] = []
+	for good: StringName in blocker["missing_goods"]:
+		missing.append(Strings.label(Strings.GOOD_LABELS, good))
+	if missing.is_empty():
+		return Strings.PROMOTION_CATEGORY_REASON % [category, value, minimum, Strings.reason(blocker["reason"])]
+	return Strings.PROMOTION_CATEGORY_BELOW % [category, value, minimum, ", ".join(missing)]
 
 
 func _tenths(value: float, round_up: bool) -> float:
