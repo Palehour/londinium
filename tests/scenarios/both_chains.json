@@ -13,7 +13,7 @@
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
     {"tick": 0, "cmd": "build", "building": "malthouse", "cell": [2, 3]},
     {"tick": 0, "cmd": "build", "building": "brewery", "cell": [3, 3]},
-    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 300},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 345},
     {"tick": 60, "cmd": "build", "building": "housing", "cell": [6, 3], "with_previous": true}
   ]
 }

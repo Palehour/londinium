@@ -54,7 +54,7 @@
         4,
         7
       ],
-      "wait_for_money": 430
+      "wait_for_money": 493
     },
     {
       "tick": 30,
@@ -74,7 +74,7 @@
         3,
         4
       ],
-      "wait_for_money": 150
+      "wait_for_money": 168
     },
     {
       "tick": 30,
@@ -84,7 +84,7 @@
         5,
         4
       ],
-      "wait_for_money": 510
+      "wait_for_money": 654
     },
     {
       "tick": 30,
@@ -114,7 +114,7 @@
         4,
         4
       ],
-      "wait_for_money": 180
+      "wait_for_money": 219
     },
     {
       "tick": 30,
@@ -124,7 +124,7 @@
         2,
         3
       ],
-      "wait_for_money": 620
+      "wait_for_money": 638
     },
     {
       "tick": 30,
@@ -182,7 +182,7 @@
         0,
         7
       ],
-      "wait_for_money": 240
+      "wait_for_money": 365
     }
   ]
 }
