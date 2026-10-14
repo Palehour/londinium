@@ -145,8 +145,11 @@ func _beer_cut_metrics(cut: Dictionary) -> Dictionary:
 	var window_end: int = back_minute + int(cut["recovery_minutes"])
 	var before: float = float(row(from_minute)["artisan_population"])
 	var fewest: float = lowest("artisan_population", from_minute, window_end)
-	var recovered_at: int = first_minute_at_least("artisan_population", before * float(cut["recovered_share"]),
-		back_minute, window_end)
+	# With no artisans before the cut there is nothing to recover: 80 % of zero must not count as a recovery.
+	var recovered_at: int = -1
+	if before > 0.0:
+		recovered_at = first_minute_at_least("artisan_population", before * float(cut["recovered_share"]),
+			back_minute, window_end)
 	return {
 		"artisans_before_cut": before,
 		"artisans_lowest_after_cut": fewest,

@@ -454,6 +454,14 @@ func test_beer_cut_counts_the_artisans_lost_and_the_minutes_to_recover() -> void
 	assert_eq(result.measured({"beer_cut": cut})["artisans_recovery_minutes"], -1)
 
 
+func test_beer_cut_with_no_artisans_before_it_is_not_a_recovery() -> void:
+	var result: ScenarioResult = _measured_result({"artisan_population": [0, 0, 0, 0, 0]})
+	var cut: Dictionary = {"from_minute": 1, "back_minute": 2, "recovery_minutes": 2, "recovered_share": 0.8}
+	var found: Dictionary = result.measured({"beer_cut": cut})
+	assert_eq(found["artisans_recovered"], 0)
+	assert_eq(found["artisans_recovery_minutes"], -1)
+
+
 func test_hourly_drift_starts_after_the_first_hour() -> void:
 	# Three hours: money climbs 100 per minute after minute 60 and dips under zero twice in the first hour.
 	var money: Array = []
