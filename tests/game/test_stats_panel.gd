@@ -690,3 +690,26 @@ func test_buildings_show_why_malthouse_and_brewery_stop() -> void:
 	var jobs: Array[int] = [WorkersSystem.job_capacity(params, &"malthouse"), WorkersSystem.job_capacity(params, &"brewery")]
 	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Maltería", 1, 1, 1, jobs[0], Strings.reason(&"no_barley")])
 	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Cervecería", 2, 1, 1, jobs[1], Strings.reason(&"no_malt")])
+
+
+# Bailey's review of #115: a split off the notch (a scenario's 15 %) is shown as it is, and a release without
+# moving the slider does not round it to the notch.
+func test_a_split_off_the_notch_shows_as_it_is_until_the_slider_moves() -> void:
+	_session.submit_command(SetUnloadingSplitCommand.new(15))
+	_tick()
+	_session.publish_tick()
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_eq(slider.value, 15.0, "not rounded to 10 or 20")
+	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 15)
+	slider.drag_started.emit()
+	slider.drag_ended.emit(false)
+	assert_true(_session.get("_pending").is_empty(), "released where it was: nothing to send")
+	assert_eq(slider.value, 15.0)
+	slider.drag_started.emit()
+	slider.value = 37.0
+	assert_eq(slider.value, 40.0, "once moved, the slider goes in notches")
+	slider.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 40)

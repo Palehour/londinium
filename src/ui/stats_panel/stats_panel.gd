@@ -37,6 +37,8 @@ var _dragging_reserve: bool = false
 var _dragging_unloading: bool = false
 # Split the simulation reported last, so releasing the slider where it was sends nothing.
 var _unloading_current: int = 0
+# Notch of the control, from data (issue #54).
+var _unloading_notch: float = 1.0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
 var _bread: Label
@@ -147,12 +149,11 @@ func _build_controls(content: VBoxContainer) -> void:
 	_unloading_label = _label("")
 	content.add_child(_unloading_label)
 	_unloading = HSlider.new()
-	_unloading.step = 1.0
 	_unloading.max_value = 100.0
 	_unloading.scrollable = false
 	_unloading.focus_mode = Control.FOCUS_NONE
 	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_unloading.drag_started.connect(func() -> void: _dragging_unloading = true)
+	_unloading.drag_started.connect(_unloading_grabbed)
 	_unloading.drag_ended.connect(_unloading_released)
 	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.UNLOADING_LABEL % int(value))
 	content.add_child(_unloading)
@@ -298,13 +299,23 @@ func _barley_text(barley: Dictionary) -> String:
 # The player's split of the wharf's unloading between barley and wheat (SetUnloadingSplitCommand); without it
 # the barley never arrives and the malthouse has nothing to work with.
 func _update_unloading(barley: Dictionary, defeated: bool) -> void:
-	# The notch comes from data (issue #54); set before the value so the value snaps to it.
-	_unloading.step = barley["step_percent"]
+	var percent: int = int(barley["barley_percent"])
+	_unloading_notch = float(barley["step_percent"])
 	if not _dragging_unloading:
-		_unloading.value = barley["barley_percent"]
-		_unloading_label.text = Strings.UNLOADING_LABEL % int(barley["barley_percent"])
-	_unloading_current = int(barley["barley_percent"])
+		# A split off the notch (a scenario's 15 %) shows as it is, not rounded, until the player grabs the
+		# slider; the step is set before the value so the value is not snapped.
+		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 else 1.0
+		_unloading.value = percent
+		_unloading_label.text = Strings.UNLOADING_LABEL % percent
+	_unloading_current = percent
 	_unloading.editable = not defeated
+
+
+# From here on the slider moves in notches; setting the step leaves the value where it was, so a release without
+# moving still sends nothing.
+func _unloading_grabbed() -> void:
+	_dragging_unloading = true
+	_unloading.step = _unloading_notch
 
 
 func _unloading_released(_changed: bool) -> void:
