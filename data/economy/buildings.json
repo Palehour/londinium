@@ -15,12 +15,12 @@
     "recipe": { "inputs": { "flour": 10 }, "outputs": { "bread": 20 }, "seconds": 60 }
   },
   "malthouse": {
-    "cost": 200, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
+    "cost": 200, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 3,
     "jobs": 3, "tags": ["producer"],
     "recipe": { "inputs": { "barley": 4 }, "outputs": { "malt": 4 }, "seconds": 60 }
   },
   "brewery": {
-    "cost": 160, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
+    "cost": 160, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 3,
     "jobs": 3, "tags": ["producer"],
     "recipe": { "inputs": { "malt": 4 }, "outputs": { "beer": 8 }, "seconds": 60 }
   },

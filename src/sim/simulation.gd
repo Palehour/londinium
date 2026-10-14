@@ -130,13 +130,15 @@ func treasury() -> int:
 
 
 # What the last tick moved, for balance probes that need every tick (the snapshot is too coarse for them):
-# the head tax each class paid, the barley bought, the beer drunk, and the buildings with their workers.
+# the head tax each class paid, the barley bought, the beer drunk, and the buildings with their workers and
+# what they cost to build (it grows with each copy, issue #118).
 func tick_flows() -> Dictionary:
 	var buildings: Dictionary = {}
 	for building: Dictionary in _state.buildings:
-		var entry: Dictionary = buildings.get(building["definition_id"], {"count": 0, "workers": 0})
+		var entry: Dictionary = buildings.get(building["definition_id"], {"count": 0, "workers": 0, "paid": 0})
 		entry["count"] += 1
 		entry["workers"] += int(building.get("workers", 0))
+		entry["paid"] += int(building.get("paid", _params.get_value(StringName("building.%s.cost" % building["definition_id"]))))
 		buildings[building["definition_id"]] = entry
 	return {"class_tax": _state.class_tax_tick.duplicate(), "barley_spent": _state.barley_spent_tick,
 		"beer_consumed": _state.beer_consumed, "buildings": buildings}

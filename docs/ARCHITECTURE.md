@@ -70,7 +70,7 @@ londinium/
 ```
 
 ## Tick order (one place, `simulation.gd`)
-1. Apply queued commands.
+1. Apply queued commands. A build charges `BuildingCosts.construction_cost`: each copy of a type already standing makes the next one `economy.construction_escalation.per_building` dearer than the one before (compounded, up to `max_multiplier` times the base cost); the building keeps what it `paid` and demolition refunds on that (issue #118).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
@@ -83,7 +83,7 @@ londinium/
 7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
 8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008).
    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
-9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
+9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep. Upkeep is multiplied by administration (`BuildingCosts.administration_multiplier`): `1 + economy.administration.per_building` for each building past `free_buildings`, up to `max_multiplier` (issue #118); wages are not.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
 11. Stats + snapshot emitted.
 

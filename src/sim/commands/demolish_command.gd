@@ -25,7 +25,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:
-	var cost: int = int(params.get_value(StringName("building.%s.cost" % building["definition_id"])))
+	# What the building cost when it was built (issue #118); a building without that record paid the base cost.
+	var cost: int = int(building.get("paid",
+		params.get_value(StringName("building.%s.cost" % building["definition_id"]))))
 	if _in_grace(state, params, building):
 		return cost
 	var definition_id: StringName = building["definition_id"]

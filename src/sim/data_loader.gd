@@ -41,6 +41,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"unloading": {"default_barley_percent": "integer", "step_percent": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
 		"no_jobs_refund_ratio": "fraction"},
+	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
+	"economy": {
+		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
+		"construction_escalation": {"per_building": "number", "max_multiplier": "number"},
+	},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},

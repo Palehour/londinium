@@ -101,6 +101,22 @@ func test_role_validation_uses_final_values_instead_of_intermediate_modifiers() 
 		assert_eq(params.get_value(&"defeat.depopulation.defeat_fraction"), 0.75)
 
 
+# Issue #118: a multiplier below 1 would turn a money sink into a discount, and free buildings are whole.
+func test_money_sink_values_out_of_range_are_rejected() -> void:
+	_documents["economy/economy.json"]["administration"]["max_multiplier"] = 0.5
+	_assert_invalid("economy/economy.json.administration.max_multiplier: invalid number value 0.5")
+
+
+func test_money_sink_free_buildings_must_be_whole() -> void:
+	_documents["economy/economy.json"]["administration"]["free_buildings"] = 1.5
+	_assert_invalid("economy/economy.json.administration.free_buildings: invalid integer value 1.5")
+
+
+func test_construction_escalation_cannot_be_negative() -> void:
+	_documents["economy/economy.json"]["construction_escalation"]["per_building"] = -0.1
+	_assert_invalid("economy/economy.json.construction_escalation.per_building: invalid number value -0.1")
+
+
 func test_missing_field_identifies_file_and_field() -> void:
 	_documents["economy/buildings.json"]["bakery"].erase("jobs")
 	_assert_invalid("economy/buildings.json.bakery.jobs: missing field")
