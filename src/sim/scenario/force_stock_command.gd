@@ -13,7 +13,14 @@ func _init(good: StringName, amount: int) -> void:
 	_amount = amount
 
 
-func execute(state: EconomyState, _params: Params, _rng: RandomNumberGenerator) -> void:
+func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
 	state.stocks[_good] = _amount
+	# A real warehouse never holds more than its cap (issue #116), and the part of a unit already eaten
+	# belongs to the stock that was emptied.
+	var cap_key: StringName = StringName("market.%s.storage_capacity" % _good)
+	if params.has_value(cap_key):
+		state.stocks[_good] = mini(_amount, int(params.get_value(cap_key)))
+	if _good == &"beer":
+		state.beer_fraction = 0.0
 	accepted = true
 	reason = &""

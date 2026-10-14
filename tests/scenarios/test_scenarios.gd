@@ -540,6 +540,19 @@ func test_artisans_beer_keeps_bread_covered_and_the_artisans_pay_the_chain() -> 
 	gut.p("artisans_beer, seed %d: bread coverage %.2f, payback %.2f min" % [int(scenario["seed"]), coverage, payback])
 
 
+func test_artisans_beer_flour_keeps_the_artisans_with_imported_flour_and_thirty_percent_barley() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/artisans_beer_flour.json")
+	assert_eq(runner.validate(scenario), [] as Array[String])
+	var result: ScenarioResult = runner.run(scenario)
+	_assert_scripts_ran_clean(result)
+	assert_true(result.survived(), "the city was lost")
+	assert_true(runner.is_stable(result), "the city is not stable at the end")
+	assert_gt(int(result.final_row()["artisan_population"]), 0, "the artisans did not collapse")
+	assert_eq(int(result.final_row()["n_wharf"]), 4, "3 + 1 wharves")
+	# The 20-seed criterion is in tests/scenarios/long/long_test_flour_reserve.gd (tools/run_long_tests).
+
+
 # --- Issue #55: bread against beer and the beer crisis ---
 
 # The 20-seed criteria live in tests/scenarios/long/long_test_hito2.gd (tools/run_long_tests); here one game

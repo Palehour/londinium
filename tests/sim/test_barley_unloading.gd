@@ -267,18 +267,19 @@ func _flour_state(barley_percent: int) -> EconomyState:
 	return state
 
 
-func test_a_lot_of_imported_flour_takes_the_capacity_before_wheat_and_barley() -> void:
+func test_a_lot_of_imported_flour_takes_the_capacity_the_barley_does_not_reserve_before_the_wheat() -> void:
+	# Issue #116: the barley keeps its 50 % of the wharf (5 a minute); the flour has the other half.
 	var sim: Simulation = _sim(_flour_state(50))
 	_run(sim, 30)
 	assert_gt(_stock(sim, &"flour") + int(sim.snapshot()["economy"]["bread_fraction"]), 0, "a lot was bought")
 	assert_eq(_stock(sim, &"wheat"), 0, "the wharf is still unloading the flour")
-	assert_eq(_stock(sim, &"barley"), 0)
+	assert_gt(_stock(sim, &"barley"), 0, "the flour does not touch the reserved barley")
 	assert_gt(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0)
-	# The bakery would keep asking for flour and the flour would keep the wharf; with the imports off the
-	# lot is paid in a minute and the grain gets the whole capacity again.
+	# The bakery would keep asking for flour and the flour would keep its half; with the imports off the
+	# lot is paid at 5 a minute (at most 5 minutes for 25 units) and the wheat gets its half again.
 	sim.apply_command(SetFlourImportsCommand.new(false))
-	_run(sim, 90)
-	assert_gt(_stock(sim, &"wheat"), 0, "once the lot is unloaded the grain gets what is left")
+	_run(sim, 300)
+	assert_gt(_stock(sim, &"wheat"), 0, "once the lot is unloaded the wheat gets what is left of its half")
 	assert_gt(_stock(sim, &"barley"), 0)
 	assert_eq(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0)
 
@@ -327,6 +328,70 @@ func test_the_flour_waits_for_the_wharf_when_it_is_busy() -> void:
 	sim.tick()
 	assert_eq(_stock(sim, &"flour"), 0, "a lot or more still to unload: no new lot")
 	assert_eq(sim.snapshot()["imports"]["flour"]["reason"], &"wharf_unloading_busy")
+
+
+# --- The barley is reserved before the flour (issue #116) -----------------------------------
+
+func _owing_state(barley_percent: int, debt: float) -> EconomyState:
+	var state: EconomyState = _state(barley_percent)
+	state.flour_unloading_debt = debt
+	return state
+
+
+func test_the_barley_share_is_kept_while_a_lot_of_flour_is_pending() -> void:
+	# 10 a minute of capacity, 3 reserved for the barley: the flour can only take the other 7.
+	var sim: Simulation = _sim(_owing_state(30, 50.0))
+	_run(sim, 120)
+	assert_between(_stock(sim, &"barley"), 5, 6, "30 % of 10 a minute, for 2 minutes")
+	assert_almost_eq(float(sim.snapshot()["market"]["barley"]["flour_unloading_debt"]), 36.0, 0.001,
+		"the flour unloaded 7 a minute")
+	assert_eq(_stock(sim, &"wheat"), 0, "the flour keeps what the barley leaves")
+
+
+func test_a_lot_of_flour_unloads_in_parts_with_what_the_reserve_leaves() -> void:
+	var sim: Simulation = _sim(_owing_state(30, 4.0))
+	_run(sim, 60)
+	assert_eq(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0, "4 units fit in the 7 a minute")
+	assert_gt(_stock(sim, &"wheat"), 0, "what the flour did not need goes to the wheat")
+	assert_between(_stock(sim, &"barley"), 2, 3)
+
+
+func test_flour_still_comes_before_wheat_on_what_the_reserve_leaves() -> void:
+	var sim: Simulation = _sim(_owing_state(30, 7.0))
+	_run(sim, 60)
+	assert_eq(_stock(sim, &"wheat"), 0, "7 units owed and 7 a minute: nothing left for the wheat")
+	assert_almost_eq(float(sim.snapshot()["market"]["barley"]["flour_unloading_debt"]), 0.0, 0.001)
+
+
+func test_with_zero_barley_the_flour_unloading_matches_the_old_split() -> void:
+	var sim: Simulation = _sim(_owing_state(0, 25.0))
+	_run(sim, 60)
+	assert_almost_eq(float(sim.snapshot()["market"]["barley"]["flour_unloading_debt"]), 15.0, 0.001,
+		"the flour takes the whole 10 a minute")
+	assert_eq(_stock(sim, &"wheat"), 0)
+	assert_eq(_stock(sim, &"barley"), 0)
+	_run(sim, 120)
+	assert_eq(sim.snapshot()["market"]["barley"]["flour_unloading_debt"], 0.0)
+	assert_between(_stock(sim, &"wheat"), 4, 5, "the 5 left of the third minute and nothing else")
+
+
+func test_the_panel_does_not_blame_the_price_while_the_flour_keeps_all_the_unreserved_wharf() -> void:
+	var state: EconomyState = _owing_state(30, 7.0)
+	state.wheat_price = 3
+	state.wheat_max_price = 2
+	state.stocks[&"wheat"] = 5
+	var sim: Simulation = _sim(state)
+	sim.tick()
+	assert_false(sim.snapshot()["market"]["wheat"]["blocked_by_price"], "7 units owed, 7 a minute left for them")
+
+
+func test_the_scenario_probe_respects_the_warehouse_cap_and_empties_the_eaten_part_of_a_unit() -> void:
+	var state: EconomyState = _state(0)
+	state.beer_fraction = 0.6
+	var params: Params = _params()
+	ForceStockCommand.new(&"beer", 9999).execute(state, params, RandomNumberGenerator.new())
+	assert_eq(int(state.stocks[&"beer"]), int(params.get_value(&"market.beer.storage_capacity")))
+	assert_eq(state.beer_fraction, 0.0)
 
 
 func test_the_tea_is_exempt_from_the_unloading_capacity() -> void:
