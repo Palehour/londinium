@@ -1,6 +1,6 @@
 # ADR 0009: Movilidad entre clases
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-13
 - **Origen:** issue #53 (ascenso y descenso a artesano); D-061; amplía el ADR 0008
 
@@ -44,8 +44,7 @@ eras, así que la regla no puede nombrar a "trabajador", "artesano" ni "cerveza"
   del panel.
 
 ## Estado
-Propuesto mientras el PR de #53 está abierto. Con la aprobación de Cristian, el autor lo cambia a Aceptado en un
-commit del mismo PR, antes del merge.
+Aceptado. Cristian lo aprobó el 2026-10-13 en el PR de #53.
 
 ## Consecuencias
 - **Otra era puede tener sus propias movilidades sin tocar código.** Por ejemplo, de liberto a ciudadano en la
