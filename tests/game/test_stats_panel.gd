@@ -491,6 +491,7 @@ func test_panel_names_the_need_category_that_is_missing() -> void:
 				"reason": &"ok", "goods": [{"good": &"tea", "coverage": 1.0}], "missing_goods": []},
 		],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	var needs: String = _text("_needs")
@@ -506,6 +507,7 @@ func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> voi
 		"categories": [{"category": &"sustento", "value": 50.0, "threshold": 75.0, "met": false,
 			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 1.0}], "missing_goods": []}],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
@@ -518,6 +520,7 @@ func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
 		"categories": [{"category": &"sustento", "value": 74.96, "threshold": 75.0, "met": false,
 			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7496}], "missing_goods": [&"bread"]}],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
@@ -529,6 +532,7 @@ func test_panel_keeps_a_fractional_threshold_above_the_score() -> void:
 		"categories": [{"category": &"sustento", "value": 74.95, "threshold": 74.96, "met": false,
 			"reason": &"below_threshold", "goods": [{"good": &"bread", "coverage": 0.7495}], "missing_goods": [&"bread"]}],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
@@ -541,6 +545,7 @@ func test_panel_says_the_threshold_is_unreachable_instead_of_naming_a_good() -> 
 			"reason": &"unreachable_threshold", "goods": [{"good": &"bread", "coverage": 0.5}],
 			"missing_goods": [&"bread"]}],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
@@ -554,6 +559,7 @@ func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
 		"categories": [{"category": &"sustento", "value": 62.99999999999999, "threshold": 63.0, "met": true,
 			"reason": &"ok", "goods": [{"good": &"bread", "coverage": 0.7}], "missing_goods": [&"bread"]}],
 		"housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_needs"), Strings.NEEDS_MET % ["Trabajadores", "Sustento", 63.0, 63.0])
@@ -574,3 +580,113 @@ func test_mobility_notice_uses_strings() -> void:
 	_panel.update_snapshot(snapshot)
 	assert_eq(_text("_notice"), "\n".join([Strings.MOBILITY_PROMOTED % [2, workers, artisans],
 		Strings.MOBILITY_DEMOTED % [1, artisans, workers]]))
+
+
+# --- Issue #54: one block per class, the promotion diagnosis and the split in notches -----------------
+
+# A city with both housings, scored like the simulation does it; worker satisfaction is the smoothed one.
+func _class_state(workers: int, artisans: int, beer: float, worker_satisfaction: float) -> Array:
+	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	var params: Params = Params.new(_catalog, RoleDef.new())
+	var state: EconomyState = EconomyState.new()
+	state.tax_rate = 0.25
+	state.buildings.append({"definition_id": &"housing"})
+	state.buildings.append({"definition_id": &"artisan_housing"})
+	ClassStates.ensure(state, context)
+	state.population = workers + artisans
+	state.class_states[&"artisan"].population = artisans
+	state.hunger_smoothed_coverage = 1.0
+	state.bread_coverage = 1.0
+	state.tea_coverage = 0.5
+	state.beer_coverage = beer
+	SatisfactionSystem.new().update_target(state, params, context)
+	state.satisfaction = worker_satisfaction
+	return [state, params, context]
+
+
+func _show_classes(city: Array) -> String:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = NeedsDiagnostics.build(city[0], city[1], city[2])
+	_panel.update_snapshot(snapshot)
+	return _text("_needs")
+
+
+func test_panel_shows_population_coverage_and_satisfaction_per_class() -> void:
+	var city: Array = _class_state(18, 2, 0.5, 72.6)
+	var artisan_satisfaction: float = (city[0] as EconomyState).class_states[&"artisan"].satisfaction
+	var needs: String = _show_classes(city)
+	assert_string_contains(needs, Strings.CLASS_HEADER % ["Trabajadores", 18, 72.0])
+	assert_string_contains(needs, Strings.CLASS_HEADER % ["Artesanos", 2, floorf(artisan_satisfaction)])
+	assert_string_contains(needs, Strings.COVERAGE_ROW % ["Trabajadores", " · ".join(
+		[Strings.GOOD_COVERAGE % ["pan", 100.0], Strings.GOOD_COVERAGE % ["té", 50.0]])])
+	assert_string_contains(needs, Strings.COVERAGE_ROW % ["Artesanos", " · ".join(
+		[Strings.GOOD_COVERAGE % ["pan", 100.0], Strings.GOOD_COVERAGE % ["cerveza", 50.0]])])
+
+
+func test_coverage_just_under_full_never_reads_as_100() -> void:
+	var city: Array = _class_state(20, 0, 0.996, 100.0)
+	assert_string_contains(_show_classes(city), Strings.GOOD_COVERAGE % ["cerveza", 99.0])
+
+
+func test_promotion_diagnosis_names_missing_beer() -> void:
+	var needs: String = _show_classes(_class_state(20, 0, 0.5, 100.0))
+	assert_string_contains(needs, Strings.PROMOTION_BLOCKED % "Artesanos")
+	assert_string_contains(needs, Strings.PROMOTION_BLOCKER
+		% (Strings.PROMOTION_CATEGORY_BELOW % ["Comunidad o fe", 50.0, 80.0, "cerveza"]))
+	assert_false(needs.contains(Strings.reason(&"no_free_housing")), "There is room: housing is not blamed")
+
+
+func test_promotion_diagnosis_names_full_artisan_housing() -> void:
+	var city: Array = _class_state(20, 0, 1.0, 100.0)
+	var artisans: ClassState = (city[0] as EconomyState).class_states[&"artisan"]
+	artisans.population = artisans.housing_capacity
+	var needs: String = _show_classes(city)
+	assert_string_contains(needs, Strings.PROMOTION_BLOCKED % "Artesanos")
+	assert_string_contains(needs, Strings.PROMOTION_BLOCKER % Strings.reason(&"no_free_housing"))
+	assert_false(needs.contains("falta cerveza"), "The beer is covered: it is not blamed")
+
+
+func test_promotion_diagnosis_names_low_worker_satisfaction() -> void:
+	var needs: String = _show_classes(_class_state(20, 0, 1.0, 69.6))
+	# 69.6 is under 70: it must not read as 70/70.
+	assert_string_contains(needs, Strings.PROMOTION_BLOCKER % (Strings.PROMOTION_SATISFACTION_LOW % ["Trabajadores", 69.0, 70.0]))
+
+
+func test_promotion_diagnosis_shows_the_rate_when_nothing_blocks() -> void:
+	var city: Array = _class_state(20, 0, 1.0, 100.0)
+	var artisan: ClassDef = (city[2] as EconomyContext).classes[&"artisan"]
+	var rate: float = (city[1] as Params).get_value(artisan.promotion_per_minute_key)
+	var needs: String = _show_classes(city)
+	assert_string_contains(needs, Strings.PROMOTION_ACTIVE % ["Artesanos", rate])
+	assert_false(needs.contains(Strings.PROMOTION_BLOCKED % "Artesanos"))
+
+
+func test_the_unloading_slider_moves_in_steps_from_data_and_starts_all_wheat() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var slider: HSlider = _panel.get("_unloading") as HSlider
+	assert_eq([slider.value, slider.step, slider.max_value], [0.0, 10.0, 100.0], "0-100 % in notches of 10, all wheat")
+	slider.value = 37.0
+	assert_eq(slider.value, 40.0, "the control snaps to its notch")
+	slider.drag_ended.emit(true)
+	_tick()
+	_session.publish_tick()
+	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 40)
+	_session = _new_session([Modifier.new(&"policy.unloading.step_percent", &"set", 25)])
+	_panel = _new_panel(_session)
+	_panel.update_snapshot(_session.get_snapshot())
+	assert_eq((_panel.get("_unloading") as HSlider).step, 25.0, "the notch is read from data, not from code")
+
+
+func test_buildings_show_why_malthouse_and_brewery_stop() -> void:
+	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"whitechapel_1850s"])
+	var params: Params = Params.new(_catalog, RoleDef.new())
+	var state: EconomyState = EconomyState.new()
+	state.buildings.append({"definition_id": &"malthouse", "cell": [1, 1], "workers": 1})
+	state.buildings.append({"definition_id": &"brewery", "cell": [2, 1], "workers": 1})
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["diagnostics"] = BreadDiagnostics.build(state, params, context)
+	_panel.update_snapshot(snapshot)
+	var buildings: String = _text("_buildings")
+	var jobs: Array[int] = [WorkersSystem.job_capacity(params, &"malthouse"), WorkersSystem.job_capacity(params, &"brewery")]
+	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Maltería", 1, 1, 1, jobs[0], Strings.reason(&"no_barley")])
+	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Cervecería", 2, 1, 1, jobs[1], Strings.reason(&"no_malt")])

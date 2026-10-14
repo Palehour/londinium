@@ -289,6 +289,8 @@ static func barley_snapshot(state: EconomyState, params: Params) -> Dictionary:
 		"price": price,
 		"previous_price": state.barley_previous_price if state.barley_previous_price >= 0 else price,
 		"barley_percent": barley_percent(state), "wheat_percent": WHOLE_PERCENT - barley_percent(state),
+		# The notch of the on-screen control (issue #54); the command itself takes any whole percent (D-031).
+		"step_percent": int(params.get_value(&"policy.unloading.step_percent")),
 		"flour_unloading_debt": state.flour_unloading_debt,
 	}
 

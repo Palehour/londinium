@@ -408,6 +408,7 @@ func test_the_new_values_come_from_data_with_the_approved_numbers() -> void:
 		&"market.barley.storage_capacity": 80, &"market.barley.decay_fraction_per_minute": 0.01,
 		&"market.barley.price_update_seconds": 60,
 		&"policy.unloading.default_barley_percent": 0,
+		&"policy.unloading.step_percent": 10,
 	}
 	for key: StringName in expected:
 		assert_eq(params.get_value(key), expected[key], String(key))
