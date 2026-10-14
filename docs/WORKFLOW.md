@@ -44,6 +44,7 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
   lo conocen bien. Para una simulación de lógica pura no hace falta más.
 - gdUnit4 (~1.25k ⭐, acción oficial de CI) es más completo (scene runner, mocks potentes, inspector), pero
   suma una pieza más y más superficie. Lo reconsideramos si en el hito 2 hay que testear mucha UI.
+- Los chequeos largos de 20 semillas (por ejemplo, la recuperación de inversión de los artesanos) no corren en CI; antes de mergear cambios de balance, ejecutarlos con `GODOT=/ruta/a/godot tools/run_long_tests.sh` (o `tools/run_long_tests.ps1` en Windows).
 
 ## CI y builds multiplataforma (gratis)
 - **`ci.yml`** — en cada PR y push a `develop` o `main`: `chickensoft-games/setup-godot` v2.4.3 (fijado por SHA) instala Godot 4.7.2 (sin .NET),
