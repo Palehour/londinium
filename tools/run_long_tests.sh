@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs the long scenario tests (tests/scenarios/long/long_test_*.gd): 20 seeds of 70-minute games, too slow
-# for CI. Their files do not start with test_, so tools/run_tests and CI never pick them up.
+# Runs the long scenario tests (tests/scenarios/long/long_test_*.gd): 20 seeds of 70-minute games and the
+# 4- and 8-hour drift games, too slow for CI. Their files do not start with test_, so tools/run_tests and CI never pick them up.
 # Usage: GODOT=/path/to/godot tools/run_long_tests.sh [extra GUT args]
 set -euo pipefail
 GODOT="${GODOT:-godot}"

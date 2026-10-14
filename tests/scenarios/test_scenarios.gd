@@ -540,6 +540,45 @@ func test_artisans_beer_keeps_bread_covered_and_the_artisans_pay_the_chain() -> 
 	gut.p("artisans_beer, seed %d: bread coverage %.2f, payback %.2f min" % [int(scenario["seed"]), coverage, payback])
 
 
+func test_artisans_beer_flour_keeps_the_artisans_with_imported_flour_and_thirty_percent_barley() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/artisans_beer_flour.json")
+	assert_eq(runner.validate(scenario), [] as Array[String])
+	var result: ScenarioResult = runner.run(scenario)
+	_assert_scripts_ran_clean(result)
+	assert_true(result.survived(), "the city was lost")
+	assert_true(runner.is_stable(result), "the city is not stable at the end")
+	assert_gt(int(result.final_row()["artisan_population"]), 0, "the artisans did not collapse")
+	assert_eq(int(result.final_row()["n_wharf"]), 4, "3 + 1 wharves")
+	# The 20-seed criterion is in tests/scenarios/long/long_test_flour_reserve.gd (tools/run_long_tests).
+
+
+# --- Issue #55: bread against beer and the beer crisis ---
+
+# The 20-seed criteria live in tests/scenarios/long/long_test_hito2.gd (tools/run_long_tests); here one game
+# with the seed of each file keeps the scripts honest in CI: they run clean, the city survives, the barley
+# share changes what the city collects and the cut demotes artisans.
+func _long_result(runner: ScenarioRunner, id: String) -> ScenarioResult:
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/%s.json" % id)
+	assert_eq(runner.validate(scenario), [] as Array[String], id)
+	var result: ScenarioResult = runner.run(scenario)
+	_assert_scripts_ran_clean(result)
+	assert_true(result.survived(), "%s was lost" % id)
+	return result
+
+
+func test_bread_against_beer_and_the_beer_crisis_play_their_file_seed() -> void:
+	var runner: ScenarioRunner = ScenarioRunner.create()
+	var window: Dictionary = {"tax_window": [50, 70]}
+	var low: float = float(_long_result(runner, "bread_vs_beer_0").measured(window)["taxes_pm_window"])
+	var high: float = float(_long_result(runner, "bread_vs_beer_30").measured(window)["taxes_pm_window"])
+	assert_gt(high, low, "the barley city collects more tax")
+	var crisis: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/beer_crisis.json")
+	var found: Dictionary = _long_result(runner, "beer_crisis").measured(crisis["measure"])
+	assert_gt(float(found["artisans_lost_in_cut"]), 0.0, "the cut demotes artisans")
+	gut.p("seed of the files: tax per minute 50-70 at 0 %% %.2f and 30 %% %.2f; beer crisis %s" % [low, high, str(found)])
+
+
 # Parity (issue #52): a city that builds no artisan housing has no artisans, drinks no beer and collects no
 # head tax from them, in every scenario that existed before the class.
 func test_scenarios_without_artisan_housing_never_have_artisans() -> void:

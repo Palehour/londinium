@@ -1,0 +1,32 @@
+{
+  "id": "beer_crisis",
+  "description": "Issue #55, crisis de cerveza (decisiones de Cristian en la PR #117, 2026-10-14): la ciudad de bread_vs_beer_30 (sin harina importada, 30 % de cebada) con un cuarto embarcadero (nota del #116: con el pan a ~0,69 los artesanos no pueden volver). Diez minutos después de que llegan los primeros artesanos se demuele la cervecería y set_stock (una sonda de escenario) vacía la cerveza del almacén en el mismo tick. Cinco minutos después se reconstruye en la misma celda, esperando el dinero si no alcanza. Mide cuántos artesanos descienden y si vuelven al 80 % dentro de los 10 minutos siguientes. Una semilla en la que nunca llegan artesanos no corta nada: se informa aparte (comandos never_ran) y no cuenta como recuperada.",
+  "notes": "Criterio (b) del #55, aprobado por Cristian el 2026-10-13: cerveza cortada 5 min; cumple si no hay derrota y en 17 de 20 semillas los artesanos recuperan el 80 % de la población previa dentro de los 10 min de vuelta la cerveza. Corte relativo, espera de dinero y cuarto embarcadero: decisiones de Cristian en la PR #117 (2026-10-14); los 10 minutos después de los primeros artesanos los eligió el agente para que la vivienda de artesanos se llene antes del corte. Medido con 20 semillas: CUMPLE, 20 de 20, sin derrotas. Los primeros artesanos llegan entre el minuto 29,5 y el 51,8; el corte dura 5,0 min en todas (nunca falta dinero para reconstruir); se pierden de 7 a 8 de 28 artesanos y vuelven al 80 % a los 1 o 2 minutos. Al final quedan 23 artesanos en todas las semillas y el pan termina entre 0,73 y 0,86. Como dato informativo, con --barley-percent 20 también se recuperan 20 de 20 y el pan termina entre 0,84 y 0,86. Las 20 semillas se corren con tools/run_long_tests (long_test_hito2.gd); la suite corta juega la semilla de este archivo.",
+  "seed": 42,
+  "duration_ticks": 6000,
+  "measure": {"beer_cut": {"recovery_minutes": 10, "recovered_share": 0.8}},
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 510},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 180},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [2, 3], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [6, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 30, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [0, 7], "wait_for_money": 240},
+    {"tick": 30, "cmd": "demolish", "cell": [3, 3], "after_artisans_ticks": 600},
+    {"tick": 30, "cmd": "set_stock", "good": "beer", "amount": 0, "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "after_previous_ticks": 300, "wait_for_money": 160}
+  ]
+}

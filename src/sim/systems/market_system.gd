@@ -31,26 +31,30 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":
 			wharves.append(building)
-	# The wharf unloads the imported flour first (issue #50); what it leaves is shared by wheat and barley.
-	var grain_fraction: float = _pay_flour_unloading(state, wharves, params)
+	# The barley share is reserved first and the flour never touches it (issue #116); the flour comes before the
+	# wheat on the rest (issue #50).
+	var wheat_fraction: float = _pay_flour_unloading(state, wharves, params)
 	if state.wheat_purchases_enabled:
-		_buy_wheat(state, params, wharves, grain_fraction * wheat_share(state))
-	_buy_barley(state, params, wharves, grain_fraction)
+		_buy_wheat(state, params, wharves, wheat_fraction)
+	_buy_barley(state, params, wharves, FULL_RATE)
 
 
-# Capacity of the wharves goes to the lots of flour already bought before it goes to any grain. Returns
-# the fraction of this tick's capacity that is left for wheat and barley.
+# The barley's share of the capacity is reserved before anything else (issue #116); the lots of flour already
+# bought are unloaded from the rest, before the wheat. Returns the fraction of this tick's capacity that is
+# left for wheat.
 func _pay_flour_unloading(state: EconomyState, wharves: Array[Dictionary], params: Params) -> float:
+	var wheat_part: float = wheat_share(state)
 	if state.flour_unloading_debt <= 0.0:
-		return FULL_RATE
+		return wheat_part
 	var capacity: float = unloading_capacity(params, wharves)
 	if capacity <= 0.0:
-		return FULL_RATE
-	var paid: float = minf(state.flour_unloading_debt, capacity)
+		return wheat_part
+	var flour_capacity: float = capacity * wheat_part
+	var paid: float = minf(state.flour_unloading_debt, flour_capacity)
 	state.flour_unloading_debt -= paid
 	if state.flour_unloading_debt < DEBT_EPSILON:
 		state.flour_unloading_debt = 0.0
-	return (capacity - paid) / capacity
+	return (flour_capacity - paid) / capacity
 
 
 # Units per second the staffed wharves can unload, whatever the good (a wharf's wheat output is its capacity).
@@ -156,7 +160,7 @@ static func could_buy(state: EconomyState, params: Params) -> bool:
 	return false
 
 
-# The lots of flour still to unload keep the whole capacity of the next tick, so the wheat gets none of it.
+# The lots of flour still to unload keep all the capacity the barley does not reserve, so the wheat gets none of it.
 static func _flour_takes_all_capacity(state: EconomyState, params: Params) -> bool:
 	if state.flour_unloading_debt <= 0.0:
 		return false
@@ -164,7 +168,7 @@ static func _flour_takes_all_capacity(state: EconomyState, params: Params) -> bo
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":
 			wharves.append(building)
-	return state.flour_unloading_debt >= unloading_capacity(params, wharves)
+	return state.flour_unloading_debt >= unloading_capacity(params, wharves) * wheat_share(state)
 
 
 static func is_accumulating(state: EconomyState) -> bool:
@@ -255,7 +259,7 @@ func _reprice_barley(state: EconomyState, params: Params, rng: RandomNumberGener
 		state.barley_price = next_barley_price(state.barley_price, params, rng)
 
 
-# Barley takes its share of what the flour leaves. It has no purchase policy yet (nothing consumes it), so
+# Barley takes its reserved share of the capacity, whatever the flour owes. It has no purchase policy yet (nothing consumes it), so
 # it only stops at a full warehouse or an empty treasury; units that do not fit are lost like the wheat ones.
 func _buy_barley(state: EconomyState, params: Params, wharves: Array[Dictionary], grain_fraction: float) -> void:
 	var share: float = float(barley_percent(state)) / PERCENT

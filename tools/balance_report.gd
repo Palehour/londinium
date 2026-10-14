@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Per-minute CSV of the scripted 15-minute games in tests/scenarios/, for tuning data/.
+# Per-minute CSV of the scripted games in tests/scenarios/ (and the longer ones in tests/scenarios/long/), for tuning data/.
 # Run with --help for the options. Godot prints its version banner on stdout, so use --out for clean
 # files (balance_all.csv and balance_<id>.csv); the same CSV is also printed.
 
@@ -9,7 +9,8 @@ const SUMMARY_HEADER: String = "scenario,metric,min,median,mean,max"
 const REFUSED_HEADER: String = "scenario,seed,tick,cmd,reason,money_at_start_of_minute"
 const LAST_MINUTES_FROM: int = 13
 const USAGE: String = """Usage: godot --headless --path . -s tools/balance_report.gd -- [options]
-  --scenario <id>|all   scenario to run (default all)
+  --scenario <id>|all   scenario to run (default all). "all" skips the scenarios whose JSON has
+                        "in_all": false (the 4- and 8-hour drift games); name them to run them
   --out <dir>           also write the CSV files into <dir>
   --seeds <n>           run every scenario with seeds 1..n instead of the seed in its file
                         (needs --summary when n is above 1)
@@ -22,9 +23,13 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --wheat-price <n>     fix the market price of wheat at n
   --wheat-max-price <n> raise (or lower) the highest price the wheat market can reach to n
   --target-stock <n>    replace the target stock of every set_wheat_policy command
+  --barley-percent <n>  replace the barley share of every set_unloading_split command, 0 to 100
+                        (the grain sweep of issue #55: --scenario grain_split)
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
-runs_refused and listed in balance_refused.csv. Nothing here changes data/ or the scenario files."""
+runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
+metrics: tax_window (taxes_pm_window), beer_cut (first_artisans_minute, beer_cut_*, artisans_*) and hourly (money_drift_per_hour,
+*_coverage_lowest_after_hour1, minutes_in_debt). Nothing here changes data/ or the scenario files."""
 
 
 func _init() -> void:
@@ -60,7 +65,7 @@ func _init() -> void:
 			printerr("balance_report: %s is invalid: %s" % [path, str(errors)])
 			quit(1)
 			return
-		if wanted == ALL or wanted == scenario["id"]:
+		if (wanted == ALL and scenario.get("in_all", true)) or wanted == scenario["id"]:
 			scenarios.append(scenario)
 	if scenarios.is_empty():
 		printerr("balance_report: no scenario named '%s'" % wanted)
@@ -93,6 +98,7 @@ func _run_csv(runner: ScenarioRunner, scenarios: Array[Dictionary], options: Dic
 func _run_summary(runner: ScenarioRunner, scenarios: Array[Dictionary], options: Dictionary) -> void:
 	var lines: Array[String] = [SUMMARY_HEADER]
 	var per_seed: Array[String] = []
+	var seeds_header: String = ""
 	var refused_rows: Array[String] = [REFUSED_HEADER]
 	for scenario: Dictionary in scenarios:
 		var id: String = String(scenario["id"])
@@ -109,9 +115,12 @@ func _run_summary(runner: ScenarioRunner, scenarios: Array[Dictionary], options:
 				refused_rows.append_array(_refused_lines(id, int(variant["seed"]), result, rejections))
 				continue
 			used += 1
-			var metrics: Dictionary = _metrics(runner, result)
-			if per_seed.is_empty():
-				per_seed.append("scenario,seed,%s" % ",".join(PackedStringArray(metrics.keys())))
+			var metrics: Dictionary = _metrics(runner, result, variant.get("measure", {}))
+			# Scenarios with a "measure" have more columns, so the header is repeated whenever they change.
+			var header: String = "scenario,seed,%s" % ",".join(PackedStringArray(metrics.keys()))
+			if header != seeds_header:
+				per_seed.append(header)
+				seeds_header = header
 			var cells: PackedStringArray = PackedStringArray()
 			for metric: String in metrics:
 				cells.append("%.2f" % float(metrics[metric]))
@@ -160,12 +169,14 @@ func _variants(scenario: Dictionary, options: Dictionary) -> Array[Dictionary]:
 			copy = ScenarioRunner.with_tax(copy, options["tax"])
 		if options["target_stock"] >= 0:
 			copy = ScenarioRunner.with_target_stock(copy, options["target_stock"])
+		if options["barley_percent"] >= 0:
+			copy = ScenarioRunner.with_barley_percent(copy, options["barley_percent"])
 		found.append(copy)
 	return found
 
 
-# Everything the issue's acceptance criteria ask about, for one finished game.
-func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
+# Everything the issue's acceptance criteria ask about, for one finished game, plus what its "measure" asks for.
+func _metrics(runner: ScenarioRunner, result: ScenarioResult, measure: Dictionary) -> Dictionary:
 	var final: Dictionary = result.final_row()
 	var balance: float = result.mean("operating_balance_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
 	# "Stable" is the simulation's own rule (DefeatSystem.is_city_stable) on the final state.
@@ -177,7 +188,7 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 	# input of bread), per bread made.
 	var bread: float = result.mean("bread_produced_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
 	var input_spend: float = result.mean("wheat_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		+ result.mean("imports_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1) 		- result.mean("tea_spent_pm", LAST_MINUTES_FROM, result.rows.size() - 1)
-	return {
+	var found: Dictionary = {
 		"survived": 1 if result.survived() else 0,
 		"defeat_tick": result.defeat_tick,
 		"population": final["population"],
@@ -202,6 +213,8 @@ func _metrics(runner: ScenarioRunner, result: ScenarioResult) -> Dictionary:
 		"artisan_payback_minute": result.payback_minutes(false),
 		"artisan_payback_minute_with_housing": result.payback_minutes(true),
 	}
+	found.merge(result.measured(measure))
+	return found
 
 
 func _summary_line(scenario_id: String, metric: String, values: Array) -> String:
@@ -218,7 +231,8 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 
 func _parse(args: PackedStringArray) -> Dictionary:
 	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
-		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "help": false}
+		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "barley_percent": -1,
+		"help": false}
 	var index: int = 0
 	while index < args.size():
 		var flag: String = args[index]
@@ -227,7 +241,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			index += 1
 			continue
 		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price",
-				"--wheat-max-price", "--target-stock"] or index + 1 >= args.size():
+				"--wheat-max-price", "--target-stock", "--barley-percent"] or index + 1 >= args.size():
 			return {"error": "unknown or incomplete option '%s'" % flag}
 		var value: String = args[index + 1]
 		match flag:
@@ -251,6 +265,10 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				if not value.is_valid_int() or int(value) < 0:
 					return {"error": "--target-stock needs a whole number >= 0"}
 				options["target_stock"] = int(value)
+			"--barley-percent":
+				if not value.is_valid_int() or int(value) < 0 or int(value) > 100:
+					return {"error": "--barley-percent needs a whole number from 0 to 100"}
+				options["barley_percent"] = int(value)
 			_:
 				options[flag.trim_prefix("--")] = value
 		index += 2

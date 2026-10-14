@@ -63,7 +63,7 @@ londinium/
 │   ├── data/                 # test_data_valid.gd: every JSON loads, keys exist, no orphan params
 │   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
-│       └── long/             # longer games; their many-seed checks (long_test_*.gd) stay out of CI
+│       └── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
 ├── tools/                    # run_tests.sh / run_tests.ps1, run_long_tests.sh / .ps1, balance report script
 ├── docs/                     # GDD.md, DECISIONS.md (canonical), ARCHITECTURE.md, WORKFLOW.md
 └── .github/                  # ci.yml, export.yml, PR template
@@ -76,7 +76,7 @@ londinium/
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
    under which the max price stops applying; the pause toggle stops all buying). The warehouse has a capacity. The wharf buys imported flour that skips the mill
    (D-026); wheat fields on cultivable cells only.
-   The wharf has one unloading capacity (its staffed wheat output per minute) that wheat, barley and the imported flour share; the tea is exempt (issue #50). A lot of flour is paid at once and leaves a debt of units that the next ticks unload first (`MarketSystem._pay_flour_unloading`); what is left is split by the player's `SetUnloadingSplit` (whole percent to barley, the rest to wheat, which keeps its purchase policy inside its share). Barley's price walks on its own seeded generator so the wheat series does not move.
+   The wharf has one unloading capacity (its staffed wheat output per minute) that wheat, barley and the imported flour share; the tea is exempt (issue #50). The player's `SetUnloadingSplit` (whole percent to barley) is reserved first and the flour never touches it (issue #116). A lot of flour is paid at once and leaves a debt of units that the next ticks unload, before the wheat, from the rest (`MarketSystem._pay_flour_unloading`); the wheat keeps its purchase policy inside what that leaves. Barley's price walks on its own seeded generator so the wheat series does not move.
 4. Converters: mill (wheat→flour), bakery (flour→bread), malthouse (barley→malt), brewery (malt→beer), limited by staffed jobs and input stock. Malt and beer have a warehouse cap (`market.malt.*`, `market.beer.*`): a full warehouse stops its producer instead of discarding output (only the artisans drink it, D-033, so a city without their housing still fills the warehouse and stops), and beer spoils a little each minute. Several producers of a capped good share its room and its fractions (ADR 0006).
 5. Consumption: each class eats the goods it lists as needs at its own rate (bread by everyone, tea by the workers, beer by the artisans, D-025, D-033); tea and beer are drawn from the global store like a single balance; stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.

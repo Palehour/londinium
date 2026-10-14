@@ -12,13 +12,16 @@ const SCENARIO_DIR: String = "res://tests/scenarios"
 const LONG_SCENARIO_DIR: String = "res://tests/scenarios/long"
 const TICKS_PER_MINUTE: int = 60
 const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
-	"set_tea_imports", "set_flour_imports", "set_unloading_split"]
+	"set_tea_imports", "set_flour_imports", "set_unloading_split", "set_stock"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 # The class and the buildings the payback probe of issue #52 follows.
 const ARTISAN_CLASS: StringName = &"artisan"
 const BEER_CHAIN: Array[StringName] = [&"malthouse", &"brewery"]
 const ARTISAN_HOUSING: StringName = &"artisan_housing"
+# The keys a scenario's "measure" may hold; balance_report adds their metrics (issue #55).
+const MEASURES: Array[String] = ["tax_window", "beer_cut", "hourly"]
+const MINUTES_PER_HOUR: int = 60
 
 var _catalog: DataCatalog
 var _params: Params
@@ -108,7 +111,10 @@ func validate(scenario: Dictionary) -> Array[String]:
 		return errors
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
+	if scenario.has("in_all") and scenario["in_all"] is not bool:
+		errors.append("in_all must be true or false")
 	errors.append_array(_validate_price_schedule(scenario.get("price_schedule", []), duration))
+	errors.append_array(_validate_measure(scenario.get("measure", {}), duration))
 	var previous_tick: int = 0
 	var command_before_tick: int = -1
 	var index: int = 0
@@ -146,7 +152,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 			sim.apply_command(ForceWheatPriceCommand.new(int(schedule[next_price]["price"])))
 			next_price += 1
 		var queued: Array[Dictionary] = []
-		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued):
+		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued, result,
+				issued):
 			var entry: Dictionary = script[next_command]
 			var command: SimulationCommand = _make_command(entry)
 			sim.apply_command(command)
@@ -158,6 +165,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		if result.defeat_tick < 0:
 			snapshot = sim.snapshot()
 			_observe(result, snapshot, tick_index + 1)
+			if result.first_artisan_tick < 0 and _artisans(snapshot) > 0:
+				result.first_artisan_tick = tick_index + 1
 			_probe_tick(result, probe, sim.tick_flows(), tick_index + 1)
 		if (tick_index + 1) % TICKS_PER_MINUTE == 0:
 			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot, probe))
@@ -213,6 +222,35 @@ func _validate_price_schedule(schedule: Variant, duration: int) -> Array[String]
 	return errors
 
 
+# What balance_report measures on top of the usual metrics (issue #55). Every window must fit in the game.
+func _validate_measure(measure: Variant, duration: int) -> Array[String]:
+	if measure is not Dictionary:
+		return ["measure must be an object"]
+	var errors: Array[String] = []
+	@warning_ignore("integer_division")
+	var minutes: int = duration / TICKS_PER_MINUTE
+	for key: Variant in measure:
+		if key not in MEASURES:
+			errors.append("measure: unknown key '%s'" % str(key))
+	if measure.has("tax_window"):
+		var window: Variant = measure["tax_window"]
+		if window is not Array or window.size() != 2 or not _is_whole(window[0]) or not _is_whole(window[1]) 				or int(window[0]) < 0 or int(window[0]) > int(window[1]) or int(window[1]) > minutes:
+			errors.append("measure.tax_window must be [from_minute, to_minute] inside the game")
+	if measure.has("beer_cut"):
+		errors.append_array(_validate_beer_cut(measure["beer_cut"]))
+	if measure.has("hourly") and (measure["hourly"] is not bool or minutes < 2 * MINUTES_PER_HOUR):
+		errors.append("measure.hourly must be true or false, in a game of two hours or more")
+	return errors
+
+
+# The cut and the return are the first accepted demolish and the build after it, wherever the script runs
+# them (issue #55: the cut follows the first artisans, so its minute changes with the seed).
+func _validate_beer_cut(cut: Variant) -> Array[String]:
+	var share: Variant = cut.get("recovered_share") if cut is Dictionary else null
+	if cut is not Dictionary or not _is_whole(cut.get("recovery_minutes")) or int(cut["recovery_minutes"]) < 1 			or typeof(share) not in [TYPE_INT, TYPE_FLOAT] or float(share) <= 0.0 or float(share) > 1.0:
+		return ["measure.beer_cut needs whole recovery_minutes >= 1 and a recovered_share in (0, 1]"]
+	return []
+
 
 # Same predicate the simulation uses for "nobody is leaving", evaluated on the final state.
 func is_stable(result: ScenarioResult) -> bool:
@@ -241,15 +279,33 @@ static func with_target_stock(scenario: Dictionary, target_stock: int) -> Dictio
 	return copy
 
 
+# Copy of `scenario` with the barley share of every set_unloading_split replaced, for the grain sweep (issue #55).
+static func with_barley_percent(scenario: Dictionary, percent: int) -> Dictionary:
+	var copy: Dictionary = scenario.duplicate(true)
+	for command: Dictionary in copy["commands"]:
+		if command["cmd"] == "set_unloading_split":
+			command["barley_percent"] = percent
+	return copy
+
+
 # Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back
 # until the treasury reaches that amount, and `with_previous` runs it in the same tick as the
 # command before it, so a purchase made of several buildings is priced once. `queued` are the
 # commands already sent in this tick: they have not run yet, so a wait is checked against the
-# treasury they would leave (see _money_after).
-func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[Dictionary]) -> bool:
+# treasury they would leave (see _money_after). `after_artisans_ticks` waits that many ticks after
+# the first artisans arrive, and `after_previous_ticks` that many after the command before it ran
+# (issue #55: the beer crisis starts and ends relative to the game, not on a fixed minute).
+func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[Dictionary],
+		result: ScenarioResult, issued: Array[Dictionary]) -> bool:
 	if entry.get("with_previous", false):
 		return not queued.is_empty()
 	if tick_index < int(entry["tick"]):
+		return false
+	if entry.has("after_artisans_ticks") and (result.first_artisan_tick < 0
+			or tick_index < result.first_artisan_tick + int(entry["after_artisans_ticks"])):
+		return false
+	if entry.has("after_previous_ticks") and (issued.is_empty()
+			or tick_index < int(issued[issued.size() - 1]["tick"]) + int(entry["after_previous_ticks"])):
 		return false
 	if entry.has("wait_for_money"):
 		return _money_after(sim, queued) >= int(entry["wait_for_money"])
@@ -305,6 +361,8 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 			return SetFlourImportsCommand.new(bool(entry["enabled"]))
 		"set_unloading_split":
 			return SetUnloadingSplitCommand.new(int(entry["barley_percent"]))
+		"set_stock":
+			return ForceStockCommand.new(StringName(entry["good"]), int(entry["amount"]))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -366,6 +424,10 @@ func _probe_tick(result: ScenarioResult, probe: Dictionary, flows: Dictionary, t
 		result.payback_tick_without_housing = tick_count
 	if result.payback_tick_with_housing < 0 and probe["tax_total"] >= probe["cost_with"]:
 		result.payback_tick_with_housing = tick_count
+
+
+func _artisans(snapshot: Dictionary) -> int:
+	return int(snapshot["economy"].get("class_states", {}).get(ARTISAN_CLASS, {}).get("population", 0))
 
 
 func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionary, probe: Dictionary = {}) -> Dictionary:
@@ -433,6 +495,9 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		errors.append("%s: ticks must not go backwards" % where)
 	if entry.has("wait_for_money") and (not _is_whole(entry["wait_for_money"]) or int(entry["wait_for_money"]) < 0):
 		errors.append("%s: wait_for_money must be a whole amount of pence >= 0" % where)
+	for field: String in ["after_artisans_ticks", "after_previous_ticks"]:
+		if entry.has(field) and (not _is_whole(entry[field]) or int(entry[field]) < 0):
+			errors.append("%s: %s must be a whole number of ticks >= 0" % [where, field])
 	errors.append_array(_validate_grouping(entry, where, index, command_before_tick))
 	var name: String = String(entry.get("cmd", ""))
 	if name not in COMMAND_NAMES:
@@ -458,6 +523,9 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 			if not _is_whole(entry.get("barley_percent")) or int(entry["barley_percent"]) < 0 \
 					or int(entry["barley_percent"]) > 100:
 				errors.append("%s: barley_percent must be a whole number from 0 to 100" % where)
+		"set_stock":
+			if not _catalog.goods.has(StringName(str(entry.get("good", "")))) or not _is_whole(entry.get("amount")) 					or int(entry["amount"]) < 0:
+				errors.append("%s: set_stock needs a known good and a whole amount >= 0" % where)
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)
@@ -480,8 +548,9 @@ func _validate_grouping(entry: Dictionary, where: String, index: int,
 	if command_before_tick >= 0 and _is_whole(declared_tick) and int(declared_tick) != command_before_tick:
 		errors.append("%s: with_previous must declare the same tick as the command before it (%d)"
 			% [where, command_before_tick])
-	if entry.has("wait_for_money"):
-		errors.append("%s: with_previous follows the command before it and cannot wait for money" % where)
+	for field: String in ["wait_for_money", "after_artisans_ticks", "after_previous_ticks"]:
+		if entry.has(field):
+			errors.append("%s: with_previous follows the command before it and cannot have %s" % [where, field])
 	return errors
 
 
