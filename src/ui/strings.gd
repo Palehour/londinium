@@ -4,6 +4,11 @@ extends RefCounted
 const PENCE_PER_SHILLING: int = 12
 const PENCE_PER_POUND: int = 240
 
+# Endonyms. The captions stay these words in both languages, so the player can
+# find their own from the other one. They are not keys in locale/ui.csv.
+const LOCALE_ES: String = "Español"
+const LOCALE_EN: String = "English"
+
 # Phrase keys. The words live in locale/ui.csv. Placeholder order is the contract:
 # GDScript's % operator cannot reorder them, so every language keeps the same order.
 const HELP: StringName = &"ui.help"
@@ -166,12 +171,35 @@ const REASONS: Dictionary[StringName, StringName] = {
 }
 
 
+static var _translations_loaded: bool = false
+
+
 static func text(key: StringName) -> String:
+	_ensure_translations()
 	return TranslationServer.translate(key)
 
 
 static func use_default_locale() -> void:
-	TranslationServer.set_locale("es")
+	set_locale("es")
+
+
+# The generated .translation files are gitignored, so project.godot does not list them:
+# a clean --import would log "Cannot open file" before the CSV importer creates them.
+static func set_locale(locale: String) -> void:
+	_ensure_translations()
+	TranslationServer.set_locale(locale)
+
+
+static func _ensure_translations() -> void:
+	if _translations_loaded:
+		return
+	var spanish: Resource = load("res://locale/ui.es.translation")
+	var english: Resource = load("res://locale/ui.en.translation")
+	if not (spanish is Translation) or not (english is Translation):
+		return
+	TranslationServer.add_translation(spanish as Translation)
+	TranslationServer.add_translation(english as Translation)
+	_translations_loaded = true
 
 
 static func command_result(accepted: bool, reason_id: StringName) -> String:

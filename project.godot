@@ -24,7 +24,8 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://locale/ui.es.translation", "res://locale/ui.en.translation")
+; ui.es.translation and ui.en.translation are generated on import and gitignored.
+; Listing them here logs "Cannot open file" on a clean --import. Strings registers them.
 locale/fallback="es"
 
 [londinium]

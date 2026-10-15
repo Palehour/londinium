@@ -158,9 +158,8 @@ func _build_locale_row(content: VBoxContainer) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	_locale_group = ButtonGroup.new()
 	_locale_group.allow_unpress = false
-	# Endonyms, so the player can find their language from the other one.
-	_locale_es = _locale_button("Español", "es")
-	_locale_en = _locale_button("English", "en")
+	_locale_es = _locale_button(Strings.LOCALE_ES, "es")
+	_locale_en = _locale_button(Strings.LOCALE_EN, "en")
 	row.add_child(_locale_es)
 	row.add_child(_locale_en)
 	content.add_child(row)
@@ -175,7 +174,7 @@ func _locale_button(caption: String, locale: String) -> Button:
 
 
 func _select_locale(locale: String) -> void:
-	TranslationServer.set_locale(locale)
+	Strings.set_locale(locale)
 
 
 func _sync_locale_buttons() -> void:
