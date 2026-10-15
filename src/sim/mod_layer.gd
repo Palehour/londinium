@@ -26,7 +26,7 @@ func apply(documents: Dictionary[String, Dictionary], root: String, era: String)
 		return
 	for mod_name: String in _load_order(root):
 		mods.append(StringName(mod_name))
-		_apply_mod(documents, root.path_join(mod_name).path_join("data"), mod_name, era)
+		_apply_mod(documents, root, mod_name, era)
 	for location: String in _sources:
 		var setters: Array = _sources[location]
 		if setters.size() > 1:
@@ -68,6 +68,9 @@ func _load_order(root: String) -> Array[String]:
 	if not FileAccess.file_exists(list_path):
 		return available
 	var order: Array[String] = []
+	if _is_link(root, LOAD_ORDER_FILE):
+		errors.append("mods/%s: symbolic links are not allowed" % LOAD_ORDER_FILE)
+		return order
 	var raw: Variant = _read_json(list_path, "mods/" + LOAD_ORDER_FILE)
 	if raw == null:
 		return order
@@ -87,11 +90,15 @@ func _load_order(root: String) -> Array[String]:
 	return order
 
 
-func _apply_mod(documents: Dictionary[String, Dictionary], data_dir: String, mod_name: String, era: String) -> void:
+func _apply_mod(documents: Dictionary[String, Dictionary], root: String, mod_name: String, era: String) -> void:
+	var data_dir: String = root.path_join(mod_name).path_join("data")
+	if _is_link(root, mod_name) or _is_link(root.path_join(mod_name), "data"):
+		errors.append("mod '%s': symbolic links are not allowed" % mod_name)
+		return
 	if not DirAccess.dir_exists_absolute(data_dir):
 		errors.append("mod '%s': missing data/ folder" % mod_name)
 		return
-	for path: String in _json_files(data_dir, ""):
+	for path: String in _json_files(data_dir, "", mod_name):
 		# Another era's files are not loaded this game, so a mod may carry them without error.
 		if path.begins_with("eras/") and not path.begins_with("eras/%s/" % era):
 			continue
@@ -121,18 +128,29 @@ func _merge(target: Dictionary, overlay: Dictionary, location: String, mod_name:
 
 
 # Relative paths of every .json under `directory`, sorted so the merge order never depends on the file system.
-func _json_files(directory: String, prefix: String) -> Array[String]:
+# A symbolic link anywhere in a mod is an error and is never followed: a mod is only what is inside its folder.
+func _json_files(directory: String, prefix: String, mod_name: String) -> Array[String]:
 	var found: Array[String] = []
 	var files: PackedStringArray = DirAccess.get_files_at(directory)
 	files.sort()
 	for file_name: String in files:
-		if file_name.ends_with(".json"):
+		if _is_link(directory, file_name):
+			errors.append("mod '%s': %s: symbolic links are not allowed" % [mod_name, prefix.path_join(file_name)])
+		elif file_name.ends_with(".json"):
 			found.append(prefix.path_join(file_name))
 	var folders: PackedStringArray = DirAccess.get_directories_at(directory)
 	folders.sort()
 	for folder: String in folders:
-		found.append_array(_json_files(directory.path_join(folder), prefix.path_join(folder)))
+		if _is_link(directory, folder):
+			errors.append("mod '%s': %s: symbolic links are not allowed" % [mod_name, prefix.path_join(folder)])
+		else:
+			found.append_array(_json_files(directory.path_join(folder), prefix.path_join(folder), mod_name))
 	return found
+
+
+func _is_link(directory: String, entry: String) -> bool:
+	var access: DirAccess = DirAccess.open(directory)
+	return access != null and access.is_link(entry)
 
 
 func _read_json(path: String, label: String) -> Variant:

@@ -107,7 +107,9 @@ Every value goes through the same layers, in this order: **base → mods → pre
    `user://mods/load_order.json` and then, alphabetically, any folder it leaves out; without the list, every folder
    alphabetically. When two mods set the same value the last wins and `DataLoadResult.mod_conflicts` records it.
    A path that is not in `data/` is an error; another era's files are skipped. A mod file over
-   `ModLayer.MAX_FILE_BYTES` or nested deeper than `ModLayer.MAX_DEPTH` is rejected before it merges.
+   `ModLayer.MAX_FILE_BYTES` or nested deeper than `ModLayer.MAX_DEPTH` is rejected before it merges, and so is a
+   symbolic link anywhere in `user://mods` (the mod folder, a folder or file inside it, or `load_order.json`): a mod
+   is only what is inside its folder, and the error names the mod.
 3. **Preset:** relative (`mul`/`add` on the values below it, so on base + mods). Normal has no modifiers.
 4. **Knobs:** absolute; they replace the preset's value.
 5. **Role:** last, through the single modifier function (D-014).

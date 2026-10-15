@@ -4,12 +4,15 @@ extends GutTest
 # Each test writes its mods to a scratch folder in user:// and removes it afterwards.
 
 const ROOT: String = "user://test_mods"
+# Real files outside the mods root, for the symbolic links to point at.
+const OUTSIDE: String = "user://test_mods_outside"
 
 var _base: DataCatalog
 
 
 func before_each() -> void:
 	_remove(ROOT)
+	_remove(OUTSIDE)
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_base = loaded.catalog
@@ -17,6 +20,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	_remove(ROOT)
+	_remove(OUTSIDE)
 
 
 func _write(path: String, content: Variant) -> void:
@@ -30,8 +34,13 @@ func _write(path: String, content: Variant) -> void:
 func _remove(path: String) -> void:
 	if not DirAccess.dir_exists_absolute(path):
 		return
+	var access: DirAccess = DirAccess.open(path)
 	for folder: String in DirAccess.get_directories_at(path):
-		_remove(path.path_join(folder))
+		# A link goes alone; following it would empty the folder it points at.
+		if access.is_link(folder):
+			DirAccess.remove_absolute(path.path_join(folder))
+		else:
+			_remove(path.path_join(folder))
 	for file_name: String in DirAccess.get_files_at(path):
 		DirAccess.remove_absolute(path.path_join(file_name))
 	DirAccess.remove_absolute(path)
@@ -194,3 +203,44 @@ func test_same_mods_load_the_same_catalog() -> void:
 	assert_true(first.is_ok(), str(first.errors))
 	assert_eq(first.catalog.base_values, second.catalog.base_values)
 	assert_eq(first.catalog.base_values[&"market.barley.reversion"], 0.3)
+
+
+# Creates `link` (under ROOT) pointing at `target` (under OUTSIDE); false if this machine does not allow it.
+func _link(target: String, link: String) -> bool:
+	var full: String = ROOT.path_join(link)
+	DirAccess.make_dir_recursive_absolute(full.get_base_dir())
+	var made: Error = DirAccess.open(full.get_base_dir()).create_link(
+		ProjectSettings.globalize_path(OUTSIDE.path_join(target)), ProjectSettings.globalize_path(full))
+	if made != OK:
+		pending("this OS user cannot create symbolic links (%s)" % error_string(made))
+	return made == OK
+
+
+# A mod is only what is inside its folder: a link to a file, a folder or the whole mod is rejected and never read.
+func test_symbolic_links_in_mods_are_rejected_naming_the_mod() -> void:
+	DirAccess.make_dir_recursive_absolute(OUTSIDE)
+	var file: FileAccess = FileAccess.open(OUTSIDE.path_join("startup.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"money": 2000}))
+	file.close()
+	DirAccess.make_dir_recursive_absolute(OUTSIDE.path_join("economy"))
+	DirAccess.make_dir_recursive_absolute(OUTSIDE.path_join("whole/data"))
+	if not (_link("startup.json", "file_link/data/economy/startup.json")
+			and _link("economy", "folder_link/data/economy") and _link("whole", "whole_link")):
+		return
+	var errors: Array[String] = _load().errors
+	assert_eq(errors, ["mod 'file_link': economy/startup.json: symbolic links are not allowed",
+		"mod 'folder_link': economy: symbolic links are not allowed",
+		"mod 'whole_link': symbolic links are not allowed"])
+	_remove(ROOT)
+	assert_true(FileAccess.file_exists(OUTSIDE.path_join("startup.json")), "Cleaning up never follows a link")
+
+
+func test_a_symbolic_load_order_is_rejected() -> void:
+	_write("real/data/economy/startup.json", {"money": 2000})
+	DirAccess.make_dir_recursive_absolute(OUTSIDE)
+	var file: FileAccess = FileAccess.open(OUTSIDE.path_join("order.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify(["real"]))
+	file.close()
+	if not _link("order.json", ModLayer.LOAD_ORDER_FILE):
+		return
+	assert_eq(_load().errors, ["mods/load_order.json: symbolic links are not allowed"])
