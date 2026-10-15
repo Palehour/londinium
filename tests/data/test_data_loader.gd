@@ -101,6 +101,27 @@ func test_role_validation_uses_final_values_instead_of_intermediate_modifiers() 
 		assert_eq(params.get_value(&"defeat.depopulation.defeat_fraction"), 0.75)
 
 
+# Issue #118: a multiplier below 1 would turn a money sink into a discount, and free buildings are whole.
+func test_money_sink_values_out_of_range_are_rejected() -> void:
+	_documents["economy/economy.json"]["administration"]["max_multiplier"] = 0.5
+	_assert_invalid("economy/economy.json.administration.max_multiplier: invalid number value 0.5")
+
+
+func test_money_sink_free_buildings_must_be_whole() -> void:
+	_documents["economy/economy.json"]["administration"]["free_buildings"] = 1.5
+	_assert_invalid("economy/economy.json.administration.free_buildings: invalid integer value 1.5")
+
+
+func test_free_copies_must_be_whole() -> void:
+	_documents["economy/economy.json"]["construction_escalation"]["free_copies"] = 2.5
+	_assert_invalid("economy/economy.json.construction_escalation.free_copies: invalid integer value 2.5")
+
+
+func test_construction_escalation_cannot_be_negative() -> void:
+	_documents["economy/economy.json"]["construction_escalation"]["per_building"] = -0.1
+	_assert_invalid("economy/economy.json.construction_escalation.per_building: invalid number value -0.1")
+
+
 func test_missing_field_identifies_file_and_field() -> void:
 	_documents["economy/buildings.json"]["bakery"].erase("jobs")
 	_assert_invalid("economy/buildings.json.bakery.jobs: missing field")
@@ -166,6 +187,17 @@ func test_malformed_recipe_is_rejected() -> void:
 func test_invalid_tags_are_rejected() -> void:
 	_documents["economy/buildings.json"]["mill"]["tags"] = [false]
 	_assert_invalid("mill.tags: expected nonempty strings")
+
+
+func test_a_misspelled_tag_is_rejected() -> void:
+	# A typo in basic_infrastructure would make housing escalate without warning (#118).
+	_documents["economy/buildings.json"]["housing"]["tags"] = ["housing", "basic_infrastucture"]
+	_assert_invalid("housing.tags: unknown tag basic_infrastucture")
+
+
+func test_the_basic_infrastructure_tag_is_known() -> void:
+	assert_true(BuildingCosts.BASIC_INFRASTRUCTURE_TAG in DataLoader.BUILDING_TAGS,
+		"BuildingCosts reads a tag the loader accepts")
 
 
 func test_housing_tag_works_with_a_different_building_id() -> void:

@@ -26,12 +26,13 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	reason = _validate(state, params)
 	if reason != &"":
 		return
-	var cost: int = int(params.get_value(StringName("building.%s.cost" % _definition_id)))
+	var cost: int = BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id])
 	state.money -= cost
 	state.construction_spent_tick += cost
-	# Game-second clock, so demolition can tell a fresh building from an established one.
+	# Game-second clock, so demolition can tell a fresh building from an established one. The price paid is kept
+	# because it grows with each copy (issue #118) and demolition refunds on it.
 	state.buildings.append({"definition_id": _definition_id, "cell": [_cell.x, _cell.y],
-		"built_at": state.defeat_elapsed_seconds})
+		"built_at": state.defeat_elapsed_seconds, "paid": cost})
 	accepted = true
 
 
@@ -47,6 +48,6 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	var terrain_reason: StringName = _context.terrain_placement_reason(_definition_id, _cell)
 	if terrain_reason != &"":
 		return terrain_reason
-	if state.money < int(params.get_value(StringName("building.%s.cost" % _definition_id))):
+	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"
 	return &""

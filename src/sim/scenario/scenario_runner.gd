@@ -402,14 +402,19 @@ func _probe_tick(result: ScenarioResult, probe: Dictionary, flows: Dictionary, t
 	var housing_cost: float = 0.0
 	var chain: Array[StringName] = BEER_CHAIN.duplicate()
 	chain.append(ARTISAN_HOUSING)
+	var city_size: int = 0
+	for entry: Dictionary in flows["buildings"].values():
+		city_size += int(entry["count"])
+	var administration: float = BuildingCosts.administration_multiplier(_params, city_size)
 	for id: StringName in chain:
-		var now: Dictionary = flows["buildings"].get(id, {"count": 0, "workers": 0})
-		var built: int = maxi(0, int(now["count"]) - int(counts.get(id, 0)))
-		counts[id] = int(now["count"])
-		var running: float = int(now["count"]) * float(_params.get_value(StringName("building.%s.upkeep_per_minute" % id))) \
+		var now: Dictionary = flows["buildings"].get(id, {"count": 0, "workers": 0, "paid": 0})
+		# What the new buildings of this tick cost (it grows with each copy, issue #118); a demolition is no refund here.
+		var built: int = maxi(0, int(now["paid"]) - int(counts.get(id, 0)))
+		counts[id] = int(now["paid"])
+		var running: float = int(now["count"]) * administration \
+			* float(_params.get_value(StringName("building.%s.upkeep_per_minute" % id))) \
 			+ int(now["workers"]) * float(_params.get_value(StringName("building.%s.wage_per_worker_per_minute" % id)))
-		var spent: float = built * float(_params.get_value(StringName("building.%s.cost" % id))) \
-			+ running / float(TICKS_PER_MINUTE)
+		var spent: float = built + running / float(TICKS_PER_MINUTE)
 		if id == ARTISAN_HOUSING:
 			housing_cost += spent
 		else:

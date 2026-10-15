@@ -5,6 +5,10 @@ const BUILDING_FIELDS: Dictionary = {
 	"cost": "money", "upkeep_per_minute": "money",
 	"wage_per_worker_per_minute": "money", "jobs": "integer",
 }
+# Every tag a building may carry. Some change rules (housing, river, cultivable, and basic_infrastructure, which keeps
+# a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
+# changing what a building costs or where it goes.
+const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean"},
@@ -41,6 +45,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"unloading": {"default_barley_percent": "integer", "step_percent": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
 		"no_jobs_refund_ratio": "fraction"},
+	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
+	"economy": {
+		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
+		"construction_escalation": {"free_copies": "integer", "per_building": "number", "max_multiplier": "number"},
+	},
 	"defeat": {
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
@@ -237,6 +246,15 @@ func _strings(raw: Variant, path: String, target: Array[String]) -> bool:
 	return true
 
 
+func _known_tags(tags: Array[String], path: String) -> bool:
+	var valid: bool = true
+	for tag: String in tags:
+		if tag not in BUILDING_TAGS:
+			_errors.append("%s: unknown tag %s" % [path, tag])
+			valid = false
+	return valid
+
+
 func _load_goods(raw: Dictionary, catalog: DataCatalog) -> void:
 	if raw.is_empty():
 		_errors.append("economy/goods.json: expected goods")
@@ -268,6 +286,8 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var building: BuildingDef = BuildingDef.new()
 		building.id = StringName(id)
 		if not _strings(raw[id]["tags"], path + ".tags", building.tags):
+			continue
+		if not _known_tags(building.tags, path + ".tags"):
 			continue
 		var is_housing: bool = "housing" in building.tags
 		var schema: Dictionary = BUILDING_FIELDS.duplicate()
