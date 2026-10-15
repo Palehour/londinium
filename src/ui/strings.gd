@@ -12,7 +12,7 @@ const LOCALE_EN: String = "English"
 # Phrase keys. The words live in locale/ui.csv. Placeholder order is the contract:
 # GDScript's % operator cannot reorder them, so every language keeps the same order.
 const DIFFICULTY_KEYS: Array[StringName] = [
-	StringName] = [&"ui.difficulty_values", &"ui.mods_toggle", &"ui.mods_active", &"ui.mods_inactive",
+	&"ui.difficulty_values", &"ui.mods_toggle", &"ui.mods_active", &"ui.mods_inactive",
 	&"ui.difficulty", &"ui.difficulty_start", &"ui.difficulty_cancel", &"ui.difficulty_normal",
 	&"ui.difficulty_easy", &"ui.difficulty_hard", &"ui.knob_defeat_enabled", &"ui.knob_reaction_seconds",
 	&"ui.knob_grace_seconds", &"ui.knob_startup_money", &"ui.knob_volatility", &"ui.knob_refund_ratio",
