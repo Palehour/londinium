@@ -1,0 +1,4 @@
+scripts:
+  setup: |
+    godot --headless --path . --import
+setupAgentStartupPolicy: wait-for-setup
