@@ -2,7 +2,8 @@ extends GutTest
 
 # Money sinks of issue #118 (approved by Cristian on 2026-10-14, revised the same day): administration makes every
 # building's upkeep grow past the free ones, and from the third copy of a type each one costs 15 % more than the one
-# before (compounded, up to 3 times the base cost). Wages stay as they were.
+# before (compounded, up to 3 times the base cost), except housing and the wharf (basic infrastructure). Wages stay
+# as they were.
 
 var _catalog: DataCatalog
 var _context: EconomyContext
@@ -33,6 +34,10 @@ func _build(state: EconomyState, definition_id: StringName, cell: Vector2i) -> B
 	var command: BuildCommand = BuildCommand.new(_context, definition_id, cell)
 	command.execute(state, _params, RandomNumberGenerator.new())
 	return command
+
+
+func _definition(definition_id: StringName) -> BuildingDef:
+	return _context.buildings[definition_id]
 
 
 func _upkeep_paid_in_a_minute(state: EconomyState, params: Params) -> int:
@@ -88,53 +93,53 @@ func test_from_the_third_copy_each_costs_fifteen_percent_more_up_to_three_times(
 	assert_eq(base, 120)
 	var expected: Array[int] = [120, 120, 138, 159, 183, 210, 241, 278, 319, 360, 360]
 	for copies: int in range(expected.size()):
-		assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"bakery", copies), &"bakery"),
+		assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"bakery", copies), _definition(&"bakery")),
 			expected[copies], "bakery number %d" % (copies + 1))
 
 
 func test_buildings_of_another_type_do_not_make_it_dearer() -> void:
-	assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"housing", 5), &"bakery"), 120)
+	assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"mill", 5), _definition(&"bakery")), 120)
 
 
 func test_the_second_copy_still_costs_the_base_price() -> void:
-	var state: EconomyState = _state_with(&"housing", 1)
-	assert_true(_build(state, &"housing", Vector2i(3, 3)).accepted)
-	assert_eq(state.money, 100000 - 60)
-	assert_eq(state.buildings[1]["paid"], 60)
+	var state: EconomyState = _state_with(&"bakery", 1)
+	assert_true(_build(state, &"bakery", Vector2i(3, 3)).accepted)
+	assert_eq(state.money, 100000 - 120)
+	assert_eq(state.buildings[1]["paid"], 120)
 
 
 func test_build_charges_the_escalated_price_and_keeps_it_on_the_building() -> void:
-	var state: EconomyState = _state_with(&"housing", 2)
-	var command: BuildCommand = _build(state, &"housing", Vector2i(3, 3))
+	var state: EconomyState = _state_with(&"bakery", 2)
+	var command: BuildCommand = _build(state, &"bakery", Vector2i(3, 3))
 	assert_true(command.accepted)
-	assert_eq(state.money, 100000 - 69, "the third housing costs 60 x 1.15")
-	assert_eq(state.construction_spent_tick, 69)
-	assert_eq(state.buildings[2]["paid"], 69)
+	assert_eq(state.money, 100000 - 138, "the third bakery costs 120 x 1.15")
+	assert_eq(state.construction_spent_tick, 138)
+	assert_eq(state.buildings[2]["paid"], 138)
 
 
 func test_insufficient_money_is_judged_on_the_escalated_price() -> void:
-	var state: EconomyState = _state_with(&"housing", 2)
-	state.money = 68
-	var refused: BuildCommand = _build(state, &"housing", Vector2i(3, 3))
+	var state: EconomyState = _state_with(&"bakery", 2)
+	state.money = 137
+	var refused: BuildCommand = _build(state, &"bakery", Vector2i(3, 3))
 	assert_false(refused.accepted)
 	assert_eq(refused.reason, &"insufficient_money")
-	state.money = 69
-	assert_true(_build(state, &"housing", Vector2i(3, 3)).accepted)
+	state.money = 138
+	assert_true(_build(state, &"bakery", Vector2i(3, 3)).accepted)
 
 
 func test_demolishing_a_copy_makes_the_next_one_cheaper_again() -> void:
-	var state: EconomyState = _state_with(&"housing", 0)
-	_build(state, &"housing", Vector2i(1, 1))
-	_build(state, &"housing", Vector2i(2, 1))
-	_build(state, &"housing", Vector2i(3, 1))
-	assert_eq(BuildingCosts.construction_cost(_params, state, &"housing"), 79)
+	var state: EconomyState = _state_with(&"bakery", 0)
+	_build(state, &"bakery", Vector2i(1, 1))
+	_build(state, &"bakery", Vector2i(2, 1))
+	_build(state, &"bakery", Vector2i(3, 1))
+	assert_eq(BuildingCosts.construction_cost(_params, state, _definition(&"bakery")), 159)
 	DemolishCommand.new(Vector2i(3, 1)).execute(state, _params, RandomNumberGenerator.new())
-	assert_eq(BuildingCosts.construction_cost(_params, state, &"housing"), 69)
+	assert_eq(BuildingCosts.construction_cost(_params, state, _definition(&"bakery")), 138)
 
 
 func test_demolition_within_grace_refunds_what_was_paid() -> void:
-	var state: EconomyState = _state_with(&"housing", 2)
-	_build(state, &"housing", Vector2i(3, 3))
+	var state: EconomyState = _state_with(&"bakery", 2)
+	_build(state, &"bakery", Vector2i(3, 3))
 	var demolish: DemolishCommand = DemolishCommand.new(Vector2i(3, 3))
 	demolish.execute(state, _params, RandomNumberGenerator.new())
 	assert_true(demolish.accepted)
@@ -142,12 +147,48 @@ func test_demolition_within_grace_refunds_what_was_paid() -> void:
 
 
 func test_demolition_after_grace_refunds_the_ratio_of_what_was_paid() -> void:
-	var state: EconomyState = _state_with(&"housing", 2)
-	_build(state, &"housing", Vector2i(3, 3))
+	# A jobless building, so the ratio applies (an idle bakery would be refunded in full); the third artisan housing
+	# paid 120 x 1.15.
+	var state: EconomyState = _state_with(&"artisan_housing", 2)
+	_build(state, &"artisan_housing", Vector2i(3, 3))
 	state.defeat_elapsed_seconds += int(_params.get_value(&"demolish.refund_grace_seconds")) + 1
 	var ratio: float = float(_params.get_value(&"demolish.no_jobs_refund_ratio"))
 	DemolishCommand.new(Vector2i(3, 3)).execute(state, _params, RandomNumberGenerator.new())
-	assert_eq(state.money, 100000 - 69 + roundi(69 * ratio))
+	assert_eq(state.money, 100000 - 138 + roundi(138 * ratio))
+
+
+# --- Basic infrastructure (Cristian, #118, 2026-10-14 23:41) ---
+
+func test_housing_and_the_wharf_are_basic_infrastructure_in_data() -> void:
+	assert_true(BuildingCosts.BASIC_INFRASTRUCTURE_TAG in _definition(&"housing").tags)
+	assert_true(BuildingCosts.BASIC_INFRASTRUCTURE_TAG in _definition(&"wharf").tags)
+	assert_false(BuildingCosts.BASIC_INFRASTRUCTURE_TAG in _definition(&"artisan_housing").tags,
+		"only the workers' housing was exempted")
+
+
+func test_basic_infrastructure_always_costs_its_base_price() -> void:
+	for copies: int in [2, 3, 8, 20]:
+		assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"housing", copies), _definition(&"housing")),
+			60, "housing number %d" % (copies + 1))
+		assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"wharf", copies), _definition(&"wharf")),
+			240, "wharf number %d" % (copies + 1))
+
+
+func test_building_a_third_housing_charges_and_keeps_the_base_price() -> void:
+	var state: EconomyState = _state_with(&"housing", 2)
+	assert_true(_build(state, &"housing", Vector2i(3, 3)).accepted)
+	assert_eq(state.money, 100000 - 60)
+	assert_eq(state.buildings[2]["paid"], 60)
+
+
+func test_artisan_housing_still_escalates() -> void:
+	assert_eq(BuildingCosts.construction_cost(_params, _state_with(&"artisan_housing", 2),
+		_definition(&"artisan_housing")), 138)
+
+
+func test_basic_infrastructure_still_counts_for_administration() -> void:
+	# 22 housings: upkeep 22 x 1 at x1.3, as in test_upkeep_is_multiplied_by_administration.
+	assert_eq(_upkeep_paid_in_a_minute(_state_with(&"housing", 22), _params), 28)
 
 
 func test_a_building_without_a_recorded_price_refunds_on_the_base_cost() -> void:

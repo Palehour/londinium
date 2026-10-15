@@ -1,7 +1,7 @@
 {
   "wharf": {
     "cost": 240, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
-    "jobs": 4, "tags": ["river", "source"],
+    "jobs": 4, "tags": ["river", "source", "basic_infrastructure"],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
   },
   "mill": {
@@ -31,7 +31,7 @@
   },
   "housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "tags": ["housing"]
+    "jobs": 0, "capacity": 20, "tags": ["housing", "basic_infrastructure"]
   },
   "artisan_housing": {
     "cost": 120, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 0,

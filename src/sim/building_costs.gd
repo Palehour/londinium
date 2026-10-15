@@ -4,6 +4,11 @@ extends RefCounted
 # Money sinks of issue #118 (D-063): a bigger city costs more to run and each copy of a building more to build.
 # Both depend on the city, so they cannot be role modifiers; their parameters still go through Params (D-014).
 
+# Buildings with this tag in data/ always cost their base price: housing and the wharf are basic infrastructure,
+# decided by Cristian in #118 after the escalation left artisans_beer short of bread. They still count for
+# administration. Future streets (#67) stay out of both escalation and administration (D-063).
+const BASIC_INFRASTRUCTURE_TAG: String = "basic_infrastructure"
+
 
 # Upkeep multiplier: every building past the free ones adds per_building, up to max_multiplier.
 static func administration_multiplier(params: Params, building_count: int) -> float:
@@ -15,9 +20,13 @@ static func administration_multiplier(params: Params, building_count: int) -> fl
 
 # Price of the next building of this type: the first free_copies cost the base price, and each copy after them is
 # per_building dearer than the one before (compounded), up to max_multiplier times the base cost. Compounding was
-# decided by Cristian in the plan of #118, and the free copies in his revision of 2026-10-14.
-static func construction_cost(params: Params, state: EconomyState, definition_id: StringName) -> int:
+# decided by Cristian in the plan of #118, and the free copies in his revision of 2026-10-14. Basic infrastructure
+# never escalates.
+static func construction_cost(params: Params, state: EconomyState, definition: BuildingDef) -> int:
+	var definition_id: StringName = definition.id
 	var base: int = int(params.get_value(StringName("building.%s.cost" % definition_id)))
+	if BASIC_INFRASTRUCTURE_TAG in definition.tags:
+		return base
 	var step: float = 1.0 + float(params.get_value(&"economy.construction_escalation.per_building"))
 	var free_copies: int = int(params.get_value(&"economy.construction_escalation.free_copies"))
 	# The next building is copy number count + 1.

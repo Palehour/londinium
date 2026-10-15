@@ -14,7 +14,7 @@
     {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
     {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
-    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 573},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 537},
     {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 198},

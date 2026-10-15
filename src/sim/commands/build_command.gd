@@ -26,7 +26,7 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	reason = _validate(state, params)
 	if reason != &"":
 		return
-	var cost: int = BuildingCosts.construction_cost(params, state, _definition_id)
+	var cost: int = BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id])
 	state.money -= cost
 	state.construction_spent_tick += cost
 	# Game-second clock, so demolition can tell a fresh building from an established one. The price paid is kept
@@ -48,6 +48,6 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	var terrain_reason: StringName = _context.terrain_placement_reason(_definition_id, _cell)
 	if terrain_reason != &"":
 		return terrain_reason
-	if state.money < BuildingCosts.construction_cost(params, state, _definition_id):
+	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"
 	return &""
