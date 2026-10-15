@@ -1,0 +1,48 @@
+{
+  "defeat_enabled": {
+    "keys": [
+      "defeat.enabled"
+    ],
+    "boolean": true
+  },
+  "reaction_seconds": {
+    "keys": [
+      "defeat.bankruptcy.duration_seconds",
+      "defeat.hunger.duration_seconds",
+      "defeat.depopulation.duration_seconds"
+    ],
+    "min": 60,
+    "max": 600,
+    "step": 30
+  },
+  "grace_seconds": {
+    "keys": [
+      "defeat.grace_seconds"
+    ],
+    "min": 0,
+    "max": 900,
+    "step": 60
+  },
+  "startup_money": {
+    "keys": [
+      "startup.money"
+    ],
+    "min": 500,
+    "max": 3000,
+    "step": 100
+  },
+  "volatility": {
+    "keys": [],
+    "min": 0.5,
+    "max": 1.5,
+    "step": 0.1
+  },
+  "refund_ratio": {
+    "keys": [
+      "demolish.refund_ratio"
+    ],
+    "min": 0,
+    "max": 1,
+    "step": 0.25
+  }
+}

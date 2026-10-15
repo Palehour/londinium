@@ -4,6 +4,7 @@ extends RefCounted
 const INT64_UPPER_BOUND: float = 9223372036854775808.0
 
 const BY_KEY: Dictionary[StringName, Dictionary] = {
+	&"defeat.enabled": {"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"startup.seed": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"startup.money": {

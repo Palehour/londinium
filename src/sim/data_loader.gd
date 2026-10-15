@@ -51,6 +51,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"construction_escalation": {"free_copies": "integer", "per_building": "number", "max_multiplier": "number"},
 	},
 	"defeat": {
+		"enabled": "boolean",
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
@@ -65,9 +66,11 @@ const DEFAULT_ERA: String = "victorian"
 
 var _errors: Array[String] = []
 var _era: String = DEFAULT_ERA
+# Only transformed monetary values retain fractions until Params applies the role and rounds.
+var _layered_money: bool = false
 
 
-func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoadResult:
+func load_all(root: String = "res://data", era: String = DEFAULT_ERA, configuration: Dictionary = {}) -> DataLoadResult:
 	_errors.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
@@ -93,14 +96,21 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoa
 				_errors.append("%s: expected an object" % path)
 			else:
 				documents[path] = json.data
-	return _build(documents)
+	return _load_layers(documents, configuration)
 
 
 # Also accepts in-memory documents so invalid fixtures never enter the game's data directory.
-func load_documents(documents: Dictionary[String, Dictionary], era: String = DEFAULT_ERA) -> DataLoadResult:
+func load_documents(documents: Dictionary[String, Dictionary], era: String = DEFAULT_ERA, configuration: Dictionary = {}) -> DataLoadResult:
 	_errors.clear()
 	_era = era
-	return _build(documents)
+	return _load_layers(documents, configuration)
+
+
+func _load_layers(documents: Dictionary[String, Dictionary], configuration: Dictionary) -> DataLoadResult:
+	if configuration.is_empty() or not _errors.is_empty():
+		return _build(documents)
+	var layers: DataLayers = DataLayers.new()
+	return layers.load_layers(documents, configuration, _era)
 
 
 func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
@@ -205,6 +215,8 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	if kind == "boolean":
 		return _boolean(raw, path, key, catalog)
 	var integral: bool = kind in ["money", "integer", "positive_integer", "optional_price"]
+	if _layered_money and kind in ["money", "optional_price"]:
+		integral = false
 	if typeof(raw) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(raw)):
 		_errors.append("%s: expected a finite %s" % [path, kind])
 		return false
@@ -218,7 +230,7 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 			or not ParameterRanges.is_valid(StringName(key), value):
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
-	catalog.base_values[StringName(key)] = int(raw) if integral else value
+	catalog.base_values[StringName(key)] = int(raw) if integral or (_layered_money and kind in ["money", "optional_price"] and value == floor(value)) else value
 	if kind in ["money", "optional_price"]:
 		catalog.money_keys.append(StringName(key))
 	return true

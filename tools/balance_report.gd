@@ -25,6 +25,7 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --target-stock <n>    replace the target stock of every set_wheat_policy command
   --barley-percent <n>  replace the barley share of every set_unloading_split command, 0 to 100
                         (the grain sweep of issue #55: --scenario grain_split)
+  --preset <id>         normal, easy or hard (no installed mods)
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
@@ -46,7 +47,7 @@ func _init() -> void:
 		printerr("balance_report: --seeds above 1 needs --summary (the per-minute CSV is for one run)")
 		quit(2)
 		return
-	var runner: ScenarioRunner = ScenarioRunner.create()
+	var runner: ScenarioRunner = ScenarioRunner.create({"preset": options["preset"], "mods": []})
 	if runner == null:
 		quit(1)
 		return
@@ -230,7 +231,7 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 
 
 func _parse(args: PackedStringArray) -> Dictionary:
-	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
+	var options: Dictionary = {"preset": "normal", "scenario": ALL, "out": "", "seeds": 0, "summary": false,
 		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "barley_percent": -1,
 		"help": false}
 	var index: int = 0
@@ -240,7 +241,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			options[flag.trim_prefix("--")] = true
 			index += 1
 			continue
-		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price",
+		if flag not in ["--preset", "--scenario", "--out", "--seeds", "--tax", "--wheat-price",
 				"--wheat-max-price", "--target-stock", "--barley-percent"] or index + 1 >= args.size():
 			return {"error": "unknown or incomplete option '%s'" % flag}
 		var value: String = args[index + 1]

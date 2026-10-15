@@ -1,0 +1,91 @@
+{
+  "normal": {
+    "modifiers": [],
+    "events": {}
+  },
+  "easy": {
+    "modifiers": [
+      {
+        "key": "startup.money",
+        "op": "mul",
+        "value": 1.4
+      },
+      {
+        "key": "defeat.grace_seconds",
+        "op": "mul",
+        "value": 2
+      },
+      {
+        "key": "defeat.bankruptcy.duration_seconds",
+        "op": "mul",
+        "value": 1.6666666666666667
+      },
+      {
+        "key": "defeat.hunger.duration_seconds",
+        "op": "mul",
+        "value": 1.6666666666666667
+      },
+      {
+        "key": "defeat.depopulation.duration_seconds",
+        "op": "mul",
+        "value": 1.6666666666666667
+      },
+      {
+        "key": "demolish.refund_ratio",
+        "op": "add",
+        "value": 0.25
+      }
+    ],
+    "events": {}
+  },
+  "hard": {
+    "modifiers": [
+      {
+        "key": "startup.money",
+        "op": "add",
+        "value": -250
+      },
+      {
+        "key": "defeat.grace_seconds",
+        "op": "mul",
+        "value": 0.6
+      },
+      {
+        "key": "defeat.bankruptcy.duration_seconds",
+        "op": "mul",
+        "value": 0.6666666666666666
+      },
+      {
+        "key": "defeat.hunger.duration_seconds",
+        "op": "mul",
+        "value": 0.6666666666666666
+      },
+      {
+        "key": "defeat.depopulation.duration_seconds",
+        "op": "mul",
+        "value": 0.6666666666666666
+      },
+      {
+        "key": "market.wheat.max_price",
+        "op": "add",
+        "value": 1
+      },
+      {
+        "key": "market.wheat.reversion",
+        "op": "add",
+        "value": -0.15
+      },
+      {
+        "key": "market.barley.reversion",
+        "op": "add",
+        "value": -0.1
+      },
+      {
+        "key": "demolish.refund_ratio",
+        "op": "add",
+        "value": -0.25
+      }
+    ],
+    "events": {}
+  }
+}

@@ -45,3 +45,9 @@ func test_translation_server_serves_both_locales() -> void:
 	TranslationServer.set_locale("en")
 	assert_eq(Strings.building_label("mill"), "Mill")
 	assert_ne(Strings.text(Strings.PANEL_TITLE), spanish_title)
+
+
+func test_difficulty_captions_preserve_spanish_accents() -> void:
+	Strings.set_locale("es")
+	assert_eq(Strings.text(&"ui.difficulty_easy"), "F\u00e1cil")
+	assert_eq(Strings.text(&"ui.knob_reaction_seconds"), "Reacci\u00f3n (s)")

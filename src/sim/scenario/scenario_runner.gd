@@ -30,8 +30,8 @@ var _map_id: StringName = &"whitechapel_1850s"
 
 
 # Returns null (and logs the errors) when data/ does not load.
-static func create() -> ScenarioRunner:
-	var loaded: DataLoadResult = DataLoader.new().load_all()
+static func create(configuration: Dictionary = {}) -> ScenarioRunner:
+	var loaded: DataLoadResult = DataLoader.new().load_all("res://data", "victorian", configuration)
 	if not loaded.is_ok():
 		push_error("ScenarioRunner: data did not load: %s" % str(loaded.errors))
 		return null

@@ -9,7 +9,7 @@ func initialize(state: EconomyState, params: Params) -> void:
 	state.hunger_smoothed_coverage = state.bread_coverage
 	_update_population_history(state, params)
 	# Empty cities expose diagnostics immediately only when grace has already ended.
-	if state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
+	if _enabled(params) and state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
 			or state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))):
 		_update(state.depopulation, &"depopulation", true, true, false,
 			float(params.get_value(&"defeat.depopulation.duration_seconds")))
@@ -35,6 +35,8 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	var stable: bool = is_city_stable(state, params)
 	if stable:
 		_decay_population_peak(state, params)
+	if not _enabled(params):
+		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
@@ -94,3 +96,8 @@ func _update(condition: DefeatState, cause: StringName, warning: bool,
 	if counting and critical and condition.elapsed_seconds >= duration:
 		condition.status = &"defeat"
 		condition.cause = cause
+
+
+func _enabled(params: Params) -> bool:
+	# Older isolated test catalogs omit this switch; live data always requires it.
+	return not params.has_value(&"defeat.enabled") or bool(params.get_value(&"defeat.enabled"))

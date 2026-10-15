@@ -11,6 +11,15 @@ const LOCALE_EN: String = "English"
 
 # Phrase keys. The words live in locale/ui.csv. Placeholder order is the contract:
 # GDScript's % operator cannot reorder them, so every language keeps the same order.
+const DIFFICULTY_KEYS: Array[StringName] = [
+	StringName] = [&"ui.difficulty_values", &"ui.mods_toggle", &"ui.mods_active", &"ui.mods_inactive",
+	&"ui.difficulty", &"ui.difficulty_start", &"ui.difficulty_cancel", &"ui.difficulty_normal",
+	&"ui.difficulty_easy", &"ui.difficulty_hard", &"ui.knob_defeat_enabled", &"ui.knob_reaction_seconds",
+	&"ui.knob_grace_seconds", &"ui.knob_startup_money", &"ui.knob_volatility", &"ui.knob_refund_ratio",
+	&"ui.mods_order", &"ui.mods_up", &"ui.mods_down", &"ui.difficulty_validate", &"ui.difficulty_valid",
+	&"ui.mods_conflict", &"ui.mods_save_error",
+]
+
 const HELP: StringName = &"ui.help"
 const LOADING: StringName = &"ui.loading"
 const LEGEND: StringName = &"ui.legend"
@@ -239,6 +248,7 @@ static func all_keys() -> Array[StringName]:
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED,
 	]
+	keys.append_array(DIFFICULTY_KEYS)
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
 	for building_id: String in BUILDING_LABELS:

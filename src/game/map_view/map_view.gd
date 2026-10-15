@@ -2,6 +2,7 @@ extends Node2D
 
 const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
 
+var configuration: Dictionary = {}
 var session: GameSession
 var clock: SimClock
 var geometry: MapGeometry
@@ -99,6 +100,7 @@ func _ready() -> void:
 	panel_mount.add_child(_stats_panel)
 	_stats_panel.update_snapshot(_snapshot)
 	get_viewport().size_changed.connect(_resized)
+	_mount_difficulty(layer)
 	_update_mode()
 	queue_redraw()
 
@@ -118,7 +120,7 @@ func _notification(what: int) -> void:
 
 
 func _load_catalog() -> DataLoadResult:
-	return DataLoader.new().load_all()
+	return DataLoader.new().load_all("res://data", "victorian", configuration)
 
 
 func _update_help() -> void:
@@ -293,3 +295,36 @@ func _draw() -> void:
 		draw_string(font, rect.get_center() + Vector2(-width / 2.0, presentation.layout["label_offset_y"]), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])
 	if geometry.selected != Vector2i(-1, -1):
 		draw_rect(Rect2(Vector2(geometry.selected) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
+
+
+func _mount_difficulty(layer: CanvasLayer) -> void:
+	var button: Button = Button.new()
+	button.name = "DifficultyButton"
+	button.text = Strings.text(&"ui.difficulty")
+	layer.add_child(button)
+	button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	button.offset_left = 16
+	button.offset_top = -44
+	button.offset_right = 16 + button.get_combined_minimum_size().x
+	button.offset_bottom = -8
+	button.pressed.connect(func() -> void:
+		var menu: DifficultyMenu = DifficultyMenu.new()
+		menu.configuration = configuration
+		layer.add_child(menu)
+		var previous_speed: int = clock.speed
+		clock.speed = 0
+		menu.canceled.connect(func() -> void:
+			clock.speed = previous_speed
+			menu.queue_free())
+		menu.configuration_selected.connect(_start_configuration)
+		menu.popup_centered())
+
+
+func _start_configuration(selected: Dictionary) -> void:
+	var scene: PackedScene = load("res://src/game/map_view/map_view.tscn")
+	var replacement: Node2D = scene.instantiate()
+	replacement.set("configuration", selected)
+	get_parent().add_child(replacement)
+	if get_tree().current_scene == self:
+		get_tree().current_scene = replacement
+	queue_free()

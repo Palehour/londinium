@@ -115,3 +115,41 @@ Keys with ids from the era's data follow the same rule: `needs.<category>.thresh
 - Save/load is out of M1, but state classes expose `to_dict()`/`from_dict()` so it's cheap later.
 - Player-facing text is a key in `locale/ui.csv` (Spanish and English) and is read only through `Strings` in `src/ui/strings.gd`. It is presentation and is not part of the tick.
 - Renderer: **Compatibility** (OpenGL) — enough for 2D squares, runs on older Macs/PCs and in CI.
+
+## Difficulty and data overlays (D-065, issue #70)
+
+Before constructing `GameSession`, `DataLoader.load_all(root, era, configuration)` resolves
+base → mods → preset → knobs; `Params.get_value()` applies the role last. Omitting configuration
+keeps the original Normal loading path, including in existing tests. No tick steps move.
+`defeat.enabled` disables defeat timers/causes at step 10; the hunger smoothing at step 6 and
+population history remain available to the economy.
+
+`configuration` accepts `preset` (`normal`, `easy`, `hard`), `knobs` (only overrides explicitly
+selected), and optional `mods` (ordered active names). Without `mods`, the loader uses
+`user://mods/load_order.json`, an array such as `["cheap_houses", "grain_prices"]`; without
+that file it sorts installed folders alphabetically. `mods_root` allows isolated fixtures.
+Each mod provides partial JSON files under `user://mods/<name>/data/`, mirroring `data/`.
+Objects merge recursively, leaves/arrays replace, and the last mod wins a shared key.
+No scripts execute. Unsupported files, invalid JSON, missing mods and duplicate/unsafe names
+are errors. `DataLoadResult.conflicts` identifies the shared path, previous mod and winner;
+`configuration` records the resolved preset, knobs and active mod order for future #57.
+The menu allows enabling/disabling and reordering installed mods; confirmation validates,
+writes the active order, and starts a new session. Restart retains those effective parameters.
+
+Presets live in `data/difficulty/presets.json`: ordered `add`/`mul` operations on parameter
+keys, with an inert `events` object reserved for #63. Knob targets, bounds and steps live in
+`data/difficulty/knobs.json`. DataLoader validates the base and every completed mod, then the
+preset and knobs through the same schemas and `ParameterRanges`; an invalid earlier layer
+cannot be hidden by a later layer. Errors include layer, file and key; no partial catalog is
+returned. Whole-second reaction durations round after relative scaling; monetary fractions
+survive until the final role calculation in `Params`, preserving ADR 0002. Volatility explicitly
+rounds grain price spread and max_step to integers, as required by D-065.
+
+Example mod `data/economy/startup.json`: `{ "money": 1200 }`.
+Example configuration: `{ "preset": "easy", "knobs": { "defeat_enabled": false }, "mods": [] }`.
+Player-facing captions live in `locale/ui.csv`, accessed through `Strings`.
+
+For balance verification use `tools/balance_report.ps1 --preset easy --summary --seeds 20 --out <dir>`
+(or the `.sh` wrapper). `--preset` deliberately excludes installed mods. Compare Normal summary
+and per-minute output byte for byte against the same commands at a fixed develop commit;
+intentional defeat scenarios are reported separately when evaluating preset survival.

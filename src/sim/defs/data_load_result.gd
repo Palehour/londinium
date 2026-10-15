@@ -3,6 +3,8 @@ extends RefCounted
 
 var catalog: DataCatalog
 var errors: Array[String] = []
+var conflicts: Array[Dictionary] = []
+var configuration: Dictionary = {}
 
 
 func is_ok() -> bool:

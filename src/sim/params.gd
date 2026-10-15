@@ -160,6 +160,9 @@ func _modified_boolean(key: StringName, value: Variant, errors: Array[String]) -
 	for modifier: Modifier in _modifiers:
 		if modifier.key != key:
 			continue
+		if not is_finite(modifier.value):
+			errors.append("Params: nonfinite result for '%s'" % key)
+			return null
 		if modifier.op != &"set" or modifier.value not in [0.0, 1.0]:
 			errors.append("Params: boolean '%s' only accepts set 0 or 1" % key)
 			return null
