@@ -30,7 +30,66 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 6. **Revisión de Cristian**: lee el resumen, prueba los 3 pasos en el PC si toca pantalla, mergea con
    *squash merge*. Bailey revisa la PR antes (ver la skill `revisar-pr`) y confirma con Cristian las autorizaciones de edición de
    `GDD.md`/`DECISIONS.md`. Opcional: pedirle además a un segundo agente que revise.
-7. Un agente por issue a la vez; issues que tocan los mismos archivos, en serie.
+7. Un agente por issue a la vez; issues que tocan los mismos archivos, en serie (ver "Trabajo en paralelo con Orca").
+
+## Trabajo en paralelo con Orca
+Orca abre un worktree de git por tarea y corre un agente en cada uno. El `orca.yaml` de la raíz prepara cada
+worktree con el import de Godot y hace que el agente espere a que termine (`setupAgentStartupPolicy: wait-for-setup`).
+
+### Regla base
+- Un issue = un worktree = una rama = un PR a `develop`. El worktree sale de `develop`, nunca de otra rama de
+  feature, salvo pedido explícito.
+- Las revisiones no se hacen en Orca: el PR va a Bailey y a Cristian como en "Ciclo de una tarea".
+
+### Configuración, una vez por máquina
+1. **`godot` en el PATH**, apuntando al binario *console* 4.7.2. El setup del `orca.yaml` lo llama así porque
+   `$GODOT` (sh) y `%GODOT%` (cmd) no se escriben igual.
+   - Windows: un `godot.cmd` en una carpeta del PATH de usuario con
+     `@"C:\ruta\Godot_v4.7.2-stable_win64_console.exe" %*`. Después de cambiar el PATH, reiniciar Orca y abrir
+     terminales nuevas: los procesos que ya estaban abiertos siguen con el PATH viejo.
+   - Mac: `sudo mkdir -p /usr/local/bin && sudo ln -sf /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot`
+     (`/usr/local/bin` puede no existir en las Mac con Apple Silicon y pide `sudo`). Sin `sudo`: crear el symlink en
+     `~/bin` y agregar `export PATH="$HOME/bin:$PATH"` a `~/.zprofile`. Una app de escritorio como Orca no siempre
+     hereda el PATH de `~/.zshrc`.
+   - Comprobar con `godot --version` **desde una terminal de Orca** (tiene que decir 4.7.2).
+2. **Rama base:** `orca repo set-base-ref --repo id:<repoId> --ref origin/develop`, antes de crear worktrees.
+3. **Hooks:** Settings → Repository → Hooks, fuente = `orca.yaml` only, así la PC y la Mac corren lo mismo.
+4. **Skills de Orca:** `orca skills install --skill orca-cli --skill orchestration`. Las de jira, linear, emulator y
+   per-workspace-env no aplican.
+
+### Lanzar un worker
+- Prompt de siempre: "Implementá el issue #N de Palehour/londinium. Leé el cuerpo y todos los comentarios, y usá las
+  skills … Primero hacé el plan en modo plan y esperá mi aprobación." Cada agente arranca en modo plan y Cristian
+  aprueba el plan de cada uno por separado.
+- Desde la CLI: `orca worktree create --name issue-N --agent claude --setup run --prompt "<prompt>"`
+  (otros agentes: `codex`, `grok`, entre otros). Para varios workers con seguimiento, usar Orchestration.
+
+### Qué va en paralelo
+- Solo issues independientes de verdad: no alcanza con que toquen archivos distintos si uno depende de algo que el
+  otro cambia. Empezar con 2 o 3 workers.
+- **Archivos calientes**, que dos issues no tocan a la vez: `docs/DECISIONS.md`, `docs/GDD.md`,
+  `data/economy/*.json`, `src/ui/strings.gd` y `src/sim/simulation.gd`. Antes de lanzar, comparar el Alcance de cada
+  issue: si comparten uno, van en serie.
+- Los D-xxx nuevos se reservan en el issue antes de arrancar, para que dos PRs no tomen el mismo número.
+
+### Integrar
+- Se mergea un PR por vez. Después de cada squash-merge en `develop`, los PRs abiertos se rebasean y vuelven a correr
+  `tools/run_tests` antes de pedir merge.
+- Un worker trabado se descarta; no se mergea trabajo parcial.
+
+### Pitfalls
+- Godot reformatea `data/economy/buildings.json` con tabs al abrir el proyecto o guardar en el editor (el `--import`
+  por consola no lo toca). Ese cambio no se commitea nunca: `git checkout -- data/economy/buildings.json` antes de
+  commitear.
+- `tools/run_long_tests` y `balance_report --seeds 20` son CPU-bound: uno por vez, solo en el PR que va a mergearse.
+  Los demás workers usan `tools/run_tests`.
+- Cada worktree tiene su propio `.godot/` (está en `.gitignore`). El primer import tarda y no se comparte: no poner
+  `.godot` en `worktree.sharedDirectories`, porque compartir el caché entre checkouts lo corrompe.
+- En la app de escritorio el setup corre después de un prompt de confianza. Desde la CLI, solo con `--setup run`.
+- Cada worktree lee el `orca.yaml` de **su** rama. Si el yaml cambia, mergearlo a `develop` y actualizar el checkout
+  principal antes de crear worktrees; Orca vuelve a pedir confianza porque compara el contenido.
+- En Windows el setup corre con `cmd.exe` y corta si una línea falla; en Mac, con `sh`. Por eso es una sola línea que
+  vale en los dos.
 
 ## Release
 1. Cristian abre una PR `develop` → `main` ("release: v0.x.y") y la mergea con *merge commit* (nunca squash),
@@ -76,4 +135,5 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 - MCP de Godot (`Coding-Solo/godot-mcp`): opcional, recién cuando haya escena jugable y queramos que el
   agente corra el juego y lea la salida de debug. No hace falta para la simulación.
 - En el PC con Windows: el zip de Godot 4.7.2 trae `Godot_v4.7.2-stable_win64.exe` y `..._win64_console.exe`;
-  los agentes usan el de consola para ver la salida. Definir la variable `GODOT` apuntando a ese.
+  los agentes usan el de consola para ver la salida. Definir la variable `GODOT` apuntando a ese. Para Orca,
+  además, `godot` en el PATH (ver "Trabajo en paralelo con Orca").

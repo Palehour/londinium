@@ -73,6 +73,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   lines of non-test code; split otherwise.
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
+- Parallel work in Orca worktrees (setup, hot files, pitfalls): `docs/WORKFLOW.md` → "Trabajo en paralelo con Orca".
 
 ## GitHub tracking
 Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
