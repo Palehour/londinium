@@ -189,6 +189,17 @@ func test_invalid_tags_are_rejected() -> void:
 	_assert_invalid("mill.tags: expected nonempty strings")
 
 
+func test_a_misspelled_tag_is_rejected() -> void:
+	# A typo in basic_infrastructure would make housing escalate without warning (#118).
+	_documents["economy/buildings.json"]["housing"]["tags"] = ["housing", "basic_infrastucture"]
+	_assert_invalid("housing.tags: unknown tag basic_infrastucture")
+
+
+func test_the_basic_infrastructure_tag_is_known() -> void:
+	assert_true(BuildingCosts.BASIC_INFRASTRUCTURE_TAG in DataLoader.BUILDING_TAGS,
+		"BuildingCosts reads a tag the loader accepts")
+
+
 func test_housing_tag_works_with_a_different_building_id() -> void:
 	var buildings: Dictionary = _documents["economy/buildings.json"]
 	buildings["worker_housing"] = buildings["housing"]
