@@ -36,6 +36,16 @@ func test_real_data_has_the_three_presets_and_every_knob() -> void:
 	assert_true(result.catalog.base_values[&"defeat.enabled"])
 
 
+func test_hard_money_factor_is_exactly_16_21() -> void:
+	# Bailey's review of #129: 0.762 gave 800.1 and only reached 800 by rounding; 16/21 lands on 800 for 1050 d.
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	var money: Array = result.catalog.difficulties[&"hard"].modifiers.filter(
+		func(modifier: Modifier) -> bool: return modifier.key == &"startup.money")
+	assert_eq(money.size(), 1)
+	assert_eq(money[0].value, 16.0 / 21.0)
+
+
 func test_every_preset_label_has_a_translation_key() -> void:
 	var result: DataLoadResult = DataLoader.new().load_all()
 	for preset_id: StringName in result.catalog.difficulties:

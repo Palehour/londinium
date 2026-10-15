@@ -1,6 +1,6 @@
 # ADR 0010: Capas de datos (dificultad y mods)
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-10-15
 - **Origen:** issue #70; D-044, D-049 y D-065
 
@@ -11,7 +11,7 @@ aplica los modificadores del rol. D-065 fija el orden base → mods → preset �
 Normal y las perillas absolutas.
 
 ## Decisión
-- **Los mods se fusionan antes de validar (PR B de #70).** Cada archivo de un mod se fusiona en profundidad sobre el
+- **Los mods se fusionan antes de validar (llega en la PR B, #132).** Cada archivo de un mod se fusiona en profundidad sobre el
   documento de `data/` con la misma ruta, en el orden de `load_order.json`. Lo que queda pasa por el mismo
   `DataLoader`, así que un mod se valida con los mismos esquemas y rangos que `data/`. Los valores base que ve el
   resto del juego ya incluyen los mods.
@@ -27,8 +27,10 @@ Normal y las perillas absolutas.
 - **Normal no tiene modificadores**, así que sin preset el juego es idéntico a `data/`.
 
 ## Estado
-Propuesto mientras el PR está abierto; con la aprobación de Cristian, el autor lo cambia a Aceptado en un commit del
-mismo PR, antes del merge.
+Aceptado el 2026-10-15 en la PR #129. Aprobación de Cristian, confirmada por Bailey (2026-10-15 06:56 ART): «Sí, apruebo
+en la #129 D-065, el resultado de Difícil tal como se midió con las corridas no jugadas documentadas, los guiones al
+#128, el alcance sin mods (van en otra PR) y el test de defeat.* que saltea switches. Chief puede mergear con squash
+cuando estén los arreglos.» La parte de mods llega en la PR B (#132).
 
 ## Consecuencias
 - `GameSession.difficulty` dice en qué preset corre la partida, para #57.
