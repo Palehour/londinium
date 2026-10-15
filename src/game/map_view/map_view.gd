@@ -121,7 +121,7 @@ func _notification(what: int) -> void:
 
 
 func _load_catalog() -> DataLoadResult:
-	return DataLoader.new().load_all()
+	return DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, ModLayer.DEFAULT_ROOT)
 
 
 func _update_help() -> void:

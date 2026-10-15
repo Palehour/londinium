@@ -74,7 +74,9 @@ var _errors: Array[String] = []
 var _era: String = DEFAULT_ERA
 
 
-func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoadResult:
+# `mods_root` is where the player's mods live (ModLayer.DEFAULT_ROOT in the game); empty loads data/ alone, as
+# tests and balance tools do so that nothing on the machine changes their results.
+func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root: String = "") -> DataLoadResult:
 	_errors.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
@@ -104,7 +106,14 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoa
 				_errors.append("%s: expected an object" % path)
 			else:
 				documents[path] = json.data
-	return _build(documents)
+	var mods: ModLayer = ModLayer.new()
+	mods.apply(documents, mods_root, era)
+	_errors.append_array(mods.errors)
+	var result: DataLoadResult = _build(documents)
+	result.errors.assign(result.errors.map(mods.blame))
+	result.mods = mods.mods
+	result.mod_conflicts = mods.conflicts
+	return result
 
 
 # Also accepts in-memory documents so invalid fixtures never enter the game's data directory.

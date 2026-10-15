@@ -60,6 +60,7 @@ londinium/
 │   │   ├── data_layers.gd    # preset + knobs → `set` modifiers, with clear errors for a knob out of range
 │   │   ├── modifier.gd       # {key, op: add|mul|set, value}
 │   │   ├── data_loader.gd    # JSON → typed defs, with validation errors
+│   │   ├── mod_layer.gd      # mods (D-049): user://mods/<name>/data/ merged over data/ before validation
 │   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …
 │   │   ├── systems/          # one file per tick step (see order below)
 │   │   ├── commands/         # command classes / validation
@@ -133,6 +134,15 @@ rules. Archive/statistics and autosave consumers can use this record when their 
 Parameter keys are dotted paths into the data (`building.bakery.jobs`, `defeat.hunger.threshold`).
 Keys with ids from the era's data follow the same rule: `needs.<category>.threshold`, `needs.housing_bonus_per_category`, `class.<class>.housing_max_bonus`, `class.<class>.need.<good>.value`; `ParameterRanges.PATTERNS` validates them by shape, and structure (which good counts in which category, which building houses a class) lives in `ClassDef`/`NeedDef` and reaches the sim through `EconomyContext` (ADR 0007). `EconomyState.class_needs` holds the result per class and category; the base class keeps its satisfaction and growth in the flat fields of `EconomyState` and the other classes in `class_states` (ADR 0008); `snapshot()["needs"]` explains it (`NeedsDiagnostics`).
 `test_data_valid.gd` fails if code asks for a key that doesn't exist or a modifier targets a missing key.
+
+**Mods (D-049, D-065).** A mod is a folder `user://mods/<name>/data/` with JSON files at the same paths as `data/`
+(`economy/startup.json`, `eras/victorian/needs.json`…). `ModLayer` merges each one over its base document before
+`DataLoader` validates anything: objects merge field by field, numbers, switches and lists replace. So a mod passes
+the same schemas, `ParameterRanges` and cross rules as `data/`, and each error names the mod. Order: the list in
+`user://mods/load_order.json` (a mod left out stays off) or, without it, every folder alphabetically; when two mods
+set the same value the last wins and `DataLoadResult.mod_conflicts` records it for the mods menu. A path that is not
+in `data/` is an error; another era's files are skipped. Only the game loads mods (`map_view`); tests and
+`balance_report` call `load_all()` without them, so nothing on the machine changes their results.
 
 ## Conventions worth stating
 - Money is `int` in pence; display converts to £/s/d or decimals in the UI only.
