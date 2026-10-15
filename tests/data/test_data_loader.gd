@@ -575,3 +575,39 @@ func test_the_unloading_step_is_required_and_validates_its_range() -> void:
 	before_each()
 	_set_modifier({"key": "policy.unloading.step_percent", "op": "set", "value": 0})
 	_assert_invalid("Params: invalid range for 'policy.unloading.step_percent'")
+
+
+func test_stats_levels_are_required_and_validated() -> void:
+	_documents.erase("economy/stats.json")
+	_assert_invalid("economy/stats.json: missing file")
+	for field: String in ["fine.span_seconds", "medium.bucket_seconds", "medium.span_seconds",
+			"chapter.bucket_seconds", "causes.max_events"]:
+		for value: float in [0.0, -1.0, 1.5, INF, NAN]:
+			before_each()
+			var parts: PackedStringArray = field.split(".")
+			_documents["economy/stats.json"][parts[0]][parts[1]] = value
+			_assert_invalid(parts[1] + ":")
+	before_each()
+	_documents["economy/stats.json"]["medium"]["span_seconds"] = 7205
+	_assert_invalid("stats.medium.span_seconds must be a multiple of stats.medium.bucket_seconds")
+
+
+# Cristian on 2026-10-15 (Mason's proposal, D-066): max_events 1000 to 100000, min_duration_seconds 0 to 30.
+func test_cause_log_cap_and_duration_ranges() -> void:
+	for invalid: float in [999.0, 100001.0, 1500.5]:
+		before_each()
+		_documents["economy/stats.json"]["causes"]["max_events"] = invalid
+		_assert_invalid("max_events:")
+	for invalid: float in [-1.0, 31.0, 2.5]:
+		before_each()
+		_documents["economy/stats.json"]["causes"]["min_duration_seconds"] = invalid
+		_assert_invalid("min_duration_seconds:")
+	before_each()
+	_documents["economy/stats.json"]["causes"].erase("min_duration_seconds")
+	_assert_invalid("min_duration_seconds: missing field")
+	for valid: Array in [[1000, 0], [100000, 30]]:
+		before_each()
+		_documents["economy/stats.json"]["causes"]["max_events"] = valid[0]
+		_documents["economy/stats.json"]["causes"]["min_duration_seconds"] = valid[1]
+		var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+		assert_eq(result.errors, [] as Array[String], str(valid))
