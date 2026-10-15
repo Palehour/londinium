@@ -44,9 +44,14 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 ### Configuración, una vez por máquina
 1. **`godot` en el PATH**, apuntando al binario *console* 4.7.2. El setup del `orca.yaml` lo llama así porque
    `$GODOT` (sh) y `%GODOT%` (cmd) no se escriben igual.
-   - Windows: un `godot.cmd` en una carpeta del PATH con `@"C:\ruta\Godot_v4.7.2-stable_win64_console.exe" %*`.
-   - Mac: `ln -s /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot`.
-   - Comprobar con `godot --version` (tiene que decir 4.7.2). Reiniciar Orca después de cambiar el PATH.
+   - Windows: un `godot.cmd` en una carpeta del PATH de usuario con
+     `@"C:\ruta\Godot_v4.7.2-stable_win64_console.exe" %*`. Después de cambiar el PATH, reiniciar Orca y abrir
+     terminales nuevas: los procesos que ya estaban abiertos siguen con el PATH viejo.
+   - Mac: `sudo mkdir -p /usr/local/bin && sudo ln -sf /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot`
+     (`/usr/local/bin` puede no existir en las Mac con Apple Silicon y pide `sudo`). Sin `sudo`: crear el symlink en
+     `~/bin` y agregar `export PATH="$HOME/bin:$PATH"` a `~/.zprofile`. Una app de escritorio como Orca no siempre
+     hereda el PATH de `~/.zshrc`.
+   - Comprobar con `godot --version` **desde una terminal de Orca** (tiene que decir 4.7.2).
 2. **Rama base:** `orca repo set-base-ref --repo id:<repoId> --ref origin/develop`, antes de crear worktrees.
 3. **Hooks:** Settings → Repository → Hooks, fuente = `orca.yaml` only, así la PC y la Mac corren lo mismo.
 4. **Skills de Orca:** `orca skills install --skill orca-cli --skill orchestration`. Las de jira, linear, emulator y
@@ -73,8 +78,9 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 - Un worker trabado se descarta; no se mergea trabajo parcial.
 
 ### Pitfalls
-- Godot reformatea `data/economy/buildings.json` con tabs en cada worktree que importa. Ese cambio no se commitea
-  nunca: `git checkout -- data/economy/buildings.json` antes de commitear.
+- Godot reformatea `data/economy/buildings.json` con tabs al abrir el proyecto o guardar en el editor (el `--import`
+  por consola no lo toca). Ese cambio no se commitea nunca: `git checkout -- data/economy/buildings.json` antes de
+  commitear.
 - `tools/run_long_tests` y `balance_report --seeds 20` son CPU-bound: uno por vez, solo en el PR que va a mergearse.
   Los demás workers usan `tools/run_tests`.
 - Cada worktree tiene su propio `.godot/` (está en `.gitignore`). El primer import tarda y no se comparte: no poner
