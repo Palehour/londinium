@@ -55,6 +55,11 @@ var payback_tick_without_housing: int = -1
 var first_artisan_tick: int = -1
 # Bytes the chapter statistics take in a save at the end of the game, compressed (issue #82); not a CSV column.
 var stats_history_bytes: int = -1
+# The whole end-of-game snapshot plus that history, compressed alike: an upper bound of a save until #57.
+var save_bytes: int = -1
+# Events in the cause log at the end, and how many of them are intermittent (D-066); not CSV columns.
+var stats_cause_events: int = -1
+var stats_intermittent_events: int = -1
 
 
 func row(minute: int) -> Dictionary:

@@ -21,6 +21,8 @@ const BREAD_FLOOR: float = 0.5
 const BREAD_TARGET: float = 0.6
 const BREAD_TARGET_SEEDS: int = 17
 # Issue #82, Cristian on 2026-10-13: an 8-hour game must not save more than 5 MB of statistics, compressed.
+# On 2026-10-15 he asked the same of the whole save, and that the cause log of the 8-hour game (long game B) stay
+# under its cap: if it reaches it, raise stats.causes.min_duration_seconds first, not the cap.
 const STATS_GAME: String = "drift_8h"
 const STATS_MAX_BYTES: int = 5 * 1024 * 1024
 
@@ -29,6 +31,9 @@ static var _stage3_minutes: Array[int] = []
 static var _lowest_bread: Array[float] = []
 static var _defeats: int = 0
 static var _stats_bytes: Array[int] = []
+static var _save_bytes: Array[int] = []
+static var _cause_events: Array[int] = []
+static var _cause_cap: int = 0
 
 var _stage3_tax: float
 var _stage3_required: int
@@ -41,6 +46,7 @@ func before_all() -> void:
 		return
 	_stage3_tax = float(runner.param(&"victory.victorian_demo.revenue.threshold"))
 	_stage3_required = int(runner.param(&"victory.victorian_demo.revenue.required_minutes"))
+	_cause_cap = int(runner.param(&"stats.causes.max_events"))
 	for id: String in GAMES:
 		var scenario: Dictionary = ScenarioRunner.load_file(LONG_DIR.path_join("%s.json" % id))
 		assert_eq(runner.validate(scenario), [] as Array[String], id)
@@ -61,7 +67,11 @@ func before_all() -> void:
 				_defeats += 0 if result.survived() else 1
 			if id == STATS_GAME:
 				_stats_bytes.append(result.stats_history_bytes)
-				gut.p("%s seed %d: statistics history %d bytes compressed" % [id, seed_value, result.stats_history_bytes])
+				_save_bytes.append(result.save_bytes)
+				_cause_events.append(result.stats_cause_events)
+				gut.p("%s seed %d: statistics history %d bytes and whole save %d bytes compressed; %d cause events of %d (%d intermittent)"
+					% [id, seed_value, result.stats_history_bytes, result.save_bytes, result.stats_cause_events,
+					_cause_cap, result.stats_intermittent_events])
 			gut.p("%s seed %d: money %+.0f per hour, lowest bread %.2f and beer %.2f after hour 1, %d min in debt; stage 3 of #56 at minute %d; lowest bread by hour %s, beer %s"
 				% [id, seed_value, found["money_drift_per_hour"], found["bread_coverage_lowest_after_hour1"],
 				found["beer_coverage_lowest_after_hour1"], int(found["minutes_in_debt"]), stage3,
@@ -97,6 +107,15 @@ func test_eight_hour_statistics_save_under_5_mb() -> void:
 	assert_eq(_stats_bytes.size(), GAMES[STATS_GAME])
 	for size: int in _stats_bytes:
 		assert_between(size, 1, STATS_MAX_BYTES)
+	assert_eq(_save_bytes.size(), GAMES[STATS_GAME])
+	for size: int in _save_bytes:
+		assert_between(size, 1, STATS_MAX_BYTES, "whole save")
+
+
+func test_eight_hour_cause_log_stays_under_its_cap() -> void:
+	assert_eq(_cause_events.size(), GAMES[STATS_GAME])
+	for events: int in _cause_events:
+		assert_between(events, 1, _cause_cap - 1, "raise stats.causes.min_duration_seconds, not the cap")
 
 
 func test_money_drift_of_the_four_hour_game_is_reported_against_its_target() -> void:

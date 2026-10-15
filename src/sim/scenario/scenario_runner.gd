@@ -195,7 +195,13 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
 		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot, probe))
 	result.final_economy = snapshot["economy"]
-	result.stats_history_bytes = StatsHistory.compressed_size(sim.stats_history_to_dict())
+	var history: Dictionary = sim.stats_history_to_dict()
+	result.stats_history_bytes = StatsHistory.compressed_size(history)
+	result.save_bytes = StatsHistory.compressed_size({"snapshot": snapshot, "stats_history": history})
+	var events: Array[Dictionary] = sim.stats_events()
+	result.stats_cause_events = events.size()
+	result.stats_intermittent_events = events.filter(
+		func(event: Dictionary) -> bool: return event["cause"] == CauseLog.INTERMITTENT).size()
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]

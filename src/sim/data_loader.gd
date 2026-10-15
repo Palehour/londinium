@@ -55,7 +55,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"fine": {"span_seconds": "positive_integer"},
 		"medium": {"bucket_seconds": "positive_integer", "span_seconds": "positive_integer"},
 		"chapter": {"bucket_seconds": "positive_integer"},
-		"causes": {"max_events": "positive_integer"},
+		"causes": {"max_events": "positive_integer", "min_duration_seconds": "integer"},
 	},
 	"defeat": {
 		# Off only through the defeats knob (D-065): the city can no longer lose, but the timers' inputs still run.

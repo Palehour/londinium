@@ -27,7 +27,9 @@ class Tier:
 	# Closed buckets kept; 0 keeps every one.
 	var capacity: int
 	var first_bucket: int = 0
+	# Closed buckets as a ring once capacity is reached: the oldest is at _head.
 	var buckets: Array[PackedFloat32Array] = []
+	var _head: int = 0
 	var open_bucket: int = 0
 	var open: PackedFloat64Array = []
 	var _last_flags: PackedByteArray = []
@@ -74,10 +76,12 @@ class Tier:
 			closed[out + 3] = open[base + 4] if _last_flags[index] else open[base + 3]
 		if buckets.is_empty():
 			first_bucket = open_bucket
-		buckets.append(closed)
-		if capacity > 0 and buckets.size() > capacity:
-			buckets.pop_front()
+		if capacity > 0 and buckets.size() >= capacity:
+			buckets[_head] = closed
+			_head = (_head + 1) % capacity
 			first_bucket += 1
+		else:
+			buckets.append(closed)
 		open_bucket += 1
 		_reset_open()
 
@@ -96,6 +100,15 @@ class Tier:
 		var current: int = recorded_seconds / bucket_seconds
 		return open_bucket == current
 
+	# Closed buckets, oldest first.
+	func ordered() -> Array[PackedFloat32Array]:
+		if _head == 0:
+			return buckets
+		var found: Array[PackedFloat32Array] = []
+		for offset: int in buckets.size():
+			found.append(buckets[(_head + offset) % buckets.size()])
+		return found
+
 	# Bucket fields of one series, oldest first.
 	func column(index: int) -> Dictionary:
 		var lows: PackedFloat32Array = []
@@ -103,7 +116,7 @@ class Tier:
 		var means: PackedFloat32Array = []
 		var totals: PackedFloat32Array = []
 		var base: int = index * BUCKET_FIELDS
-		for bucket: PackedFloat32Array in buckets:
+		for bucket: PackedFloat32Array in ordered():
 			lows.append(bucket[base])
 			highs.append(bucket[base + 1])
 			means.append(bucket[base + 2])
@@ -117,7 +130,7 @@ class Tier:
 		var opens: Dictionary = {}
 		for index: int in ids.size():
 			var packed: PackedFloat32Array = []
-			for bucket: PackedFloat32Array in buckets:
+			for bucket: PackedFloat32Array in ordered():
 				packed.append_array(bucket.slice(index * BUCKET_FIELDS, (index + 1) * BUCKET_FIELDS))
 			columns[String(ids[index])] = packed
 			opens[String(ids[index])] = open.slice(index * OPEN_FIELDS, (index + 1) * OPEN_FIELDS)
@@ -160,6 +173,7 @@ class Tier:
 					closed[index * BUCKET_FIELDS + field] = packed[(skipped + bucket) * BUCKET_FIELDS + field]
 			restored.append(closed)
 		buckets = restored
+		_head = 0
 		first_bucket = int(saved["first_bucket"]) + skipped
 		open_bucket = int(saved["open_bucket"])
 		open = restored_open
@@ -172,7 +186,9 @@ var _params: Params
 var _context: EconomyContext
 # Game seconds recorded so far: the history's own clock, saved with it, so buckets line up after a load.
 var _seconds: int = 0
+# The last seconds as a ring once full: the oldest is at _fine_head.
 var _fine: Array[PackedFloat64Array] = []
+var _fine_head: int = 0
 var _fine_span: int
 var _medium: Tier
 var _chapter: Tier
@@ -193,19 +209,23 @@ func _init(defs: Array[SeriesDef], params: Params, context: EconomyContext) -> v
 	var medium_buckets: int = int(params.get_value(&"stats.medium.span_seconds")) / medium_seconds
 	_medium = Tier.new(medium_seconds, maxi(1, medium_buckets), last_flags)
 	_chapter = Tier.new(int(params.get_value(&"stats.chapter.bucket_seconds")), 0, last_flags)
-	_causes = CauseLog.new(int(params.get_value(&"stats.causes.max_events")))
+	_causes = CauseLog.new(int(params.get_value(&"stats.causes.max_events")),
+		int(params.get_value(&"stats.causes.min_duration_seconds")))
 
 
-# Step 11 of the tick: one sample of every series and the causes that changed.
+# Step 11 of the tick: one sample of every series and the causes that changed. Defeats, victory stages and
+# commands skip the cause log's duration filter: the last of them may end the game before it would confirm.
 func record(state: EconomyState) -> void:
 	_seconds += 1
 	var values: PackedFloat64Array = []
 	values.resize(_defs.size())
 	for index: int in _defs.size():
 		values[index] = float(_defs[index].sampler.call(state))
-	_fine.append(values)
-	if _fine.size() > _fine_span:
-		_fine.pop_front()
+	if _fine.size() < _fine_span:
+		_fine.append(values)
+	else:
+		_fine[_fine_head] = values
+		_fine_head = (_fine_head + 1) % _fine_span
 	_medium.add(_seconds, values)
 	_chapter.add(_seconds, values)
 	_note_causes(state)
@@ -214,7 +234,7 @@ func record(state: EconomyState) -> void:
 # Step 1 of the tick: every command's outcome, on the second the tick is about to record.
 func note_command(command: SimulationCommand) -> void:
 	var cause: StringName = &"accepted" if command.accepted else command.reason
-	_causes.note(_seconds + 1, &"command", command.get_script().get_global_name(), cause)
+	_causes.note(_seconds + 1, &"command", command.get_script().get_global_name(), cause, true)
 
 
 func _note_causes(state: EconomyState) -> void:
@@ -239,10 +259,10 @@ func _note_causes(state: EconomyState) -> void:
 	_causes.note(_seconds, &"policy", &"tea_imports", StringName(str(state.tea_imports_enabled)))
 	_causes.note(_seconds, &"policy", &"flour_imports", StringName(str(state.flour_imports_enabled)))
 	for condition: StringName in SeriesRegistry.DEFEAT_CONDITIONS:
-		_causes.note(_seconds, &"defeat", condition, SeriesRegistry.defeat_state(state, condition).status)
+		_causes.note(_seconds, &"defeat", condition, SeriesRegistry.defeat_state(state, condition).status, true)
 	for stage: StringName in state.victory.stages:
 		var done: bool = int(state.victory.stages[stage]["completed_tick"]) >= 0
-		_causes.note(_seconds, &"victory", stage, &"completed" if done else &"pending")
+		_causes.note(_seconds, &"victory", stage, &"completed" if done else &"pending", true)
 
 
 # Only the two reasons people leave: hunger or low satisfaction (GrowthSystem).
@@ -269,8 +289,8 @@ func series(id: StringName, tier: StringName) -> Dictionary:
 	match tier:
 		TIER_FINE:
 			var values: PackedFloat32Array = []
-			for sample: PackedFloat64Array in _fine:
-				values.append(sample[index])
+			for offset: int in _fine.size():
+				values.append(_fine[(_fine_head + offset) % _fine.size()][index])
 			return {"bucket_seconds": 1, "first_second": _seconds - _fine.size() + 1, "values": values}
 		TIER_MEDIUM:
 			return _medium.column(index)
