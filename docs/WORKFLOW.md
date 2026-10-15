@@ -131,7 +131,6 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 
 ## Herramientas para agentes (gratis)
 - AGENTS.md (Codex, Cursor, Grok Build lo leen; Claude Code vía `CLAUDE.md` → `@AGENTS.md`).
-- Skill `godot-gdscript-patterns`: `npx skills add wshobson/agents --skill godot-gdscript-patterns`.
 - MCP de Godot (`Coding-Solo/godot-mcp`): opcional, recién cuando haya escena jugable y queramos que el
   agente corra el juego y lea la salida de debug. No hace falta para la simulación.
 - En el PC con Windows: el zip de Godot 4.7.2 trae `Godot_v4.7.2-stable_win64.exe` y `..._win64_console.exe`;
