@@ -13,10 +13,8 @@ const LONG_DIR: String = "res://tests/scenarios/long"
 const CRITERION_GAME: String = "drift_4h"
 const DRIFT_FROM: float = 1500.0
 const DRIFT_TO: float = 4000.0
-# Stage 3 of #56 (approved by Cristian on 2026-10-13): collected tax >= 250 per minute, sustained 10 minutes
-# (the mean of the window, as in the defeats). It was expected between hours 1 and 1.5; only reported here.
-const STAGE3_TAX_PER_MINUTE: float = 250.0
-const STAGE3_WINDOW_MINUTES: int = 10
+# Stage 3 of #56, Cristian's 2026-10-15 decision: each complete minute must collect the minimum,
+# for consecutive minutes; a low minute resets the streak. Only observe it: long games have no victory.
 # Bread criterion of the 4-hour game after hour 1, decided by Cristian in #118 on 2026-10-14 (Mason's proposal, D-063):
 # no defeat in any seed, lowest bread coverage >= 0.5 in every seed and >= 0.6 in at least 17 of the 20.
 const BREAD_FLOOR: float = 0.5
@@ -28,12 +26,17 @@ static var _stage3_minutes: Array[int] = []
 static var _lowest_bread: Array[float] = []
 static var _defeats: int = 0
 
+var _stage3_tax: float
+var _stage3_required: int
+
 
 func before_all() -> void:
 	var runner: ScenarioRunner = ScenarioRunner.create()
 	assert_not_null(runner, "data/ must load")
 	if runner == null:
 		return
+	_stage3_tax = float(runner.param(&"victory.victorian_demo.revenue.threshold"))
+	_stage3_required = int(runner.param(&"victory.victorian_demo.revenue.required_minutes"))
 	for id: String in GAMES:
 		var scenario: Dictionary = ScenarioRunner.load_file(LONG_DIR.path_join("%s.json" % id))
 		assert_eq(runner.validate(scenario), [] as Array[String], id)
@@ -47,7 +50,7 @@ func before_all() -> void:
 			assert_true(result.survived(), "%s seed %d was lost" % [id, seed_value])
 			var found: Dictionary = result.measured(scenario["measure"])
 			_drifts[id].append(float(found["money_drift_per_hour"]))
-			var stage3: int = _first_sustained_minute(result, STAGE3_TAX_PER_MINUTE, STAGE3_WINDOW_MINUTES)
+			var stage3: int = _first_sustained_minute(result, _stage3_tax, _stage3_required)
 			if id == CRITERION_GAME:
 				_stage3_minutes.append(stage3)
 				_lowest_bread.append(float(found["bread_coverage_lowest_after_hour1"]))
@@ -58,11 +61,12 @@ func before_all() -> void:
 				str(result.lowest_per_hour("bread_coverage")), str(result.lowest_per_hour("beer_coverage"))])
 
 
-# The minute that closes the first window of `window` minutes whose mean collected tax reaches `per_minute`;
-# -1 if no window does.
-static func _first_sustained_minute(result: ScenarioResult, per_minute: float, window: int) -> int:
-	for minute: int in range(window, result.rows.size()):
-		if result.mean("taxes_pm", minute - window + 1, minute) >= per_minute:
+# Rows at minute m contain the actual taxes paid in that complete minute (the 60-tick Stats window).
+static func _first_sustained_minute(result: ScenarioResult, per_minute: float, required: int) -> int:
+	var streak: int = 0
+	for minute: int in range(1, result.rows.size()):
+		streak = streak + 1 if float(result.row(minute)["taxes_pm"]) >= per_minute else 0
+		if streak >= required:
 			return minute
 	return -1
 
@@ -97,9 +101,15 @@ func test_stage_three_of_56_is_reported() -> void:
 	assert_eq(_stage3_minutes.size(), GAMES[CRITERION_GAME])
 	var reached: Array = _stage3_minutes.filter(func(minute: int) -> bool: return minute >= 0)
 	var median: float = _median(reached) if not reached.is_empty() else -1.0
-	gut.p("stage 3 of #56 (tax >= %.0f per minute over %d min) on %s: reached in %d of %d seeds, median minute %.1f, earliest %s, latest %s"
-		% [STAGE3_TAX_PER_MINUTE, STAGE3_WINDOW_MINUTES, CRITERION_GAME, reached.size(), _stage3_minutes.size(),
+	gut.p("stage 3 of #56 (tax >= %.0f per minute in each of %d consecutive min) on %s: reached in %d of %d seeds, median minute %.1f, earliest %s, latest %s"
+		% [_stage3_tax, _stage3_required, CRITERION_GAME, reached.size(), _stage3_minutes.size(),
 		median, str(reached.min()), str(reached.max())])
+
+
+func test_stage_three_of_56_reaches_minutes_sixty_to_ninety_in_all_twenty_seeds() -> void:
+	assert_eq(_stage3_minutes.size(), 20)
+	for index: int in range(_stage3_minutes.size()):
+		assert_between(_stage3_minutes[index], 60, 90, "seed %d" % (index + 1))
 
 
 func test_bread_after_hour_one_of_the_four_hour_game_meets_its_criterion() -> void:

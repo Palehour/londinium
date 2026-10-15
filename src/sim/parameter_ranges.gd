@@ -149,8 +149,11 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 }
 
 # Keys with ids in the middle (a category, a class, a good) come from the era's data, so they are matched
-# by shape instead of listed: a new era needs no edit here. Bounds are inclusive.
+# by shape instead of listed: a new era needs no edit here. Bounds are inclusive unless marked exclusive.
 const PATTERNS: Array[Dictionary] = [
+	{"prefix": "victory.", "suffix": ".threshold", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
+	{"prefix": "victory.", "suffix": ".duration_seconds", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
+	{"prefix": "victory.", "suffix": ".required_minutes", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
 	{"prefix": "needs.", "suffix": ".threshold", "min": 0.0, "max": 100.0, "integer": false},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
@@ -214,5 +217,6 @@ static func _pattern_allows(key: StringName, value: float) -> bool:
 			if pattern["integer"] and value != floor(value):
 				return false
 			var above: bool = value > pattern["min"] if pattern.get("min_exclusive", false) else value >= pattern["min"]
-			return above and value <= pattern["max"]
+			var below: bool = value < pattern["max"] if pattern.get("max_exclusive", false) else value <= pattern["max"]
+			return above and below
 	return true

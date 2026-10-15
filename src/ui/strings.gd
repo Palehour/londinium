@@ -1,6 +1,18 @@
 class_name Strings
 extends RefCounted
 
+const OBJECTIVES: StringName = &"ui.objectives"
+const OBJECTIVE_POPULATION: StringName = &"ui.objective_population"
+const OBJECTIVE_CLASS: StringName = &"ui.objective_class"
+const OBJECTIVE_REVENUE: StringName = &"ui.objective_revenue"
+const OBJECTIVE_MET: StringName = &"ui.objective_met"
+const OBJECTIVE_PENDING: StringName = &"ui.objective_pending"
+const VICTORY_WHY: StringName = &"ui.victory_why"
+const VICTORY_NO_BREAK: StringName = &"ui.victory_no_break"
+const VICTORY_MESSAGE: StringName = &"ui.victory_message"
+const VICTORY_DISMISS: StringName = &"ui.victory_dismiss"
+const ALERT_DEFEAT_AFTER_VICTORY: StringName = &"ui.alert_defeat_after_victory"
+
 const PENCE_PER_SHILLING: int = 12
 const PENCE_PER_POUND: int = 240
 
@@ -227,6 +239,7 @@ static func reason(key: StringName) -> String:
 
 static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
+		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
 		HELP, LOADING, LEGEND, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,

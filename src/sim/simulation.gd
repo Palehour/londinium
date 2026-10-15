@@ -23,6 +23,7 @@ var _growth: GrowthSystem = GrowthSystem.new()
 var _mobility: MobilitySystem = MobilitySystem.new()
 var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
+var _victory: VictorySystem
 var _stats: Stats
 # Classes this simulation had to add to the state it was given; primed once the needs are evaluated.
 var _new_classes: Array[ClassDef] = []
@@ -30,7 +31,7 @@ var _new_classes: Array[ClassDef] = []
 
 # New-game defaults are explicit so loading a snapshot never grants supplies or resets happiness.
 static func create_new(params: Params, initial_state: EconomyState, seed_value: int,
-		context: EconomyContext) -> Simulation:
+		context: EconomyContext, victory_stages: Array[Dictionary] = []) -> Simulation:
 	var state: EconomyState = EconomyState.from_dict(initial_state.to_dict())
 	state.stocks[&"bread"] = int(params.get_value(&"population.initial_bread"))
 	state.bread_fraction = 0.0
@@ -41,12 +42,14 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	state.hunger_smoothed_coverage = state.bread_coverage
 	SatisfactionSystem.new().update_target(state, params, context)
 	SatisfactionSystem.new().snap_to_target(state, context)
-	return Simulation.new(params, state, seed_value, context)
+	return Simulation.new(params, state, seed_value, context, [], victory_stages)
 
 
 # stats_window is snapshot()["stats"]["window"]; it is copied, so callers may keep mutating theirs.
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
-		context: EconomyContext = null, stats_window: Array = []) -> void:
+		context: EconomyContext = null, stats_window: Array = [],
+		victory_stages: Array[Dictionary] = []) -> void:
+	_victory = VictorySystem.new(victory_stages)
 	_params = params
 	_state = EconomyState.from_dict(initial_state.to_dict())
 	_seed = seed_value
@@ -121,6 +124,7 @@ func tick() -> void:
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)
 			_commands.clear()
+		_victory.tick(_state, _params)
 		_stats.record(_state)
 
 
@@ -172,6 +176,7 @@ func snapshot() -> Dictionary:
 			"beer": MarketSystem.storage_snapshot(_state, _params, &"beer")},
 		"imports": ImportSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
+		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,
 		"seed": _seed,
 		"rng_state": get_rng_state(),

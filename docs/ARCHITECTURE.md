@@ -39,6 +39,7 @@ londinium/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates, head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
+│   ├── scenarios/             # optional playable scenarios: victory.stages (D-064)
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
 │   └── maps/
@@ -86,8 +87,27 @@ londinium/
 8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008).
    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
-10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation).
+10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
 11. Stats + snapshot emitted.
+
+## Chapter objectives (D-064, issue #56)
+`data/scenarios/victorian_demo.json` defines `victory.stages`; a scenario without that property has no victory.
+`DataCatalog.scenarios` holds only the structural stage definitions. Numbers use scenario-specific keys through
+`Params`: `victory.<scenario>.<stage>.threshold` and either `.duration_seconds` (population/class population means)
+or `.required_minutes` (consecutive tax minutes). `ParameterRanges` validates them, including role modifiers.
+`GameSession` selects the demo by default and passes its definitions explicitly to `Simulation`; the balance runner
+passes none, so its scenarios and CSV columns stay unchanged.
+
+`VictorySystem` runs after money and defeat, before stats. Means require a full rolling window of tick samples.
+Tax objectives sum actual integer `taxes_tick` over non-overlapping blocks of 60 ticks from game start. A complete
+minute at or above the threshold adds one to the streak; a low minute resets it, with no tolerance or averaging
+across minutes. Stages are independent and latch permanently. Completing all of them records a single victory;
+a simultaneous defeat takes priority, and defeat after victory keeps the win record but ends the game.
+
+`EconomyState.victory` (`VictoryState`) serializes windows, the partial tax minute, streaks, completion ticks and
+the last shortfall. `snapshot()["victory"]` exposes stage progress and the last break (minute, revenue, threshold,
+reason), without mutable state aliases. The panel renders it and announces victory once; it contains no objective
+rules. Archive/statistics and autosave consumers can use this record when their features exist (#57, #82).
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

@@ -8,11 +8,13 @@ var simulation: Simulation
 var context: EconomyContext
 var _params: Params
 var _initial_state: EconomyState
+var _victory_stages: Array[Dictionary] = []
 var _seed: int
 var _pending: Array[SimulationCommand] = []
 
 
-func _init(catalog: DataCatalog, params: Params) -> void:
+func _init(catalog: DataCatalog, params: Params, scenario_id: StringName = &"victorian_demo") -> void:
+	_victory_stages.assign(catalog.scenarios.get(scenario_id, {}).get("stages", []))
 	_params = params
 	context = EconomyContext.new(catalog, catalog.maps[&"whitechapel_1850s"])
 	var state: EconomyState = EconomyState.new()
@@ -24,7 +26,7 @@ func _init(catalog: DataCatalog, params: Params) -> void:
 	# create_new copies the state, so this template stays pristine for restarts.
 	_initial_state = state
 	_seed = int(params.get_value(&"startup.seed"))
-	simulation = Simulation.create_new(params, _initial_state, _seed, context)
+	simulation = Simulation.create_new(params, _initial_state, _seed, context, _victory_stages)
 
 
 func get_snapshot() -> Dictionary:
@@ -44,7 +46,7 @@ func submit_command(command: SimulationCommand) -> void:
 # A restart is a brand-new game from the same startup data and seed.
 func restart() -> void:
 	_pending.clear()
-	simulation = Simulation.create_new(_params, _initial_state, _seed, context)
+	simulation = Simulation.create_new(_params, _initial_state, _seed, context, _victory_stages)
 
 
 func publish_tick() -> void:

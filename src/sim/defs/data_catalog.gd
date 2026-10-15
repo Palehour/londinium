@@ -6,6 +6,7 @@ var buildings: Dictionary[StringName, BuildingDef] = {}
 var roles: Dictionary[StringName, RoleDef] = {}
 var maps: Dictionary[StringName, MapDef] = {}
 var classes: Dictionary[StringName, ClassDef] = {}
+var scenarios: Dictionary[StringName, Dictionary] = {}
 var categories: Array[StringName] = []
 var base_values: Dictionary[StringName, Variant] = {}
 var money_keys: Array[StringName] = []

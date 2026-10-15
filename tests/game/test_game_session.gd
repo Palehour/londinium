@@ -16,6 +16,18 @@ func _resolved(accepted: bool, reason: StringName) -> void:
 	_results.append({"accepted": accepted, "reason": reason})
 
 
+func test_only_demo_enables_victory_and_restart_resets_its_progress() -> void:
+	assert_true(_session.get_snapshot()["victory"]["enabled"])
+	_session.simulation.tick()
+	assert_eq(_session.get_snapshot()["economy"]["victory"]["elapsed_seconds"], 1)
+	_session.restart()
+	assert_eq(_session.get_snapshot()["economy"]["victory"]["elapsed_seconds"], 0)
+	assert_false(_session.get_snapshot()["victory"]["won"])
+	var no_objectives: GameSession = GameSession.new(_catalog,
+		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
+	assert_false(no_objectives.get_snapshot()["victory"]["enabled"])
+
+
 func _tick() -> void:
 	_session.simulation.tick()
 	_session.publish_tick()

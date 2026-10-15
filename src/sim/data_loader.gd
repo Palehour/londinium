@@ -71,9 +71,11 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoa
 	_errors.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era)]:
+	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), "scenarios"]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
 		if directory == null:
+			if folder == "scenarios":
+				continue
 			_errors.append("%s/%s: cannot open directory" % [root, folder])
 			continue
 		var files: PackedStringArray = directory.get_files()
@@ -121,7 +123,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path in [_needs_path(), _classes_path()]:
+		elif path.begins_with("scenarios/") or path in [_needs_path(), _classes_path()]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			_numbers(raw, ECONOMY_SCHEMAS[section], path, section, catalog)
@@ -130,6 +132,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
+	for path: String in documents:
+		if path.begins_with("scenarios/"):
+			_load_scenario(documents[path], path, catalog)
 	# Roles may precede economy files in the dictionary; resolve keys only after registration.
 	for role: RoleDef in catalog.roles.values():
 		for modifier: Modifier in role.modifiers:
@@ -619,3 +624,56 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 			var cells: Array[Vector2i] = map.river_cells if field == "river_cells" else map.cultivable_cells
 			cells.append(position)
 	catalog.maps[map.id] = map
+
+
+# Scenario files are optional: a harness or old fixture without victory has no objectives.
+func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var id: StringName = StringName(path.get_file().get_basename())
+	var stages: Array[Dictionary] = []
+	catalog.scenarios[id] = {"stages": stages}
+	var scenario_fields: Array[String] = []
+	if raw.has("victory"):
+		scenario_fields.append("victory")
+	if not _object(raw, scenario_fields, path) or not raw.has("victory"):
+		return
+	if not _object(raw["victory"], ["stages"], path + ".victory"):
+		return
+	var entries: Variant = raw["victory"]["stages"]
+	if entries is not Array or entries.is_empty():
+		_errors.append("%s.victory.stages: expected a nonempty array" % path)
+		return
+	for entry: Variant in entries:
+		var where: String = "%s.victory.stages[%d]" % [path, stages.size()]
+		if entry is not Dictionary:
+			_errors.append("%s: expected an object" % where)
+			continue
+		var mode: String = str(entry.get("mode", ""))
+		var metric: String = str(entry.get("metric", ""))
+		var duration: String = "duration_seconds" if mode == "mean" else "required_minutes"
+		var fields: Array[String] = ["id", "metric", "mode", "threshold", duration]
+		if metric == "class_population":
+			fields.append("class_id")
+		if not _object(entry, fields, where):
+			continue
+		if entry["id"] is not String or not String(entry["id"]).is_valid_identifier():
+			_errors.append("%s.id: expected an identifier" % where)
+			continue
+		var stage_id: StringName = StringName(entry["id"])
+		if stages.any(func(stage: Dictionary) -> bool: return stage["id"] == stage_id):
+			_errors.append("%s.id: duplicate stage" % where)
+			continue
+		if not ((mode == "mean" and metric in ["population", "class_population"]) \
+				or (mode == "consecutive_minutes" and metric == "revenue")):
+			_errors.append("%s: unsupported metric/mode" % where)
+			continue
+		var prefix: String = "victory.%s.%s" % [id, stage_id]
+		var def: Dictionary = {"id": stage_id, "metric": StringName(metric), "mode": StringName(mode), "prefix": prefix}
+		if metric == "class_population":
+			if entry["class_id"] is not String or not catalog.classes.has(StringName(entry["class_id"])):
+				_errors.append("%s.class_id: unknown class" % where)
+				continue
+			def["class_id"] = StringName(entry["class_id"])
+			def["class_base"] = catalog.classes[def["class_id"]].base
+		_number(entry["threshold"], "money" if metric == "revenue" else "integer", where + ".threshold", prefix + ".threshold", catalog)
+		_number(entry[duration], "positive_integer", where + "." + duration, prefix + "." + duration, catalog)
+		stages.append(def)
