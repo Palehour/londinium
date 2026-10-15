@@ -40,6 +40,7 @@ var hunger_emigration_active: bool = false
 var satisfaction_departure_age_seconds: int = -1
 var population_peak: float = 0.0
 var depopulation_active: bool = false
+var victory: VictoryState = VictoryState.new()
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
@@ -122,6 +123,7 @@ func reset_flows() -> void:
 
 func to_dict() -> Dictionary:
 	var values: Dictionary = {
+		"victory": victory.to_dict(),
 		"bankruptcy": bankruptcy.to_dict(), "hunger": hunger.to_dict(),
 		"depopulation": depopulation.to_dict(), "defeat_initialized": defeat_initialized,
 		"defeat_elapsed_seconds": defeat_elapsed_seconds,
@@ -179,6 +181,7 @@ func _class_states_dict() -> Dictionary:
 # Internal conversion: expects the complete value schema produced by to_dict().
 static func from_dict(values: Dictionary) -> EconomyState:
 	var result: EconomyState = EconomyState.new()
+	result.victory = VictoryState.from_dict(values.get("victory", {}))
 	result.bankruptcy = DefeatState.from_dict(values.get("bankruptcy", {}))
 	result.hunger = DefeatState.from_dict(values.get("hunger", {}))
 	result.depopulation = DefeatState.from_dict(values.get("depopulation", {}))

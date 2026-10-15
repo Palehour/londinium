@@ -8,6 +8,23 @@ func after_each() -> void:
 	Strings.use_default_locale()
 
 
+func test_victory_and_streak_explanations_are_translated_in_both_languages() -> void:
+	var spanish: String = ""
+	for locale: String in ["es", "en"]:
+		TranslationServer.set_locale(locale)
+		var message: String = Strings.text(Strings.VICTORY_MESSAGE)
+		assert_false(message.is_empty())
+		assert_ne(message, String(Strings.VICTORY_MESSAGE))
+		var cut: String = Strings.text(Strings.VICTORY_WHY) % [7, Strings.money(249), Strings.money(250)]
+		assert_string_contains(cut, "7")
+		assert_string_contains(cut, Strings.money(249))
+		assert_string_contains(cut, Strings.money(250))
+		if locale == "es":
+			spanish = message
+		else:
+			assert_ne(message, spanish)
+
+
 func test_every_key_has_spanish_and_english() -> void:
 	var file: FileAccess = FileAccess.open("res://locale/ui.csv", FileAccess.READ)
 	assert_not_null(file, "locale/ui.csv must open")

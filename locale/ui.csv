@@ -143,3 +143,14 @@ ui.reason.understaffed,Faltan trabajadores para cubrir los puestos.,Not enough w
 ui.reason.insufficient_capacity,La cadena hace menos pan del que se come: hacen falta más edificios.,The chain makes less bread than is eaten: more buildings are needed.
 ui.reason.invalid_tax_rate,Tasa de impuestos inválida.,Invalid tax rate.
 ui.reason.ok,Operativo.,Operating.
+ui.objectives,Objetivos del capítulo,Chapter objectives
+ui.objective_population,Población: %.1f / %d · media de %d s · %s,Population: %.1f / %d · %d s average · %s
+ui.objective_class,%s: %.1f / %d · media de %d s · %s,%s: %.1f / %d · %d s average · %s
+ui.objective_revenue,Recaudación ≥ %s/min: %d / %d minutos consecutivos · %s,Tax revenue ≥ %s/min: %d / %d consecutive minutes · %s
+ui.objective_met,Cumplido,Completed
+ui.objective_pending,En progreso,In progress
+ui.victory_why,"¿Por qué? El minuto %d cortó la racha: se recaudó %s, menos que el mínimo de %s.","Why? Minute %d broke the streak: tax revenue was %s, below the required %s."
+ui.victory_no_break,¿Por qué? Cada minuto completo debe alcanzar el mínimo; un minuto inferior reinicia la racha.,Why? Each complete minute must reach the minimum; a minute below it resets the streak.
+ui.victory_message,¡Victoria! Completaste todos los objetivos del capítulo. Podés seguir jugando; las derrotas siguen activas.,Victory! You completed every chapter objective. You can keep playing; defeat is still possible.
+ui.victory_dismiss,Continuar,Continue
+ui.alert_defeat_after_victory,Ciudad perdida después de la victoria: %s,City lost after victory: %s

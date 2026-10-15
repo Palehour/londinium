@@ -52,6 +52,13 @@ var _economy: Label
 var _needs: Label
 var _buildings: Label
 var _crises: Label
+var _objectives: Label
+var _victory_why: Label
+var _victory_progress: ProgressBar
+var _victory_message: Label
+var _victory_dismiss: Button
+var _victory_notice: VBoxContainer
+var _victory_announced: bool = false
 
 
 func setup(game_session: GameSession, game_clock: SimClock) -> void:
@@ -70,6 +77,13 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_alert = _label("")
 	_alert.visible = false
 	root.add_child(_alert)
+	_victory_notice = VBoxContainer.new()
+	_victory_notice.visible = false
+	root.add_child(_victory_notice)
+	_victory_message = _label("")
+	_victory_notice.add_child(_victory_message)
+	_victory_dismiss = _button(Strings.text(Strings.VICTORY_DISMISS), func() -> void: _victory_notice.hide())
+	_victory_notice.add_child(_victory_dismiss)
 	_notice = _label("")
 	_notice.visible = false
 	root.add_child(_notice)
@@ -83,6 +97,14 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	var content: VBoxContainer = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	_objectives = _label("")
+	content.add_child(_objectives)
+	_victory_progress = ProgressBar.new()
+	_victory_progress.show_percentage = false
+	_victory_progress.step = 1.0
+	content.add_child(_victory_progress)
+	_victory_why = _label("")
+	content.add_child(_victory_why)
 	_build_controls(content)
 	_bread = _label("")
 	_economy = _label("")
@@ -117,6 +139,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_update_unloading(snapshot["market"]["barley"], defeated)
 	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
+	_update_victory(snapshot.get("victory", {}), defeated)
 	_notice.text = _mobility_text(stats, snapshot["needs"])
 	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
@@ -445,7 +468,8 @@ func _update_alert(defeat: Dictionary) -> void:
 	if not defeat["causes"].is_empty():
 		for cause: StringName in defeat["causes"]:
 			names.append(Strings.label(Strings.CONDITION_LABELS, cause))
-		_alert.text = Strings.text(Strings.ALERT_DEFEAT) % ", ".join(names)
+		var template: StringName = Strings.ALERT_DEFEAT_AFTER_VICTORY if _snapshot.get("victory", {}).get("won", false) else Strings.ALERT_DEFEAT
+		_alert.text = Strings.text(template) % ", ".join(names)
 	else:
 		for key: StringName in CONDITIONS:
 			if defeat[key]["status"] == &"warning":
@@ -678,3 +702,42 @@ func _button(text: String, action: Callable) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(action)
 	return button
+
+
+func _update_victory(victory: Dictionary, defeated: bool) -> void:
+	var enabled: bool = victory.get("enabled", false)
+	_objectives.visible = enabled
+	_victory_progress.hide()
+	_victory_why.hide()
+	_victory_message.text = Strings.text(Strings.VICTORY_MESSAGE)
+	_victory_dismiss.text = Strings.text(Strings.VICTORY_DISMISS)
+	if not victory.get("won", false):
+		_victory_announced = false
+		_victory_notice.hide()
+	elif not _victory_announced:
+		_victory_announced = true
+		_victory_notice.show()
+	if defeated:
+		_victory_notice.hide()
+	if not enabled:
+		return
+	var lines: Array[String] = [Strings.text(Strings.OBJECTIVES)]
+	for stage: Dictionary in victory["stages"].values():
+		var status: String = Strings.text(Strings.OBJECTIVE_MET if stage["completed"] else Strings.OBJECTIVE_PENDING)
+		if stage["mode"] == &"consecutive_minutes":
+			lines.append(Strings.text(Strings.OBJECTIVE_REVENUE) % [_money(int(stage["threshold"])),
+				stage["streak_minutes"], int(stage["required_minutes"]), status])
+			_victory_progress.max_value = float(stage["required_minutes"])
+			_victory_progress.value = float(stage["streak_minutes"])
+			_victory_progress.show()
+			var cut: Dictionary = stage["last_break"]
+			_victory_why.text = Strings.text(Strings.VICTORY_NO_BREAK) if cut.is_empty() else Strings.text(Strings.VICTORY_WHY) \
+				% [cut["minute"], _money(int(cut["revenue"])), _money(int(cut["threshold"]))]
+			_victory_why.show()
+		elif stage["metric"] == &"population":
+			lines.append(Strings.text(Strings.OBJECTIVE_POPULATION) % [stage["mean"],
+				int(stage["threshold"]), int(stage["duration_seconds"]), status])
+		else:
+			lines.append(Strings.text(Strings.OBJECTIVE_CLASS) % [Strings.label(Strings.CLASS_LABELS, stage["class_id"]),
+				stage["mean"], int(stage["threshold"]), int(stage["duration_seconds"]), status])
+	_objectives.text = "\n".join(lines)

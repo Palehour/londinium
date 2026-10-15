@@ -58,6 +58,56 @@ func _text(section: String) -> String:
 	return (_panel.get(section) as Label).text
 
 
+func test_victory_progress_moves_by_minute_and_explains_the_last_break() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	var revenue: Dictionary = snapshot["victory"]["stages"][&"revenue"]
+	revenue["streak_minutes"] = 12
+	revenue["last_break"] = {"minute": 7, "revenue": 249, "threshold": 250, "reason": &"revenue_below_threshold"}
+	_panel.update_snapshot(snapshot)
+	var progress: ProgressBar = _panel.get("_victory_progress") as ProgressBar
+	assert_eq(progress.value, 12.0)
+	assert_eq(progress.max_value, 30.0)
+	assert_string_contains(_text("_objectives"), Strings.text(Strings.OBJECTIVE_REVENUE)
+		% [Strings.money(250), 12, 30, Strings.text(Strings.OBJECTIVE_PENDING)])
+	assert_eq(_text("_victory_why"), Strings.text(Strings.VICTORY_WHY)
+		% [7, Strings.money(249), Strings.money(250)])
+	revenue["streak_minutes"] = 0
+	_panel.update_snapshot(snapshot)
+	assert_eq(progress.value, 0.0)
+
+
+func test_victory_notice_is_shown_once_and_later_defeat_names_the_victory() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["victory"]["won"] = true
+	_panel.update_snapshot(snapshot)
+	var notice: VBoxContainer = _panel.get("_victory_notice") as VBoxContainer
+	assert_true(notice.visible)
+	assert_eq(_text("_victory_message"), Strings.text(Strings.VICTORY_MESSAGE))
+	assert_true((_panel.get("_tax") as SpinBox).editable)
+	assert_false((_panel.get("_tea") as CheckButton).disabled)
+	(_panel.get("_victory_dismiss") as Button).pressed.emit()
+	_panel.update_snapshot(snapshot)
+	assert_false(notice.visible, "repeated snapshots must not announce victory again")
+	snapshot["defeat"]["causes"] = [&"bankruptcy"]
+	_panel.update_snapshot(snapshot)
+	assert_eq(_text("_alert"), Strings.text(Strings.ALERT_DEFEAT_AFTER_VICTORY)
+		% Strings.label(Strings.CONDITION_LABELS, &"bankruptcy"))
+	assert_false((_panel.get("_tax") as SpinBox).editable)
+	_panel.update_snapshot(_session.get_snapshot())
+	snapshot["defeat"]["causes"] = []
+	_panel.update_snapshot(snapshot)
+	assert_true(notice.visible, "a new game can announce its own victory")
+
+
+func test_objectives_are_hidden_when_the_scenario_has_no_victory() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["victory"] = {"enabled": false, "won": false, "stages": {}}
+	_panel.update_snapshot(snapshot)
+	assert_false((_panel.get("_objectives") as Label).visible)
+	assert_false((_panel.get("_victory_progress") as ProgressBar).visible)
+	assert_false((_panel.get("_victory_why") as Label).visible)
+
+
 func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	assert_true(_session.get("_pending").is_empty(), "binding a snapshot must not submit commands")
