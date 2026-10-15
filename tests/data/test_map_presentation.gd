@@ -53,7 +53,7 @@ func test_building_labels_resolve_by_id_and_reject_unknown_ids() -> void:
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
 	var presentation: MapPresentation = MapPresentation.new()
 	presentation.validate(raw, [&"mill"])
-	assert_eq(presentation.labels[&"mill"], "Molino")
+	assert_eq(presentation.labels[&"mill"], Strings.building_label("mill"))
 	raw["buildings"]["unknown"] = {"color": "#123456"}
 	presentation.validate(raw, [&"unknown"])
 	assert_eq(presentation.errors.size(), 1)

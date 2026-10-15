@@ -57,6 +57,13 @@ func _valid_color(value: Variant) -> bool:
 	return value is String and Color.html_is_valid(value)
 
 
+func refresh_labels() -> void:
+	var ids: Array[StringName] = []
+	ids.assign(labels.keys())
+	for id: StringName in ids:
+		labels[id] = Strings.building_label(String(id))
+
+
 func building_unavailable_reason(reason: StringName) -> String:
 	return "" if reason == &"" else Strings.command_result(false, reason)
 

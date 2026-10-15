@@ -22,6 +22,11 @@ gdscript/warnings/untyped_declaration=2
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/ui.es.translation", "res://locale/ui.en.translation")
+locale/fallback="es"
+
 [londinium]
 
 splash/enabled=true

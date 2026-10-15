@@ -6,6 +6,24 @@ var _clock: SimClock
 var _panel: StatsPanel
 
 
+func _class_label(id: StringName) -> String:
+	return Strings.label(Strings.CLASS_LABELS, id)
+
+
+func _category_label(id: StringName) -> String:
+	return Strings.label(Strings.CATEGORY_LABELS, id)
+
+
+func _good_label(id: StringName) -> String:
+	return Strings.label(Strings.GOOD_LABELS, id)
+
+
+# The "short of <good>" tail of a template, in whichever language is active.
+func _missing_good(template: StringName, good: String) -> String:
+	var pieces: PackedStringArray = Strings.text(template).split("%s")
+	return pieces[pieces.size() - 2].get_slice("·", 1).strip_edges() + " " + good
+
+
 func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
@@ -47,11 +65,11 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 	assert_eq(Strings.money(1000), "£4 3s 4d")
 	assert_eq(Strings.money(-25), "-£0 2s 1d")
 	var treasury: int = _session.get_snapshot()["economy"]["money"]
-	assert_string_contains(_text("_economy"), Strings.TREASURY % Strings.money(treasury))
-	assert_string_contains(_text("_economy"), Strings.WINDOW_PARTIAL % [0, 60])
-	assert_string_contains(_text("_bread"), Strings.STOCKS % [0, 0, 40])
-	assert_string_contains(_text("_buildings"), Strings.NO_BUILDINGS)
-	assert_string_contains(_text("_crises"), Strings.GRACE % 300)
+	assert_string_contains(_text("_economy"), Strings.text(Strings.TREASURY) % Strings.money(treasury))
+	assert_string_contains(_text("_economy"), Strings.text(Strings.WINDOW_PARTIAL) % [0, 60])
+	assert_string_contains(_text("_bread"), Strings.text(Strings.STOCKS) % [0, 0, 40])
+	assert_string_contains(_text("_buildings"), Strings.text(Strings.NO_BUILDINGS))
+	assert_string_contains(_text("_crises"), Strings.text(Strings.GRACE) % 300)
 	assert_false((_panel.get("_alert") as Label).visible)
 	assert_false((_panel.get("_restart") as Button).visible)
 
@@ -59,7 +77,7 @@ func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands
 func test_panel_shows_malt_and_beer_stock_with_their_caps() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	var market: Dictionary = _session.get_snapshot()["market"]
-	assert_eq(_text("_malt_beer_row"), Strings.MALT_BEER_ROW
+	assert_eq(_text("_malt_beer_row"), Strings.text(Strings.MALT_BEER_ROW)
 		% [0, market["malt"]["capacity"], 0, market["beer"]["capacity"]])
 
 
@@ -68,14 +86,14 @@ func test_the_unloading_slider_sends_the_split_and_follows_the_snapshot() -> voi
 	_panel.update_snapshot(_session.get_snapshot())
 	var slider: HSlider = _panel.get("_unloading") as HSlider
 	assert_eq([slider.value, slider.max_value, slider.scrollable], [0.0, 100.0, false])
-	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 0)
+	assert_eq(_text("_unloading_label"), Strings.text(Strings.UNLOADING_LABEL) % 0)
 	slider.value = 30.0
 	slider.drag_ended.emit(true)
 	_tick()
 	_session.publish_tick()
 	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 30)
 	assert_eq(slider.value, 30.0)
-	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 30)
+	assert_eq(_text("_unloading_label"), Strings.text(Strings.UNLOADING_LABEL) % 30)
 	assert_true(_session.get("_pending").is_empty(), "resyncing the slider does not resend the command")
 
 
@@ -89,10 +107,10 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_session.submit_command(SetWheatPurchasesCommand.new(false))
 	_tick()
 	var bread: String = _text("_bread")
-	assert_string_contains(bread, Strings.BREAD_SHORT)
-	assert_string_contains(bread, Strings.BREAD_CAUSE % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")])
-	assert_string_contains(bread, Strings.BREAD_CAUSE % [Strings.building_label("mill"), Strings.reason(&"no_input")])
-	assert_string_contains(_text("_buildings"), Strings.BUILDING_STATUS % [Strings.building_label("wharf"), 0, 7, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
+	assert_string_contains(bread, Strings.text(Strings.BREAD_SHORT))
+	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")])
+	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("mill"), Strings.reason(&"no_input")])
+	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 7, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
 
 
 func test_panel_shows_chain_wide_capacity_cause_without_a_building_label() -> void:
@@ -101,8 +119,8 @@ func test_panel_shows_chain_wide_capacity_cause_without_a_building_label() -> vo
 	snapshot["diagnostics"]["bread_short"] = true
 	snapshot["diagnostics"]["bread_causes"] = [{"definition_id": &"", "reason": &"insufficient_capacity"}]
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_bread"), Strings.BREAD_SHORT + "
-" + Strings.BREAD_CHAIN_CAUSE % Strings.reason(&"insufficient_capacity"))
+	assert_string_contains(_text("_bread"), Strings.text(Strings.BREAD_SHORT) + "
+" + Strings.text(Strings.BREAD_CHAIN_CAUSE) % Strings.reason(&"insufficient_capacity"))
 
 
 func test_money_formats_int64_extremes_without_overflow() -> void:
@@ -118,14 +136,14 @@ func test_hunger_causes_show_only_when_bread_is_short() -> void:
 	snapshot["diagnostics"]["bread_short"] = false
 	snapshot["diagnostics"]["bread_causes"] = [{"definition_id": &"wharf", "reason": &"wheat_purchases_disabled"}]
 	_panel.update_snapshot(snapshot)
-	var cause: String = Strings.BREAD_CAUSE % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")]
-	assert_string_contains(_text("_bread"), Strings.BREAD_OK)
-	assert_false(_text("_bread").contains(Strings.BREAD_SHORT))
+	var cause: String = Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")]
+	assert_string_contains(_text("_bread"), Strings.text(Strings.BREAD_OK))
+	assert_false(_text("_bread").contains(Strings.text(Strings.BREAD_SHORT)))
 	assert_false(_text("_bread").contains(cause))
 	snapshot["diagnostics"]["bread_short"] = true
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_bread"), cause)
-	assert_false(_text("_bread").contains(Strings.BREAD_OK))
+	assert_false(_text("_bread").contains(Strings.text(Strings.BREAD_OK)))
 
 
 func test_tax_box_sends_set_tax_command_and_resyncs_from_snapshot() -> void:
@@ -157,18 +175,18 @@ func test_wheat_toggle_sends_command_and_reflects_state() -> void:
 func test_wheat_row_shows_stock_price_trend_and_minutes_of_mill() -> void:
 	var snapshot: Dictionary = _session.get_snapshot()
 	_panel.update_snapshot(snapshot)
-	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [0, 100, Strings.money(2), Strings.TREND_FLAT, Strings.NO_MILL_COVERAGE])
+	assert_eq(_text("_wheat_row"), Strings.text(Strings.WHEAT_ROW) % [0, 100, Strings.money(2), Strings.TREND_FLAT, Strings.NO_MILL_COVERAGE])
 	var market: Dictionary = snapshot["market"]["wheat"]
 	market["stock"] = 60
 	market["previous_price"] = 3
 	market["minutes_covered"] = 6.0
 	_panel.update_snapshot(snapshot)
-	assert_eq(_text("_wheat_row"), Strings.WHEAT_ROW % [60, 100, Strings.money(2), Strings.TREND_DOWN, Strings.MINUTES_COVERED % 6.0])
+	assert_eq(_text("_wheat_row"), Strings.text(Strings.WHEAT_ROW) % [60, 100, Strings.money(2), Strings.TREND_DOWN, Strings.text(Strings.MINUTES_COVERED) % 6.0])
 	market["previous_price"] = 1
 	market["blocked_by_price"] = true
 	_panel.update_snapshot(snapshot)
 	assert_string_contains(_text("_wheat_row"), Strings.TREND_UP)
-	assert_string_contains(_text("_wheat_row"), Strings.WHEAT_BLOCKED_NOTE)
+	assert_string_contains(_text("_wheat_row"), Strings.text(Strings.WHEAT_BLOCKED_NOTE))
 
 
 func _price_controls() -> Dictionary:
@@ -199,7 +217,7 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	target.drag_ended.emit(true)
 	var reserve: HSlider = _panel.get("_reserve") as HSlider
 	assert_eq([reserve.value, reserve.max_value], [2.0, 10.0], "the default reserve, up to the ten minutes the rules allow")
-	assert_string_contains(_text("_reserve_label"), Strings.RESERVE_LABEL % 2)
+	assert_string_contains(_text("_reserve_label"), Strings.text(Strings.RESERVE_LABEL) % 2)
 	reserve.value = 4.0
 	reserve.drag_ended.emit(true)
 	_tick()
@@ -210,7 +228,7 @@ func test_policy_controls_send_the_whole_policy_and_resync_from_the_snapshot() -
 	assert_eq([accumulate_on.button_pressed, accumulate.value, limit_on.button_pressed, limit.value, target.value],
 		[true, 1.0, true, 2.0, 60.0])
 	assert_string_contains(_text("_target_label"), "60")
-	assert_eq(_text("_reserve_label"), Strings.RESERVE_LABEL % 4)
+	assert_eq(_text("_reserve_label"), Strings.text(Strings.RESERVE_LABEL) % 4)
 	assert_true(_session.get("_pending").is_empty(), "resyncing the controls does not resend the command")
 	limit_on.button_pressed = false
 	_tick()
@@ -304,7 +322,7 @@ func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> voi
 	assert_eq(_session.simulation.snapshot()["tick_count"], 3, "3x runs three one-second ticks")
 	pause.pressed.emit()
 	assert_eq(_clock.speed, 0)
-	assert_eq(pause.text, Strings.RESUME)
+	assert_eq(pause.text, Strings.text(Strings.RESUME))
 	_clock.advance(1.0)
 	assert_eq(_session.simulation.snapshot()["tick_count"], 3)
 	(speeds[2] as Button).pressed.emit()
@@ -324,11 +342,11 @@ func test_defeat_shows_cause_blocks_controls_and_offers_restart() -> void:
 	_tick()
 	var alert: Label = _panel.get("_alert") as Label
 	assert_true(alert.visible)
-	assert_string_contains(alert.text, Strings.CONDITION_LABELS[&"bankruptcy"])
-	assert_string_contains(alert.text, Strings.TIMER % [1, 2, 1])
+	assert_string_contains(alert.text, Strings.label(Strings.CONDITION_LABELS, &"bankruptcy"))
+	assert_string_contains(alert.text, Strings.text(Strings.TIMER) % [1, 2, 1])
 	_tick()
-	assert_eq(alert.text, Strings.ALERT_DEFEAT % Strings.CONDITION_LABELS[&"bankruptcy"])
-	assert_string_contains(_text("_crises"), Strings.STATUS_LABELS[&"defeat"])
+	assert_eq(alert.text, Strings.text(Strings.ALERT_DEFEAT) % Strings.label(Strings.CONDITION_LABELS, &"bankruptcy"))
+	assert_string_contains(_text("_crises"), Strings.label(Strings.STATUS_LABELS, &"defeat"))
 	assert_false((_panel.get("_tax") as SpinBox).editable)
 	assert_true((_panel.get("_wheat") as CheckButton).disabled)
 	var restart: Button = _panel.get("_restart") as Button
@@ -449,7 +467,7 @@ func test_import_rows_show_tea_stock_and_coverage_flour_price_and_why_there_is_n
 	_panel.update_snapshot(_session.get_snapshot())
 	var imports: Dictionary = _session.get_snapshot()["imports"]
 	assert_string_contains(_text("_tea_row"), Strings.reason(&"tea_imports_disabled"))
-	assert_string_contains(_text("_tea_row"), "cobertura 0 %")
+	assert_string_contains(_text("_tea_row"), "%.0f %%" % 0.0)
 	var flour: Dictionary = imports["flour"]
 	assert_string_contains(_text("_flour_row"), Strings.money(flour["lot_price"]))
 	assert_string_contains(_text("_flour_row"), Strings.UNIT_PRICE % flour["unit_price"])
@@ -463,22 +481,23 @@ func test_satisfaction_line_adds_the_tea_component_so_the_parts_match_the_total(
 	var snapshot: Dictionary = _session.get_snapshot()
 	snapshot["economy"]["satisfaction_breakdown"]["tea"] = 15.0
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_economy"), "té +15")
+	assert_string_contains(_text("_economy"), "%s +15" % _good_label(&"tea"))
 
 
 func test_barley_row_shows_the_stock_the_price_and_the_split_of_the_wharf() -> void:
 	_session.submit_command(SetUnloadingSplitCommand.new(30))
 	_tick()
 	var barley: Dictionary = _session.get_snapshot()["market"]["barley"]
-	assert_string_contains(_text("_barley_row"), "Cebada: 0/%d" % barley["capacity"])
+	var barley_name: String = _good_label(&"barley")
+	assert_string_contains(_text("_barley_row"), "%s: 0/%d" % [barley_name.capitalize(), barley["capacity"]])
 	assert_string_contains(_text("_barley_row"), Strings.money(barley["price"]))
-	assert_string_contains(_text("_barley_row"), "30 % cebada, 70 % trigo")
+	assert_string_contains(_text("_barley_row"), "%d %% %s, %d %% %s" % [30, barley_name, 70, _good_label(&"wheat")])
 
 
 func test_balance_breakdown_lists_the_barley_so_the_parts_match_the_total() -> void:
 	_session.submit_command(SetUnloadingSplitCommand.new(100))
 	_tick()
-	assert_string_contains(_text("_economy"), "cebada")
+	assert_string_contains(_text("_economy"), _good_label(&"barley"))
 
 
 func test_panel_names_the_need_category_that_is_missing() -> void:
@@ -495,10 +514,10 @@ func test_panel_names_the_need_category_that_is_missing() -> void:
 	}}}
 	_panel.update_snapshot(snapshot)
 	var needs: String = _text("_needs")
-	assert_string_contains(needs, Strings.NEEDS_TITLE)
-	assert_string_contains(needs, Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 50.0, 75.0, "pan"])
-	assert_string_contains(needs, Strings.NEEDS_MET % ["Trabajadores", "Comunidad o fe", 100.0, 50.0])
-	assert_string_contains(needs, Strings.HOUSING_ROW % ["Trabajadores", 20, 0, 0])
+	assert_string_contains(needs, Strings.text(Strings.NEEDS_TITLE))
+	assert_string_contains(needs, Strings.text(Strings.NEEDS_SHORT) % [_class_label(&"worker"), _category_label(&"sustento"), 50.0, 75.0, _good_label(&"bread")])
+	assert_string_contains(needs, Strings.text(Strings.NEEDS_MET) % [_class_label(&"worker"), _category_label(&"comunidad"), 100.0, 50.0])
+	assert_string_contains(needs, Strings.text(Strings.HOUSING_ROW) % [_class_label(&"worker"), 20, 0, 0])
 
 
 func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> void:
@@ -510,8 +529,8 @@ func test_panel_gives_the_reason_when_a_covered_category_is_still_short() -> voi
 		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
-		% ["Trabajadores", "Sustento", 50.0, 75.0, Strings.reason(&"below_threshold")])
+	assert_string_contains(_text("_needs"), Strings.text(Strings.NEEDS_SHORT_REASON)
+		% [_class_label(&"worker"), _category_label(&"sustento"), 50.0, 75.0, Strings.reason(&"below_threshold")])
 
 
 func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
@@ -523,7 +542,7 @@ func test_panel_keeps_a_score_just_under_its_threshold_visibly_under() -> void:
 		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
+	assert_string_contains(_text("_needs"), Strings.text(Strings.NEEDS_SHORT) % [_class_label(&"worker"), _category_label(&"sustento"), 74.9, 75.0, _good_label(&"bread")])
 
 
 func test_panel_keeps_a_fractional_threshold_above_the_score() -> void:
@@ -535,7 +554,7 @@ func test_panel_keeps_a_fractional_threshold_above_the_score() -> void:
 		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT % ["Trabajadores", "Sustento", 74.9, 75.0, "pan"])
+	assert_string_contains(_text("_needs"), Strings.text(Strings.NEEDS_SHORT) % [_class_label(&"worker"), _category_label(&"sustento"), 74.9, 75.0, _good_label(&"bread")])
 
 
 func test_panel_says_the_threshold_is_unreachable_instead_of_naming_a_good() -> void:
@@ -548,9 +567,9 @@ func test_panel_says_the_threshold_is_unreachable_instead_of_naming_a_good() -> 
 		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_needs"), Strings.NEEDS_SHORT_REASON
-		% ["Trabajadores", "Sustento", 25.0, 75.0, Strings.reason(&"unreachable_threshold")])
-	assert_false(_text("_needs").contains("falta pan"))
+	assert_string_contains(_text("_needs"), Strings.text(Strings.NEEDS_SHORT_REASON)
+		% [_class_label(&"worker"), _category_label(&"sustento"), 25.0, 75.0, Strings.reason(&"unreachable_threshold")])
+	assert_false(_text("_needs").contains(_missing_good(Strings.NEEDS_SHORT, _good_label(&"bread"))))
 
 
 func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
@@ -562,7 +581,7 @@ func test_panel_shows_a_met_score_with_float_drift_as_the_threshold() -> void:
 		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {},
 	}}}
 	_panel.update_snapshot(snapshot)
-	assert_string_contains(_text("_needs"), Strings.NEEDS_MET % ["Trabajadores", "Sustento", 63.0, 63.0])
+	assert_string_contains(_text("_needs"), Strings.text(Strings.NEEDS_MET) % [_class_label(&"worker"), _category_label(&"sustento"), 63.0, 63.0])
 
 
 # Issue #53: a notice at the top of the panel while anyone rose or fell between classes in the last minute.
@@ -572,14 +591,14 @@ func test_mobility_notice_uses_strings() -> void:
 	assert_false(_panel.get("_notice").visible, "Nobody moved: no notice")
 	snapshot["stats"]["promotions_in_window"] = 2
 	_panel.update_snapshot(snapshot)
-	var workers: String = Strings.CLASS_LABELS[&"worker"]
-	var artisans: String = Strings.CLASS_LABELS[&"artisan"]
+	var workers: String = Strings.label(Strings.CLASS_LABELS, &"worker")
+	var artisans: String = Strings.label(Strings.CLASS_LABELS, &"artisan")
 	assert_true(_panel.get("_notice").visible)
-	assert_eq(_text("_notice"), Strings.MOBILITY_PROMOTED % [2, workers, artisans])
+	assert_eq(_text("_notice"), Strings.text(Strings.MOBILITY_PROMOTED) % [2, workers, artisans])
 	snapshot["stats"]["demotions_in_window"] = 1
 	_panel.update_snapshot(snapshot)
-	assert_eq(_text("_notice"), "\n".join([Strings.MOBILITY_PROMOTED % [2, workers, artisans],
-		Strings.MOBILITY_DEMOTED % [1, artisans, workers]]))
+	assert_eq(_text("_notice"), "\n".join([Strings.text(Strings.MOBILITY_PROMOTED) % [2, workers, artisans],
+		Strings.text(Strings.MOBILITY_DEMOTED) % [1, artisans, workers]]))
 
 
 # --- Issue #54: one block per class, the promotion diagnosis and the split in notches -----------------
@@ -615,24 +634,24 @@ func test_panel_shows_population_coverage_and_satisfaction_per_class() -> void:
 	var city: Array = _class_state(18, 2, 0.5, 72.6)
 	var artisan_satisfaction: float = (city[0] as EconomyState).class_states[&"artisan"].satisfaction
 	var needs: String = _show_classes(city)
-	assert_string_contains(needs, Strings.CLASS_HEADER % ["Trabajadores", 18, 72.0])
-	assert_string_contains(needs, Strings.CLASS_HEADER % ["Artesanos", 2, floorf(artisan_satisfaction)])
-	assert_string_contains(needs, Strings.COVERAGE_ROW % ["Trabajadores", " · ".join(
-		[Strings.GOOD_COVERAGE % ["pan", 100.0], Strings.GOOD_COVERAGE % ["té", 50.0]])])
-	assert_string_contains(needs, Strings.COVERAGE_ROW % ["Artesanos", " · ".join(
-		[Strings.GOOD_COVERAGE % ["pan", 100.0], Strings.GOOD_COVERAGE % ["cerveza", 50.0]])])
+	assert_string_contains(needs, Strings.text(Strings.CLASS_HEADER) % [_class_label(&"worker"), 18, 72.0])
+	assert_string_contains(needs, Strings.text(Strings.CLASS_HEADER) % [_class_label(&"artisan"), 2, floorf(artisan_satisfaction)])
+	assert_string_contains(needs, Strings.text(Strings.COVERAGE_ROW) % [_class_label(&"worker"), " · ".join(
+		[Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"bread"), 100.0], Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"tea"), 50.0]])])
+	assert_string_contains(needs, Strings.text(Strings.COVERAGE_ROW) % [_class_label(&"artisan"), " · ".join(
+		[Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"bread"), 100.0], Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"beer"), 50.0]])])
 
 
 func test_coverage_just_under_full_never_reads_as_100() -> void:
 	var city: Array = _class_state(20, 0, 0.996, 100.0)
-	assert_string_contains(_show_classes(city), Strings.GOOD_COVERAGE % ["cerveza", 99.0])
+	assert_string_contains(_show_classes(city), Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"beer"), 99.0])
 
 
 func test_promotion_diagnosis_names_missing_beer() -> void:
 	var needs: String = _show_classes(_class_state(20, 0, 0.5, 100.0))
-	assert_string_contains(needs, Strings.PROMOTION_BLOCKED % "Artesanos")
-	assert_string_contains(needs, Strings.PROMOTION_BLOCKER
-		% (Strings.PROMOTION_CATEGORY_BELOW % ["Comunidad o fe", 50.0, 80.0, "cerveza"]))
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan"))
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER)
+		% (Strings.text(Strings.PROMOTION_CATEGORY_BELOW) % [_category_label(&"comunidad"), 50.0, 80.0, _good_label(&"beer")]))
 	assert_false(needs.contains(Strings.reason(&"no_free_housing")), "There is room: housing is not blamed")
 
 
@@ -641,15 +660,15 @@ func test_promotion_diagnosis_names_full_artisan_housing() -> void:
 	var artisans: ClassState = (city[0] as EconomyState).class_states[&"artisan"]
 	artisans.population = artisans.housing_capacity
 	var needs: String = _show_classes(city)
-	assert_string_contains(needs, Strings.PROMOTION_BLOCKED % "Artesanos")
-	assert_string_contains(needs, Strings.PROMOTION_BLOCKER % Strings.reason(&"no_free_housing"))
-	assert_false(needs.contains("falta cerveza"), "The beer is covered: it is not blamed")
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan"))
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER) % Strings.reason(&"no_free_housing"))
+	assert_false(needs.contains(_missing_good(Strings.PROMOTION_CATEGORY_BELOW, _good_label(&"beer"))), "The beer is covered: it is not blamed")
 
 
 func test_promotion_diagnosis_names_low_worker_satisfaction() -> void:
 	var needs: String = _show_classes(_class_state(20, 0, 1.0, 69.6))
 	# 69.6 is under 70: it must not read as 70/70.
-	assert_string_contains(needs, Strings.PROMOTION_BLOCKER % (Strings.PROMOTION_SATISFACTION_LOW % ["Trabajadores", 69.0, 70.0]))
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER) % (Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [_class_label(&"worker"), 69.0, 70.0]))
 
 
 func test_promotion_diagnosis_shows_the_rate_when_nothing_blocks() -> void:
@@ -657,8 +676,8 @@ func test_promotion_diagnosis_shows_the_rate_when_nothing_blocks() -> void:
 	var artisan: ClassDef = (city[2] as EconomyContext).classes[&"artisan"]
 	var rate: float = (city[1] as Params).get_value(artisan.promotion_per_minute_key)
 	var needs: String = _show_classes(city)
-	assert_string_contains(needs, Strings.PROMOTION_ACTIVE % ["Artesanos", rate])
-	assert_false(needs.contains(Strings.PROMOTION_BLOCKED % "Artesanos"))
+	assert_string_contains(needs, Strings.text(Strings.PROMOTION_ACTIVE) % [_class_label(&"artisan"), rate])
+	assert_false(needs.contains(Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan")))
 
 
 func test_the_unloading_slider_moves_in_steps_from_data_and_starts_all_wheat() -> void:
@@ -688,8 +707,8 @@ func test_buildings_show_why_malthouse_and_brewery_stop() -> void:
 	_panel.update_snapshot(snapshot)
 	var buildings: String = _text("_buildings")
 	var jobs: Array[int] = [WorkersSystem.job_capacity(params, &"malthouse"), WorkersSystem.job_capacity(params, &"brewery")]
-	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Maltería", 1, 1, 1, jobs[0], Strings.reason(&"no_barley")])
-	assert_string_contains(buildings, Strings.BUILDING_STATUS % ["Cervecería", 2, 1, 1, jobs[1], Strings.reason(&"no_malt")])
+	assert_string_contains(buildings, Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("malthouse"), 1, 1, 1, jobs[0], Strings.reason(&"no_barley")])
+	assert_string_contains(buildings, Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("brewery"), 2, 1, 1, jobs[1], Strings.reason(&"no_malt")])
 
 
 # Bailey's review of #115: a split off the notch (a scenario's 15 %) is shown as it is, and a release without
@@ -701,7 +720,7 @@ func test_a_split_off_the_notch_shows_as_it_is_until_the_slider_moves() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	var slider: HSlider = _panel.get("_unloading") as HSlider
 	assert_eq(slider.value, 15.0, "not rounded to 10 or 20")
-	assert_eq(_text("_unloading_label"), Strings.UNLOADING_LABEL % 15)
+	assert_eq(_text("_unloading_label"), Strings.text(Strings.UNLOADING_LABEL) % 15)
 	slider.drag_started.emit()
 	slider.drag_ended.emit(false)
 	assert_true(_session.get("_pending").is_empty(), "released where it was: nothing to send")

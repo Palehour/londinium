@@ -11,10 +11,19 @@ var _building_type: StringName = &""
 var _status: Label
 var _mode: Label
 var _help: Label
+var _legend_caption: Label
+var _terrain_labels: Dictionary[String, Label] = {}
 var _stats_panel: StatsPanel
+var _status_pending: bool = false
+var _status_has_result: bool = false
+var _status_accepted: bool = false
+var _status_reason: StringName = &""
 
 
 func _ready() -> void:
+	Strings.use_default_locale()
+	# Phrases are already translated. Leaving auto-translate on would look the sentence up as a key.
+	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
 	var loaded: DataLoadResult = _load_catalog()
@@ -38,14 +47,15 @@ func _ready() -> void:
 	help.position = Vector2(presentation.layout["help_x"], presentation.layout["help_y"])
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(help)
-	for text: String in [Strings.LOADING, "", ""]:
+	for text: String in [Strings.text(Strings.LOADING), "", ""]:
 		var label: Label = Label.new()
 		label.text = text
 		help.add_child(label)
 	var legend: HBoxContainer = HBoxContainer.new()
 	legend.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var caption: Label = Label.new()
-	caption.text = Strings.LEGEND
+	caption.text = Strings.text(Strings.LEGEND)
+	_legend_caption = caption
 	legend.add_child(caption)
 	for kind: String in ["land", "river", "cultivable"]:
 		var sample: ColorRect = ColorRect.new()
@@ -54,7 +64,8 @@ func _ready() -> void:
 		sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		legend.add_child(sample)
 		var label: Label = Label.new()
-		label.text = Strings.TERRAIN_LABELS[kind]
+		label.text = Strings.text(Strings.TERRAIN_LABELS[kind])
+		_terrain_labels[kind] = label
 		legend.add_child(label)
 	help.add_child(legend)
 	help.move_child(legend, 1)
@@ -92,6 +103,20 @@ func _ready() -> void:
 	queue_redraw()
 
 
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or _help == null:
+		return
+	presentation.refresh_labels()
+	_legend_caption.text = Strings.text(Strings.LEGEND)
+	for kind: String in _terrain_labels:
+		_terrain_labels[kind].text = Strings.text(Strings.TERRAIN_LABELS[kind])
+	_update_help()
+	if geometry != null:
+		_update_mode()
+	_apply_status()
+	queue_redraw()
+
+
 func _load_catalog() -> DataLoadResult:
 	return DataLoader.new().load_all()
 
@@ -101,13 +126,13 @@ func _update_help() -> void:
 	for id: StringName in TYPES:
 		var label: String = presentation.labels[id]
 		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
-		labels.append(label if reason.is_empty() else Strings.DISABLED_BUILDING % [label, reason])
-	_help.text = Strings.HELP % labels
+		labels.append(label if reason.is_empty() else Strings.text(Strings.DISABLED_BUILDING) % [label, reason])
+	_help.text = Strings.text(Strings.HELP) % labels
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
 	var label: Label = Label.new()
-	label.text = Strings.LOAD_ERROR
+	label.text = Strings.text(Strings.LOAD_ERROR)
 	layer.add_child(label)
 	for diagnostic: String in errors:
 		push_error(diagnostic)
@@ -153,10 +178,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1:
 			var type: StringName = TYPES[event.keycode - KEY_1]
-			var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(type))
+			var reason_id: StringName = session.get_building_unavailable_reason(type)
+			var reason: String = presentation.building_unavailable_reason(reason_id)
 			_building_type = type if reason.is_empty() else &""
 			if not reason.is_empty():
-				_status.text = reason
+				_show_result(false, reason_id)
 		elif event.keycode == KEY_ESCAPE:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
@@ -184,12 +210,40 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _submit(command: SimulationCommand) -> void:
-	_status.text = Strings.PENDING
+	_show_pending()
 	session.submit_command(command)
 
 
 func _command_resolved(accepted: bool, reason: StringName) -> void:
+	_show_result(accepted, reason)
+
+
+func _show_pending() -> void:
+	_status_pending = true
+	_status_has_result = false
+	_status.text = Strings.text(Strings.PENDING)
+
+
+func _show_result(accepted: bool, reason: StringName) -> void:
+	_status_pending = false
+	_status_has_result = true
+	_status_accepted = accepted
+	_status_reason = reason
 	_status.text = Strings.command_result(accepted, reason)
+
+
+func _clear_status() -> void:
+	_status_pending = false
+	_status_has_result = false
+	if _status != null:
+		_status.text = ""
+
+
+func _apply_status() -> void:
+	if _status_pending:
+		_status.text = Strings.text(Strings.PENDING)
+	elif _status_has_result:
+		_status.text = Strings.command_result(_status_accepted, _status_reason)
 
 
 func _snapshot_received(snapshot: Dictionary) -> void:
@@ -206,7 +260,7 @@ func _restart_session() -> void:
 	clock.reset()
 	_building_type = &""
 	geometry.selected = Vector2i(-1, -1)
-	_status.text = ""
+	_clear_status()
 	_snapshot = session.get_snapshot()
 	_stats_panel.update_snapshot(_snapshot)
 	_update_mode()
@@ -214,7 +268,7 @@ func _restart_session() -> void:
 
 
 func _update_mode() -> void:
-	_mode.text = Strings.MODE % [presentation.labels.get(_building_type, Strings.SELECT), geometry.selected]
+	_mode.text = Strings.text(Strings.MODE) % [presentation.labels.get(_building_type, Strings.text(Strings.SELECT)), geometry.selected]
 
 
 func _draw() -> void:

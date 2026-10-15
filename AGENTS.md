@@ -41,7 +41,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   `CONSTANT_CASE` constants, signals in past tense (`stock_changed`). One `class_name` per file, file name =
   snake_case of the class.
 - Small functions, early returns, no magic numbers, comments explain *why*. Code and identifiers in English;
-  player-facing strings in one place (`src/ui/strings.gd`).
+  player-facing strings live in `locale/ui.csv` and are read only through `src/ui/strings.gd`.
 
 ## Scenes and scripts
 - One scene per folder with its script next to it (`src/ui/stats_panel/stats_panel.tscn` + `.gd`).

@@ -41,6 +41,12 @@ var _unloading_current: int = 0
 var _unloading_notch: float = 1.0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
+var _title: Label
+var _tax_label: Label
+var _locale_es: Button
+var _locale_en: Button
+var _locale_group: ButtonGroup
+var _snapshot: Dictionary = {}
 var _bread: Label
 var _economy: Label
 var _needs: Label
@@ -51,20 +57,23 @@ var _crises: Label
 func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	session = game_session
 	clock = game_clock
+	# Phrases are already translated. Leaving auto-translate on would look the sentence up as a key.
+	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	# The panel owns every click and wheel event over it, so none reach the map.
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# Godot forwards unhandled wheel events to the parent by default, which would zoom the map.
 	mouse_force_pass_scroll_events = false
 	var root: VBoxContainer = VBoxContainer.new()
 	add_child(root)
-	root.add_child(_label(Strings.PANEL_TITLE))
+	_title = _label(Strings.text(Strings.PANEL_TITLE))
+	root.add_child(_title)
 	_alert = _label("")
 	_alert.visible = false
 	root.add_child(_alert)
 	_notice = _label("")
 	_notice.visible = false
 	root.add_child(_notice)
-	_restart = _button(Strings.RESTART, func() -> void: restart_requested.emit())
+	_restart = _button(Strings.text(Strings.RESTART), func() -> void: restart_requested.emit())
 	_restart.visible = false
 	root.add_child(_restart)
 	var scroll: ScrollContainer = ScrollContainer.new()
@@ -93,6 +102,7 @@ func apply_style(background: Color, alert: Color, margin: float) -> void:
 
 
 func update_snapshot(snapshot: Dictionary) -> void:
+	_snapshot = snapshot
 	var economy: Dictionary = snapshot["economy"]
 	var stats: Dictionary = snapshot["stats"]
 	var defeat: Dictionary = snapshot["defeat"]
@@ -117,28 +127,88 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_crises.text = _crises_text(defeat)
 
 
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or _pause == null:
+		return
+	_apply_static_texts()
+	if not _snapshot.is_empty():
+		update_snapshot(_snapshot)
+
+
+func _apply_static_texts() -> void:
+	_title.text = Strings.text(Strings.PANEL_TITLE)
+	_restart.text = Strings.text(Strings.RESTART)
+	_tax_label.text = Strings.text(Strings.TAX_LABEL)
+	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
+	_tea.text = Strings.text(Strings.TEA_IMPORTS)
+	_flour.text = Strings.text(Strings.FLOUR_IMPORTS)
+	_accumulate_on.text = Strings.text(Strings.ACCUMULATE_LABEL)
+	_limit_on.text = Strings.text(Strings.MAX_PRICE_LABEL)
+	if _dragging_target:
+		_target_label.text = Strings.text(Strings.TARGET_LABEL) % int(_target.value)
+	if _dragging_reserve:
+		_reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(_reserve.value)
+	if _dragging_unloading:
+		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(_unloading.value)
+	_update_clock_controls()
+	_sync_locale_buttons()
+
+
+func _build_locale_row(content: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	_locale_group = ButtonGroup.new()
+	_locale_group.allow_unpress = false
+	# Endonyms, so the player can find their language from the other one.
+	_locale_es = _locale_button("Español", "es")
+	_locale_en = _locale_button("English", "en")
+	row.add_child(_locale_es)
+	row.add_child(_locale_en)
+	content.add_child(row)
+	_sync_locale_buttons()
+
+
+func _locale_button(caption: String, locale: String) -> Button:
+	var button: Button = _button(caption, _select_locale.bind(locale))
+	button.toggle_mode = true
+	button.button_group = _locale_group
+	return button
+
+
+func _select_locale(locale: String) -> void:
+	TranslationServer.set_locale(locale)
+
+
+func _sync_locale_buttons() -> void:
+	if _locale_es == null:
+		return
+	var english: bool = TranslationServer.get_locale().begins_with("en")
+	_locale_en.set_pressed_no_signal(english)
+	_locale_es.set_pressed_no_signal(not english)
+
+
 func _build_controls(content: VBoxContainer) -> void:
+	_build_locale_row(content)
 	var tax_row: HBoxContainer = HBoxContainer.new()
-	var tax_label: Label = Label.new()
-	tax_label.text = Strings.TAX_LABEL
-	tax_row.add_child(tax_label)
+	_tax_label = Label.new()
+	_tax_label.text = Strings.text(Strings.TAX_LABEL)
+	tax_row.add_child(_tax_label)
 	_tax = SpinBox.new()
 	_tax.max_value = PERCENT
 	_tax.value_changed.connect(_tax_changed)
 	tax_row.add_child(_tax)
 	content.add_child(tax_row)
 	_wheat = CheckButton.new()
-	_wheat.text = Strings.WHEAT_PURCHASES
+	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
 	_wheat.focus_mode = Control.FOCUS_NONE
 	_wheat.toggled.connect(_wheat_toggled)
 	content.add_child(_wheat)
 	_wheat_row = _label("")
 	content.add_child(_wheat_row)
-	_tea = _import_switch(content, Strings.TEA_IMPORTS, func(enabled: bool) -> void:
+	_tea = _import_switch(content, Strings.text(Strings.TEA_IMPORTS), func(enabled: bool) -> void:
 		session.submit_command(SetTeaImportsCommand.new(enabled)))
 	_tea_row = _label("")
 	content.add_child(_tea_row)
-	_flour = _import_switch(content, Strings.FLOUR_IMPORTS, func(enabled: bool) -> void:
+	_flour = _import_switch(content, Strings.text(Strings.FLOUR_IMPORTS), func(enabled: bool) -> void:
 		session.submit_command(SetFlourImportsCommand.new(enabled)))
 	_flour_row = _label("")
 	content.add_child(_flour_row)
@@ -155,12 +225,12 @@ func _build_controls(content: VBoxContainer) -> void:
 	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_unloading.drag_started.connect(_unloading_grabbed)
 	_unloading.drag_ended.connect(_unloading_released)
-	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.UNLOADING_LABEL % int(value))
+	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(value))
 	content.add_child(_unloading)
-	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
+	var accumulate_row: Array[Control] = _price_row(content, Strings.text(Strings.ACCUMULATE_LABEL))
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
-	var limit_row: Array[Control] = _price_row(content, Strings.MAX_PRICE_LABEL)
+	var limit_row: Array[Control] = _price_row(content, Strings.text(Strings.MAX_PRICE_LABEL))
 	_limit_on = limit_row[0] as CheckBox
 	_limit_price = limit_row[1] as SpinBox
 	_target_label = _label("")
@@ -173,7 +243,7 @@ func _build_controls(content: VBoxContainer) -> void:
 	_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target.drag_started.connect(func() -> void: _dragging_target = true)
 	_target.drag_ended.connect(_target_released)
-	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.TARGET_LABEL % int(value))
+	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.text(Strings.TARGET_LABEL) % int(value))
 	content.add_child(_target)
 	_reserve_label = _label("")
 	content.add_child(_reserve_label)
@@ -184,10 +254,10 @@ func _build_controls(content: VBoxContainer) -> void:
 	_reserve.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reserve.drag_started.connect(func() -> void: _dragging_reserve = true)
 	_reserve.drag_ended.connect(_reserve_released)
-	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.RESERVE_LABEL % int(value))
+	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(value))
 	content.add_child(_reserve)
 	var speed_row: HBoxContainer = HBoxContainer.new()
-	_pause = _button(Strings.PAUSE, _toggle_pause)
+	_pause = _button(Strings.text(Strings.PAUSE), _toggle_pause)
 	speed_row.add_child(_pause)
 	for speed: int in Strings.SPEED_LABELS:
 		var button: Button = _button(Strings.SPEED_LABELS[speed], _select_speed.bind(speed))
@@ -258,12 +328,12 @@ func _update_wheat_policy(market: Dictionary, defeated: bool) -> void:
 	_target.max_value = market["capacity"]
 	if not _dragging_target:
 		_target.value = market["target_stock"]
-		_target_label.text = Strings.TARGET_LABEL % int(market["target_stock"])
+		_target_label.text = Strings.text(Strings.TARGET_LABEL) % int(market["target_stock"])
 	_syncing = false
 	_reserve.max_value = market["max_reserve_minutes"]
 	if not _dragging_reserve:
 		_reserve.value = market["reserve_minutes"]
-		_reserve_label.text = Strings.RESERVE_LABEL % int(market["reserve_minutes"])
+		_reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(market["reserve_minutes"])
 	_reserve.editable = not defeated
 	_target.editable = not defeated
 
@@ -272,19 +342,19 @@ func _wheat_text(market: Dictionary) -> String:
 	var price: int = market["price"]
 	var previous: int = market["previous_price"]
 	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
-	var covered: String = Strings.MINUTES_COVERED % market["minutes_covered"] if market["minutes_covered"] >= 0.0 \
+	var covered: String = Strings.text(Strings.MINUTES_COVERED) % market["minutes_covered"] if market["minutes_covered"] >= 0.0 \
 		else Strings.NO_MILL_COVERAGE
-	var text: String = Strings.WHEAT_ROW % [market["stock"], market["capacity"], Strings.money(price), trend, covered]
-	return text + "\n" + Strings.WHEAT_BLOCKED_NOTE if market["blocked_by_price"] else text
+	var text: String = Strings.text(Strings.WHEAT_ROW) % [market["stock"], market["capacity"], Strings.money(price), trend, covered]
+	return text + "\n" + Strings.text(Strings.WHEAT_BLOCKED_NOTE) if market["blocked_by_price"] else text
 
 
 func _tea_text(tea: Dictionary) -> String:
-	return Strings.TEA_ROW % [tea["stock"], float(tea["coverage"]) * PERCENT, Strings.money(tea["price"]),
+	return Strings.text(Strings.TEA_ROW) % [tea["stock"], float(tea["coverage"]) * PERCENT, Strings.money(tea["price"]),
 		tea["satisfaction_bonus"], Strings.reason(tea["reason"])]
 
 
 func _flour_text(flour: Dictionary) -> String:
-	return Strings.FLOUR_ROW % [flour["lot_size"], Strings.money(flour["lot_price"]),
+	return Strings.text(Strings.FLOUR_ROW) % [flour["lot_size"], Strings.money(flour["lot_price"]),
 		_unit_price(flour["unit_price"]), flour["stock"], Strings.reason(flour["reason"])]
 
 
@@ -292,7 +362,7 @@ func _barley_text(barley: Dictionary) -> String:
 	var price: int = barley["price"]
 	var previous: int = barley["previous_price"]
 	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
-	return Strings.BARLEY_ROW % [barley["stock"], barley["capacity"], Strings.money(price), trend,
+	return Strings.text(Strings.BARLEY_ROW) % [barley["stock"], barley["capacity"], Strings.money(price), trend,
 		barley["barley_percent"], barley["wheat_percent"]]
 
 
@@ -306,7 +376,7 @@ func _update_unloading(barley: Dictionary, defeated: bool) -> void:
 		# slider; the step is set before the value so the value is not snapped.
 		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 else 1.0
 		_unloading.value = percent
-		_unloading_label.text = Strings.UNLOADING_LABEL % percent
+		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % percent
 	_unloading_current = percent
 	_unloading.editable = not defeated
 
@@ -327,7 +397,7 @@ func _unloading_released(_changed: bool) -> void:
 
 
 func _malt_beer_text(malt: Dictionary, beer: Dictionary) -> String:
-	return Strings.MALT_BEER_ROW % [malt["stock"], malt["capacity"], beer["stock"], beer["capacity"]]
+	return Strings.text(Strings.MALT_BEER_ROW) % [malt["stock"], malt["capacity"], beer["stock"], beer["capacity"]]
 
 
 # A lot is priced in whole pence, so the unit price can carry a fraction of a penny.
@@ -366,7 +436,7 @@ func _target_released(_changed: bool) -> void:
 
 
 func _update_clock_controls() -> void:
-	_pause.text = Strings.RESUME if clock.speed == 0 else Strings.PAUSE
+	_pause.text = Strings.text(Strings.RESUME) if clock.speed == 0 else Strings.text(Strings.PAUSE)
 	for speed: int in _speed_buttons:
 		_speed_buttons[speed].set_pressed_no_signal(speed == _speed)
 
@@ -375,13 +445,13 @@ func _update_alert(defeat: Dictionary) -> void:
 	var names: Array[String] = []
 	if not defeat["causes"].is_empty():
 		for cause: StringName in defeat["causes"]:
-			names.append(Strings.CONDITION_LABELS[cause])
-		_alert.text = Strings.ALERT_DEFEAT % ", ".join(names)
+			names.append(Strings.label(Strings.CONDITION_LABELS, cause))
+		_alert.text = Strings.text(Strings.ALERT_DEFEAT) % ", ".join(names)
 	else:
 		for key: StringName in CONDITIONS:
 			if defeat[key]["status"] == &"warning":
-				names.append(Strings.CONDITION_LABELS[key] + _timer_text(defeat[key]))
-		_alert.text = Strings.ALERT_WARNING % ", ".join(names) if not names.is_empty() else ""
+				names.append(Strings.label(Strings.CONDITION_LABELS, key) + _timer_text(defeat[key]))
+		_alert.text = Strings.text(Strings.ALERT_WARNING) % ", ".join(names) if not names.is_empty() else ""
 	_alert.visible = not _alert.text.is_empty()
 
 
@@ -402,58 +472,58 @@ func _mobility_text(stats: Dictionary, needs: Dictionary) -> String:
 			break
 	var lines: Array[String] = []
 	if promoted > 0:
-		lines.append(Strings.MOBILITY_PROMOTED % [promoted, lower, upper])
+		lines.append(Strings.text(Strings.MOBILITY_PROMOTED) % [promoted, lower, upper])
 	if demoted > 0:
-		lines.append(Strings.MOBILITY_DEMOTED % [demoted, upper, lower])
+		lines.append(Strings.text(Strings.MOBILITY_DEMOTED) % [demoted, upper, lower])
 	return "\n".join(lines)
 
 
 func _bread_text(economy: Dictionary, stats: Dictionary, diagnostics: Dictionary) -> String:
-	var lines: Array[String] = [Strings.BREAD_RATE % [stats["bread_produced_per_minute"],
+	var lines: Array[String] = [Strings.text(Strings.BREAD_RATE) % [stats["bread_produced_per_minute"],
 		stats["bread_consumed_per_minute"], stats["bread_demand_per_minute"]]]
 	var stocks: Dictionary = economy["stocks"]
-	lines.append(Strings.STOCKS % [stocks.get(&"wheat", 0), stocks.get(&"flour", 0), stocks.get(&"bread", 0)])
+	lines.append(Strings.text(Strings.STOCKS) % [stocks.get(&"wheat", 0), stocks.get(&"flour", 0), stocks.get(&"bread", 0)])
 	if not diagnostics["bread_short"]:
-		lines.append(Strings.BREAD_OK)
+		lines.append(Strings.text(Strings.BREAD_OK))
 		return "\n".join(lines)
-	lines.append(Strings.BREAD_SHORT)
+	lines.append(Strings.text(Strings.BREAD_SHORT))
 	for cause: Dictionary in diagnostics["bread_causes"]:
 		var label: String = Strings.building_label(String(cause["definition_id"]))
 		# Chain-wide causes have no single building to blame.
 		if label.is_empty():
-			lines.append(Strings.BREAD_CHAIN_CAUSE % Strings.reason(cause["reason"]))
+			lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % Strings.reason(cause["reason"]))
 		else:
-			lines.append(Strings.BREAD_CAUSE % [label, Strings.reason(cause["reason"])])
+			lines.append(Strings.text(Strings.BREAD_CAUSE) % [label, Strings.reason(cause["reason"])])
 	return "\n".join(lines)
 
 
 func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 	var breakdown: Dictionary = economy["satisfaction_breakdown"]
 	var lines: Array[String] = [
-		Strings.POPULATION % [economy["population"], economy["employed"], economy["unemployed"]],
-		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
+		Strings.text(Strings.POPULATION) % [economy["population"], economy["employed"], economy["unemployed"]],
+		Strings.text(Strings.SATISFACTION) % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
 			breakdown.get("tax", 0.0), breakdown.get("overcrowding", 0.0)],
-		Strings.TREASURY % Strings.money(economy["money"]),
-		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
-		Strings.BALANCE_BREAKDOWN % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
+		Strings.text(Strings.TREASURY) % Strings.money(economy["money"]),
+		Strings.text(Strings.OPERATING_BALANCE) % _money(stats["operating_balance_per_minute"]),
+		Strings.text(Strings.BALANCE_BREAKDOWN) % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
 			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"]),
 			_money(stats["barley_spent_per_minute"]), _money(stats["imports_spent_per_minute"])],
-		Strings.CONSTRUCTION % _money(stats["construction_spent_per_minute"]),
-		Strings.WHEAT_PRICE % Strings.money(economy.get("wheat_price", 0)),
+		Strings.text(Strings.CONSTRUCTION) % _money(stats["construction_spent_per_minute"]),
+		Strings.text(Strings.WHEAT_PRICE) % Strings.money(economy.get("wheat_price", 0)),
 	]
 	if not stats["complete"]:
-		lines.append(Strings.WINDOW_PARTIAL % [stats["window_seconds"], stats["window_size"]])
+		lines.append(Strings.text(Strings.WINDOW_PARTIAL) % [stats["window_seconds"], stats["window_size"]])
 	return "\n".join(lines)
 
 
 func _needs_text(needs: Dictionary) -> String:
-	var lines: Array[String] = [Strings.NEEDS_TITLE]
+	var lines: Array[String] = [Strings.text(Strings.NEEDS_TITLE)]
 	for class_id: StringName in needs["classes"]:
 		var class_label: String = Strings.label(Strings.CLASS_LABELS, class_id)
 		var info: Dictionary = needs["classes"][class_id]
 		# Rounded down like the promotion's satisfaction check, so the two never disagree on screen.
-		lines.append(Strings.CLASS_HEADER % [class_label, info["population"], floorf(info["satisfaction"]["current"])])
-		lines.append(Strings.COVERAGE_ROW % [class_label, _coverage_text(info["categories"])])
+		lines.append(Strings.text(Strings.CLASS_HEADER) % [class_label, info["population"], floorf(info["satisfaction"]["current"])])
+		lines.append(Strings.text(Strings.COVERAGE_ROW) % [class_label, _coverage_text(info["categories"])])
 		for entry: Dictionary in info["categories"]:
 			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
 			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
@@ -461,24 +531,24 @@ func _needs_text(needs: Dictionary) -> String:
 			var value: float = _tenths(maxf(entry["value"], entry["threshold"]) if entry["met"] else entry["value"], false)
 			var threshold: float = _tenths(entry["threshold"], not entry["met"])
 			if entry["met"]:
-				lines.append(Strings.NEEDS_MET % [class_label, category, value, threshold])
+				lines.append(Strings.text(Strings.NEEDS_MET) % [class_label, category, value, threshold])
 				continue
 			var missing: Array[String] = []
 			for good: StringName in entry["missing_goods"]:
 				missing.append(Strings.label(Strings.GOOD_LABELS, good))
 			# Nothing to cover that would help (the value is too low to ever reach the threshold): the reason says it.
 			if missing.is_empty() or entry["reason"] == &"unreachable_threshold":
-				lines.append(Strings.NEEDS_SHORT_REASON % [class_label, category, value,
+				lines.append(Strings.text(Strings.NEEDS_SHORT_REASON) % [class_label, category, value,
 					threshold, Strings.reason(entry["reason"])])
 				continue
-			lines.append(Strings.NEEDS_SHORT % [class_label, category, value, threshold,
+			lines.append(Strings.text(Strings.NEEDS_SHORT) % [class_label, category, value, threshold,
 				", ".join(missing)])
 		var housing: Dictionary = info["housing"]
-		lines.append(Strings.HOUSING_ROW % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
+		lines.append(Strings.text(Strings.HOUSING_ROW) % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
 		if not info["mobility"].is_empty():
 			lines.append_array(_promotion_lines(class_label, info["mobility"]))
 	if needs["classes"].is_empty():
-		lines.append(Strings.NEEDS_NO_CLASS)
+		lines.append(Strings.text(Strings.NEEDS_NO_CLASS))
 	return "\n".join(lines)
 
 
@@ -488,7 +558,7 @@ func _coverage_text(categories: Array) -> String:
 	var parts: Array[String] = []
 	for entry: Dictionary in categories:
 		for good: Dictionary in entry["goods"]:
-			parts.append(Strings.GOOD_COVERAGE % [Strings.label(Strings.GOOD_LABELS, good["good"]),
+			parts.append(Strings.text(Strings.GOOD_COVERAGE) % [Strings.label(Strings.GOOD_LABELS, good["good"]),
 				floorf(float(good["coverage"]) * PERCENT)])
 	return " · ".join(parts)
 
@@ -498,11 +568,11 @@ func _coverage_text(categories: Array) -> String:
 func _promotion_lines(class_label: String, mobility: Dictionary) -> Array[String]:
 	var promotion: Dictionary = mobility["promotion"]
 	if promotion["active"]:
-		return [Strings.PROMOTION_ACTIVE % [class_label, promotion["per_minute"]]]
-	var lines: Array[String] = [Strings.PROMOTION_BLOCKED % class_label]
+		return [Strings.text(Strings.PROMOTION_ACTIVE) % [class_label, promotion["per_minute"]]]
+	var lines: Array[String] = [Strings.text(Strings.PROMOTION_BLOCKED) % class_label]
 	var source_label: String = Strings.label(Strings.CLASS_LABELS, mobility["from"])
 	for blocker: Dictionary in promotion["blockers"]:
-		lines.append(Strings.PROMOTION_BLOCKER % _blocker_text(blocker, source_label))
+		lines.append(Strings.text(Strings.PROMOTION_BLOCKER) % _blocker_text(blocker, source_label))
 	return lines
 
 
@@ -511,7 +581,7 @@ func _blocker_text(blocker: Dictionary, source_label: String) -> String:
 		return _category_blocker_text(blocker)
 	if blocker["reason"] == MobilitySystem.REASON_SOURCE_SATISFACTION_LOW:
 		# Rounded apart, so a satisfaction just under the minimum never reads as reaching it.
-		return Strings.PROMOTION_SATISFACTION_LOW % [source_label, floorf(blocker["satisfaction"]),
+		return Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [source_label, floorf(blocker["satisfaction"]),
 			ceilf(blocker["minimum"])]
 	return Strings.reason(blocker["reason"])
 
@@ -525,8 +595,8 @@ func _category_blocker_text(blocker: Dictionary) -> String:
 	for good: StringName in blocker["missing_goods"]:
 		missing.append(Strings.label(Strings.GOOD_LABELS, good))
 	if missing.is_empty():
-		return Strings.PROMOTION_CATEGORY_REASON % [category, value, minimum, Strings.reason(blocker["reason"])]
-	return Strings.PROMOTION_CATEGORY_BELOW % [category, value, minimum, ", ".join(missing)]
+		return Strings.text(Strings.PROMOTION_CATEGORY_REASON) % [category, value, minimum, Strings.reason(blocker["reason"])]
+	return Strings.text(Strings.PROMOTION_CATEGORY_BELOW) % [category, value, minimum, ", ".join(missing)]
 
 
 func _tenths(value: float, round_up: bool) -> float:
@@ -534,30 +604,30 @@ func _tenths(value: float, round_up: bool) -> float:
 
 
 func _buildings_text(buildings: Array) -> String:
-	var lines: Array[String] = [Strings.BUILDINGS]
+	var lines: Array[String] = [Strings.text(Strings.BUILDINGS)]
 	for building: Dictionary in buildings:
-		lines.append(Strings.BUILDING_STATUS % [Strings.building_label(String(building["definition_id"])),
+		lines.append(Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label(String(building["definition_id"])),
 			building["cell"][0], building["cell"][1], building["workers"], building["jobs"], Strings.reason(building["reason"])])
 	if buildings.is_empty():
-		lines.append(Strings.NO_BUILDINGS)
+		lines.append(Strings.text(Strings.NO_BUILDINGS))
 	return "\n".join(lines)
 
 
 func _crises_text(defeat: Dictionary) -> String:
-	var lines: Array[String] = [Strings.CRISES]
+	var lines: Array[String] = [Strings.text(Strings.CRISES)]
 	if defeat["grace_active"]:
-		lines.append(Strings.GRACE % defeat["grace_remaining_seconds"])
+		lines.append(Strings.text(Strings.GRACE) % defeat["grace_remaining_seconds"])
 	var bankruptcy: Dictionary = defeat[&"bankruptcy"]
 	var hunger: Dictionary = defeat[&"hunger"]
 	var depopulation: Dictionary = defeat[&"depopulation"]
 	var metrics: Dictionary[StringName, String] = {
-		&"bankruptcy": Strings.METRIC_BANKRUPTCY % [Strings.money(bankruptcy["money"]), Strings.money(bankruptcy["threshold"])],
-		&"hunger": Strings.METRIC_HUNGER % [hunger["coverage"] * PERCENT, hunger["threshold"] * PERCENT],
-		&"depopulation": Strings.METRIC_DEPOPULATION % [depopulation["population"], depopulation["peak"]],
+		&"bankruptcy": Strings.text(Strings.METRIC_BANKRUPTCY) % [Strings.money(bankruptcy["money"]), Strings.money(bankruptcy["threshold"])],
+		&"hunger": Strings.text(Strings.METRIC_HUNGER) % [hunger["coverage"] * PERCENT, hunger["threshold"] * PERCENT],
+		&"depopulation": Strings.text(Strings.METRIC_DEPOPULATION) % [depopulation["population"], depopulation["peak"]],
 	}
 	for key: StringName in CONDITIONS:
 		var condition: Dictionary = defeat[key]
-		lines.append(Strings.CONDITION % [Strings.CONDITION_LABELS[key], Strings.STATUS_LABELS[condition["status"]],
+		lines.append(Strings.text(Strings.CONDITION) % [Strings.label(Strings.CONDITION_LABELS, key), Strings.label(Strings.STATUS_LABELS, condition["status"]),
 			metrics[key]] + _timer_text(condition))
 	return "\n".join(lines)
 
@@ -565,7 +635,7 @@ func _crises_text(defeat: Dictionary) -> String:
 func _timer_text(condition: Dictionary) -> String:
 	if not condition["timer_running"]:
 		return ""
-	return Strings.TIMER % [condition["elapsed_seconds"], condition["duration_seconds"], condition["remaining_seconds"]]
+	return Strings.text(Strings.TIMER) % [condition["elapsed_seconds"], condition["duration_seconds"], condition["remaining_seconds"]]
 
 
 func _tax_changed(value: float) -> void:
