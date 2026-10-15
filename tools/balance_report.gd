@@ -25,6 +25,8 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --target-stock <n>    replace the target stock of every set_wheat_policy command
   --barley-percent <n>  replace the barley share of every set_unloading_split command, 0 to 100
                         (the grain sweep of issue #55: --scenario grain_split)
+  --preset <id>         play every scenario on a difficulty preset of data/difficulty/presets.json
+                        (easy, normal, hard; issue #70). Not with --wheat-price or --wheat-max-price
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
@@ -50,6 +52,12 @@ func _init() -> void:
 	if runner == null:
 		quit(1)
 		return
+	if options["preset"] != "":
+		var errors: Array[String] = runner.use_difficulty(StringName(options["preset"]))
+		if not errors.is_empty():
+			printerr("balance_report: %s" % "; ".join(errors))
+			quit(2)
+			return
 	if options["wheat_price"] > 0:
 		runner.pin_wheat_price(options["wheat_price"])
 	if options["wheat_max_price"] > 0:
@@ -232,7 +240,7 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 func _parse(args: PackedStringArray) -> Dictionary:
 	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
 		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "barley_percent": -1,
-		"help": false}
+		"preset": "", "help": false}
 	var index: int = 0
 	while index < args.size():
 		var flag: String = args[index]
@@ -241,7 +249,7 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			index += 1
 			continue
 		if flag not in ["--scenario", "--out", "--seeds", "--tax", "--wheat-price",
-				"--wheat-max-price", "--target-stock", "--barley-percent"] or index + 1 >= args.size():
+				"--wheat-max-price", "--target-stock", "--barley-percent", "--preset"] or index + 1 >= args.size():
 			return {"error": "unknown or incomplete option '%s'" % flag}
 		var value: String = args[index + 1]
 		match flag:
@@ -272,6 +280,9 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			_:
 				options[flag.trim_prefix("--")] = value
 		index += 2
+	# A preset sets its own wheat prices, which would silently undo a pinned one.
+	if options["preset"] != "" and (options["wheat_price"] > 0 or options["wheat_max_price"] > 0):
+		return {"error": "--preset cannot be combined with --wheat-price or --wheat-max-price"}
 	return options
 
 

@@ -27,6 +27,8 @@ var _catalog: DataCatalog
 var _params: Params
 var _context: EconomyContext
 var _map_id: StringName = &"whitechapel_1850s"
+# Difficulty modifiers (DataLayers); empty is Normal, the base values as they are.
+var _layers: Array[Modifier] = []
 
 
 # Returns null (and logs the errors) when data/ does not load.
@@ -37,9 +39,22 @@ static func create() -> ScenarioRunner:
 		return null
 	var runner: ScenarioRunner = ScenarioRunner.new()
 	runner._catalog = loaded.catalog
-	runner._params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+	runner._params = runner._new_params()
 	runner._context = EconomyContext.new(loaded.catalog, loaded.catalog.maps[runner._map_id])
 	return runner
+
+
+# Balance probes (issue #70): every later run uses this difficulty preset. Returns the errors, empty when it applies.
+func use_difficulty(preset_id: StringName) -> Array[String]:
+	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
+	if layers.is_ok():
+		_layers = layers.modifiers
+		_params = _new_params()
+	return layers.errors
+
+
+func _new_params() -> Params:
+	return Params.new(_catalog, _catalog.roles[&"neutral_administrator"], _layers)
 
 
 # Read-only view of a parameter, so tests derive timings from data/ instead of copying them.
@@ -52,14 +67,14 @@ func param(key: StringName) -> Variant:
 func pin_wheat_price(price: int) -> void:
 	for key: StringName in [&"market.wheat.base_price", &"market.wheat.min_price", &"market.wheat.max_price"]:
 		_catalog.base_values[key] = price
-	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_params = _new_params()
 
 
 # Balance probes only (issue #42): the highest price the wheat market can reach. Like pin_wheat_price,
 # it changes this runner's copy of the values, never the files in data/.
 func pin_wheat_max_price(price: int) -> void:
 	_catalog.base_values[&"market.wheat.max_price"] = price
-	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_params = _new_params()
 
 
 # Money plus the wheat in store valued at the base price (issue #42): what the city owns, not only
@@ -203,7 +218,7 @@ func _params_without_repricing(duration_ticks: int) -> Params:
 	var key: StringName = &"market.wheat.price_update_seconds"
 	var saved: Variant = _catalog.base_values[key]
 	_catalog.base_values[key] = duration_ticks + 1
-	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	var params: Params = _new_params()
 	_catalog.base_values[key] = saved
 	return params
 

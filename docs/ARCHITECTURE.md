@@ -11,7 +11,10 @@ Changes to this file go through a normal PR reviewed by Cristian.
    real `delta × speed` and calls `sim.tick()` in whole steps (capped per frame). Same seed + same
    commands ⇒ same state. Randomness (wheat price) only via the sim's seeded `RandomNumberGenerator`.
 3. **Everything tunable lives in `data/`** as JSON, read through `Params.get_value(key)`, which applies the
-   active role's modifier list (empty for the neutral administrator in M1, D-014 / D-019).
+   difficulty's layers and then the active role's modifier list (empty for the neutral administrator in M1,
+   D-014 / D-019). Layer order (D-065, ADR 0010): base → mods → preset → knobs → role. `DataLayers` resolves the
+   preset (relative: `mul`/`add` on the values below it) and the knobs (absolute) once, into `set` modifiers that
+   `Params` applies before the role's; whole keys are rounded there. Normal has no modifiers.
 4. **UI sends commands, reads snapshots.** `Simulation.apply_command(cmd)` (build, demolish, set_tax,
    order_wheat, toggle_tea, …) is the only way to change state. After each tick the sim emits a read-only
    snapshot + per-minute stats for the panel. The command log also gives free replays and, later, saves.
@@ -34,7 +37,10 @@ londinium/
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
-│   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota")
+│   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota"); `enabled` is the defeats switch (D-065)
+│   ├── difficulty/           # optional (D-065): without it the game runs on the base values
+│   │   ├── presets.json      # easy, normal, hard: relative modifiers (mul|add) and `events` (reserved, empty until #63)
+│   │   └── knobs.json        # loose knobs: kind (switch, value, price_volatility), keys, min, max, step
 │   ├── eras/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
@@ -50,7 +56,8 @@ londinium/
 │   ├── sim/                  # pure simulation (RefCounted, no Node)
 │   │   ├── simulation.gd     # owns state, tick(), apply_command(), snapshot()
 │   │   ├── economy_state.gd  # stocks (global warehouse, D-011), money (int pence), buildings, population
-│   │   ├── params.gd         # get_value(key) = base data ∘ role modifiers
+│   │   ├── params.gd         # get_value(key) = base data ∘ difficulty layers ∘ role modifiers
+│   │   ├── data_layers.gd    # preset + knobs → `set` modifiers, with clear errors for a knob out of range
 │   │   ├── modifier.gd       # {key, op: add|mul|set, value}
 │   │   ├── data_loader.gd    # JSON → typed defs, with validation errors
 │   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …

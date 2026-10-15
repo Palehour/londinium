@@ -49,6 +49,7 @@ const MINUTES_COVERED: StringName = &"ui.minutes_covered"
 const PAUSE: StringName = &"ui.pause"
 const RESUME: StringName = &"ui.resume"
 const RESTART: StringName = &"ui.restart"
+const DIFFICULTY: StringName = &"ui.difficulty"
 const POPULATION: StringName = &"ui.population"
 const SATISFACTION: StringName = &"ui.satisfaction"
 const BREAD_RATE: StringName = &"ui.bread_rate"
@@ -132,6 +133,10 @@ const CLASS_LABELS: Dictionary[StringName, StringName] = {
 const CATEGORY_LABELS: Dictionary[StringName, StringName] = {
 	&"sustento": &"ui.category.sustento", &"abrigo": &"ui.category.abrigo", &"salud": &"ui.category.salud",
 	&"comunidad": &"ui.category.comunidad", &"estatus": &"ui.category.estatus",
+}
+# Difficulty presets (D-065), in the order the panel shows them.
+const DIFFICULTY_LABELS: Dictionary[StringName, StringName] = {
+	&"easy": &"ui.difficulty.easy", &"normal": &"ui.difficulty.normal", &"hard": &"ui.difficulty.hard",
 }
 const GOOD_LABELS: Dictionary[StringName, StringName] = {
 	&"wheat": &"ui.good.wheat", &"barley": &"ui.good.barley", &"flour": &"ui.good.flour", &"bread": &"ui.good.bread",
@@ -250,7 +255,7 @@ static func all_keys() -> Array[StringName]:
 		METRIC_HUNGER, METRIC_DEPOPULATION, NEEDS_TITLE, CLASS_HEADER, COVERAGE_ROW, GOOD_COVERAGE,
 		PROMOTION_ACTIVE, PROMOTION_BLOCKED, PROMOTION_BLOCKER, PROMOTION_CATEGORY_BELOW,
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
-		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED,
+		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
 	]
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
@@ -260,6 +265,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, CLASS_LABELS[class_id])
 	for category_id: StringName in CATEGORY_LABELS:
 		_append_unique(keys, CATEGORY_LABELS[category_id])
+	for preset_id: StringName in DIFFICULTY_LABELS:
+		_append_unique(keys, DIFFICULTY_LABELS[preset_id])
 	for good_id: StringName in GOOD_LABELS:
 		_append_unique(keys, GOOD_LABELS[good_id])
 	for condition_id: StringName in CONDITION_LABELS:

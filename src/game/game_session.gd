@@ -6,6 +6,8 @@ signal command_resolved(accepted: bool, reason: StringName)
 
 var simulation: Simulation
 var context: EconomyContext
+# The preset this game runs on (D-065), kept for saving (#57).
+var difficulty: StringName = DataLayers.NORMAL
 var _params: Params
 var _initial_state: EconomyState
 var _victory_stages: Array[Dictionary] = []
@@ -13,10 +15,22 @@ var _seed: int
 var _pending: Array[SimulationCommand] = []
 
 
-func _init(catalog: DataCatalog, params: Params, scenario_id: StringName = &"victorian_demo") -> void:
+func _init(catalog: DataCatalog, params: Params, scenario_id: StringName = &"victorian_demo",
+		preset_id: StringName = DataLayers.NORMAL) -> void:
 	_victory_stages.assign(catalog.scenarios.get(scenario_id, {}).get("stages", []))
-	_params = params
 	context = EconomyContext.new(catalog, catalog.maps[&"whitechapel_1850s"])
+	_start(params, preset_id)
+
+
+# A new game on another difficulty: the startup values come from the new parameters.
+func restart_with(params: Params, preset_id: StringName) -> void:
+	_pending.clear()
+	_start(params, preset_id)
+
+
+func _start(params: Params, preset_id: StringName) -> void:
+	_params = params
+	difficulty = preset_id
 	var state: EconomyState = EconomyState.new()
 	state.money = int(params.get_value(&"startup.money"))
 	state.population = int(params.get_value(&"startup.population"))
