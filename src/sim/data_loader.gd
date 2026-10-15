@@ -50,6 +50,13 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
 		"construction_escalation": {"free_copies": "integer", "per_building": "number", "max_multiplier": "number"},
 	},
+	# Statistics history (issue #82, D-066): derived from the state, it never feeds back into the simulation.
+	"stats": {
+		"fine": {"span_seconds": "positive_integer"},
+		"medium": {"bucket_seconds": "positive_integer", "span_seconds": "positive_integer"},
+		"chapter": {"bucket_seconds": "positive_integer"},
+		"causes": {"max_events": "positive_integer"},
+	},
 	"defeat": {
 		# Off only through the defeats knob (D-065): the city can no longer lose, but the timers' inputs still run.
 		"enabled": "boolean",
@@ -160,6 +167,11 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			and float(catalog.base_values[recovery_key]) < float(catalog.base_values[threshold_key]):
 		_errors.append("economy/population.json: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
 	_check_wheat_policy(catalog)
+	var bucket_key: StringName = &"stats.medium.bucket_seconds"
+	var span_key: StringName = &"stats.medium.span_seconds"
+	if catalog.base_values.has(bucket_key) and catalog.base_values.has(span_key) \
+			and int(catalog.base_values[span_key]) % int(catalog.base_values[bucket_key]) != 0:
+		_errors.append("economy/stats.json: stats.medium.span_seconds must be a multiple of stats.medium.bucket_seconds")
 	# Presets and knobs name Params keys, so they load once every key is registered.
 	_load_presets(documents.get(PRESETS_PATH, {}), catalog)
 	_load_knobs(documents.get(KNOBS_PATH, {}), catalog)

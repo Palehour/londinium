@@ -56,6 +56,16 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"population.stats_window_seconds": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"stats.fine.span_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"stats.medium.bucket_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"stats.medium.span_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"stats.chapter.bucket_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"stats.causes.max_events": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	# The policy uses -1 for "off" / "no limit" (WheatPolicy), so a price bound must not be negative.
 	&"market.wheat.min_price": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
@@ -198,7 +208,9 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"market.malt.storage_capacity", &"market.beer.storage_capacity",
 				&"policy.unloading.default_barley_percent", &"policy.unloading.step_percent",
 				&"needs.housing_bonus_per_category", &"economy.administration.free_buildings",
-				&"economy.construction_escalation.free_copies"] \
+				&"economy.construction_escalation.free_copies", &"stats.fine.span_seconds",
+				&"stats.medium.bucket_seconds", &"stats.medium.span_seconds", &"stats.chapter.bucket_seconds",
+				&"stats.causes.max_events"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

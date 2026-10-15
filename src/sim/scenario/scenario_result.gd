@@ -53,6 +53,8 @@ var payback_tick_with_housing: int = -1
 var payback_tick_without_housing: int = -1
 # First tick that ended with artisans in the city (issue #55: the beer crisis starts relative to it); -1: never.
 var first_artisan_tick: int = -1
+# Bytes the chapter statistics take in a save at the end of the game, compressed (issue #82); not a CSV column.
+var stats_history_bytes: int = -1
 
 
 func row(minute: int) -> Dictionary:

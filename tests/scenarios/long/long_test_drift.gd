@@ -20,11 +20,15 @@ const DRIFT_TO: float = 4000.0
 const BREAD_FLOOR: float = 0.5
 const BREAD_TARGET: float = 0.6
 const BREAD_TARGET_SEEDS: int = 17
+# Issue #82, Cristian on 2026-10-13: an 8-hour game must not save more than 5 MB of statistics, compressed.
+const STATS_GAME: String = "drift_8h"
+const STATS_MAX_BYTES: int = 5 * 1024 * 1024
 
 static var _drifts: Dictionary[String, Array] = {}
 static var _stage3_minutes: Array[int] = []
 static var _lowest_bread: Array[float] = []
 static var _defeats: int = 0
+static var _stats_bytes: Array[int] = []
 
 var _stage3_tax: float
 var _stage3_required: int
@@ -55,6 +59,9 @@ func before_all() -> void:
 				_stage3_minutes.append(stage3)
 				_lowest_bread.append(float(found["bread_coverage_lowest_after_hour1"]))
 				_defeats += 0 if result.survived() else 1
+			if id == STATS_GAME:
+				_stats_bytes.append(result.stats_history_bytes)
+				gut.p("%s seed %d: statistics history %d bytes compressed" % [id, seed_value, result.stats_history_bytes])
 			gut.p("%s seed %d: money %+.0f per hour, lowest bread %.2f and beer %.2f after hour 1, %d min in debt; stage 3 of #56 at minute %d; lowest bread by hour %s, beer %s"
 				% [id, seed_value, found["money_drift_per_hour"], found["bread_coverage_lowest_after_hour1"],
 				found["beer_coverage_lowest_after_hour1"], int(found["minutes_in_debt"]), stage3,
@@ -84,6 +91,12 @@ static func _median(values: Array) -> float:
 func test_drift_games_survive_and_report_their_drift() -> void:
 	for id: String in GAMES:
 		assert_eq(_drifts.get(id, []).size(), GAMES[id], "%s played every seed" % id)
+
+
+func test_eight_hour_statistics_save_under_5_mb() -> void:
+	assert_eq(_stats_bytes.size(), GAMES[STATS_GAME])
+	for size: int in _stats_bytes:
+		assert_between(size, 1, STATS_MAX_BYTES)
 
 
 func test_money_drift_of_the_four_hour_game_is_reported_against_its_target() -> void:

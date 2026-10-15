@@ -195,6 +195,7 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
 		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot, probe))
 	result.final_economy = snapshot["economy"]
+	result.stats_history_bytes = StatsHistory.compressed_size(sim.stats_history_to_dict())
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]

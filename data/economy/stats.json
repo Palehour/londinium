@@ -1,0 +1,6 @@
+{
+  "fine": { "span_seconds": 600 },
+  "medium": { "bucket_seconds": 10, "span_seconds": 7200 },
+  "chapter": { "bucket_seconds": 60 },
+  "causes": { "max_events": 10000 }
+}
