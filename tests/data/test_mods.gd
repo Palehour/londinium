@@ -84,15 +84,55 @@ func test_alphabetical_without_load_order() -> void:
 func test_load_order_last_wins_and_reports_conflict() -> void:
 	_write("b_poor/data/economy/startup.json", {"money": 600, "population": 10})
 	_write("a_rich/data/economy/startup.json", {"money": 2000})
-	_write("unlisted/data/economy/startup.json", {"money": 999})
 	_write("load_order.json", ["b_poor", "a_rich"])
 	var loaded: DataLoadResult = _load()
 	assert_true(loaded.is_ok(), str(loaded.errors))
-	assert_eq(loaded.mods, [&"b_poor", &"a_rich"] as Array[StringName], "A mod left out of the list stays off")
+	assert_eq(loaded.mods, [&"b_poor", &"a_rich"] as Array[StringName])
 	assert_eq(loaded.catalog.base_values[&"startup.money"], 2000)
 	assert_eq(loaded.catalog.base_values[&"startup.population"], 10)
 	assert_eq(loaded.mod_conflicts, [{"key": "economy/startup.json.money", "mods": ["b_poor", "a_rich"],
 		"winner": "a_rich"}])
+
+
+# D-065 only orders mods: a folder the list leaves out still loads, after the listed ones, alphabetically.
+func test_mods_left_out_of_load_order_load_last_alphabetically() -> void:
+	_write("z_listed/data/economy/startup.json", {"money": 600})
+	_write("c_unlisted/data/economy/startup.json", {"money": 999})
+	_write("b_unlisted/data/economy/startup.json", {"money": 2000})
+	_write("load_order.json", ["z_listed"])
+	var loaded: DataLoadResult = _load()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	assert_eq(loaded.mods, [&"z_listed", &"b_unlisted", &"c_unlisted"] as Array[StringName])
+	assert_eq(loaded.catalog.base_values[&"startup.money"], 999)
+
+
+func test_saved_load_order_is_the_order_of_the_next_load() -> void:
+	_write("a/data/economy/startup.json", {"money": 2000})
+	_write("b/data/economy/startup.json", {"money": 600})
+	assert_eq(ModLayer.save_load_order(ROOT, [&"b", &"a"] as Array[StringName]), OK)
+	var loaded: DataLoadResult = _load()
+	assert_eq(loaded.mods, [&"b", &"a"] as Array[StringName])
+	assert_eq(loaded.catalog.base_values[&"startup.money"], 2000)
+
+
+func test_oversized_or_too_deep_mod_files_are_rejected() -> void:
+	_write("huge/data/economy/startup.json", "{\"money\": 2000}" + " ".repeat(ModLayer.MAX_FILE_BYTES))
+	var nested: Dictionary = {"wheat": {}}
+	var inner: Dictionary = nested["wheat"]
+	for level: int in range(ModLayer.MAX_DEPTH):
+		inner["deeper"] = {}
+		inner = inner["deeper"]
+	_write("deep/data/economy/market.json", nested)
+	var errors: Array[String] = _load().errors
+	assert_has(errors, "mod 'huge': economy/startup.json: file larger than %d bytes" % ModLayer.MAX_FILE_BYTES)
+	assert_has(errors, "mod 'deep': economy/market.json: nested deeper than %d levels" % ModLayer.MAX_DEPTH)
+
+
+func test_a_file_at_the_size_limit_still_loads() -> void:
+	_write("roomy/data/economy/startup.json", "{\"money\": 2000}" + " ".repeat(ModLayer.MAX_FILE_BYTES - 15))
+	var loaded: DataLoadResult = _load()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	assert_eq(loaded.catalog.base_values[&"startup.money"], 2000)
 
 
 func test_mod_value_out_of_range_is_rejected_naming_the_mod() -> void:

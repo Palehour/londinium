@@ -12,9 +12,7 @@ Changes to this file go through a normal PR reviewed by Cristian.
    commands ⇒ same state. Randomness (wheat price) only via the sim's seeded `RandomNumberGenerator`.
 3. **Everything tunable lives in `data/`** as JSON, read through `Params.get_value(key)`, which applies the
    difficulty's layers and then the active role's modifier list (empty for the neutral administrator in M1,
-   D-014 / D-019). Layer order (D-065, ADR 0010): base → mods → preset → knobs → role. `DataLayers` resolves the
-   preset (relative: `mul`/`add` on the values below it) and the knobs (absolute) once, into `set` modifiers that
-   `Params` applies before the role's; whole keys are rounded there. Normal has no modifiers.
+   D-014 / D-019). The layers and their order are in "Data layers" below.
 4. **UI sends commands, reads snapshots.** `Simulation.apply_command(cmd)` (build, demolish, set_tax,
    order_wheat, toggle_tea, …) is the only way to change state. After each tick the sim emits a read-only
    snapshot + per-minute stats for the panel. The command log also gives free replays and, later, saves.
@@ -60,13 +58,13 @@ londinium/
 │   │   ├── data_layers.gd    # preset + knobs → `set` modifiers, with clear errors for a knob out of range
 │   │   ├── modifier.gd       # {key, op: add|mul|set, value}
 │   │   ├── data_loader.gd    # JSON → typed defs, with validation errors
-│   │   ├── mod_layer.gd      # mods (D-049): user://mods/<name>/data/ merged over data/ before validation
+│   │   ├── mod_layer.gd      # mods (D-049, D-065): user://mods/<name>/data/ merged over data/ before validation
 │   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …
 │   │   ├── systems/          # one file per tick step (see order below)
 │   │   ├── commands/         # command classes / validation
 │   │   └── stats.gd          # rolling 60-tick windows for "per minute" figures
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera
-│   └── ui/                   # stats_panel/, build_bar/, controls/, defeat_banner/, strings.gd
+│   └── ui/                   # stats_panel/, mods_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
 ├── tests/
@@ -97,6 +95,32 @@ londinium/
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
 11. Stats + snapshot emitted.
+
+## Data layers (D-049, D-065, ADR 0010)
+Every value goes through the same layers, in this order: **base → mods → preset → knobs → role**.
+1. **Base:** `data/` as shipped.
+2. **Mods:** a mod is a folder `user://mods/<name>/data/` with JSON files at the same paths as `data/`
+   (`economy/startup.json`, `eras/victorian/needs.json`…). `ModLayer` merges each one over its base document before
+   `DataLoader` validates anything: objects merge field by field, numbers, switches and lists replace. So a mod
+   passes the same schemas, `ParameterRanges` and cross rules as `data/`, and each error names the mod; a value a mod
+   breaks is reported once, not again by the preset, knob or role that targets it. Order: the list in
+   `user://mods/load_order.json` and then, alphabetically, any folder it leaves out; without the list, every folder
+   alphabetically. When two mods set the same value the last wins and `DataLoadResult.mod_conflicts` records it.
+   A path that is not in `data/` is an error; another era's files are skipped. A mod file over
+   `ModLayer.MAX_FILE_BYTES` or nested deeper than `ModLayer.MAX_DEPTH` is rejected before it merges.
+3. **Preset:** relative (`mul`/`add` on the values below it, so on base + mods). Normal has no modifiers.
+4. **Knobs:** absolute; they replace the preset's value.
+5. **Role:** last, through the single modifier function (D-014).
+
+`DataLayers` resolves the preset and the knobs once, into `set` modifiers that `Params` applies before the role's;
+whole keys are rounded there. The mods are already inside the catalog the other layers start from.
+
+Only the game loads mods (`map_view`, from `ModLayer.DEFAULT_ROOT`); tests and `balance_report` call `load_all()`
+without them, so nothing on the machine changes their results. The mods menu (`src/ui/mods_menu/`, inside the
+stats panel) lists the active mods in order, their conflicts and the winner of each, and moves a mod up or down: the
+map view saves the new `load_order.json`, loads the data again and starts a new game on the same difficulty. If the
+new order does not validate, the previous list is written back and the game goes on. `GameSession` keeps the
+difficulty, the active mods and their conflicts for saving (#57).
 
 ## Chapter objectives (D-064, issue #56)
 `data/scenarios/victorian_demo.json` defines `victory.stages`; a scenario without that property has no victory.
@@ -134,15 +158,6 @@ rules. Archive/statistics and autosave consumers can use this record when their 
 Parameter keys are dotted paths into the data (`building.bakery.jobs`, `defeat.hunger.threshold`).
 Keys with ids from the era's data follow the same rule: `needs.<category>.threshold`, `needs.housing_bonus_per_category`, `class.<class>.housing_max_bonus`, `class.<class>.need.<good>.value`; `ParameterRanges.PATTERNS` validates them by shape, and structure (which good counts in which category, which building houses a class) lives in `ClassDef`/`NeedDef` and reaches the sim through `EconomyContext` (ADR 0007). `EconomyState.class_needs` holds the result per class and category; the base class keeps its satisfaction and growth in the flat fields of `EconomyState` and the other classes in `class_states` (ADR 0008); `snapshot()["needs"]` explains it (`NeedsDiagnostics`).
 `test_data_valid.gd` fails if code asks for a key that doesn't exist or a modifier targets a missing key.
-
-**Mods (D-049, D-065).** A mod is a folder `user://mods/<name>/data/` with JSON files at the same paths as `data/`
-(`economy/startup.json`, `eras/victorian/needs.json`…). `ModLayer` merges each one over its base document before
-`DataLoader` validates anything: objects merge field by field, numbers, switches and lists replace. So a mod passes
-the same schemas, `ParameterRanges` and cross rules as `data/`, and each error names the mod. Order: the list in
-`user://mods/load_order.json` (a mod left out stays off) or, without it, every folder alphabetically; when two mods
-set the same value the last wins and `DataLoadResult.mod_conflicts` records it for the mods menu. A path that is not
-in `data/` is an error; another era's files are skipped. Only the game loads mods (`map_view`); tests and
-`balance_report` call `load_all()` without them, so nothing on the machine changes their results.
 
 ## Conventions worth stating
 - Money is `int` in pence; display converts to £/s/d or decimals in the UI only.

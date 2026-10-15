@@ -29,6 +29,13 @@ ui.difficulty,Dificultad (empieza una partida nueva):,Difficulty (starts a new g
 ui.difficulty.easy,Fácil,Easy
 ui.difficulty.normal,Normal,Normal
 ui.difficulty.hard,Difícil,Hard
+ui.mods.title,Mods en orden de carga (si dos cambian el mismo valor gana el último; cambiar el orden empieza una partida nueva):,Mods in load order (when two change the same value the last one wins; changing the order starts a new game):
+ui.mods.none,Sin mods. Para agregar uno: %s/<nombre>/data/,No mods. To add one: %s/<name>/data/
+ui.mods.up,Subir,Up
+ui.mods.down,Bajar,Down
+ui.mods.conflicts,Conflictos:,Conflicts:
+ui.mods.conflict,"%s: %s; gana %s","%s: %s; %s wins"
+ui.mods.error,"No se pudo aplicar el orden nuevo, se mantiene el anterior: %s","Could not apply the new order, the previous one stays: %s"
 ui.population,Población: %d · empleados %d · desempleados %d,Population: %d · employed %d · unemployed %d
 ui.satisfaction,Satisfacción: %.0f/100 (pan +%.0f · té +%.0f · impuestos −%.0f · hacinamiento −%.0f),Satisfaction: %.0f/100 (bread +%.0f · tea +%.0f · tax −%.0f · overcrowding −%.0f)
 ui.bread_rate,Pan/min: producido %.1f · consumido %.1f · demanda %.1f,Bread/min: produced %.1f · consumed %.1f · demand %.1f

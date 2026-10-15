@@ -411,8 +411,10 @@ func _scene(size: Vector2i) -> Array:
 	viewport.size = size
 	add_child_autofree(viewport)
 	var scene: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
-	viewport.add_child(scene)
 	var view: Node2D = scene.get_node("Map") as Node2D
+	# No mods: whatever the machine has in user://mods must not change these tests.
+	view.set("mods_root", "")
+	viewport.add_child(scene)
 	(view.get("clock") as SimClock).speed = 0
 	return [viewport, view]
 

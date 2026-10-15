@@ -8,24 +8,40 @@ var simulation: Simulation
 var context: EconomyContext
 # The preset this game runs on (D-065), kept for saving (#57).
 var difficulty: StringName = DataLayers.NORMAL
+# Active mods in load order and their conflicts (D-065), for the mods menu and saving (#57).
+var mods: Array[StringName] = []
+var mod_conflicts: Array[Dictionary] = []
 var _params: Params
 var _initial_state: EconomyState
 var _victory_stages: Array[Dictionary] = []
 var _seed: int
 var _pending: Array[SimulationCommand] = []
+var _scenario_id: StringName
 
 
 func _init(catalog: DataCatalog, params: Params, scenario_id: StringName = &"victorian_demo",
 		preset_id: StringName = DataLayers.NORMAL) -> void:
-	_victory_stages.assign(catalog.scenarios.get(scenario_id, {}).get("stages", []))
-	context = EconomyContext.new(catalog, catalog.maps[&"whitechapel_1850s"])
+	_scenario_id = scenario_id
+	_use_catalog(catalog)
 	_start(params, preset_id)
+
+
+# A new game on data loaded again (another mod order): same scenario and difficulty, new definitions.
+func restart_with_catalog(catalog: DataCatalog, params: Params) -> void:
+	_pending.clear()
+	_use_catalog(catalog)
+	_start(params, difficulty)
 
 
 # A new game on another difficulty: the startup values come from the new parameters.
 func restart_with(params: Params, preset_id: StringName) -> void:
 	_pending.clear()
 	_start(params, preset_id)
+
+
+func _use_catalog(catalog: DataCatalog) -> void:
+	_victory_stages.assign(catalog.scenarios.get(_scenario_id, {}).get("stages", []))
+	context = EconomyContext.new(catalog, catalog.maps[&"whitechapel_1850s"])
 
 
 func _start(params: Params, preset_id: StringName) -> void:

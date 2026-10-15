@@ -5,9 +5,13 @@ extends RefCounted
 # They merge before validation, so a mod passes the same schemas and ParameterRanges as data/ itself.
 const DEFAULT_ROOT: String = "user://mods"
 const LOAD_ORDER_FILE: String = "load_order.json"
+# Reading limits for files the player drops in, so a huge or absurdly nested one is an error, not a stall.
+# data/ files are a few KB and five levels deep; these leave ample room for any real mod.
+const MAX_FILE_BYTES: int = 65536
+const MAX_DEPTH: int = 16
 
 var errors: Array[String] = []
-# Active mods in load order, for the save (#57) and a future mods menu.
+# Active mods in load order, for the save (#57) and the mods menu.
 var mods: Array[StringName] = []
 # {key, mods, winner} for every value more than one mod sets; the last one wins.
 var conflicts: Array[Dictionary] = []
@@ -44,7 +48,18 @@ func blame(message: String) -> String:
 	return message
 
 
-# Without load_order.json every mod folder loads, alphabetically. With it, only the listed ones, in its order.
+# Writes the order the mods menu chose (D-065: load_order.json is editable there).
+static func save_load_order(root: String, order: Array[StringName]) -> Error:
+	var file: FileAccess = FileAccess.open(root.path_join(LOAD_ORDER_FILE), FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(JSON.stringify(order.map(func(mod_name: StringName) -> String: return String(mod_name))))
+	file.close()
+	return OK
+
+
+# D-065: load_order.json sets the order; without it, alphabetical. A folder the list leaves out still loads,
+# after the listed ones and alphabetically, because the decision orders mods but never switches one off.
 func _load_order(root: String) -> Array[String]:
 	var available: Array[String] = []
 	available.assign(DirAccess.get_directories_at(root))
@@ -66,6 +81,9 @@ func _load_order(root: String) -> Array[String]:
 			errors.append("mods/%s: mod '%s' is listed twice" % [LOAD_ORDER_FILE, entry])
 		else:
 			order.append(entry)
+	for mod_name: String in available:
+		if mod_name not in order:
+			order.append(mod_name)
 	return order
 
 
@@ -122,10 +140,29 @@ func _read_json(path: String, label: String) -> Variant:
 	if file == null:
 		errors.append("%s: cannot read file" % label)
 		return null
+	if file.get_length() > MAX_FILE_BYTES:
+		errors.append("%s: file larger than %d bytes" % [label, MAX_FILE_BYTES])
+		return null
 	var json: JSON = JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		errors.append("%s:%d: %s" % [label, json.get_error_line(), json.get_error_message()])
 		return null
 	if json.data == null:
 		errors.append("%s: expected JSON content, found null" % label)
+		return null
+	if _depth(json.data) > MAX_DEPTH:
+		errors.append("%s: nested deeper than %d levels" % [label, MAX_DEPTH])
+		return null
 	return json.data
+
+
+# Levels of objects and lists; stops counting once past the limit, so a deep file costs no more than a legal one.
+func _depth(value: Variant, level: int = 0) -> int:
+	if level > MAX_DEPTH or (value is not Dictionary and value is not Array):
+		return level
+	var deepest: int = level + 1
+	for child: Variant in (value.values() if value is Dictionary else value):
+		deepest = maxi(deepest, _depth(child, level + 1))
+		if deepest > MAX_DEPTH:
+			break
+	return deepest

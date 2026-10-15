@@ -6,6 +6,8 @@ var session: GameSession
 var clock: SimClock
 var geometry: MapGeometry
 var presentation: MapPresentation = MapPresentation.new()
+# Where the player's mods live; a test points it elsewhere so the machine's own mods never reach it.
+var mods_root: String = ModLayer.DEFAULT_ROOT
 var _catalog: DataCatalog
 var _snapshot: Dictionary
 var _building_type: StringName = &""
@@ -81,6 +83,8 @@ func _ready() -> void:
 	layer.add_child(panel_mount)
 	_catalog = loaded.catalog
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
+	session.mods = loaded.mods
+	session.mod_conflicts = loaded.mod_conflicts
 	_update_help()
 	geometry = MapGeometry.new(Vector2i(session.context.map.width, session.context.map.height), presentation.layout["cell_size"], _map_viewport(), presentation.camera["max_zoom_factor"])
 	_snapshot = session.get_snapshot()
@@ -99,6 +103,9 @@ func _ready() -> void:
 	_stats_panel.offset_left = -presentation.layout["panel_width"]
 	_stats_panel.restart_requested.connect(_restart_session)
 	_stats_panel.difficulty_selected.connect(_start_on_difficulty)
+	_stats_panel.mod_order_requested.connect(_reorder_mods)
+	if not mods_root.is_empty():
+		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
 	panel_mount.add_child(_stats_panel)
 	_stats_panel.update_snapshot(_snapshot)
 	get_viewport().size_changed.connect(_resized)
@@ -121,7 +128,7 @@ func _notification(what: int) -> void:
 
 
 func _load_catalog() -> DataLoadResult:
-	return DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, ModLayer.DEFAULT_ROOT)
+	return DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, mods_root)
 
 
 func _update_help() -> void:
@@ -266,6 +273,29 @@ func _restart_session() -> void:
 func _start_on_difficulty(preset_id: StringName) -> void:
 	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
 	session.restart_with(Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers), preset_id)
+	_reset_view()
+
+
+# The mods menu's new order (D-065): saved to load_order.json, then data/ and the mods load again and a new game
+# starts on the same difficulty. If the new order does not validate, the old list goes back and the game goes on.
+func _reorder_mods(order: Array[StringName]) -> void:
+	var previous: Array[StringName] = session.mods.duplicate()
+	var saved: Error = ModLayer.save_load_order(mods_root, order)
+	if saved != OK:
+		_stats_panel.show_mod_error(error_string(saved))
+		return
+	var loaded: DataLoadResult = _load_catalog()
+	if not loaded.is_ok():
+		ModLayer.save_load_order(mods_root, previous)
+		_stats_panel.show_mod_error("
+".join(loaded.errors))
+		return
+	_catalog = loaded.catalog
+	session.mods = loaded.mods
+	session.mod_conflicts = loaded.mod_conflicts
+	var layers: DataLayers = DataLayers.resolve(_catalog, session.difficulty)
+	session.restart_with_catalog(_catalog, Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
+	_update_help()
 	_reset_view()
 
 
