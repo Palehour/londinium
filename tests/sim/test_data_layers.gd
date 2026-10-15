@@ -20,11 +20,12 @@ func _params(preset_id: StringName, knobs: Dictionary[StringName, Variant] = {},
 
 
 func _assert_values(params: Params, expected: Dictionary[StringName, Variant]) -> void:
+	# A `set` modifier hands whole keys back as floats, as a role's does; the systems cast them where they read them.
 	for key: StringName in expected:
-		if typeof(expected[key]) == TYPE_FLOAT:
-			assert_almost_eq(float(params.get_value(key)), float(expected[key]), 0.0000001, str(key))
-		else:
+		if typeof(expected[key]) == TYPE_BOOL:
 			assert_eq(params.get_value(key), expected[key], str(key))
+		else:
+			assert_almost_eq(float(params.get_value(key)), float(expected[key]), 0.0000001, str(key))
 
 
 func test_easy_preset_values() -> void:
@@ -117,7 +118,8 @@ func test_disabled_defeats_never_end_the_game() -> void:
 func test_same_preset_and_seed_give_the_same_game() -> void:
 	var runs: Array[Array] = []
 	for run: int in range(2):
-		var session: GameSession = GameSession.new(_catalog, _params(&"hard", {&"price_volatility": 1.5}), &"victorian_demo", &"hard")
+		var params: Params = _params(&"hard", {&"price_volatility": 1.5})
+		var session: GameSession = GameSession.new(_catalog, params, &"victorian_demo", &"hard")
 		var snapshots: Array = []
 		for tick: int in range(GAME_TICKS):
 			session.simulation.tick()
