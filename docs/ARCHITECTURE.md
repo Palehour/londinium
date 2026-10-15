@@ -43,6 +43,8 @@ londinium/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
 │   └── maps/
 │       └── whitechapel_1850s.json       # grid size, river cells, cultivable cells (none, D-010)
+├── locale/
+│   └── ui.csv                # player-facing strings (keys, es, en); read only through src/ui/strings.gd
 ├── src/
 │   ├── sim/                  # pure simulation (RefCounted, no Node)
 │   │   ├── simulation.gd     # owns state, tick(), apply_command(), snapshot()
@@ -111,4 +113,5 @@ Keys with ids from the era's data follow the same rule: `needs.<category>.thresh
   ties round away from zero (2.5 → 3, -2.5 → -3). Non-monetary parameters are not rounded.
 - Time in data is in game seconds; the UI may show minutes.
 - Save/load is out of M1, but state classes expose `to_dict()`/`from_dict()` so it's cheap later.
+- Player-facing text is a key in `locale/ui.csv` (Spanish and English) and is read only through `Strings` in `src/ui/strings.gd`. It is presentation and is not part of the tick.
 - Renderer: **Compatibility** (OpenGL) — enough for 2D squares, runs on older Macs/PCs and in CI.

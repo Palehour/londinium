@@ -22,6 +22,12 @@ gdscript/warnings/untyped_declaration=2
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
+[internationalization]
+
+; ui.es.translation and ui.en.translation are generated on import and gitignored.
+; Listing them here logs "Cannot open file" on a clean --import. Strings registers them.
+locale/fallback="es"
+
 [londinium]
 
 splash/enabled=true

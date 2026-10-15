@@ -81,7 +81,7 @@ func test_loader_failure_shows_strings_message_and_logs_diagnostics() -> void:
 	var diagnostics: Array[String] = ["data/ui/map.json: invalid JSON", "economy/startup.json: missing field"]
 	view.call("_show_load_error", layer, diagnostics)
 	var label: Label = layer.get_child(0) as Label
-	assert_eq(label.text, Strings.LOAD_ERROR)
+	assert_eq(label.text, Strings.text(Strings.LOAD_ERROR))
 	for diagnostic: String in diagnostics:
 		assert_false(label.text.contains(diagnostic))
 		assert_push_error(diagnostic)

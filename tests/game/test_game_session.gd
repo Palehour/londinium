@@ -70,9 +70,9 @@ func test_terrain_reasons_are_results_of_real_commands() -> void:
 	for index: int in range(expected.size()):
 		assert_false(_results[index]["accepted"])
 		assert_eq(_results[index]["reason"], expected[index])
-		assert_eq(Strings.command_result(false, expected[index]), Strings.REASONS[expected[index]])
+		assert_eq(Strings.command_result(false, expected[index]), Strings.reason(expected[index]))
 	assert_eq(Strings.command_result(false, &"future_reason"), "future_reason")
-	assert_eq(Strings.command_result(true, &""), Strings.SUCCESS)
+	assert_eq(Strings.command_result(true, &""), Strings.text(Strings.SUCCESS))
 
 
 func test_occupied_demolition_and_insufficient_money() -> void:
