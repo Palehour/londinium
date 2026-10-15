@@ -25,6 +25,10 @@ ui.minutes_covered,%.1f min,%.1f min
 ui.pause,Pausa,Pause
 ui.resume,Reanudar,Resume
 ui.restart,Reiniciar partida,Restart game
+ui.difficulty,Dificultad (empieza una partida nueva):,Difficulty (starts a new game):
+ui.difficulty.easy,Fácil,Easy
+ui.difficulty.normal,Normal,Normal
+ui.difficulty.hard,Difícil,Hard
 ui.population,Población: %d · empleados %d · desempleados %d,Population: %d · employed %d · unemployed %d
 ui.satisfaction,Satisfacción: %.0f/100 (pan +%.0f · té +%.0f · impuestos −%.0f · hacinamiento −%.0f),Satisfaction: %.0f/100 (bread +%.0f · tea +%.0f · tax −%.0f · overcrowding −%.0f)
 ui.bread_rate,Pan/min: producido %.1f · consumido %.1f · demanda %.1f,Bread/min: produced %.1f · consumed %.1f · demand %.1f

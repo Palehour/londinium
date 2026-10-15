@@ -22,6 +22,17 @@ func _chain() -> Array:
 	]
 
 
+func test_difficulty_applies_to_later_runs_and_rejects_unknown_presets() -> void:
+	assert_eq(_runner.use_difficulty(&"nightmare"), ["difficulty: unknown preset 'nightmare'"])
+	assert_eq(_runner.param(&"startup.money"), 1050, "A rejected preset leaves the runner on the base values")
+	assert_true(_runner.use_difficulty(&"hard").is_empty())
+	assert_eq(_runner.param(&"startup.money"), 800)
+	# Without commands the only difference in the first minute is the money each game starts with.
+	var hard: ScenarioResult = _runner.run(_scenario([], 42, 60))
+	var normal: ScenarioResult = ScenarioRunner.create().run(_scenario([], 42, 60))
+	assert_eq(int(normal.rows[0]["money"]) - int(hard.rows[0]["money"]), 1050 - 800)
+
+
 func test_valid_scenario_has_no_errors() -> void:
 	assert_eq(_runner.validate(_scenario(_chain())).size(), 0)
 

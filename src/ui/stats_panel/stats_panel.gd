@@ -2,6 +2,7 @@ class_name StatsPanel
 extends PanelContainer
 
 signal restart_requested
+signal difficulty_selected(preset_id: StringName)
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -46,6 +47,8 @@ var _tax_label: Label
 var _locale_es: Button
 var _locale_en: Button
 var _locale_group: ButtonGroup
+var _difficulty_label: Label
+var _difficulty_buttons: Dictionary[StringName, Button] = {}
 var _snapshot: Dictionary = {}
 var _bread: Label
 var _economy: Label
@@ -143,6 +146,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_notice.text = _mobility_text(stats, snapshot["needs"])
 	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
+	_sync_difficulty_buttons()
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
@@ -173,6 +177,9 @@ func _apply_static_texts() -> void:
 		_reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(_reserve.value)
 	if _dragging_unloading:
 		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(_unloading.value)
+	_difficulty_label.text = Strings.text(Strings.DIFFICULTY)
+	for preset_id: StringName in _difficulty_buttons:
+		_difficulty_buttons[preset_id].text = Strings.text(Strings.DIFFICULTY_LABELS[preset_id])
 	_update_clock_controls()
 	_sync_locale_buttons()
 
@@ -208,8 +215,32 @@ func _sync_locale_buttons() -> void:
 	_locale_es.set_pressed_no_signal(not english)
 
 
+# Picking a preset starts a new game on it (issue #70); the map view owns the restart.
+func _build_difficulty_row(content: VBoxContainer) -> void:
+	_difficulty_label = _label(Strings.text(Strings.DIFFICULTY))
+	content.add_child(_difficulty_label)
+	var row: HBoxContainer = HBoxContainer.new()
+	var group: ButtonGroup = ButtonGroup.new()
+	group.allow_unpress = false
+	for preset_id: StringName in Strings.DIFFICULTY_LABELS:
+		var button: Button = _button(Strings.text(Strings.DIFFICULTY_LABELS[preset_id]),
+			func() -> void: difficulty_selected.emit(preset_id))
+		button.toggle_mode = true
+		button.button_group = group
+		_difficulty_buttons[preset_id] = button
+		row.add_child(button)
+	content.add_child(row)
+	_sync_difficulty_buttons()
+
+
+func _sync_difficulty_buttons() -> void:
+	for preset_id: StringName in _difficulty_buttons:
+		_difficulty_buttons[preset_id].set_pressed_no_signal(preset_id == session.difficulty)
+
+
 func _build_controls(content: VBoxContainer) -> void:
 	_build_locale_row(content)
+	_build_difficulty_row(content)
 	var tax_row: HBoxContainer = HBoxContainer.new()
 	_tax_label = Label.new()
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)

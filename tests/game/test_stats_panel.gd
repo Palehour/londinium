@@ -483,6 +483,24 @@ func test_map_restart_replaces_simulation_and_resets_clock() -> void:
 	assert_eq(view.get("_building_type"), &"")
 
 
+func test_picking_a_difficulty_starts_a_new_game_on_it() -> void:
+	var parts: Array = await _scene_ready(Vector2i(1152, 800))
+	var view: Node2D = parts[1]
+	var session: GameSession = view.get("session") as GameSession
+	var clock: SimClock = view.get("clock") as SimClock
+	var panel: StatsPanel = view.get("_stats_panel") as StatsPanel
+	var buttons: Dictionary[StringName, Button] = panel.get("_difficulty_buttons")
+	assert_true(buttons[&"normal"].button_pressed, "The game opens on Normal")
+	session.simulation.tick()
+	buttons[&"hard"].pressed.emit()
+	assert_eq(session.difficulty, &"hard")
+	assert_eq(session.get_snapshot()["tick_count"], 0)
+	assert_eq(session.get_snapshot()["economy"]["money"], 800)
+	assert_eq(clock.simulation, session.simulation)
+	assert_true(buttons[&"hard"].button_pressed)
+	assert_false(buttons[&"normal"].button_pressed)
+
+
 func _key(code: Key) -> InputEventKey:
 	var key: InputEventKey = InputEventKey.new()
 	key.keycode = code

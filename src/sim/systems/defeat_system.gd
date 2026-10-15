@@ -9,7 +9,7 @@ func initialize(state: EconomyState, params: Params) -> void:
 	state.hunger_smoothed_coverage = state.bread_coverage
 	_update_population_history(state, params)
 	# Empty cities expose diagnostics immediately only when grace has already ended.
-	if state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
+	if params.get_value(&"defeat.enabled") and state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
 			or state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))):
 		_update(state.depopulation, &"depopulation", true, true, false,
 			float(params.get_value(&"defeat.depopulation.duration_seconds")))
@@ -35,6 +35,9 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	var stable: bool = is_city_stable(state, params)
 	if stable:
 		_decay_population_peak(state, params)
+	# Defeats off (D-065): coverage and the peak above keep running for growth and stability, but no timer moves.
+	if not params.get_value(&"defeat.enabled"):
+		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,

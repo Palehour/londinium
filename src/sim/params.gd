@@ -17,11 +17,12 @@ var _modifiers: Array[Modifier] = []
 var _validated: Dictionary[StringName, Variant] = {}
 
 
-func _init(catalog: DataCatalog, role: RoleDef) -> void:
+# `layers` are the difficulty's `set` modifiers (DataLayers). They go first so the role still applies last (D-065).
+func _init(catalog: DataCatalog, role: RoleDef, layers: Array[Modifier] = []) -> void:
 	_base_values.assign(catalog.base_values)
 	_money_keys.assign(catalog.money_keys)
 	_boolean_keys.assign(catalog.boolean_keys)
-	for modifier: Modifier in role.modifiers:
+	for modifier: Modifier in layers + role.modifiers:
 		_modifiers.append(Modifier.new(modifier.key, modifier.op, modifier.value))
 
 

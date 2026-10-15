@@ -1,0 +1,28 @@
+{
+  "easy": {
+    "modifiers": [
+      { "key": "startup.money", "op": "mul", "value": 1.4 },
+      { "key": "defeat.grace_seconds", "op": "mul", "value": 2 },
+      { "key": "defeat.bankruptcy.duration_seconds", "op": "mul", "value": 1.6666667 },
+      { "key": "defeat.hunger.duration_seconds", "op": "mul", "value": 1.6666667 },
+      { "key": "defeat.depopulation.duration_seconds", "op": "mul", "value": 1.6666667 },
+      { "key": "demolish.refund_ratio", "op": "mul", "value": 1.5 }
+    ],
+    "events": []
+  },
+  "normal": { "modifiers": [], "events": [] },
+  "hard": {
+    "modifiers": [
+      { "key": "startup.money", "op": "mul", "value": 0.762 },
+      { "key": "defeat.grace_seconds", "op": "mul", "value": 0.6 },
+      { "key": "defeat.bankruptcy.duration_seconds", "op": "mul", "value": 0.6666667 },
+      { "key": "defeat.hunger.duration_seconds", "op": "mul", "value": 0.6666667 },
+      { "key": "defeat.depopulation.duration_seconds", "op": "mul", "value": 0.6666667 },
+      { "key": "market.wheat.max_price", "op": "mul", "value": 1.3333333 },
+      { "key": "market.wheat.reversion", "op": "mul", "value": 0.7 },
+      { "key": "market.barley.reversion", "op": "mul", "value": 0.7142857 },
+      { "key": "demolish.refund_ratio", "op": "mul", "value": 0.5 }
+    ],
+    "events": []
+  }
+}

@@ -51,6 +51,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"construction_escalation": {"free_copies": "integer", "per_building": "number", "max_multiplier": "number"},
 	},
 	"defeat": {
+		# Off only through the defeats knob (D-065): the city can no longer lose, but the timers' inputs still run.
+		"enabled": "boolean",
 		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
@@ -62,6 +64,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 
 # One era's data is loaded: the engine is the same for every era, only these files change.
 const DEFAULT_ERA: String = "victorian"
+# Difficulty presets and knobs (D-065). Optional: without them the game runs on the base values alone.
+const DIFFICULTY_FOLDER: String = "difficulty"
+const PRESETS_PATH: String = "difficulty/presets.json"
+const KNOBS_PATH: String = "difficulty/knobs.json"
+const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
 
 var _errors: Array[String] = []
 var _era: String = DEFAULT_ERA
@@ -71,8 +78,10 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoa
 	_errors.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), "scenarios"]:
+	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), "scenarios", DIFFICULTY_FOLDER]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
+		if directory == null and folder == DIFFICULTY_FOLDER:
+			continue
 		if directory == null:
 			if folder == "scenarios":
 				continue
@@ -123,7 +132,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path.begins_with("scenarios/") or path in [_needs_path(), _classes_path()]:
+		elif path.begins_with("scenarios/") or path in [_needs_path(), _classes_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			_numbers(raw, ECONOMY_SCHEMAS[section], path, section, catalog)
@@ -151,6 +160,13 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			and float(catalog.base_values[recovery_key]) < float(catalog.base_values[threshold_key]):
 		_errors.append("economy/population.json: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold")
 	_check_wheat_policy(catalog)
+	# Presets and knobs name Params keys, so they load once every key is registered.
+	_load_presets(documents.get(PRESETS_PATH, {}), catalog)
+	_load_knobs(documents.get(KNOBS_PATH, {}), catalog)
+	if _errors.is_empty():
+		for preset_id: StringName in catalog.difficulties:
+			for message: String in DataLayers.resolve(catalog, preset_id).errors:
+				_errors.append("%s.%s: %s" % [PRESETS_PATH, preset_id, message])
 	if _errors.is_empty():
 		for role: RoleDef in catalog.roles.values():
 			for message: String in Params.new(catalog, role).validation_errors():
@@ -224,6 +240,8 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value
+	if integral:
+		catalog.integer_keys.append(StringName(key))
 	if kind in ["money", "optional_price"]:
 		catalog.money_keys.append(StringName(key))
 	return true
@@ -677,3 +695,100 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 		_number(entry["threshold"], "money" if metric == "revenue" else "integer", where + ".threshold", prefix + ".threshold", catalog)
 		_number(entry[duration], "positive_integer", where + "." + duration, prefix + "." + duration, catalog)
 		stages.append(def)
+
+
+func _load_presets(raw: Dictionary, catalog: DataCatalog) -> void:
+	for id: Variant in raw:
+		var location: String = "%s.%s" % [PRESETS_PATH, id]
+		if not _object(raw[id], ["modifiers", "events"], location):
+			continue
+		if raw[id]["modifiers"] is not Array or raw[id]["events"] is not Array or not raw[id]["events"].is_empty():
+			_errors.append("%s: modifiers must be an array; events must be an empty array (reserved for #63)" % location)
+			continue
+		var preset: DifficultyDef = DifficultyDef.new()
+		preset.id = StringName(id)
+		for index: int in range(raw[id]["modifiers"].size()):
+			var modifier: Modifier = _relative_modifier(raw[id]["modifiers"][index],
+				"%s.modifiers[%d]" % [location, index], catalog)
+			if modifier != null:
+				preset.modifiers.append(modifier)
+		catalog.difficulties[preset.id] = preset
+
+
+# A preset is relative to the values below it (D-065): mul or add on a numeric key, never set.
+func _relative_modifier(entry: Variant, location: String, catalog: DataCatalog) -> Modifier:
+	if not _object(entry, ["key", "op", "value"], location):
+		return null
+	if entry["key"] is not String or entry["op"] not in ["add", "mul"] 			or typeof(entry["value"]) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(entry["value"])):
+		_errors.append("%s: expected key string, op add|mul and finite numeric value" % location)
+		return null
+	var key: StringName = StringName(entry["key"])
+	if not catalog.base_values.has(key) or key in catalog.boolean_keys:
+		_errors.append("%s: unknown or non-numeric key '%s'" % [location, key])
+		return null
+	return Modifier.new(key, StringName(entry["op"]), float(entry["value"]))
+
+
+func _load_knobs(raw: Dictionary, catalog: DataCatalog) -> void:
+	for id: Variant in raw:
+		var location: String = "%s.%s" % [KNOBS_PATH, id]
+		var entry: Variant = raw[id]
+		var is_switch: bool = entry is Dictionary and entry.get("kind") == "switch"
+		var fields: Array[String] = ["kind", "keys"]
+		if not is_switch:
+			fields.append_array(["min", "max", "step"])
+		if not _object(entry, fields, location):
+			continue
+		var knob: KnobDef = KnobDef.new()
+		knob.id = StringName(id)
+		if entry["kind"] not in KNOB_KINDS or not _knob_keys(entry["keys"], location, knob):
+			_errors.append("%s: kind must be one of %s, with a non-empty list of keys" % [location, KNOB_KINDS])
+			continue
+		knob.kind = StringName(entry["kind"])
+		if not is_switch and not _knob_range(entry, location, knob):
+			continue
+		if _knob_targets_valid(knob, location, catalog):
+			catalog.knobs[knob.id] = knob
+
+
+func _knob_keys(raw: Variant, location: String, knob: KnobDef) -> bool:
+	var keys: Array[String] = []
+	if not _strings(raw, location + ".keys", keys) or keys.is_empty():
+		return false
+	for key: String in keys:
+		knob.keys.append(StringName(key))
+	return true
+
+
+func _knob_range(entry: Dictionary, location: String, knob: KnobDef) -> bool:
+	for field: String in ["min", "max", "step"]:
+		if typeof(entry[field]) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(entry[field])):
+			_errors.append("%s.%s: expected a finite number" % [location, field])
+			return false
+	knob.minimum = float(entry["min"])
+	knob.maximum = float(entry["max"])
+	knob.step = float(entry["step"])
+	if knob.step <= 0.0 or knob.minimum > knob.maximum:
+		_errors.append("%s: step must be positive and min <= max" % location)
+		return false
+	return true
+
+
+# Every value the knob can take must be one its keys accept, so the player can never pick an invalid one.
+func _knob_targets_valid(knob: KnobDef, location: String, catalog: DataCatalog) -> bool:
+	var valid: bool = true
+	for target: StringName in knob.keys:
+		match knob.kind:
+			&"switch":
+				if target not in catalog.boolean_keys:
+					_errors.append("%s.keys: '%s' is not a switch" % [location, target])
+					valid = false
+			&"value":
+				if not catalog.base_values.has(target) or target in catalog.boolean_keys 						or not ParameterRanges.is_valid(target, knob.minimum) 						or not ParameterRanges.is_valid(target, knob.maximum):
+					_errors.append("%s: min and max must be valid values of '%s'" % [location, target])
+					valid = false
+			&"price_volatility":
+				if knob.minimum <= 0.0 or not catalog.base_values.has(StringName("market.%s.max_step" % target)):
+					_errors.append("%s: '%s' is not a traded grain, or min is not positive" % [location, target])
+					valid = false
+	return valid
