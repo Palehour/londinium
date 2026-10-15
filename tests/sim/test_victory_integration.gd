@@ -69,3 +69,15 @@ func test_commands_work_after_victory_and_later_defeat_keeps_record() -> void:
 	var refused: SetTaxCommand = SetTaxCommand.new(0.5)
 	sim.apply_command(refused)
 	assert_false(refused.accepted)
+
+
+func test_defeat_on_the_winning_tick_prevents_a_victory_record() -> void:
+	var sim: Simulation = _simulation()
+	for tick_index: int in range(59):
+		sim.tick()
+	sim.apply_command(LoseMoneyCommand.new())
+	sim.tick()
+	assert_eq(sim.snapshot()["tick_count"], 60)
+	assert_eq(sim.snapshot()["defeat"]["causes"], [&"bankruptcy"])
+	assert_false(sim.snapshot()["victory"]["won"])
+	assert_eq(sim.snapshot()["victory"]["won_tick"], -1)
