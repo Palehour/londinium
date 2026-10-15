@@ -132,7 +132,10 @@ for `stats.fine.span_seconds` (a ring, not saved), buckets of `stats.medium.buck
 keeps four float32 fields (16 B): min, max, mean and a total, which is the sum for `sum` and `mean` series and the
 last value for `last` series. Buckets line up on the history's own clock of recorded seconds, which is saved with it.
 `CauseLog` keeps `{second, kind, subject, cause}` events only when the cause of a `kind|subject` changes, up to
-`stats.causes.max_events` (the oldest are dropped). Kinds: `command` (accepted or the refusal reason), `building`
+`stats.causes.max_events` (a ring: the oldest are dropped). A change is logged once it lasts
+`stats.causes.min_duration_seconds`, with the second it began; a subject that flips faster gets one `intermittent`
+event whose `count` grows with every change that did not last, until a cause holds and is logged. The first cause of
+a subject, `gone`, and the `command`, `defeat` and `victory` kinds skip that filter. Kinds: `command` (accepted or the refusal reason), `building`
 (`BreadDiagnostics.building_reason` per building with jobs, `gone` once demolished), `import` (tea and flour
 reasons), `emigration` (`hungry_leaving`, `unhappy_leaving` or `none` per class), `policy` (tax, wheat purchases
 and policy, unloading split, imports), `defeat` (each condition's status) and `victory` (each stage).
