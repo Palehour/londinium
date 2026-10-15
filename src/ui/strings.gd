@@ -149,6 +149,27 @@ const GOOD_LABELS: Dictionary[StringName, StringName] = {
 	&"wheat": &"ui.good.wheat", &"barley": &"ui.good.barley", &"flour": &"ui.good.flour", &"bread": &"ui.good.bread",
 	&"malt": &"ui.good.malt", &"beer": &"ui.good.beer", &"tea": &"ui.good.tea",
 }
+# Names of the statistics series (issue #82), by metric; SeriesDef.label_key points here.
+const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
+	&"money": &"ui.stats.money",
+	&"income": &"ui.stats.income",
+	&"expense": &"ui.stats.expense",
+	&"stock": &"ui.stats.stock",
+	&"coverage": &"ui.stats.coverage",
+	&"produced": &"ui.stats.produced",
+	&"consumed": &"ui.stats.consumed",
+	&"price": &"ui.stats.price",
+	&"population": &"ui.stats.population",
+	&"satisfaction": &"ui.stats.satisfaction",
+	&"housing_capacity": &"ui.stats.housing_capacity",
+	&"housing_occupancy": &"ui.stats.housing_occupancy",
+	&"need_score": &"ui.stats.need_score",
+	&"promotions": &"ui.stats.promotions",
+	&"demotions": &"ui.stats.demotions",
+	&"jobs_filled": &"ui.stats.jobs_filled",
+	&"defeat_timer": &"ui.stats.defeat_timer",
+	&"victory_progress": &"ui.stats.victory_progress",
+}
 const REASONS: Dictionary[StringName, StringName] = {
 	&"arriving": &"ui.reason.arriving",
 	&"no_free_housing": &"ui.reason.no_free_housing",
@@ -283,6 +304,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, STATUS_LABELS[status_id])
 	for reason_id: StringName in REASONS:
 		_append_unique(keys, REASONS[reason_id])
+	for metric_id: StringName in STATS_SERIES_LABELS:
+		_append_unique(keys, STATS_SERIES_LABELS[metric_id])
 	return keys
 
 

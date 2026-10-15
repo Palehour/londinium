@@ -25,6 +25,8 @@ var _money: MoneySystem = MoneySystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
 var _victory: VictorySystem
 var _stats: Stats
+# Chapter-long statistics (issue #82); null without a context, like the systems that feed it.
+var _history: StatsHistory
 # Classes this simulation had to add to the state it was given; primed once the needs are evaluated.
 var _new_classes: Array[ClassDef] = []
 
@@ -46,9 +48,10 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 
 
 # stats_window is snapshot()["stats"]["window"]; it is copied, so callers may keep mutating theirs.
+# stats_history is stats_history_to_dict(); a missing or broken one starts an empty history.
 func _init(params: Params, initial_state: EconomyState, seed_value: int,
 		context: EconomyContext = null, stats_window: Array = [],
-		victory_stages: Array[Dictionary] = []) -> void:
+		victory_stages: Array[Dictionary] = [], stats_history: Dictionary = {}) -> void:
 	_victory = VictorySystem.new(victory_stages)
 	_params = params
 	_state = EconomyState.from_dict(initial_state.to_dict())
@@ -61,6 +64,8 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	if _context != null:
 		_new_classes = ClassStates.ensure(_state, _context)
 		_defeat.initialize(_state, _params)
+		_history = StatsHistory.new(SeriesRegistry.build(_params, _context, victory_stages), _params, _context)
+		_history.restore(stats_history)
 	if _context != null and _state.wheat_price < 0:
 		_state.wheat_price = int(_params.get_value(&"market.wheat.base_price"))
 	if _context != null and _state.barley_price < 0:
@@ -107,6 +112,8 @@ func tick() -> void:
 		command.use_context(_context)
 		command.execute(_state, _params, _rng)
 		command.release_context()
+		if _history != null:
+			_history.note_command(command)
 	_tick_count += 1
 	if _context != null:
 		_workers.tick(_state, _params)
@@ -126,6 +133,7 @@ func tick() -> void:
 			_commands.clear()
 		_victory.tick(_state, _params)
 		_stats.record(_state)
+		_history.record(_state)
 
 
 # The treasury, without building a snapshot.
@@ -146,6 +154,25 @@ func tick_flows() -> Dictionary:
 		buildings[building["definition_id"]] = entry
 	return {"class_tax": _state.class_tax_tick.duplicate(), "barley_spent": _state.barley_spent_tick,
 		"beer_consumed": _state.beer_consumed, "buildings": buildings}
+
+
+# Read-only access to the chapter statistics (issue #82), for the views (#83) and the save (#57). Without a context
+# there is no history: no series, no events and an empty dictionary.
+func stats_series_defs() -> Array[Dictionary]:
+	return _history.defs() if _history != null else [] as Array[Dictionary]
+
+
+# tier is StatsHistory.TIER_FINE, TIER_MEDIUM or TIER_CHAPTER.
+func stats_series(id: StringName, tier: StringName) -> Dictionary:
+	return _history.series(id, tier) if _history != null else {}
+
+
+func stats_events(from_second: int = 0) -> Array[Dictionary]:
+	return _history.events(from_second) if _history != null else [] as Array[Dictionary]
+
+
+func stats_history_to_dict() -> Dictionary:
+	return _history.to_dict() if _history != null else {}
 
 
 func _reject_after_defeat(command: SimulationCommand) -> void:

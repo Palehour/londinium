@@ -62,7 +62,9 @@ londinium/
 │   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …
 │   │   ├── systems/          # one file per tick step (see order below)
 │   │   ├── commands/         # command classes / validation
-│   │   └── stats.gd          # rolling 60-tick windows for "per minute" figures
+│   │   ├── stats.gd          # rolling 60-tick windows for "per minute" figures
+│   │   ├── series_def.gd, series_registry.gd  # statistics series: label, unit, aggregation, dimensions (D-066)
+│   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera
 │   └── ui/                   # stats_panel/, mods_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
@@ -94,7 +96,8 @@ londinium/
    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
-11. Stats + snapshot emitted.
+11. Stats + snapshot emitted. The chapter history (`StatsHistory`, D-066) samples every series and notes the causes
+    that changed; step 1 also notes each command's outcome. It only reads the state.
 
 ## Data layers (D-049, D-065, ADR 0010)
 Every value goes through the same layers, in this order: **base → mods → preset → knobs → role**.
@@ -142,6 +145,33 @@ a simultaneous defeat takes priority, and defeat after victory keeps the win rec
 the last shortfall. `snapshot()["victory"]` exposes stage progress and the last break (minute, revenue, threshold,
 reason), without mutable state aliases. The panel renders it and announces victory once; it contains no objective
 rules. Archive/statistics and autosave consumers can use this record when their features exist (#57, #82).
+
+## Statistics history (D-066, issue #82)
+`SeriesRegistry.build(params, context, victory_stages)` declares every series: metric, label key (`ui.stats.<metric>`,
+translated in `locale/ui.csv`), unit, aggregation (`sum` for flows, `mean` or `last` for levels) and dimensions
+(`class`, `good`, `building`, `category`, `source`, `stage`, `condition`, `district`). Members come from the data, so
+a new class or good gets its series without code. A series id is the metric and its members joined by `:`
+(`income:tax:artisan`). Each series has a sampler that reads one tick of the state and never writes to it.
+
+`StatsHistory` keeps three levels, sized in `data/economy/stats.json` and read through `Params`: one value per second
+for `stats.fine.span_seconds` (a ring, not saved), buckets of `stats.medium.bucket_seconds` for
+`stats.medium.span_seconds`, and buckets of `stats.chapter.bucket_seconds` for the whole chapter. A closed bucket
+keeps four float32 fields (16 B): min, max, mean and a total, which is the sum for `sum` and `mean` series and the
+last value for `last` series. Buckets line up on the history's own clock of recorded seconds, which is saved with it.
+`CauseLog` keeps `{second, kind, subject, cause}` events only when the cause of a `kind|subject` changes, up to
+`stats.causes.max_events` (a ring: the oldest are dropped). A change is logged once it lasts
+`stats.causes.min_duration_seconds`, with the second it began; a subject that flips faster gets one `intermittent`
+event whose `count` grows with every change that did not last, until a cause holds and is logged. The first cause of
+a subject, `gone`, and the `command`, `defeat` and `victory` kinds skip that filter. Kinds: `command` (accepted or the refusal reason), `building`
+(`BreadDiagnostics.building_reason` per building with jobs, `gone` once demolished), `import` (tea and flour
+reasons), `emigration` (`hungry_leaving`, `unhappy_leaving` or `none` per class), `policy` (tax, wheat purchases
+and policy, unloading split, imports), `defeat` (each condition's status) and `victory` (each stage).
+
+`Simulation` exposes it read-only: `stats_series_defs()`, `stats_series(id, tier)`, `stats_events(from_second)` and
+`stats_history_to_dict()`; its constructor takes the saved dictionary as its last argument. A missing history starts
+empty; a malformed one (other version, sizes that do not match, buckets of another length) starts empty with a
+warning. A series the save lacks reads as NaN for the saved buckets. The saved form uses packed arrays per series and
+is meant for `var_to_bytes` + compression (`StatsHistory.compressed_size`, the measure of the 5 MB criterion).
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

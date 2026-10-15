@@ -165,3 +165,21 @@ ui.victory_no_break,¿Por qué? Cada minuto completo debe alcanzar el mínimo; u
 ui.victory_message,¡Victoria! Completaste todos los objetivos del capítulo. Podés seguir jugando; las derrotas siguen activas.,Victory! You completed every chapter objective. You can keep playing; defeat is still possible.
 ui.victory_dismiss,Continuar,Continue
 ui.alert_defeat_after_victory,Ciudad perdida después de la victoria: %s,City lost after victory: %s
+ui.stats.money,Caja,Treasury
+ui.stats.income,Ingresos,Income
+ui.stats.expense,Gastos,Expenses
+ui.stats.stock,Existencias,Stock
+ui.stats.coverage,Cobertura,Coverage
+ui.stats.produced,Producción,Production
+ui.stats.consumed,Consumo,Consumption
+ui.stats.price,Precio,Price
+ui.stats.population,Población,Population
+ui.stats.satisfaction,Satisfacción,Satisfaction
+ui.stats.housing_capacity,Capacidad de vivienda,Housing capacity
+ui.stats.housing_occupancy,Ocupación de vivienda,Housing occupancy
+ui.stats.need_score,Necesidad por categoría,Need by category
+ui.stats.promotions,Ascensos,Promotions
+ui.stats.demotions,Descensos,Demotions
+ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
+ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
+ui.stats.victory_progress,Progreso del objetivo,Objective progress
