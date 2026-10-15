@@ -3,8 +3,8 @@ extends GutTest
 # Long drift games of issue #55, approved by Cristian on 2026-10-13: the artisans_beer city played for 4 hours
 # (20 seeds) and 8 hours (5 seeds), to catch drifts, money inflation and debt that 15- or 70-minute games hide.
 # They require the city to survive with every scripted command accepted, and the measures are printed for Mason
-# and Cristian. Issue #118 reports the median money drift of the 4-hour game against its target and re-measures
-# stage 3 of #56. Run with tools/run_long_tests.
+# and Cristian. Issue #118 reports the median money drift of the 4-hour game against its target, re-measures
+# stage 3 of #56 and requires the bread criterion of the 4-hour game. Run with tools/run_long_tests.
 
 const GAMES: Dictionary[String, int] = {"drift_4h": 20, "drift_8h": 5}
 const LONG_DIR: String = "res://tests/scenarios/long"
@@ -17,9 +17,16 @@ const DRIFT_TO: float = 4000.0
 # (the mean of the window, as in the defeats). It was expected between hours 1 and 1.5; only reported here.
 const STAGE3_TAX_PER_MINUTE: float = 250.0
 const STAGE3_WINDOW_MINUTES: int = 10
+# Bread criterion of the 4-hour game after hour 1, decided by Cristian in #118 on 2026-10-14 (Mason's proposal, D-063):
+# no defeat in any seed, lowest bread coverage >= 0.5 in every seed and >= 0.6 in at least 17 of the 20.
+const BREAD_FLOOR: float = 0.5
+const BREAD_TARGET: float = 0.6
+const BREAD_TARGET_SEEDS: int = 17
 
 static var _drifts: Dictionary[String, Array] = {}
 static var _stage3_minutes: Array[int] = []
+static var _lowest_bread: Array[float] = []
+static var _defeats: int = 0
 
 
 func before_all() -> void:
@@ -43,6 +50,8 @@ func before_all() -> void:
 			var stage3: int = _first_sustained_minute(result, STAGE3_TAX_PER_MINUTE, STAGE3_WINDOW_MINUTES)
 			if id == CRITERION_GAME:
 				_stage3_minutes.append(stage3)
+				_lowest_bread.append(float(found["bread_coverage_lowest_after_hour1"]))
+				_defeats += 0 if result.survived() else 1
 			gut.p("%s seed %d: money %+.0f per hour, lowest bread %.2f and beer %.2f after hour 1, %d min in debt; stage 3 of #56 at minute %d; lowest bread by hour %s, beer %s"
 				% [id, seed_value, found["money_drift_per_hour"], found["bread_coverage_lowest_after_hour1"],
 				found["beer_coverage_lowest_after_hour1"], int(found["minutes_in_debt"]), stage3,
@@ -91,3 +100,21 @@ func test_stage_three_of_56_is_reported() -> void:
 	gut.p("stage 3 of #56 (tax >= %.0f per minute over %d min) on %s: reached in %d of %d seeds, median minute %.1f, earliest %s, latest %s"
 		% [STAGE3_TAX_PER_MINUTE, STAGE3_WINDOW_MINUTES, CRITERION_GAME, reached.size(), _stage3_minutes.size(),
 		median, str(reached.min()), str(reached.max())])
+
+
+func test_bread_after_hour_one_of_the_four_hour_game_meets_its_criterion() -> void:
+	assert_eq(_lowest_bread.size(), GAMES[CRITERION_GAME])
+	var below_floor: Array[int] = []
+	var below_target: Array[int] = []
+	for index: int in range(_lowest_bread.size()):
+		if _lowest_bread[index] < BREAD_FLOOR:
+			below_floor.append(index + 1)
+		if _lowest_bread[index] < BREAD_TARGET:
+			below_target.append(index + 1)
+	var at_target: int = _lowest_bread.size() - below_target.size()
+	gut.p("%s bread after hour 1: %d defeats, below %.1f in seeds %s, at or above %.1f in %d of %d (below in seeds %s)"
+		% [CRITERION_GAME, _defeats, BREAD_FLOOR, str(below_floor), BREAD_TARGET, at_target, _lowest_bread.size(),
+		str(below_target)])
+	assert_eq(_defeats, 0, "seeds lost")
+	assert_eq(below_floor, [] as Array[int], "seeds whose lowest bread after hour 1 is under %.1f" % BREAD_FLOOR)
+	assert_gte(at_target, BREAD_TARGET_SEEDS, "seeds whose lowest bread after hour 1 reaches %.1f" % BREAD_TARGET)
