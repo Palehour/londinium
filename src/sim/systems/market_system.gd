@@ -25,8 +25,10 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 	state.malt_decay_fraction = _decayed(state, params, &"malt", state.malt_decay_fraction)
 	state.beer_decay_fraction = _decayed(state, params, &"beer", state.beer_decay_fraction)
 	# The part of a unit left after drinking spoils at the same rate as the whole units (PR #108).
+	var beer_fraction: float = state.beer_fraction
 	state.beer_fraction *= pow(1.0 - float(params.get_value(&"market.beer.decay_fraction_per_minute")),
 		1.0 / SECONDS_PER_MINUTE)
+	state.count_spoiled(&"beer", beer_fraction - state.beer_fraction)
 	var wharves: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":
@@ -195,6 +197,7 @@ func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale:
 	state.money -= units * state.wheat_price
 	state.wheat_spent_tick += units * state.wheat_price
 	state.stocks[&"wheat"] = stock + units
+	state.count_bought(&"wheat", units)
 
 
 func _decay(state: EconomyState, params: Params) -> void:
@@ -219,6 +222,7 @@ func _decayed(state: EconomyState, params: Params, good: StringName, carried: fl
 	var lost: int = mini(stock, ProductionSystem.whole_units(carried))
 	carried -= float(lost)
 	state.stocks[good] = stock - lost
+	state.count_spoiled(good, float(lost))
 	# Decay that empties the warehouse leaves nothing owed to the delivery that may refill it this tick.
 	if stock - lost <= 0:
 		return 0.0
@@ -277,6 +281,7 @@ func _buy_barley(state: EconomyState, params: Params, wharves: Array[Dictionary]
 		state.money -= units * price
 		state.barley_spent_tick += units * price
 		state.stocks[&"barley"] = stock + units
+		state.count_bought(&"barley", units)
 
 
 # Before the simulation loads the price (systems driven by hand in tests) barley sells at its base price.

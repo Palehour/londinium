@@ -10,7 +10,7 @@ const AGGREGATION_MEAN: StringName = &"mean"
 const AGGREGATION_LAST: StringName = &"last"
 const AGGREGATIONS: Array[StringName] = [AGGREGATION_SUM, AGGREGATION_MEAN, AGGREGATION_LAST]
 # District is declared before districts exist (#60) so saves made now never need migrating.
-const DIMENSIONS: Array[StringName] = [&"class", &"good", &"building", &"category", &"source", &"stage",
+const DIMENSIONS: Array[StringName] = [&"class", &"good", &"building", &"category", &"source", &"cause", &"stage",
 	&"condition", &"district"]
 const UNITS: Array[StringName] = [&"pence", &"units", &"people", &"ratio", &"score", &"seconds", &"minutes"]
 

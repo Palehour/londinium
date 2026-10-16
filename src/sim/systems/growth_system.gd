@@ -40,6 +40,7 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 		entry.immigration_fraction += float(params.get_value(def.immigration_per_minute_key)) / 60.0
 		var arrivals: int = mini(free_housing, ProductionSystem.whole_units(entry.immigration_fraction))
 		ClassStates.grow(state, def, entry, arrivals)
+		state.immigration_tick[def.id] = arrivals
 		entry.immigration_fraction = maxf(0.0, entry.immigration_fraction - arrivals) \
 			if arrivals < free_housing else 0.0
 	elif (hungry or is_class_satisfaction_emigration_active(entry, params, def)) and residents > 0:
@@ -51,6 +52,10 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 		entry.emigration_fraction += rate / 60.0
 		var departures: int = mini(residents, ProductionSystem.whole_units(entry.emigration_fraction))
 		ClassStates.grow(state, def, entry, -departures)
+		if hungry:
+			state.emigration_hunger_tick[def.id] = departures
+		else:
+			state.emigration_unhappy_tick[def.id] = departures
 		if departures > 0 and is_class_satisfaction_emigration_active(entry, params, def):
 			entry.satisfaction_departure_age_seconds = 0
 		entry.emigration_fraction = maxf(0.0, entry.emigration_fraction - departures) \

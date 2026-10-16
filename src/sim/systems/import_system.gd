@@ -124,6 +124,7 @@ func _import_flour(state: EconomyState, params: Params) -> void:
 	state.money -= lots * price
 	state.imports_spent_tick += lots * price
 	state.stocks[&"flour"] = stock + lots * lot
+	state.count_bought(&"flour", lots * lot)
 	state.flour_unloading_debt += float(lots * lot)
 
 
@@ -142,6 +143,7 @@ func _import_tea(state: EconomyState, params: Params, context: EconomyContext) -
 	state.imports_spent_tick += units * price
 	state.tea_spent_tick += units * price
 	state.stocks[&"tea"] = stock + units
+	state.count_bought(&"tea", units)
 
 
 # The wharf still has a lot or more to unload, so it takes no new flour until the capacity catches up.

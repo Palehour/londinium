@@ -89,3 +89,55 @@ func test_samplers_read_the_state() -> void:
 	assert_eq(values[&"income:tax:worker"], 2.5)
 	assert_eq(values[&"population:worker"], 12.0, "the base class is what the others leave")
 	assert_eq(values[&"population:artisan"], 0.0)
+
+
+# Issue #130 (part 2): the series of the new per-tick counters, with their members from the data.
+func test_part_two_series_come_from_the_data() -> void:
+	var by_id: Dictionary[StringName, SeriesDef] = {}
+	for def: SeriesDef in _defs():
+		by_id[def.id] = def
+	for id: StringName in [&"produced:flour", &"produced:malt", &"produced:beer", &"consumed:wheat",
+			&"consumed:malt", &"consumed:tea", &"spoiled:wheat", &"spoiled:beer", &"spoiled:bread", &"bought:wheat",
+			&"bought:barley", &"bought:flour", &"bought:tea", &"immigration:worker", &"immigration:artisan",
+			&"emigration:worker:hunger", &"emigration:artisan:satisfaction", &"promotions:artisan",
+			&"demotions:artisan", &"expense:administration", &"income:refund"]:
+		assert_has(by_id, id)
+	for id: StringName in [&"produced:wheat", &"produced:tea", &"spoiled:tea", &"spoiled:flour", &"bought:malt",
+			&"promotions:worker", &"promotions", &"demotions"]:
+		assert_does_not_have(by_id, id, "nothing makes, spoils, buys or promotes it")
+	assert_eq(by_id[&"emigration:worker:hunger"].dimensions, {&"class": &"worker", &"cause": &"hunger"})
+	assert_has(SeriesDef.DIMENSIONS, &"cause")
+
+
+func test_part_two_samplers_read_the_counters() -> void:
+	var state: EconomyState = EconomyState.new()
+	state.count_produced(&"malt", 2)
+	state.count_consumed(&"tea", 0.5)
+	state.count_spoiled(&"beer", 0.25)
+	state.count_bought(&"flour", 30)
+	state.immigration_tick[&"artisan"] = 1
+	state.emigration_hunger_tick[&"worker"] = 2
+	state.emigration_unhappy_tick[&"worker"] = 3
+	state.promotions_by_class_tick[&"artisan"] = 4
+	state.demotions_by_class_tick[&"artisan"] = 5
+	state.upkeep_tick = 10
+	state.administration_tick = 2.5
+	state.construction_spent_tick = 70
+	state.refunds_tick = 30
+	var values: Dictionary = {}
+	for def: SeriesDef in _defs():
+		values[def.id] = def.sampler.call(state)
+	assert_eq(values[&"produced:malt"], 2.0)
+	assert_eq(values[&"produced:flour"], 0.0)
+	assert_eq(values[&"consumed:tea"], 0.5)
+	assert_eq(values[&"spoiled:beer"], 0.25)
+	assert_eq(values[&"bought:flour"], 30.0)
+	assert_eq(values[&"immigration:artisan"], 1.0)
+	assert_eq(values[&"emigration:worker:hunger"], 2.0)
+	assert_eq(values[&"emigration:worker:satisfaction"], 3.0)
+	assert_eq(values[&"promotions:artisan"], 4.0)
+	assert_eq(values[&"demotions:artisan"], 5.0)
+	assert_eq(values[&"expense:upkeep"], 7.5, "base upkeep is what administration leaves")
+	assert_eq(values[&"expense:administration"], 2.5)
+	assert_eq(values[&"expense:construction"], 100.0, "what was paid; the net 70 is after the refund")
+	assert_eq(values[&"income:refund"], 30.0)

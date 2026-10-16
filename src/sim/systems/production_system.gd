@@ -61,6 +61,7 @@ static func _settle_shared_output(state: EconomyState, context: EconomyContext, 
 	if units <= 0:
 		return
 	state.stocks[good] = int(state.stocks.get(good, 0)) + units
+	state.count_produced(good, units)
 	var owed: float = float(units)
 	for building: Dictionary in producers:
 		var taken: float = minf(owed, float(building.get("output_fraction", 0.0)))
@@ -121,6 +122,7 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 			if state.stocks.get(input, 0) <= 0:
 				break
 			state.stocks[input] -= 1
+			state.count_consumed(input, 1.0)
 			reserved = 1.0
 		var processed: float = minf(budget, reserved)
 		reserved -= processed
@@ -135,6 +137,7 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 		state.input_starved_tick[id] = int(state.input_starved_tick.get(id, 0)) + 1
 	var produced: int = whole_units(fraction)
 	state.stocks[output] = state.stocks.get(output, 0) + produced
+	state.count_produced(output, produced)
 	if output == &"bread":
 		state.bread_produced_tick += produced
 	building["reserved_input"] = reserved

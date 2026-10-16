@@ -20,7 +20,8 @@ func tick(state: EconomyState, params: Params, context: EconomyContext = null) -
 		state.class_tax_tick[def.id] = collected
 	state.wage_fraction += wages / 60.0
 	# Administration (issue #118): a bigger city pays more upkeep for every building; wages do not grow.
-	upkeep *= BuildingCosts.administration_multiplier(params, state.buildings.size())
+	var multiplier: float = BuildingCosts.administration_multiplier(params, state.buildings.size())
+	upkeep *= multiplier
 	state.upkeep_fraction += upkeep / 60.0
 	var taxes_paid: int = ProductionSystem.whole_units(state.tax_fraction)
 	var wages_paid: int = ProductionSystem.whole_units(state.wage_fraction)
@@ -29,6 +30,8 @@ func tick(state: EconomyState, params: Params, context: EconomyContext = null) -
 	state.taxes_tick = taxes_paid
 	state.wages_tick = wages_paid
 	state.upkeep_tick = upkeep_paid
+	# The statistics split what was paid, so base upkeep and administration always add up to it.
+	state.administration_tick = upkeep_paid * maxf(0.0, 1.0 - 1.0 / multiplier) if multiplier > 0.0 else 0.0
 	state.tax_fraction = maxf(0.0, state.tax_fraction - taxes_paid)
 	state.wage_fraction = maxf(0.0, state.wage_fraction - wages_paid)
 	state.upkeep_fraction = maxf(0.0, state.upkeep_fraction - upkeep_paid)
