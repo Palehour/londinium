@@ -40,6 +40,7 @@ func _tick_class(state: EconomyState, params: Params, context: EconomyContext, d
 		var falling: int = mini(entry.population, ProductionSystem.whole_units(entry.demotion_fraction))
 		_move(state, source, entry, -falling)
 		state.demotions_tick += falling
+		state.demotions_by_class_tick[def.id] = falling
 		entry.demotion_fraction = maxf(0.0, entry.demotion_fraction - falling) if entry.population > 0 else 0.0
 		return falling > 0
 	entry.demotion_fraction = 0.0
@@ -52,6 +53,7 @@ func _tick_class(state: EconomyState, params: Params, context: EconomyContext, d
 	var rising: int = mini(room, ProductionSystem.whole_units(entry.promotion_fraction))
 	_move(state, source, entry, rising)
 	state.promotions_tick += rising
+	state.promotions_by_class_tick[def.id] = rising
 	entry.promotion_fraction = maxf(0.0, entry.promotion_fraction - rising) if rising < room else 0.0
 	return rising > 0
 

@@ -173,8 +173,12 @@ ui.stats.stock,Existencias,Stock
 ui.stats.coverage,Cobertura,Coverage
 ui.stats.produced,Producción,Production
 ui.stats.consumed,Consumo,Consumption
+ui.stats.spoiled,Merma,Spoilage
+ui.stats.bought,Compras,Purchases
 ui.stats.price,Precio,Price
 ui.stats.population,Población,Population
+ui.stats.immigration,Inmigración,Immigration
+ui.stats.emigration,Emigración,Emigration
 ui.stats.satisfaction,Satisfacción,Satisfaction
 ui.stats.housing_capacity,Capacidad de vivienda,Housing capacity
 ui.stats.housing_occupancy,Ocupación de vivienda,Housing occupancy

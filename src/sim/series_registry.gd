@@ -2,13 +2,18 @@ class_name SeriesRegistry
 extends RefCounted
 
 # Every statistics series of a game (issue #82, D-066). The members come from the data (classes, goods, buildings,
-# victory stages), so a class or good added to data/ gets its series without touching this file. This first part
-# only reads values the simulation already keeps; flows that need new per-tick counters come with part 2.
+# victory stages), so a class or good added to data/ gets its series without touching this file. Part 2 (#130) adds
+# the flows that read the per-tick counters of EconomyState: per good, migration, mobility, administration, refunds.
 
 const DEFEAT_CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
-# Money that left the treasury this tick, by what paid for it. Construction is net of demolition refunds.
-const EXPENSE_SOURCES: Array[StringName] = [&"upkeep", &"wages", &"construction", &"wheat", &"barley",
-	&"imported_flour", &"tea"]
+# Money that left the treasury this tick, by what paid for it. Upkeep is the base one, without administration;
+# construction is what was paid, and demolition refunds are an income of their own.
+const EXPENSE_SOURCES: Array[StringName] = [&"upkeep", &"administration", &"wages", &"construction", &"wheat",
+	&"barley", &"imported_flour", &"tea"]
+# Goods the wharf buys or imports (MarketSystem, ImportSystem).
+const BOUGHT_GOODS: Array[StringName] = [&"wheat", &"barley", &"flour", &"tea"]
+# Why people leave (GrowthSystem): hunger takes priority over low satisfaction.
+const EMIGRATION_CAUSES: Array[StringName] = [&"hunger", &"satisfaction"]
 # Goods whose coverage the state keeps: the ones a class eats.
 const COVERED_GOODS: Array[StringName] = [&"bread", &"tea", &"beer"]
 const BASE_MEMBER: StringName = &"base"
@@ -32,21 +37,24 @@ static func _money(found: Array[SeriesDef], context: EconomyContext) -> void:
 		found.append(SeriesDef.create(&"income", &"pence", SeriesDef.AGGREGATION_SUM,
 			{&"source": &"tax", &"class": member_of(def)},
 			func(state: EconomyState) -> float: return float(state.class_tax_tick.get(id, 0.0))))
+	found.append(SeriesDef.create(&"income", &"pence", SeriesDef.AGGREGATION_SUM, {&"source": &"refund"},
+		func(state: EconomyState) -> float: return float(state.refunds_tick)))
 	for source: StringName in EXPENSE_SOURCES:
 		found.append(SeriesDef.create(&"expense", &"pence", SeriesDef.AGGREGATION_SUM, {&"source": source},
 			func(state: EconomyState) -> float: return float(expense(state, source))))
 
 
-static func expense(state: EconomyState, source: StringName) -> int:
+static func expense(state: EconomyState, source: StringName) -> float:
 	match source:
-		&"upkeep": return state.upkeep_tick
+		&"upkeep": return state.upkeep_tick - state.administration_tick
+		&"administration": return state.administration_tick
 		&"wages": return state.wages_tick
-		&"construction": return state.construction_spent_tick
+		&"construction": return state.construction_spent_tick + state.refunds_tick
 		&"wheat": return state.wheat_spent_tick
 		&"barley": return state.barley_spent_tick
 		&"imported_flour": return state.imports_spent_tick - state.tea_spent_tick
 		&"tea": return state.tea_spent_tick
-	return 0
+	return 0.0
 
 
 static func _goods(found: Array[SeriesDef], params: Params, context: EconomyContext) -> void:
@@ -56,10 +64,7 @@ static func _goods(found: Array[SeriesDef], params: Params, context: EconomyCont
 		if good in COVERED_GOODS:
 			found.append(SeriesDef.create(&"coverage", &"ratio", SeriesDef.AGGREGATION_MEAN, {&"good": good},
 				func(state: EconomyState) -> float: return coverage(state, good)))
-	found.append(SeriesDef.create(&"produced", &"units", SeriesDef.AGGREGATION_SUM, {&"good": &"bread"},
-		func(state: EconomyState) -> float: return float(state.bread_produced_tick)))
-	found.append(SeriesDef.create(&"consumed", &"units", SeriesDef.AGGREGATION_SUM, {&"good": &"bread"},
-		func(state: EconomyState) -> float: return state.bread_consumed_tick))
+	_flows(found, params, context)
 	found.append(SeriesDef.create(&"price", &"pence", SeriesDef.AGGREGATION_MEAN, {&"good": &"wheat"},
 		func(state: EconomyState) -> float: return float(state.wheat_price)))
 	found.append(SeriesDef.create(&"price", &"pence", SeriesDef.AGGREGATION_MEAN, {&"good": &"barley"},
@@ -69,6 +74,48 @@ static func _goods(found: Array[SeriesDef], params: Params, context: EconomyCont
 		func(_state: EconomyState) -> float: return float(params.get_value(&"market.imported_flour.price_per_lot"))))
 	found.append(SeriesDef.create(&"price", &"pence", SeriesDef.AGGREGATION_MEAN, {&"good": &"tea"},
 		func(_state: EconomyState) -> float: return float(params.get_value(&"market.tea.price"))))
+
+
+# Per good: what converters make, what leaves the store (a converter's input or what people eat), what spoils
+# (the goods with a decay rate in the data, and the bread) and what the wharf buys.
+static func _flows(found: Array[SeriesDef], params: Params, context: EconomyContext) -> void:
+	var made: Array[StringName] = recipe_goods(context, true)
+	var used: Array[StringName] = recipe_goods(context, false)
+	for good: StringName in goods(context):
+		if good in made:
+			found.append(SeriesDef.create(&"produced", &"units", SeriesDef.AGGREGATION_SUM, {&"good": good},
+				func(state: EconomyState) -> float: return float(state.goods_produced_tick.get(good, 0))))
+		if good in used or _eaten(context, good):
+			found.append(SeriesDef.create(&"consumed", &"units", SeriesDef.AGGREGATION_SUM, {&"good": good},
+				func(state: EconomyState) -> float: return float(state.goods_consumed_tick.get(good, 0.0))))
+		if good == &"bread" or params.has_value(StringName("market.%s.decay_fraction_per_minute" % good)):
+			found.append(SeriesDef.create(&"spoiled", &"units", SeriesDef.AGGREGATION_SUM, {&"good": good},
+				func(state: EconomyState) -> float: return float(state.goods_spoiled_tick.get(good, 0.0))))
+		if good in BOUGHT_GOODS:
+			found.append(SeriesDef.create(&"bought", &"units", SeriesDef.AGGREGATION_SUM, {&"good": good},
+				func(state: EconomyState) -> float: return float(state.goods_bought_tick.get(good, 0))))
+
+
+# The outputs (or the inputs) of the converters ProductionSystem runs: the wharf's wheat is bought, not made.
+static func recipe_goods(context: EconomyContext, outputs: bool) -> Array[StringName]:
+	var found: Array[StringName] = []
+	if context == null:
+		return found
+	for id: StringName in ProductionSystem.CONVERTERS:
+		var definition: BuildingDef = context.buildings.get(id)
+		if definition != null and definition.recipe != null:
+			for good: StringName in definition.recipe.outputs if outputs else definition.recipe.inputs:
+				if good not in found:
+					found.append(good)
+	return found
+
+
+static func _eaten(context: EconomyContext, good: StringName) -> bool:
+	for def: ClassDef in ClassStates.defs(context):
+		for need: NeedDef in def.needs:
+			if need.good == good:
+				return true
+	return false
 
 
 # Every good a recipe uses or makes, or a class eats, in a stable order.
@@ -99,8 +146,20 @@ static func coverage(state: EconomyState, good: StringName) -> float:
 static func _people(found: Array[SeriesDef], context: EconomyContext) -> void:
 	for def: ClassDef in ClassStates.defs(context):
 		var member: Dictionary[StringName, StringName] = {&"class": member_of(def)}
+		var class_id: StringName = def.id
 		found.append(SeriesDef.create(&"population", &"people", SeriesDef.AGGREGATION_MEAN, member,
 			func(state: EconomyState) -> float: return float(ClassStates.population_of(state, def))))
+		found.append(SeriesDef.create(&"immigration", &"people", SeriesDef.AGGREGATION_SUM, member,
+			func(state: EconomyState) -> float: return float(state.immigration_tick.get(class_id, 0))))
+		for cause: StringName in EMIGRATION_CAUSES:
+			found.append(SeriesDef.create(&"emigration", &"people", SeriesDef.AGGREGATION_SUM,
+				{&"class": member_of(def), &"cause": cause},
+				func(state: EconomyState) -> float: return float(emigrated(state, class_id, cause))))
+		if def.has_mobility():
+			found.append(SeriesDef.create(&"promotions", &"people", SeriesDef.AGGREGATION_SUM, member,
+				func(state: EconomyState) -> float: return float(state.promotions_by_class_tick.get(class_id, 0))))
+			found.append(SeriesDef.create(&"demotions", &"people", SeriesDef.AGGREGATION_SUM, member,
+				func(state: EconomyState) -> float: return float(state.demotions_by_class_tick.get(class_id, 0))))
 		found.append(SeriesDef.create(&"satisfaction", &"score", SeriesDef.AGGREGATION_MEAN, member,
 			func(state: EconomyState) -> float: return satisfaction(state, def)))
 		found.append(SeriesDef.create(&"housing_capacity", &"people", SeriesDef.AGGREGATION_MEAN, member,
@@ -112,10 +171,12 @@ static func _people(found: Array[SeriesDef], context: EconomyContext) -> void:
 			found.append(SeriesDef.create(&"need_score", &"score", SeriesDef.AGGREGATION_MEAN,
 				{&"class": member_of(def), &"category": category},
 				func(state: EconomyState) -> float: return MobilitySystem.score(state, id, category)))
-	found.append(SeriesDef.create(&"promotions", &"people", SeriesDef.AGGREGATION_SUM, {},
-		func(state: EconomyState) -> float: return float(state.promotions_tick)))
-	found.append(SeriesDef.create(&"demotions", &"people", SeriesDef.AGGREGATION_SUM, {},
-		func(state: EconomyState) -> float: return float(state.demotions_tick)))
+
+
+static func emigrated(state: EconomyState, class_id: StringName, cause: StringName) -> int:
+	var counter: Dictionary[StringName, int] = state.emigration_hunger_tick if cause == &"hunger" \
+		else state.emigration_unhappy_tick
+	return counter.get(class_id, 0)
 
 
 static func categories(def: ClassDef) -> Array[StringName]:
