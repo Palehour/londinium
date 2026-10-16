@@ -101,6 +101,23 @@ var demotions_tick: int = 0
 # Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
 # used all its budget on the wheat it had does not count). Transient: never saved.
 var input_starved_tick: Dictionary[StringName, int] = {}
+# Counters for the chapter statistics (issue #130, D-066). The systems only write them and nothing in the
+# simulation reads them. Per good: units a converter made, units taken out of the store (a converter's input,
+# what people ate), units lost to spoilage, units bought at the wharf or imported.
+var goods_produced_tick: Dictionary[StringName, int] = {}
+var goods_consumed_tick: Dictionary[StringName, float] = {}
+var goods_spoiled_tick: Dictionary[StringName, float] = {}
+var goods_bought_tick: Dictionary[StringName, int] = {}
+# Per class id: people who arrived, and who left out of hunger or low satisfaction.
+var immigration_tick: Dictionary[StringName, int] = {}
+var emigration_hunger_tick: Dictionary[StringName, int] = {}
+var emigration_unhappy_tick: Dictionary[StringName, int] = {}
+# Per class id with mobility: people who rose into it, and who fell back out of it.
+var promotions_by_class_tick: Dictionary[StringName, int] = {}
+var demotions_by_class_tick: Dictionary[StringName, int] = {}
+# The share of upkeep_tick that administration added (issue #118), and what demolitions gave back.
+var administration_tick: float = 0.0
+var refunds_tick: int = 0
 
 
 func reset_flows() -> void:
@@ -119,6 +136,34 @@ func reset_flows() -> void:
 	promotions_tick = 0
 	demotions_tick = 0
 	input_starved_tick.clear()
+	goods_produced_tick.clear()
+	goods_consumed_tick.clear()
+	goods_spoiled_tick.clear()
+	goods_bought_tick.clear()
+	immigration_tick.clear()
+	emigration_hunger_tick.clear()
+	emigration_unhappy_tick.clear()
+	promotions_by_class_tick.clear()
+	demotions_by_class_tick.clear()
+	administration_tick = 0.0
+	refunds_tick = 0
+
+
+# Statistics counters (issue #130): written by the systems, never read by them.
+func count_produced(good: StringName, units: int) -> void:
+	goods_produced_tick[good] = goods_produced_tick.get(good, 0) + units
+
+
+func count_consumed(good: StringName, units: float) -> void:
+	goods_consumed_tick[good] = goods_consumed_tick.get(good, 0.0) + units
+
+
+func count_spoiled(good: StringName, units: float) -> void:
+	goods_spoiled_tick[good] = goods_spoiled_tick.get(good, 0.0) + units
+
+
+func count_bought(good: StringName, units: int) -> void:
+	goods_bought_tick[good] = goods_bought_tick.get(good, 0) + units
 
 
 func to_dict() -> Dictionary:

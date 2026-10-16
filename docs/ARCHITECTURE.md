@@ -149,9 +149,18 @@ rules. Archive/statistics and autosave consumers can use this record when their 
 ## Statistics history (D-066, issue #82)
 `SeriesRegistry.build(params, context, victory_stages)` declares every series: metric, label key (`ui.stats.<metric>`,
 translated in `locale/ui.csv`), unit, aggregation (`sum` for flows, `mean` or `last` for levels) and dimensions
-(`class`, `good`, `building`, `category`, `source`, `stage`, `condition`, `district`). Members come from the data, so
-a new class or good gets its series without code. A series id is the metric and its members joined by `:`
+(`class`, `good`, `building`, `category`, `source`, `cause`, `stage`, `condition`, `district`). Members come from the
+data, so a new class or good gets its series without code. A series id is the metric and its members joined by `:`
 (`income:tax:artisan`). Each series has a sampler that reads one tick of the state and never writes to it.
+
+Part 2 (#130) adds per-tick counters to `EconomyState`, reset in `reset_flows()`, never saved and never read by a
+system: per good, the units a converter made, took from the store (a converter's input, or what people ate), lost to
+spoilage, and bought or imported (`count_produced`, `count_consumed`, `count_spoiled`, `count_bought`); per class,
+arrivals, departures for `hunger` or `satisfaction`, and promotions and demotions; the share of `upkeep_tick` that
+administration added; and demolition refunds. Each system writes its counter next to the stock or money it already
+moves, in its own step of the tick. `expense:upkeep` is the base upkeep and `expense:administration` the rest;
+`expense:construction` is what was paid and `income:refund` what demolitions gave back (the panel's
+`construction_spent_tick` stays net).
 
 `StatsHistory` keeps three levels, sized in `data/economy/stats.json` and read through `Params`: one value per second
 for `stats.fine.span_seconds` (a ring, not saved), buckets of `stats.medium.bucket_seconds` for

@@ -31,9 +31,12 @@ func tick(state: EconomyState, params: Params, context: EconomyContext = null) -
 	var available: float = float(state.stocks.get(&"bread", 0)) + state.bread_fraction
 	state.bread_consumed = minf(available, state.bread_demand)
 	state.bread_consumed_tick = state.bread_consumed
+	state.count_consumed(&"bread", state.bread_consumed)
 	state.bread_coverage = coverage(state, params, context)
 	var decay: float = float(params.get_value(&"population.bread_decay_fraction_per_minute"))
-	var remaining: float = maxf(0.0, available - state.bread_consumed) * pow(1.0 - decay, 1.0 / 60.0)
+	var left: float = maxf(0.0, available - state.bread_consumed)
+	var remaining: float = left * pow(1.0 - decay, 1.0 / 60.0)
+	state.count_spoiled(&"bread", left - remaining)
 	var whole: int = ProductionSystem.whole_units(remaining)
 	if state.stocks.has(&"bread") or whole > 0:
 		state.stocks[&"bread"] = whole
@@ -48,6 +51,7 @@ func _consume_tea(state: EconomyState, params: Params, context: EconomyContext) 
 	state.tea_demand = demand_per_second(state, params, context, &"tea")
 	var available: float = float(state.stocks.get(&"tea", 0)) + state.tea_fraction
 	state.tea_consumed = minf(available, state.tea_demand)
+	state.count_consumed(&"tea", state.tea_consumed)
 	state.tea_coverage = tea_coverage(state, params, context)
 	var remaining: float = maxf(0.0, available - state.tea_consumed)
 	var whole: int = ProductionSystem.whole_units(remaining)
@@ -62,6 +66,7 @@ func _consume_beer(state: EconomyState, params: Params, context: EconomyContext)
 	state.beer_demand = demand_per_second(state, params, context, &"beer")
 	var available: float = float(state.stocks.get(&"beer", 0)) + state.beer_fraction
 	state.beer_consumed = minf(available, state.beer_demand)
+	state.count_consumed(&"beer", state.beer_consumed)
 	state.beer_coverage = beer_coverage(state, params, context)
 	var remaining: float = maxf(0.0, available - state.beer_consumed)
 	var whole: int = ProductionSystem.whole_units(remaining)

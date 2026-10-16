@@ -17,6 +17,7 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 			state.money += refund
 			# Net spending keeps the panel's construction line honest.
 			state.construction_spent_tick -= refund
+			state.refunds_tick += refund
 			# Work in progress belongs to the building; global stocks survive demolition.
 			state.buildings.remove_at(index)
 			accepted = true
