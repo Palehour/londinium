@@ -50,6 +50,13 @@ const PAUSE: StringName = &"ui.pause"
 const RESUME: StringName = &"ui.resume"
 const RESTART: StringName = &"ui.restart"
 const DIFFICULTY: StringName = &"ui.difficulty"
+const MODS_TITLE: StringName = &"ui.mods.title"
+const MODS_NONE: StringName = &"ui.mods.none"
+const MODS_UP: StringName = &"ui.mods.up"
+const MODS_DOWN: StringName = &"ui.mods.down"
+const MODS_CONFLICTS: StringName = &"ui.mods.conflicts"
+const MODS_CONFLICT: StringName = &"ui.mods.conflict"
+const MODS_ERROR: StringName = &"ui.mods.error"
 const POPULATION: StringName = &"ui.population"
 const SATISFACTION: StringName = &"ui.satisfaction"
 const BREAD_RATE: StringName = &"ui.bread_rate"
@@ -277,6 +284,7 @@ static func all_keys() -> Array[StringName]:
 		PROMOTION_ACTIVE, PROMOTION_BLOCKED, PROMOTION_BLOCKER, PROMOTION_CATEGORY_BELOW,
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
+		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR,
 	]
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])

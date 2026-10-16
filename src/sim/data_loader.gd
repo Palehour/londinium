@@ -78,11 +78,17 @@ const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
 
 var _errors: Array[String] = []
+# Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
+# targets them does not add a second one (a broken mod value would otherwise read as a broken preset).
+var _rejected_keys: Array[StringName] = []
 var _era: String = DEFAULT_ERA
 
 
-func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoadResult:
+# `mods_root` is where the player's mods live (ModLayer.DEFAULT_ROOT in the game); empty loads data/ alone, as
+# tests and balance tools do so that nothing on the machine changes their results.
+func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root: String = "") -> DataLoadResult:
 	_errors.clear()
+	_rejected_keys.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
 	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), "scenarios", DIFFICULTY_FOLDER]:
@@ -111,12 +117,20 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA) -> DataLoa
 				_errors.append("%s: expected an object" % path)
 			else:
 				documents[path] = json.data
-	return _build(documents)
+	var mods: ModLayer = ModLayer.new()
+	mods.apply(documents, mods_root, era)
+	_errors.append_array(mods.errors)
+	var result: DataLoadResult = _build(documents)
+	result.errors.assign(result.errors.map(mods.blame))
+	result.mods = mods.mods
+	result.mod_conflicts = mods.conflicts
+	return result
 
 
 # Also accepts in-memory documents so invalid fixtures never enter the game's data directory.
 func load_documents(documents: Dictionary[String, Dictionary], era: String = DEFAULT_ERA) -> DataLoadResult:
 	_errors.clear()
+	_rejected_keys.clear()
 	_era = era
 	return _build(documents)
 
@@ -154,7 +168,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	# Roles may precede economy files in the dictionary; resolve keys only after registration.
 	for role: RoleDef in catalog.roles.values():
 		for modifier: Modifier in role.modifiers:
-			if not catalog.base_values.has(modifier.key):
+			if not catalog.base_values.has(modifier.key) and modifier.key not in _rejected_keys:
 				_errors.append("roles/%s.json.modifiers: unknown key '%s'" % [role.id, modifier.key])
 	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
 	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
@@ -240,6 +254,7 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	var integral: bool = kind in ["money", "integer", "positive_integer", "optional_price"]
 	if typeof(raw) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(raw)):
 		_errors.append("%s: expected a finite %s" % [path, kind])
+		_rejected_keys.append(StringName(key))
 		return false
 	var value: float = float(raw)
 	# JSON numbers arrive as doubles; reject values outside int64 before conversion.
@@ -250,6 +265,7 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
 			or not ParameterRanges.is_valid(StringName(key), value):
 		_errors.append("%s: invalid %s value %s" % [path, kind, raw])
+		_rejected_keys.append(StringName(key))
 		return false
 	catalog.base_values[StringName(key)] = int(raw) if integral else value
 	if integral:
@@ -263,6 +279,7 @@ func _boolean(raw: Variant, path: String, key: String, catalog: DataCatalog) -> 
 	# JSON true/false only; 0/1 would hide a typo in a switch as a number.
 	if typeof(raw) != TYPE_BOOL:
 		_errors.append("%s: expected a boolean" % path)
+		_rejected_keys.append(StringName(key))
 		return false
 	catalog.base_values[StringName(key)] = raw
 	catalog.boolean_keys.append(StringName(key))
@@ -735,6 +752,8 @@ func _relative_modifier(entry: Variant, location: String, catalog: DataCatalog) 
 		_errors.append("%s: expected key string, op add|mul and finite numeric value" % location)
 		return null
 	var key: StringName = StringName(entry["key"])
+	if key in _rejected_keys:
+		return null
 	if not catalog.base_values.has(key) or key in catalog.boolean_keys:
 		_errors.append("%s: unknown or non-numeric key '%s'" % [location, key])
 		return null
@@ -790,6 +809,9 @@ func _knob_range(entry: Dictionary, location: String, knob: KnobDef) -> bool:
 func _knob_targets_valid(knob: KnobDef, location: String, catalog: DataCatalog) -> bool:
 	var valid: bool = true
 	for target: StringName in knob.keys:
+		if target in _rejected_keys or StringName("market.%s.max_step" % target) in _rejected_keys:
+			valid = false
+			continue
 		match knob.kind:
 			&"switch":
 				if target not in catalog.boolean_keys:

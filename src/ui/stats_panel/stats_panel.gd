@@ -3,6 +3,7 @@ extends PanelContainer
 
 signal restart_requested
 signal difficulty_selected(preset_id: StringName)
+signal mod_order_requested(order: Array[StringName])
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -49,6 +50,9 @@ var _locale_en: Button
 var _locale_group: ButtonGroup
 var _difficulty_label: Label
 var _difficulty_buttons: Dictionary[StringName, Button] = {}
+var _mods_menu: ModsMenu
+# Where the player puts mods, shown by the mods menu when there are none.
+var _mods_folder: String = ""
 var _snapshot: Dictionary = {}
 var _bread: Label
 var _economy: Label
@@ -147,6 +151,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
 	_sync_difficulty_buttons()
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
@@ -238,9 +243,23 @@ func _sync_difficulty_buttons() -> void:
 		_difficulty_buttons[preset_id].set_pressed_no_signal(preset_id == session.difficulty)
 
 
+# A mods menu fails to apply an order only when the reloaded data does not validate; the game goes on.
+func show_mod_error(message: String) -> void:
+	_mods_menu.show_error(message)
+
+
+func set_mods_folder(folder: String) -> void:
+	_mods_folder = folder
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
+
+
 func _build_controls(content: VBoxContainer) -> void:
 	_build_locale_row(content)
 	_build_difficulty_row(content)
+	_mods_menu = ModsMenu.new()
+	_mods_menu.order_changed.connect(func(order: Array[StringName]) -> void: mod_order_requested.emit(order))
+	content.add_child(_mods_menu)
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
 	var tax_row: HBoxContainer = HBoxContainer.new()
 	_tax_label = Label.new()
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)
