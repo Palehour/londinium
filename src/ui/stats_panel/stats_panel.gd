@@ -7,6 +7,8 @@ signal mod_order_requested(order: Array[StringName])
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
+# Floating point noise of rates summed per second, not a threshold: 10.0000000001 per minute is still 10.0.
+const RATE_NOISE: float = 1e-6
 
 var session: GameSession
 var clock: SimClock
@@ -155,7 +157,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
-	_buildings.text = _buildings_text(snapshot["diagnostics"]["buildings"])
+	_buildings.text = _buildings_text(snapshot["diagnostics"])
 	_crises.text = _crises_text(defeat)
 
 
@@ -567,7 +569,21 @@ func _bread_text(economy: Dictionary, stats: Dictionary, diagnostics: Dictionary
 			lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % Strings.reason(cause["reason"]))
 		else:
 			lines.append(Strings.text(Strings.BREAD_CAUSE) % [label, Strings.reason(cause["reason"])])
+	var split: String = _unloading_split_text(diagnostics)
+	if not split.is_empty():
+		lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % split)
 	return "\n".join(lines)
+
+
+# Empty unless the barley share leaves the mill short (issue #106). What arrives is rounded down and what the
+# mill needs up, so the two never read the same while the warning shows.
+func _unloading_split_text(diagnostics: Dictionary) -> String:
+	var split: Dictionary = diagnostics.get("unloading_split", {})
+	if not split.get("active", false):
+		return ""
+	return Strings.text(Strings.UNLOADING_SPLIT_SHORT) % [
+		_tenths(snappedf(split["received_per_minute"], RATE_NOISE), false),
+		_tenths(snappedf(split["needed_per_minute"], RATE_NOISE), true)]
 
 
 func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
@@ -676,11 +692,17 @@ func _tenths(value: float, round_up: bool) -> float:
 	return (ceilf(value * 10.0) if round_up else floorf(value * 10.0)) / 10.0
 
 
-func _buildings_text(buildings: Array) -> String:
+func _buildings_text(diagnostics: Dictionary) -> String:
+	var buildings: Array = diagnostics["buildings"]
 	var lines: Array[String] = [Strings.text(Strings.BUILDINGS)]
+	# Said once, under the first mill: the split is the wharf's, not one mill's.
+	var split: String = _unloading_split_text(diagnostics)
 	for building: Dictionary in buildings:
 		lines.append(Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label(String(building["definition_id"])),
 			building["cell"][0], building["cell"][1], building["workers"], building["jobs"], Strings.reason(building["reason"])])
+		if building["definition_id"] == &"mill" and not split.is_empty():
+			lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % split)
+			split = ""
 	if buildings.is_empty():
 		lines.append(Strings.text(Strings.NO_BUILDINGS))
 	return "\n".join(lines)

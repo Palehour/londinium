@@ -64,6 +64,7 @@ const BREAD_OK: StringName = &"ui.bread_ok"
 const BREAD_SHORT: StringName = &"ui.bread_short"
 const BREAD_CAUSE: StringName = &"ui.bread_cause"
 const BREAD_CHAIN_CAUSE: StringName = &"ui.bread_chain_cause"
+const UNLOADING_SPLIT_SHORT: StringName = &"ui.unloading_split_short"
 const STOCKS: StringName = &"ui.stocks"
 const TREASURY: StringName = &"ui.treasury"
 const OPERATING_BALANCE: StringName = &"ui.operating_balance"
@@ -284,7 +285,7 @@ static func all_keys() -> Array[StringName]:
 		PROMOTION_ACTIVE, PROMOTION_BLOCKED, PROMOTION_BLOCKER, PROMOTION_CATEGORY_BELOW,
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
-		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR,
+		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
 	]
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])

@@ -163,6 +163,55 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 7, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
 
 
+# Issue #106: one staffed wharf at 30 % barley brings 7 of the 10 wheat a staffed mill grinds.
+func _bread_chain_with_split(barley_percent: int) -> void:
+	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
+	_panel = _new_panel(_session)
+	_session.submit_command(SetUnloadingSplitCommand.new(barley_percent))
+	for id: StringName in [&"wharf", &"mill", &"bakery"]:
+		var cell: Vector2i = Vector2i(0, 7) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size(), 1)
+		_session.submit_command(BuildCommand.new(_session.context, id, cell))
+		_session.simulation.tick()
+	_tick()
+
+
+func test_mill_row_and_bread_why_explain_the_unloading_split() -> void:
+	_bread_chain_with_split(30)
+	var warning: String = Strings.text(Strings.BREAD_CHAIN_CAUSE) % (Strings.text(Strings.UNLOADING_SPLIT_SHORT) % [7.0, 10.0])
+	var row: Dictionary = {}
+	for building: Dictionary in _session.get_snapshot()["diagnostics"]["buildings"]:
+		if building["definition_id"] == &"mill":
+			row = building
+	var mill: String = Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("mill"), row["cell"][0],
+		row["cell"][1], row["workers"], row["jobs"], Strings.reason(row["reason"])]
+	assert_string_contains(_text("_buildings"), mill + "\n" + warning)
+	assert_eq(_text("_buildings").count(warning), 1, "said once, under the mill")
+	assert_string_contains(_text("_bread"), Strings.text(Strings.BREAD_SHORT))
+	assert_string_contains(_text("_bread"), warning)
+
+
+func test_unloading_split_warning_hidden_without_barley() -> void:
+	_bread_chain_with_split(0)
+	var warning: String = Strings.text(Strings.UNLOADING_SPLIT_SHORT).get_slice("%", 0)
+	assert_string_contains(_text("_bread"), Strings.text(Strings.BREAD_SHORT))
+	assert_false(_text("_buildings").contains(warning))
+	assert_false(_text("_bread").contains(warning))
+
+
+func test_unloading_split_shows_rounded_rates_that_never_read_the_same() -> void:
+	_panel.update_snapshot(_session.get_snapshot())
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["diagnostics"]["bread_short"] = true
+	snapshot["diagnostics"]["bread_causes"] = []
+	snapshot["diagnostics"]["unloading_split"] = {"active": true, "received_per_minute": 6.66,
+		"needed_per_minute": 20.0 / 3.0}
+	_panel.update_snapshot(snapshot)
+	assert_string_contains(_text("_bread"), Strings.text(Strings.UNLOADING_SPLIT_SHORT) % [6.6, 6.7])
+	snapshot["diagnostics"]["unloading_split"]["active"] = false
+	_panel.update_snapshot(snapshot)
+	assert_false(_text("_bread").contains(Strings.text(Strings.UNLOADING_SPLIT_SHORT).get_slice("%", 0)))
+
+
 func test_panel_shows_chain_wide_capacity_cause_without_a_building_label() -> void:
 	_panel.update_snapshot(_session.get_snapshot())
 	var snapshot: Dictionary = _session.get_snapshot()
