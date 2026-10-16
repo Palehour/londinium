@@ -92,6 +92,14 @@ static func long_scenario_paths() -> Array[String]:
 	return _json_files(LONG_SCENARIO_DIR)
 
 
+# Scripts rewritten for one difficulty preset (issue #128: hard/ buys later, for its 800 d), in
+# tests/scenarios/<preset>/. Only balance_report --preset plays them, so the runs without a preset stay as they were.
+static func preset_scenario_paths(preset_id: StringName) -> Array[String]:
+	if preset_id == &"":
+		return [] as Array[String]
+	return _json_files(SCENARIO_DIR.path_join(String(preset_id)))
+
+
 static func _json_files(directory: String) -> Array[String]:
 	var found: Array[String] = []
 	var dir: DirAccess = DirAccess.open(directory)
