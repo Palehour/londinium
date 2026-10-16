@@ -39,7 +39,7 @@ func test_hard_preset_values() -> void:
 	_assert_values(_params(&"hard"), {&"startup.money": 800, &"defeat.grace_seconds": 180.0,
 		&"defeat.bankruptcy.duration_seconds": 120, &"defeat.hunger.duration_seconds": 120,
 		&"defeat.depopulation.duration_seconds": 120, &"market.wheat.max_price": 4,
-		&"market.wheat.reversion": 0.35, &"market.barley.reversion": 0.25, &"demolish.refund_ratio": 0.25})
+		&"market.wheat.reversion": 0.45, &"market.barley.reversion": 0.35, &"demolish.refund_ratio": 0.25})
 
 
 func test_normal_equals_no_layers() -> void:

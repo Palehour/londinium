@@ -60,6 +60,9 @@ var save_bytes: int = -1
 # Events in the cause log at the end, and how many of them are intermittent (D-066); not CSV columns.
 var stats_cause_events: int = -1
 var stats_intermittent_events: int = -1
+# The cause log itself, only when the runner keeps it (ScenarioRunner.keep_cause_events): what the "why?" of #73
+# will read, so a probe can check that it names the cause of a defeat (issue #128).
+var cause_events: Array[Dictionary] = []
 
 
 func row(minute: int) -> Dictionary:
