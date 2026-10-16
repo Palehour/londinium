@@ -43,6 +43,7 @@ ui.bread_ok,El pan alcanza.,There is enough bread.
 ui.bread_short,Falta pan porque:,Short of bread because:
 ui.bread_cause,• %s: %s,• %s: %s
 ui.bread_chain_cause,• %s,• %s
+ui.unloading_split_short,El molino recibe %.1f de trigo por minuto de los %.1f que necesita: el embarcadero reparte sus descargas con la cebada. Construí otro embarcadero o bajá la parte de la cebada.,The mill receives %.1f wheat per minute of the %.1f it needs: the wharf shares its unloading with the barley. Build another wharf or lower the barley share.
 ui.stocks,Stocks: trigo %d · harina %d · pan %d,Stocks: wheat %d · flour %d · bread %d
 ui.treasury,Tesoro: %s,Treasury: %s
 ui.operating_balance,Balance operativo: %s/min,Operating balance: %s/min

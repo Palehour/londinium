@@ -67,6 +67,16 @@ static func unloading_capacity(params: Params, wharves: Array[Dictionary]) -> fl
 	return capacity
 
 
+# Wheat per minute the split lets the staffed wharves unload, before price, money or the imported flour
+# (issue #106: the diagnostic blames only the split, the other causes have their own reasons).
+static func wheat_unloading_per_minute(state: EconomyState, params: Params) -> float:
+	var wharves: Array[Dictionary] = []
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"wharf":
+			wharves.append(building)
+	return unloading_capacity(params, wharves) * wheat_share(state) * SECONDS_PER_MINUTE
+
+
 # Share of the capacity left for grain that goes to wheat; 1.0 until the player gives some to barley.
 static func wheat_share(state: EconomyState) -> float:
 	return float(WHOLE_PERCENT - barley_percent(state)) / PERCENT

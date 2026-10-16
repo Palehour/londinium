@@ -34,6 +34,20 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 		"bread_short": bread_short,
 		"bread_causes": causes,
 		"buildings": buildings,
+		"unloading_split": unloading_split(state, params),
+	}
+
+
+# The mill gets less wheat than it grinds because the wharf gives part of its unloading to the barley
+# (issue #106). It only explains the tension D-031 wants; both conditions have to hold at once.
+static func unloading_split(state: EconomyState, params: Params) -> Dictionary:
+	var received: float = MarketSystem.wheat_unloading_per_minute(state, params)
+	var needed: float = MarketSystem.mill_consumption_per_second(state, params) * MarketSystem.SECONDS_PER_MINUTE
+	var short: bool = received < needed - ProductionSystem.ROUNDING_EPSILON
+	return {
+		"active": short and MarketSystem.barley_percent(state) > 0,
+		"received_per_minute": received,
+		"needed_per_minute": needed,
 	}
 
 
