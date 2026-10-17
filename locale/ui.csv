@@ -100,6 +100,7 @@ ui.building.wheat_field,Campo de trigo,Wheat field
 ui.building.malthouse,Maltería,Malthouse
 ui.building.brewery,Cervecería,Brewery
 ui.building.artisan_housing,Vivienda de artesanos,Artisan housing
+ui.building.dense_housing,Vivienda densa,Dense housing
 ui.class.worker,Trabajadores,Workers
 ui.class.artisan,Artesanos,Artisans
 ui.category.sustento,Sustento,Sustenance
@@ -137,6 +138,8 @@ ui.reason.occupied_cell,La casilla está ocupada.,The cell is occupied.
 ui.reason.not_cultivable,La casilla no es cultivable.,The cell is not cultivable.
 ui.reason.requires_river,El edificio requiere una casilla de río.,The building requires a river cell.
 ui.reason.requires_land,El edificio requiere una casilla de tierra.,The building requires a land cell.
+ui.reason.existing_building,En la casilla hay edificación existente.,There is a standing building on the cell.
+ui.reason.not_buildable,Este edificio no se construye: solo viene del mapa.,This building cannot be built: it only comes with the map.
 ui.reason.insufficient_money,No hay dinero suficiente.,There is not enough money.
 ui.reason.no_money_for_wheat,Sin dinero para comprar trigo.,No money to buy wheat.
 ui.reason.no_building,No hay edificio para demoler.,There is no building to demolish.

@@ -89,7 +89,10 @@ londinium/
 ```
 
 ## Tick order (one place, `simulation.gd`)
-1. Apply queued commands.
+1. Apply queued commands. A build is checked against the map (`EconomyContext.terrain_placement_reason`): the
+   standing buildings (`existing_cells`) block new building until the tracing of #152 (D-075), but a saved building
+   on one of them stays and works (D-076). Before tick 0, `Simulation.create_new` puts down the map's starting dense
+   housing (`dense_housing_cells`, as many as `startup.dense_housing_occupied`; not buildable by the player).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,

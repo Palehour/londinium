@@ -39,6 +39,8 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 func _validate(state: EconomyState, params: Params) -> StringName:
 	if not _context.buildings.has(_definition_id):
 		return &"unknown_building"
+	if not _context.buildings[_definition_id].buildable:
+		return &"not_buildable"
 	var map: MapDef = _context.map
 	if _cell.x < 0 or _cell.y < 0 or _cell.x >= map.width or _cell.y >= map.height:
 		return &"outside_map"
