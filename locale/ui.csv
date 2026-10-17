@@ -188,7 +188,20 @@ ui.stats.demotions,Descensos,Demotions
 ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
 ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
 ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.save.title,Partidas guardadas:,Saved games:
+ui.save.none,Todavía no hay partidas guardadas.,No saved games yet.
+ui.save.save,Guardar partida,Save game
+ui.save.load,Cargar,Load
+ui.save.entry,"%s · minuto %d · %s","%s · minute %d · %s"
+ui.save.unreadable,"%s · no se puede leer (%s)","%s · cannot be read (%s)"
+ui.save.saved,Partida guardada.,Game saved.
+ui.save.saved_without_queue,"Partida guardada. Las órdenes que todavía no se aplicaron no quedaron en el archivo.","Game saved. Orders that have not been applied yet are not in the file."
+ui.save.write_error,"No se pudo guardar la partida.","Could not save the game."
+ui.save.loaded,Partida cargada.,Game loaded.
 ui.save.no_mods,sin mods,no mods
+ui.save.kind.manual,Guardada a mano,Manual save
+ui.save.kind.autosave,Autoguardado %d,Autosave %d
+ui.save.kind.stage,Etapa cumplida,Stage met
 ui.save.invalid_file,"No se pudo cargar: el archivo no es una partida guardada de Londinium o está dañado.","Could not load: the file is not a Londinium saved game or it is damaged."
 ui.save.other_version,"No se pudo cargar: la partida está guardada en el formato %d y este juego lee el %d.","Could not load: the game is saved in format %d and this game reads format %d."
 ui.save.other_mods,"No se pudo cargar: la partida se jugó con otros mods (%s). Ponelos en ese orden para cargarla.","Could not load: the game was played with other mods (%s). Put them in that order to load it."

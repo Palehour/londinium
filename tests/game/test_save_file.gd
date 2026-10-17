@@ -132,6 +132,19 @@ func test_manual_saves_never_overwrite() -> void:
 	assert_eq(int(SaveFile.read(second)["data"]["simulation"]["tick_count"]), 121)
 
 
+func test_list_names_each_save_and_marks_unreadable_ones() -> void:
+	SaveFile.write_manual(ROOT, SaveFile.build(_session))
+	SaveFile.write(SaveFile.autosave_path(ROOT, 2), SaveFile.build(_session))
+	_write_raw("broken.sav", PackedByteArray([1, 2, 3]))
+	var lines: Array[String] = []
+	for entry: Dictionary in SaveFile.list(ROOT):
+		lines.append(Strings.save_entry(entry))
+	assert_eq(lines.size(), 3)
+	assert_true(lines.any(func(line: String) -> bool: return line.begins_with("Guardada a mano · minuto 2 · ")))
+	assert_true(lines.any(func(line: String) -> bool: return line.begins_with("Autoguardado 2 · minuto 2 · ")))
+	assert_has(lines, "Guardada a mano · no se puede leer (broken.sav)")
+
+
 func test_load_save_restores_difficulty_and_game() -> void:
 	var hard: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"],
 		DataLayers.resolve(_catalog, &"hard").modifiers)

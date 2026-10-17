@@ -4,6 +4,8 @@ extends PanelContainer
 signal restart_requested
 signal difficulty_selected(preset_id: StringName)
 signal mod_order_requested(order: Array[StringName])
+signal save_requested
+signal load_requested(path: String)
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -53,6 +55,7 @@ var _locale_group: ButtonGroup
 var _difficulty_label: Label
 var _difficulty_buttons: Dictionary[StringName, Button] = {}
 var _mods_menu: ModsMenu
+var _saves_menu: SavesMenu
 # Where the player puts mods, shown by the mods menu when there are none.
 var _mods_folder: String = ""
 var _snapshot: Dictionary = {}
@@ -255,8 +258,17 @@ func set_mods_folder(folder: String) -> void:
 	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
 
 
+# The saves in the folder and the outcome of the last save or load (issue #57); the map view owns the files.
+func show_saves(entries: Array[Dictionary], message: String = "") -> void:
+	_saves_menu.show_saves(entries, message)
+
+
 func _build_controls(content: VBoxContainer) -> void:
 	_build_locale_row(content)
+	_saves_menu = SavesMenu.new()
+	_saves_menu.save_requested.connect(func() -> void: save_requested.emit())
+	_saves_menu.load_requested.connect(func(path: String) -> void: load_requested.emit(path))
+	content.add_child(_saves_menu)
 	_build_difficulty_row(content)
 	_mods_menu = ModsMenu.new()
 	_mods_menu.order_changed.connect(func(order: Array[StringName]) -> void: mod_order_requested.emit(order))
