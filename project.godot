@@ -18,6 +18,12 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 gdscript/warnings/untyped_declaration=2
 
+[display]
+
+; Steam Deck resolution (issue #68, D-048).
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")

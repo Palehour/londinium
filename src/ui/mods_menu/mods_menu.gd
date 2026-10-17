@@ -9,6 +9,12 @@ var _mods: Array[StringName] = []
 var _conflicts: Array[Dictionary] = []
 var _error: String = ""
 var _folder: String = ""
+# On while the player is in the panel with a gamepad (issue #68); then its buttons take the focus.
+var focusable: bool = false:
+	set(value):
+		focusable = value
+		for node: Node in find_children("*", "Button", true, false):
+			(node as Control).focus_mode = Control.FOCUS_ALL if value else Control.FOCUS_NONE
 
 
 # `folder` is where the player puts mods, shown when there are none so they know where to look.
@@ -29,14 +35,34 @@ func show_error(message: String) -> void:
 
 
 func _notification(what: int) -> void:
+	# Deferred: the tree refuses new children while it is still sending this notification.
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree():
-		_rebuild()
+		_rebuild.call_deferred()
 
 
 func _rebuild() -> void:
+	var focused: int = _focused_button()
 	for child: Node in get_children():
 		remove_child(child)
 		child.queue_free()
+	_build()
+	_restore_focus(focused)
+
+
+# Which button has the focus, so a rebuild (an autosave, a save, a load, a new order) can give it back to the one in
+# the same place and a gamepad player is never left without focus.
+func _focused_button() -> int:
+	var focus_owner: Control = get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	return find_children("*", "Button", true, false).find(focus_owner) if focus_owner != null else -1
+
+
+func _restore_focus(index: int) -> void:
+	var buttons: Array[Node] = find_children("*", "Button", true, false)
+	if index >= 0 and not buttons.is_empty():
+		(buttons[mini(index, buttons.size() - 1)] as Control).grab_focus()
+
+
+func _build() -> void:
 	if _mods.is_empty():
 		add_child(_label(Strings.text(Strings.MODS_NONE) % _folder))
 		return
@@ -83,10 +109,11 @@ func _label(text: String) -> Label:
 	return label
 
 
-# Buttons never keep focus, so map shortcuts keep working after a click (same as the stats panel).
+# Buttons never keep focus after a click, so map shortcuts keep working (same as the stats panel); a gamepad in the
+# panel turns it on.
 func _button(text: String, action: Callable) -> Button:
 	var button: Button = Button.new()
 	button.text = text
-	button.focus_mode = Control.FOCUS_NONE
+	button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	button.pressed.connect(action)
 	return button

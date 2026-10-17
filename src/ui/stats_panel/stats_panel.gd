@@ -71,6 +71,8 @@ var _victory_message: Label
 var _victory_dismiss: Button
 var _victory_notice: VBoxContainer
 var _victory_announced: bool = false
+# The player moves through the panel with a gamepad (issue #68); with the mouse nothing keeps the focus.
+var _focused: bool = false
 
 
 func setup(game_session: GameSession, game_clock: SimClock) -> void:
@@ -105,6 +107,7 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	root.add_child(scroll)
 	var content: VBoxContainer = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -133,6 +136,39 @@ func apply_style(background: Color, alert: Color, margin: float) -> void:
 	style.set_content_margin_all(margin)
 	add_theme_stylebox_override("panel", style)
 	_alert.add_theme_color_override("font_color", alert)
+
+
+# Gamepad focus (issue #68): buttons, switches and sliders take the focus only from here to leave_focus(), so a
+# mouse click never leaves one holding it and the map's keys keep working. The focus starts on the first visible
+# control: restart or the victory notice when they show.
+func enter_focus() -> void:
+	_focused = true
+	_set_focusable(true)
+	for node: Node in find_children("*", "Control", true, false):
+		var control: Control = node as Control
+		if control.focus_mode != Control.FOCUS_NONE and control.is_visible_in_tree():
+			control.grab_focus()
+			return
+
+
+func leave_focus() -> void:
+	_focused = false
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	if focus_owner != null and is_ancestor_of(focus_owner):
+		focus_owner.release_focus()
+	_set_focusable(false)
+
+
+func is_focused() -> bool:
+	return _focused
+
+
+func _set_focusable(on: bool) -> void:
+	var mode: Control.FocusMode = Control.FOCUS_ALL if on else Control.FOCUS_NONE
+	for node: Node in find_children("*", "BaseButton", true, false) + find_children("*", "Slider", true, false):
+		(node as Control).focus_mode = mode
+	_saves_menu.focusable = on
+	_mods_menu.focusable = on
 
 
 func update_snapshot(snapshot: Dictionary) -> void:
@@ -281,6 +317,7 @@ func _build_controls(content: VBoxContainer) -> void:
 	_tax = SpinBox.new()
 	_tax.max_value = PERCENT
 	_tax.value_changed.connect(_tax_changed)
+	_step_with_gamepad(_tax)
 	tax_row.add_child(_tax)
 	content.add_child(tax_row)
 	_wheat = CheckButton.new()
@@ -311,6 +348,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_unloading.drag_started.connect(_unloading_grabbed)
 	_unloading.drag_ended.connect(_unloading_released)
+	_unloading.focus_entered.connect(func() -> void: _unloading.step = _unloading_notch)
+	_submit_on_input(_unloading, func() -> void: _unloading_released(true))
 	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(value))
 	content.add_child(_unloading)
 	var accumulate_row: Array[Control] = _price_row(content, Strings.text(Strings.ACCUMULATE_LABEL))
@@ -329,6 +368,7 @@ func _build_controls(content: VBoxContainer) -> void:
 	_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target.drag_started.connect(func() -> void: _dragging_target = true)
 	_target.drag_ended.connect(_target_released)
+	_submit_on_input(_target, _submit_policy)
 	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.text(Strings.TARGET_LABEL) % int(value))
 	content.add_child(_target)
 	_reserve_label = _label("")
@@ -340,10 +380,11 @@ func _build_controls(content: VBoxContainer) -> void:
 	_reserve.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reserve.drag_started.connect(func() -> void: _dragging_reserve = true)
 	_reserve.drag_ended.connect(_reserve_released)
+	_submit_on_input(_reserve, _submit_policy)
 	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(value))
 	content.add_child(_reserve)
 	var speed_row: HBoxContainer = HBoxContainer.new()
-	_pause = _button(Strings.text(Strings.PAUSE), _toggle_pause)
+	_pause = _button(Strings.text(Strings.PAUSE), toggle_pause)
 	speed_row.add_child(_pause)
 	for speed: int in Strings.SPEED_LABELS:
 		var button: Button = _button(Strings.SPEED_LABELS[speed], _select_speed.bind(speed))
@@ -385,6 +426,7 @@ func _price_row(content: VBoxContainer, title: String) -> Array[Control]:
 	spin.step = 1.0
 	spin.suffix = Strings.PENCE_SUFFIX
 	spin.value_changed.connect(func(_value: float) -> void: _submit_policy())
+	_step_with_gamepad(spin)
 	row.add_child(spin)
 	# Editable right away: while the game is paused no snapshot arrives to do it.
 	check.toggled.connect(func(on: bool) -> void:
@@ -460,7 +502,8 @@ func _update_unloading(barley: Dictionary, defeated: bool) -> void:
 	if not _dragging_unloading:
 		# A split off the notch (a scenario's 15 %) shows as it is, not rounded, until the player grabs the
 		# slider; the step is set before the value so the value is not snapped.
-		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 else 1.0
+		# With the gamepad's focus on it the slider already moves in notches (issue #68).
+		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 or _unloading.has_focus() else 1.0
 		_unloading.value = percent
 		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % percent
 	_unloading_current = percent
@@ -755,7 +798,7 @@ func _wheat_toggled(enabled: bool) -> void:
 		session.submit_command(SetWheatPurchasesCommand.new(enabled))
 
 
-func _toggle_pause() -> void:
+func toggle_pause() -> void:
 	clock.speed = _speed if clock.speed == 0 else 0
 	_update_clock_controls()
 
@@ -779,7 +822,30 @@ func _label(text: String) -> Label:
 	return label
 
 
-# Buttons never keep focus, so map shortcuts (1–5, WASD) keep working after a click.
+# Left and right on the gamepad step a number (issue #68); without this the d-pad only moves the focus away, and the
+# player has no keyboard to type with. The keyboard keeps the line edit as it is.
+func _step_with_gamepad(spin: SpinBox) -> void:
+	spin.get_line_edit().gui_input.connect(func(event: InputEvent) -> void:
+		if not GamepadBindings.is_gamepad(event) or not spin.editable:
+			return
+		if event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"ui_right"):
+			spin.value += spin.step if event.is_action_pressed(&"ui_right") else -spin.step
+			spin.get_line_edit().accept_event())
+
+
+# Left and right step a focused slider and send its command, since there is no drag to end. Done here because the
+# engine's slider ignores the d-pad (Godot 4.7.2).
+func _submit_on_input(slider: Slider, submit: Callable) -> void:
+	slider.gui_input.connect(func(event: InputEvent) -> void:
+		if not slider.editable or not (event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"ui_right")):
+			return
+		slider.value += slider.step if event.is_action_pressed(&"ui_right") else -slider.step
+		slider.accept_event()
+		submit.call())
+
+
+# Buttons never keep focus after a click, so map shortcuts (1–5, WASD) keep working; the gamepad turns focus on
+# while it is in the panel (enter_focus).
 func _button(text: String, action: Callable) -> Button:
 	var button: Button = Button.new()
 	button.text = text
