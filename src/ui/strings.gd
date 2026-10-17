@@ -148,6 +148,7 @@ const BUILDING_LABELS: Dictionary[String, StringName] = {
 	"malthouse": &"ui.building.malthouse",
 	"brewery": &"ui.building.brewery",
 	"artisan_housing": &"ui.building.artisan_housing",
+	"dense_housing": &"ui.building.dense_housing",
 }
 const CLASS_LABELS: Dictionary[StringName, StringName] = {
 	&"worker": &"ui.class.worker", &"artisan": &"ui.class.artisan",
@@ -216,6 +217,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"not_cultivable": &"ui.reason.not_cultivable",
 	&"requires_river": &"ui.reason.requires_river",
 	&"requires_land": &"ui.reason.requires_land",
+	&"existing_building": &"ui.reason.existing_building",
+	&"not_buildable": &"ui.reason.not_buildable",
 	&"insufficient_money": &"ui.reason.insufficient_money",
 	&"no_money_for_wheat": &"ui.reason.no_money_for_wheat",
 	&"no_building": &"ui.reason.no_building",

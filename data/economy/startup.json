@@ -4,5 +4,6 @@
   "seed": 42,
   "wheat_purchases_enabled": true,
   "tea_imports_enabled": false,
-  "flour_imports_enabled": false
+  "flour_imports_enabled": false,
+  "dense_housing_occupied": 1
 }

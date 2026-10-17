@@ -39,7 +39,8 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	assert_eq(state["money"], params.get_value(&"startup.money"))
 	assert_eq(state["population"], 20)
 	assert_eq(state["stocks"][&"bread"], 40)
-	assert_true(state["buildings"].is_empty())
+	# Only the standing dense housing of the strip (issue #154, D-075).
+	assert_eq(state["buildings"], [{"definition_id": &"dense_housing", "cell": [4, 5]}])
 	assert_eq(_session.get_snapshot()["seed"], 42)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1234), Modifier.new(&"startup.population", &"set", 12), Modifier.new(&"population.initial_bread", &"set", 55)])
@@ -62,11 +63,12 @@ func test_commands_wait_for_tick_and_publish_snapshots_without_aliases() -> void
 	_tick()
 	assert_eq(_results, [{"accepted": true, "reason": &""}])
 	assert_signal_emitted(_session, "snapshot_changed")
-	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 1)
-	assert_true(before["economy"]["buildings"].is_empty())
+	# Plus the standing dense housing the strip starts with (issue #154, D-075).
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 2)
+	assert_eq(before["economy"]["buildings"].size(), 1)
 	var snapshot: Dictionary = _session.get_snapshot()
 	snapshot["economy"]["buildings"].clear()
-	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 1)
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 2)
 	_session.publish_tick()
 	assert_eq(_results.size(), 1)
 
@@ -96,7 +98,8 @@ func test_occupied_demolition_and_insufficient_money() -> void:
 	assert_eq(_results[1]["reason"], &"occupied_cell")
 	assert_true(_results[2]["accepted"])
 	assert_eq(_results[3]["reason"], &"no_building")
-	assert_true(_session.get_snapshot()["economy"]["buildings"].is_empty())
+	# Only the standing dense housing of the strip is left (issue #154, D-075).
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 1)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"startup.money", &"set", 0))
 	var poor: GameSession = GameSession.new(_catalog, Params.new(_catalog, role))
@@ -120,3 +123,17 @@ func test_the_demo_is_played_on_the_riverside_strip() -> void:
 	var other: GameSession = GameSession.new(_catalog,
 		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
 	assert_eq(other.context.map.id, &"whitechapel_1850s", "A scenario without a map keeps the 8x8 map")
+
+
+# Issue #154 (D-075): the demo starts with its one dense housing, and a restart puts it back.
+func test_the_demo_starts_with_a_dense_housing_and_a_restart_puts_it_back() -> void:
+	var start: Array = _session.get_snapshot()["economy"]["buildings"]
+	assert_eq(start.size(), 1)
+	if start.is_empty():
+		return
+	assert_eq(StringName(start[0]["definition_id"]), &"dense_housing")
+	_session.submit_command(DemolishCommand.new(Vector2i(start[0]["cell"][0], start[0]["cell"][1])))
+	_tick()
+	assert_true(_session.get_snapshot()["economy"]["buildings"].is_empty())
+	_session.restart()
+	assert_eq(_session.get_snapshot()["economy"]["buildings"], start)

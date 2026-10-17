@@ -52,18 +52,24 @@ func test_nothing_is_built_on_a_dock_basin() -> void:
 			assert_eq(context.terrain_placement_reason(id, cell), &"requires_land", "%s %s" % [id, cell])
 
 
-# Streets, standing buildings and terrain labels carry no rule yet (#67, #154, #88).
-func test_streets_buildings_and_terrain_labels_do_not_block_building() -> void:
+# Streets and terrain labels carry no rule yet (#67, #88).
+func test_streets_and_terrain_labels_do_not_block_building() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
 	var context: EconomyContext = _context(STRIP)
 	var dry: Array[Vector2i] = []
 	dry.append_array(map.road_cells)
-	dry.append_array(map.existing_cells)
 	dry.append_array(map.terrain.keys())
 	for cell: Vector2i in dry:
-		if cell in map.river_cells or cell in map.dock_cells:
+		if cell in map.river_cells or cell in map.dock_cells or cell in map.existing_cells:
 			continue
 		assert_eq(context.terrain_placement_reason(&"housing", cell), &"", str(cell))
+
+
+# Standing buildings block building until the tracing of #152 (issue #154, D-075).
+func test_standing_buildings_block_building() -> void:
+	var context: EconomyContext = _context(STRIP)
+	for cell: Vector2i in context.map.existing_cells:
+		assert_eq(context.terrain_placement_reason(&"housing", cell), &"existing_building", str(cell))
 
 
 func test_the_small_map_has_no_new_layers() -> void:
