@@ -100,6 +100,7 @@ func _ready() -> void:
 	session.snapshot_changed.connect(_snapshot_received)
 	session.command_resolved.connect(_command_resolved)
 	session.snapshot_changed.connect(_autosave.observe)
+	_autosave.saved.connect(func(_path: String) -> void: _stats_panel.show_saves(SaveFile.list(saves_root)))
 	clock = SimClock.new()
 	clock.simulation = session.simulation
 	clock.tick_advanced.connect(session.publish_tick)
@@ -114,9 +115,12 @@ func _ready() -> void:
 	_stats_panel.restart_requested.connect(_restart_session)
 	_stats_panel.difficulty_selected.connect(_start_on_difficulty)
 	_stats_panel.mod_order_requested.connect(_reorder_mods)
+	_stats_panel.save_requested.connect(_save_game)
+	_stats_panel.load_requested.connect(_load_game)
 	if not mods_root.is_empty():
 		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
 	panel_mount.add_child(_stats_panel)
+	_stats_panel.show_saves(SaveFile.list(saves_root))
 	_stats_panel.update_snapshot(_snapshot)
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
@@ -307,6 +311,28 @@ func _reorder_mods(order: Array[StringName]) -> void:
 	session.restart_with_catalog(_catalog, Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
 	_update_help()
 	_reset_view()
+
+
+# Saves the state at the end of the last tick (issue #57); orders still queued stay in this game, not in the file.
+func _save_game() -> void:
+	var path: String = SaveFile.write_manual(saves_root, SaveFile.build(session))
+	var message: StringName = Strings.SAVED_WITHOUT_QUEUE if session.simulation.has_queued_commands() else Strings.SAVED
+	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_WRITE_ERROR if path.is_empty() else message))
+
+
+# A save loads on the difficulty it was played on; a file from another version or other mods is refused and the
+# current game goes on.
+func _load_game(path: String) -> void:
+	var result: Dictionary = SaveFile.read(path)
+	if result["reason"] == &"":
+		result = SaveFile.check_compatible(result["data"], session, _catalog)
+	if result["reason"] != &"":
+		_stats_panel.show_saves(SaveFile.list(saves_root), Strings.save_refusal(result["reason"], result["args"]))
+		return
+	var layers: DataLayers = DataLayers.resolve(_catalog, StringName(result["data"]["difficulty"]))
+	session.load_save(result["data"], Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
+	_reset_view()
+	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_LOADED))
 
 
 func _reset_view() -> void:

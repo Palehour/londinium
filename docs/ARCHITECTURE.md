@@ -69,7 +69,7 @@ londinium/
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
 │   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57)
-│   └── ui/                   # stats_panel/, mods_menu/, build_bar/, controls/, defeat_banner/, strings.gd
+│   └── ui/                   # stats_panel/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
 ├── tests/
@@ -196,7 +196,7 @@ saved at minute N and played to M ends in the same state as one never saved (`te
 The tick and its order do not change.
 
 A save holds the state at the end of the last tick; commands still queued stay in the running game and are not
-in the file. `SaveFile.read` refuses a file that is not a save or whose economy
+in the file (the panel says so when that happens). `SaveFile.read` refuses a file that is not a save or whose economy
 lacks a field (or its kind of value) that a new `EconomyState` has, and one of another version;
 `SaveFile.check_compatible` refuses another scenario, an unknown difficulty and other mods (another set or order).
 Each refusal is a message from `Strings.save_refusal` and the current game goes on. A missing or broken history
@@ -205,8 +205,9 @@ still loads (D-066).
 `Autosave` listens to `GameSession.snapshot_changed`, so it always runs right after a tick: every
 `autosave_interval_seconds` into `autosave_slots` rotating files (`autosave_<n>.sav`, going on after the newest one on
 disk), plus one file per chapter stage the moment it is met (`stage_<id>.sav`), outside the rotation; a loaded game
-does not save its met stages again. Manual saves (`manual_<unix time>.sav`) are unlimited and never overwritten.
-`GameSession.load_save` loads a save on the parameters of its difficulty.
+does not save its met stages again. Manual saves (`manual_<unix time>.sav`) are unlimited and never overwritten. The
+saves menu (`src/ui/saves_menu/`, inside the stats panel) saves and lists every file newest first; the map view
+writes and reads them and loads a save on the parameters of its difficulty (`GameSession.load_save`).
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

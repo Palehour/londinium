@@ -57,6 +57,16 @@ const MODS_DOWN: StringName = &"ui.mods.down"
 const MODS_CONFLICTS: StringName = &"ui.mods.conflicts"
 const MODS_CONFLICT: StringName = &"ui.mods.conflict"
 const MODS_ERROR: StringName = &"ui.mods.error"
+const SAVES_TITLE: StringName = &"ui.save.title"
+const SAVES_NONE: StringName = &"ui.save.none"
+const SAVE_GAME: StringName = &"ui.save.save"
+const LOAD_GAME: StringName = &"ui.save.load"
+const SAVE_ENTRY: StringName = &"ui.save.entry"
+const SAVE_UNREADABLE: StringName = &"ui.save.unreadable"
+const SAVED: StringName = &"ui.save.saved"
+const SAVED_WITHOUT_QUEUE: StringName = &"ui.save.saved_without_queue"
+const SAVE_WRITE_ERROR: StringName = &"ui.save.write_error"
+const SAVE_LOADED: StringName = &"ui.save.loaded"
 const SAVE_NO_MODS: StringName = &"ui.save.no_mods"
 const POPULATION: StringName = &"ui.population"
 const SATISFACTION: StringName = &"ui.satisfaction"
@@ -176,7 +186,10 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"defeat_timer": &"ui.stats.defeat_timer",
 	&"victory_progress": &"ui.stats.victory_progress",
 }
-# Saved games (issue #57): why one does not load.
+# Saved games (issue #57): the kind of each file and why one does not load.
+const SAVE_KIND_LABELS: Dictionary[StringName, StringName] = {
+	&"manual": &"ui.save.kind.manual", &"autosave": &"ui.save.kind.autosave", &"stage": &"ui.save.kind.stage",
+}
 const SAVE_REFUSALS: Dictionary[StringName, StringName] = {
 	&"invalid_file": &"ui.save.invalid_file", &"other_version": &"ui.save.other_version",
 	&"other_mods": &"ui.save.other_mods",
@@ -274,6 +287,17 @@ static func save_refusal(reason_id: StringName, args: Array) -> String:
 	return text(SAVE_REFUSALS.get(reason_id, SAVE_REFUSALS[&"invalid_file"]))
 
 
+# One line of the saves list: its kind (with the slot of an autosave), the game minute and when it was saved.
+static func save_entry(entry: Dictionary) -> String:
+	var kind: String = text(SAVE_KIND_LABELS[entry["kind"]])
+	if entry["kind"] == &"autosave":
+		kind = kind % entry["slot"]
+	if int(entry["tick"]) < 0:
+		return text(SAVE_UNREADABLE) % [kind, String(entry["path"]).get_file()]
+	@warning_ignore("integer_division")
+	return text(SAVE_ENTRY) % [kind, int(entry["tick"]) / 60, entry["saved_at"]]
+
+
 static func building_label(key: String) -> String:
 	if not BUILDING_LABELS.has(key):
 		return ""
@@ -308,7 +332,8 @@ static func all_keys() -> Array[StringName]:
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
-		SAVE_NO_MODS,
+		SAVES_TITLE, SAVES_NONE, SAVE_GAME, LOAD_GAME, SAVE_ENTRY, SAVE_UNREADABLE, SAVED, SAVED_WITHOUT_QUEUE,
+		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS,
 	]
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
@@ -328,6 +353,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, STATUS_LABELS[status_id])
 	for reason_id: StringName in REASONS:
 		_append_unique(keys, REASONS[reason_id])
+	for kind_id: StringName in SAVE_KIND_LABELS:
+		_append_unique(keys, SAVE_KIND_LABELS[kind_id])
 	for refusal_id: StringName in SAVE_REFUSALS:
 		_append_unique(keys, SAVE_REFUSALS[refusal_id])
 	for metric_id: StringName in STATS_SERIES_LABELS:
