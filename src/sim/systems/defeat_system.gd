@@ -42,7 +42,7 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
 		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
-	var hungry: bool = state.population > 0 and state.hunger_smoothed_coverage \
+	var hungry: bool = state.population > 0 and state.hunger_coverage() \
 		< float(params.get_value(&"defeat.hunger.threshold"))
 	_update(state.hunger, &"hunger", hungry, hungry, counting,
 		float(params.get_value(&"defeat.hunger.duration_seconds")))
@@ -80,7 +80,7 @@ func is_city_stable(state: EconomyState, params: Params) -> bool:
 		ages.append(entry.satisfaction_departure_age_seconds)
 		# A class with nobody in it cannot be leaving, whatever its hunger flag says.
 		hunger_active = hunger_active or (entry.hunger_emigration_active and entry.population > 0)
-	return not hunger_active and state.hunger_smoothed_coverage 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) 		and ages.all(func(age: int) -> bool: return age < 0 or age >= window)
+	return not hunger_active and state.hunger_coverage() 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) 		and ages.all(func(age: int) -> bool: return age < 0 or age >= window)
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:

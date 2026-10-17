@@ -23,6 +23,7 @@ var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
 var _growth: GrowthSystem = GrowthSystem.new()
 var _mobility: MobilitySystem = MobilitySystem.new()
 var _money: MoneySystem = MoneySystem.new()
+var _roads: RoadSystem = RoadSystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
 var _victory: VictorySystem
 var _stats: Stats
@@ -76,6 +77,8 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_stats.restore(stats_window)
 	if _context != null:
 		_new_classes = ClassStates.ensure(_state, _context)
+		# Derived from the layout and never saved (D-080): a loaded game works its coverage out again.
+		_roads.tick(_state, _params, _context)
 		_defeat.initialize(_state, _params)
 		_history = StatsHistory.new(SeriesRegistry.build(_params, _context, victory_stages), _params, _context)
 		_history.restore(stats_history)
@@ -160,6 +163,7 @@ func tick() -> void:
 			_history.note_command(command)
 	_tick_count += 1
 	if _context != null:
+		_roads.tick(_state, _params, _context)
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
 		_imports.tick(_state, _params, _context)
@@ -246,6 +250,7 @@ func snapshot() -> Dictionary:
 			"malt": MarketSystem.storage_snapshot(_state, _params, &"malt"),
 			"beer": MarketSystem.storage_snapshot(_state, _params, &"beer")},
 		"imports": ImportSystem.snapshot(_state, _params, _context),
+		"distance": RoadSystem.snapshot(_state, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,
@@ -264,7 +269,7 @@ func _defeat_snapshot() -> Dictionary:
 		"bankruptcy": _condition_snapshot(_state.bankruptcy, &"bankruptcy",
 			{"money": _state.money, "threshold": int(_params.get_value(&"defeat.bankruptcy.threshold"))}),
 		"hunger": _condition_snapshot(_state.hunger, &"hunger",
-			{"coverage": _state.hunger_smoothed_coverage, "threshold": float(_params.get_value(&"defeat.hunger.threshold"))}),
+			{"coverage": _state.hunger_coverage(), "threshold": float(_params.get_value(&"defeat.hunger.threshold"))}),
 		"depopulation": _condition_snapshot(_state.depopulation, &"depopulation",
 			{"population": _state.population, "peak": _state.population_peak, "active": _state.depopulation_active}),
 	}

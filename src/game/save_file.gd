@@ -18,6 +18,8 @@ const OTHER_VERSION: StringName = &"other_version"
 const OTHER_MODS: StringName = &"other_mods"
 const SIMULATION_INTS: Array[String] = ["tick_count", "seed", "rng_state", "barley_rng_state"]
 const ENVELOPE_NAMES: Array[String] = ["scenario", "difficulty"]
+# Economy fields a save from before them may lack: the streets of issue #67 (D-080) load as none.
+const OPTIONAL_ECONOMY_FIELDS: Array[String] = ["player_roads", "transport_fraction"]
 
 
 static func build(session: GameSession) -> Dictionary:
@@ -142,6 +144,8 @@ static func _valid_simulation(simulation: Variant) -> bool:
 	var economy: Dictionary = simulation["economy"]
 	var expected: Dictionary = EconomyState.new().to_dict()
 	for field: String in expected:
+		if field in OPTIONAL_ECONOMY_FIELDS and not economy.has(field):
+			continue
 		if not economy.has(field) or not _same_kind(economy[field], expected[field]):
 			return false
 	return true

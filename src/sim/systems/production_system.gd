@@ -8,8 +8,11 @@ const CONVERTERS: Array[StringName] = [&"mill", &"bakery", &"malthouse", &"brewe
 # Pending output passed to _convert for a good without a warehouse cap.
 const NOT_CAPPED: float = -1.0
 
+var _streets: bool = false
+
 
 func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
+	_streets = context.map.roads_enabled
 	var capped: Array[StringName] = capped_outputs(params, context)
 	for id: StringName in CONVERTERS:
 		var recipe: RecipeDef = context.buildings[id].recipe
@@ -100,6 +103,14 @@ static func whole_units(value: float) -> int:
 	return nearest if absf(value - float(nearest)) <= ROUNDING_EPSILON else floori(value)
 
 
+# Units a building takes out of the store travel its transport leg (issue #67); only on a map with streets.
+func _count_transport(state: EconomyState, building: Dictionary) -> void:
+	if not _streets:
+		return
+	var cell: Vector2i = RoadNetwork.cell_of(building)
+	state.transport_units_tick[cell] = int(state.transport_units_tick.get(cell, 0)) + 1
+
+
 func _convert(state: EconomyState, params: Params, building: Dictionary, recipe: RecipeDef, pending: float) -> void:
 	var input: StringName = recipe.inputs[0]
 	var output: StringName = recipe.outputs[0]
@@ -123,6 +134,7 @@ func _convert(state: EconomyState, params: Params, building: Dictionary, recipe:
 				break
 			state.stocks[input] -= 1
 			state.count_consumed(input, 1.0)
+			_count_transport(state, building)
 			reserved = 1.0
 		var processed: float = minf(budget, reserved)
 		reserved -= processed

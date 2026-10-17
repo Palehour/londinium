@@ -13,6 +13,8 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.id = definition.id
 		copy.tags.assign(definition.tags)
 		copy.buildable = definition.buildable
+		copy.distributes.assign(definition.distributes)
+		copy.supplies.assign(definition.supplies)
 		if definition.recipe != null:
 			copy.recipe = RecipeDef.new()
 			copy.recipe.inputs.assign(definition.recipe.inputs)
@@ -31,6 +33,8 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.existing_cells.assign(selected_map.existing_cells)
 	map.terrain.assign(selected_map.terrain)
 	map.dense_housing_cells.assign(selected_map.dense_housing_cells)
+	map.roads_enabled = selected_map.roads_enabled
+	map.road_diagonals.assign(selected_map.road_diagonals)
 
 
 func copy() -> EconomyContext:

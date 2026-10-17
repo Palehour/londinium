@@ -122,6 +122,20 @@ func test_save_without_stats_history_loads() -> void:
 	assert_eq(_session.get_snapshot()["tick_count"], 120)
 
 
+# Issue #67 (D-080): a game saved before the streets loads without them and without errors.
+func test_old_save_without_roads_loads() -> void:
+	var saved: Dictionary = SaveFile.build(_session)
+	saved["simulation"]["economy"].erase("player_roads")
+	saved["simulation"]["economy"].erase("transport_fraction")
+	var path: String = ROOT.path_join("before_roads.sav")
+	assert_eq(SaveFile.write(path, saved), OK)
+	var result: Dictionary = SaveFile.read(path)
+	assert_eq(result["reason"], &"")
+	_session.load_save(result["data"], Params.new(_catalog, _catalog.roles[&"neutral_administrator"]))
+	assert_eq(_session.get_snapshot()["economy"]["player_roads"], [])
+	assert_eq(_session.get_snapshot()["distance"]["player_roads"], [])
+
+
 func test_manual_saves_never_overwrite() -> void:
 	var first: String = SaveFile.write_manual(ROOT, SaveFile.build(_session))
 	_session.simulation.tick()

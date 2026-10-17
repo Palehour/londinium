@@ -30,6 +30,10 @@ var rows: Array[Dictionary] = []
 # The economy dictionary of the last snapshot (EconomyState.to_dict()), for questions about the
 # final state that the per-minute rows do not answer, such as DefeatSystem.is_city_stable().
 var final_economy: Dictionary = {}
+# The streets and the diagnostics at the end (issue #67): which houses each good reaches, the transport legs and why
+# a building stops.
+var final_distance: Dictionary = {}
+var final_diagnostics: Dictionary = {}
 # First tick (1-based count of ticks run) with a defeat cause, or -1 if the city survived.
 var defeat_tick: int = -1
 var defeat_causes: Array[StringName] = []

@@ -54,6 +54,10 @@ static func unloading_split(state: EconomyState, params: Params) -> Dictionary:
 static func building_reason(state: EconomyState, context: EconomyContext, building: Dictionary,
 		params: Params) -> StringName:
 	var id: StringName = StringName(building["definition_id"])
+	# Without a street or a route to its inputs nothing else matters (issue #67).
+	var road: StringName = state.road_reason(building)
+	if road != &"":
+		return road
 	# A staffed wharf that brings in the flour is working, whatever the wheat purchases do, unless it
 	# cannot pay for the flour. An unstaffed one falls through to the usual reasons.
 	if id == &"wharf" and ImportSystem.flour_import_active(state) and int(building.get("workers", 0)) > 0:

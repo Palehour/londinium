@@ -10,8 +10,12 @@ const SCENARIO_DIR: String = "res://tests/scenarios"
 # Scenarios that need more than the 15 minutes of the others (the artisans are built after minute 30, issue #52).
 # They are not part of scenario_paths(), whose files all last 15 minutes, but balance_report plays them too.
 const LONG_SCENARIO_DIR: String = "res://tests/scenarios/long"
+# Scenarios on the 16x12 strip with streets (issue #67): only balance_report --strip and their own tests play them, so
+# the scripts on the 8x8 keep their numbers. strip/long/ holds the games too slow for CI (run_long_tests).
+const STRIP_SCENARIO_DIR: String = "res://tests/scenarios/strip"
+const STRIP_LONG_SCENARIO_DIR: String = "res://tests/scenarios/strip/long"
 const TICKS_PER_MINUTE: int = 60
-const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
+const COMMAND_NAMES: Array[String] = ["build", "build_road", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
 	"set_tea_imports", "set_flour_imports", "set_unloading_split", "set_stock"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -94,6 +98,24 @@ static func long_scenario_paths() -> Array[String]:
 	return _json_files(LONG_SCENARIO_DIR)
 
 
+static func strip_scenario_paths() -> Array[String]:
+	return _json_files(STRIP_SCENARIO_DIR)
+
+
+static func strip_long_scenario_paths() -> Array[String]:
+	return _json_files(STRIP_LONG_SCENARIO_DIR)
+
+
+# The map a scenario is played on (issue #67): the 8x8 unless it names another, like the strip scenarios. validate()
+# reports an unknown one.
+func _use_map(scenario: Dictionary) -> void:
+	var map_id: StringName = StringName(str(scenario.get("map", MapDef.DEFAULT_ID)))
+	if map_id == _map_id or not _catalog.maps.has(map_id):
+		return
+	_map_id = map_id
+	_context = EconomyContext.new(_catalog, _catalog.maps[map_id])
+
+
 # Scripts rewritten for one difficulty preset (issue #128: hard/ buys later, for its 800 d), in
 # tests/scenarios/<preset>/. Only balance_report --preset plays them, so the runs without a preset stay as they were.
 static func preset_scenario_paths(preset_id: StringName) -> Array[String]:
@@ -134,6 +156,9 @@ func validate(scenario: Dictionary) -> Array[String]:
 	if scenario.get("commands") is not Array:
 		errors.append("commands must be a list")
 		return errors
+	if scenario.has("map") and (scenario["map"] is not String or not _catalog.maps.has(StringName(scenario["map"]))):
+		errors.append("map must be the id of a map in data/maps")
+	_use_map(scenario)
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
 	if scenario.has("in_all") and scenario["in_all"] is not bool:
@@ -156,6 +181,7 @@ func validate(scenario: Dictionary) -> Array[String]:
 func run(scenario: Dictionary) -> ScenarioResult:
 	var errors: Array[String] = validate(scenario)
 	assert(errors.is_empty(), "Invalid scenario: %s" % str(errors))
+	_use_map(scenario)
 	var result: ScenarioResult = ScenarioResult.new()
 	result.id = String(scenario["id"])
 	for condition: StringName in CONDITIONS:
@@ -205,6 +231,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
 		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot, probe))
 	result.final_economy = snapshot["economy"]
+	result.final_distance = snapshot["distance"]
+	result.final_diagnostics = snapshot["diagnostics"]
 	var history: Dictionary = sim.stats_history_to_dict()
 	result.stats_history_bytes = StatsHistory.compressed_size(history)
 	result.save_bytes = StatsHistory.compressed_size({"snapshot": snapshot, "stats_history": history})
@@ -381,6 +409,9 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 		"build":
 			var cell: Array = entry["cell"]
 			return BuildCommand.new(_context, StringName(entry["building"]), Vector2i(int(cell[0]), int(cell[1])))
+		"build_road":
+			var road: Array = entry["cell"]
+			return BuildRoadCommand.new(_context, Vector2i(int(road[0]), int(road[1])))
 		"demolish":
 			var target: Array = entry["cell"]
 			return DemolishCommand.new(Vector2i(int(target[0]), int(target[1])))
@@ -547,7 +578,7 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 			if not _catalog.buildings.has(StringName(entry.get("building", ""))):
 				errors.append("%s: unknown building" % where)
 			errors.append_array(_validate_cell(entry.get("cell"), where))
-		"demolish":
+		"demolish", "build_road":
 			errors.append_array(_validate_cell(entry.get("cell"), where))
 		"set_tax":
 			if typeof(entry.get("rate")) not in [TYPE_INT, TYPE_FLOAT]:

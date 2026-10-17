@@ -28,10 +28,10 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 	var residents: int = entry.population
 	var free_housing: int = maxi(0, entry.housing_capacity - residents)
 	if entry.hunger_emigration_active:
-		entry.hunger_emigration_active = state.hunger_smoothed_coverage \
+		entry.hunger_emigration_active = state.hunger_coverage(def.id) \
 			< float(params.get_value(def.hunger_recovery_key))
 	else:
-		entry.hunger_emigration_active = state.hunger_smoothed_coverage \
+		entry.hunger_emigration_active = state.hunger_coverage(def.id) \
 			< float(params.get_value(def.hunger_threshold_key))
 	var hungry: bool = entry.hunger_emigration_active
 	if not hungry and entry.satisfaction >= float(params.get_value(def.immigration_threshold_key)) \
@@ -48,7 +48,7 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 		var rate: float = float(params.get_value(def.emigration_per_minute_key))
 		if hungry:
 			var multiplier: float = float(params.get_value(def.hunger_multiplier_key))
-			rate *= 1.0 + (multiplier - 1.0) * (1.0 - state.bread_coverage)
+			rate *= 1.0 + (multiplier - 1.0) * (1.0 - state.bread_coverage * state.access(def.id, &"bread"))
 		entry.emigration_fraction += rate / 60.0
 		var departures: int = mini(residents, ProductionSystem.whole_units(entry.emigration_fraction))
 		ClassStates.grow(state, def, entry, -departures)

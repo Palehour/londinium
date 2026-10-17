@@ -109,3 +109,43 @@ func test_save_without_history_still_loads_with_an_empty_one() -> void:
 	var loaded: Simulation = Simulation.from_save(_params(), _context, _stages, saved)
 	assert_eq(loaded.snapshot()["economy"], sim.snapshot()["economy"])
 	assert_true(loaded.stats_events().is_empty())
+
+
+# Issue #67 (D-080): the player's streets travel in the save; the coverage is not saved but worked out again on
+# load, so it matches the game that never stopped.
+func _strip_game() -> Array:
+	var context: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[&"riverside_strip"])
+	var state: EconomyState = EconomyState.new()
+	state.money = 1000000
+	state.population = 30
+	var sim: Simulation = Simulation.create_new(_params(), state, 7, context, _stages)
+	var builds: Array[Array] = [[&"wharf", Vector2i(2, 7)], [&"mill", Vector2i(3, 5)], [&"bakery", Vector2i(6, 5)],
+		[&"housing", Vector2i(7, 5)], [&"housing", Vector2i(9, 5)]]
+	for build: Array in builds:
+		sim.apply_command(BuildCommand.new(context, build[0], build[1]))
+	sim.apply_command(BuildRoadCommand.new(context, Vector2i(9, 4)))
+	return [sim, context]
+
+
+func test_player_roads_survive_save() -> void:
+	var game: Array = _strip_game()
+	var sim: Simulation = game[0]
+	_play(sim, 0, SAVE_TICK)
+	assert_eq(sim.snapshot()["distance"]["player_roads"], [[9, 4]])
+	var loaded: Simulation = Simulation.from_save(_params(), game[1], _stages, _through_bytes(sim.to_save()))
+	assert_eq(loaded.snapshot()["economy"]["player_roads"], sim.snapshot()["economy"]["player_roads"])
+	assert_eq(loaded.snapshot()["distance"]["player_roads"], [[9, 4]])
+
+
+func test_coverage_after_load_equals_recomputed() -> void:
+	var game: Array = _strip_game()
+	var uninterrupted: Simulation = game[0]
+	_play(uninterrupted, 0, END_TICK)
+	var first: Simulation = _strip_game()[0]
+	_play(first, 0, SAVE_TICK)
+	var saved: Dictionary = _through_bytes(first.to_save())
+	assert_false(saved["economy"].has("service_access"), "the coverage is not saved")
+	var loaded: Simulation = Simulation.from_save(_params(), game[1], _stages, saved)
+	assert_eq(loaded.snapshot()["distance"], first.snapshot()["distance"])
+	_play(loaded, SAVE_TICK, END_TICK)
+	assert_eq(loaded.snapshot(), uninterrupted.snapshot())

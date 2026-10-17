@@ -8,14 +8,15 @@ extends RefCounted
 
 # Share of the demand for a good that the store covers, as the earlier steps of this tick left it.
 # Bread uses the smoothed coverage the satisfaction already reads, so a category does not flicker per tick.
-static func coverage(state: EconomyState, good: StringName) -> float:
+# A class's houses get it only within reach of a building that hands it out (issue #67): times its access.
+static func coverage(state: EconomyState, good: StringName, class_id: StringName = &"") -> float:
 	match good:
 		&"bread":
-			return state.hunger_smoothed_coverage
+			return state.hunger_smoothed_coverage * state.access(class_id, good)
 		&"tea":
-			return state.tea_coverage
+			return state.tea_coverage * state.access(class_id, good)
 		&"beer":
-			return state.beer_coverage
+			return state.beer_coverage * state.access(class_id, good)
 		_:
 			# Nothing else is consumed yet.
 			return 0.0
@@ -28,7 +29,7 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 		var categories: Dictionary = {}
 		for need: NeedDef in definition.needs:
 			var key: StringName = StringName("class.%s.need.%s.value" % [definition.id, need.good])
-			var points: float = coverage(state, need.good) * float(params.get_value(key))
+			var points: float = coverage(state, need.good, definition.id) * float(params.get_value(key))
 			var entry: Dictionary = categories.get(need.category, {"value": 0.0})
 			entry["value"] = float(entry["value"]) + points
 			categories[need.category] = entry
@@ -75,7 +76,8 @@ static func housing_capacity(state: EconomyState, params: Params, context: Econo
 	var bonuses: Dictionary[StringName, int] = {}
 	for building: Dictionary in state.buildings:
 		var id: StringName = building["definition_id"]
-		if "housing" not in context.buildings[id].tags:
+		# A house without a street of the network holds nobody (issue #67).
+		if "housing" not in context.buildings[id].tags or state.road_reason(building) != &"":
 			continue
 		var class_id: StringName = context.class_of_housing(id)
 		if not bonuses.has(class_id):
@@ -91,7 +93,7 @@ static func class_housing_capacity(state: EconomyState, params: Params, context:
 	var total: int = 0
 	for building: Dictionary in state.buildings:
 		var id: StringName = building["definition_id"]
-		if "housing" not in context.buildings[id].tags:
+		if "housing" not in context.buildings[id].tags or state.road_reason(building) != &"":
 			continue
 		var owner: StringName = context.class_of_housing(id)
 		if owner == def.id or (def.base and owner == &""):

@@ -6,7 +6,8 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
 ## Archivos
 - `import.json`: la grilla. `origin` es la esquina noroeste en metros British National Grid (EPSG:27700),
   `cell_metres` el lado de la casilla (50 m, D-069), `width`/`height` en casillas, `samples_per_axis` cuántas
-  muestras por eje se toman en cada casilla, y `priority` el orden de desempate entre clases.
+  muestras por eje se toman en cada casilla, y `priority` el orden de desempate entre clases. `roads_enabled`
+  (opcional, `false` si falta) dice si el mapa se juega con calles (#67, D-080): `true` en la franja.
 - Capas calcadas en QGIS, exportadas como GeoJSON en EPSG:27700 (todas opcionales):
   - `river.geojson`, `docks.geojson`, `marsh.geojson`, `existing.geojson`: polígonos (se admiten huecos y
     MultiPolygon). Cada casilla toma la clase que cubre la mayoría de sus muestras; lo que no cubre ningún
@@ -15,16 +16,18 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
     cada casilla que cruza, así que una diagonal (D-058) queda en escalera unida por los lados.
 - `overrides.json`: ajustes a mano que se aplican después de rasterizar, para que reimportar no los pise.
   `areas`: lista de `{"class": "river|dock|marsh|existing|land", "rects": [[x, y, ancho, alto]]}` (la última
-  gana). `roads`: `{"add": [[x, y]], "remove": [[x, y]]}`. `dense_housing_cells` (opcional): `[[x, y]]`, las
-  casillas donde arranca la vivienda densa, en orden (#154, D-075, D-079); cada una tiene que ser edificación
-  existente con una calle a un lado, y `startup.dense_housing_occupied` dice cuántas se ocupan.
+  gana). `roads`: `{"add": [[x, y]], "remove": [[x, y]], "diagonals": [[x1, y1, x2, y2]]}`. Las diagonales (D-058) son
+  aristas entre dos calles históricas que se tocan por la esquina; se listan una por una y nunca se deducen de las
+  casillas. En la franja provisoria la lista está vacía y la completa #152. `dense_housing_cells` (opcional):
+  `[[x, y]]`, las casillas donde arranca la vivienda densa, en orden (#154, D-075, D-079); cada una tiene que ser
+  edificación existente con una calle a un lado, y `startup.dense_housing_occupied` dice cuántas se ocupan.
 
 ## Qué sale
 `river_cells`, `dock_cells`, `road_cells`, `existing_cells`, `terrain` (`riverbank`: tierra junto al río o a
-una dársena; `marsh`: lo calcado como marisma; el resto es tierra firme) y, si overrides lo trae,
-`dense_housing_cells`. Las reglas de calles son de #67 y las de terreno de #88. La edificación existente no se puede
-edificar hasta el calcado de #152; la vivienda densa inicial se pone sobre ella (D-075). Las dársenas no se pueden
-edificar (D-020).
+una dársena; `marsh`: lo calcado como marisma; el resto es tierra firme), `roads_enabled`, `road_diagonals` y, si
+overrides lo trae, `dense_housing_cells`. Las reglas de calles son de #67 (en `src/sim/road_network.gd`) y las de
+terreno de #88. La edificación existente no se puede edificar hasta el calcado de #152; la vivienda densa inicial se
+pone sobre ella (D-075). Las dársenas no se pueden edificar (D-020).
 
 ## Reimportar
 ```

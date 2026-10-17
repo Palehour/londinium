@@ -243,6 +243,12 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"insufficient_capacity": &"ui.reason.insufficient_capacity",
 	&"invalid_tax_rate": &"ui.reason.invalid_tax_rate",
 	&"ok": &"ui.reason.ok",
+	# Streets of the distance model (issue #67).
+	&"no_road_access": &"ui.reason.no_road_access",
+	&"no_route": &"ui.reason.no_route",
+	&"road_cell": &"ui.reason.road_cell",
+	&"historic_road": &"ui.reason.historic_road",
+	&"roads_disabled": &"ui.reason.roads_disabled",
 }
 
 

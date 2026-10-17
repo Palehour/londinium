@@ -1,0 +1,18 @@
+{
+  "id": "strip_cut_street",
+  "description": "Issue #67, escenario (c): el molino está en [1, 2], donde no llega ninguna calle histórica, y el jugador le hace una calle en [1, 1] hasta la calle del norte. En el minuto 5 la demuele: el molino queda sin acceso a calle, la panadería sin ruta a su harina y el panel lo explica.",
+  "notes": "Mide los motivos del diagnóstico al final: molino no_road_access y panadería no_route, y que la causa del pan nombra al molino.",
+  "map": "riverside_strip",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build_road", "cell": [1, 1]},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [1, 2]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [7, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [9, 5]},
+    {"tick": 300, "cmd": "demolish", "cell": [1, 1]}
+  ]
+}

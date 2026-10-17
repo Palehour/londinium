@@ -9,6 +9,9 @@ const BUILDING_FIELDS: Dictionary = {
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
 # changing what a building costs or where it goes.
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure"]
+# Distance model (issue #67): a building may hand out goods to the houses within its service radius, and the wharf
+# may supply goods it brings beyond its recipe. All three are optional.
+const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius", "distributes", "supplies"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -45,6 +48,9 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"unloading": {"default_barley_percent": "integer", "step_percent": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
 		"no_jobs_refund_ratio": "fraction"},
+	# Streets and transport of the distance model (issue #67, D-070, D-080).
+	"roads": {"cost": "money", "upkeep_per_minute": "money"},
+	"transport": {"cost_per_unit_per_step": "number", "expensive_steps": "positive_integer"},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -76,7 +82,8 @@ const DIFFICULTY_FOLDER: String = "difficulty"
 const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
-const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain", "dense_housing_cells"]
+const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain", "dense_housing_cells",
+	"roads_enabled", "road_diagonals"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -355,11 +362,21 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		fields.append("tags")
 		if raw[id].has("buildable"):
 			fields.append("buildable")
+		for field: String in BUILDING_SERVICE_FIELDS:
+			if raw[id].has(field):
+				fields.append(field)
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
 		numeric.erase("tags")
 		numeric.erase("buildable")
+		if numeric.has("service_radius"):
+			schema["service_radius"] = "integer"
+		for field: String in ["distributes", "supplies"]:
+			numeric.erase(field)
+		if not _goods_list(raw[id].get("distributes", []), path + ".distributes", building.distributes, catalog) \
+				or not _goods_list(raw[id].get("supplies", []), path + ".supplies", building.supplies, catalog):
+			continue
 		if not is_housing:
 			building.recipe = _recipe(numeric["recipe"], path + ".recipe",
 				"building.%s.recipe" % id, catalog)
@@ -367,6 +384,18 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			schema.erase("recipe")
 		_numbers(numeric, schema, path, "building.%s" % id, catalog)
 		catalog.buildings[building.id] = building
+
+
+func _goods_list(raw: Variant, path: String, target: Array[StringName], catalog: DataCatalog) -> bool:
+	var names: Array[String] = []
+	if not _strings(raw, path, names):
+		return false
+	for good: String in names:
+		if not catalog.goods.has(StringName(good)):
+			_errors.append("%s: unknown good %s" % [path, good])
+			return false
+		target.append(StringName(good))
+	return true
 
 
 func _recipe(raw: Variant, path: String, prefix: String, catalog: DataCatalog) -> RecipeDef:
@@ -680,7 +709,39 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 		_load_terrain(raw["terrain"], path + ".terrain", map)
 	if raw.has("dense_housing_cells"):
 		_load_dense_housing_cells(raw["dense_housing_cells"], path + ".dense_housing_cells", map)
+	if raw.has("roads_enabled"):
+		if typeof(raw["roads_enabled"]) != TYPE_BOOL:
+			_errors.append("%s.roads_enabled: expected a boolean" % path)
+		else:
+			map.roads_enabled = raw["roads_enabled"]
+	if raw.has("road_diagonals"):
+		_load_diagonals(raw["road_diagonals"], path + ".road_diagonals", map)
 	catalog.maps[map.id] = map
+
+
+# Diagonal edges of the historic streets (D-058, D-080): listed one by one, never guessed from the cells. Each joins
+# two street cells that touch corner to corner.
+func _load_diagonals(raw: Variant, location: String, map: MapDef) -> void:
+	if raw is not Array:
+		_errors.append("%s: expected an array" % location)
+		return
+	for entry: Variant in raw:
+		if entry is not Array or entry.size() != 4 or not entry.all(_is_whole_number):
+			_errors.append("%s: expected [x1, y1, x2, y2]" % location)
+			continue
+		var edge: Vector4i = Vector4i(int(entry[0]), int(entry[1]), int(entry[2]), int(entry[3]))
+		var from: Vector2i = Vector2i(edge.x, edge.y)
+		var to: Vector2i = Vector2i(edge.z, edge.w)
+		if from not in map.road_cells or to not in map.road_cells or absi(from.x - to.x) != 1 \
+				or absi(from.y - to.y) != 1:
+			_errors.append("%s: [%d, %d, %d, %d] must join two diagonal street cells"
+				% [location, edge.x, edge.y, edge.z, edge.w])
+			continue
+		map.road_diagonals.append(edge)
+
+
+static func _is_whole_number(value: Variant) -> bool:
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(value)) and float(value) == floor(float(value))
 
 
 # Where dense housing stands at the start (issue #154): on a standing building with a street on one side, the access

@@ -697,3 +697,76 @@ func test_a_scenario_map_must_exist() -> void:
 	assert_true(result.is_ok(), str(result.errors))
 	if result.is_ok():
 		assert_eq(result.catalog.scenarios[&"victorian_demo"]["map"], &"riverside_strip")
+
+
+# Issue #67 (D-070, D-080): streets, transport and service radii are data with ranges, and the strip's map says
+# whether it plays with streets and which diagonal edges its historic streets have.
+func test_distance_values_load_with_their_numbers() -> void:
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"roads.cost"), 10)
+	assert_eq(params.get_value(&"roads.upkeep_per_minute"), 0)
+	assert_eq(params.get_value(&"transport.cost_per_unit_per_step"), 0.1)
+	assert_eq(params.get_value(&"transport.expensive_steps"), 10)
+	assert_eq(params.get_value(&"building.bakery.service_radius"), 8)
+	assert_eq(params.get_value(&"building.brewery.service_radius"), 6)
+	assert_eq(params.get_value(&"building.wharf.service_radius"), 4)
+	assert_eq(result.catalog.buildings[&"bakery"].distributes, [&"bread"] as Array[StringName])
+	assert_eq(result.catalog.buildings[&"wharf"].distributes, [&"tea"] as Array[StringName])
+	assert_eq(result.catalog.buildings[&"wharf"].supplies, [&"barley", &"flour"] as Array[StringName])
+	assert_true(result.catalog.maps[&"riverside_strip"].roads_enabled)
+	assert_true(result.catalog.maps[&"riverside_strip"].road_diagonals.is_empty())
+	assert_false(result.catalog.maps[&"whitechapel_1850s"].roads_enabled)
+
+
+func test_distance_values_validate_their_ranges() -> void:
+	_documents["economy/transport.json"]["cost_per_unit_per_step"] = 1.5
+	_assert_invalid("economy/transport.json.cost_per_unit_per_step: invalid number value 1.5")
+	before_each()
+	_documents["economy/transport.json"]["expensive_steps"] = 0
+	_assert_invalid("economy/transport.json.expensive_steps: invalid positive_integer value 0")
+	before_each()
+	_documents["economy/roads.json"]["cost"] = 1001
+	_assert_invalid("economy/roads.json.cost: invalid money value 1001")
+	before_each()
+	_documents["economy/roads.json"]["upkeep_per_minute"] = 101
+	_assert_invalid("economy/roads.json.upkeep_per_minute: invalid money value 101")
+	before_each()
+	_documents["economy/buildings.json"]["bakery"]["service_radius"] = 31
+	_assert_invalid("economy/buildings.json.bakery.service_radius: invalid integer value 31")
+	before_each()
+	_documents["economy/buildings.json"]["bakery"]["distributes"] = ["cake"]
+	_assert_invalid("economy/buildings.json.bakery.distributes: unknown good cake")
+
+
+func test_a_role_modifies_the_distance_values() -> void:
+	_set_modifier({"key": "transport.cost_per_unit_per_step", "op": "mul", "value": 2})
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_almost_eq(float(params.get_value(&"transport.cost_per_unit_per_step")), 0.2, 1e-9)
+
+
+func test_roads_enabled_is_a_boolean() -> void:
+	_documents["maps/whitechapel_1850s.json"]["roads_enabled"] = 1
+	_assert_invalid("maps/whitechapel_1850s.json.roads_enabled: expected a boolean")
+
+
+func test_diagonal_must_join_historic_roads() -> void:
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 1], [2, 2], [3, 3]]
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 2, 2]]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_eq(result.catalog.maps[&"whitechapel_1850s"].road_diagonals, [Vector4i(1, 1, 2, 2)] as Array[Vector4i])
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 3, 3]]
+	_assert_invalid("road_diagonals: [1, 1, 3, 3] must join two diagonal street cells")
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[3, 3, 4, 4]]
+	_assert_invalid("road_diagonals: [3, 3, 4, 4] must join two diagonal street cells")
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 2]]
+	_assert_invalid("road_diagonals: expected [x1, y1, x2, y2]")

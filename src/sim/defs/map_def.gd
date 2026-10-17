@@ -10,13 +10,18 @@ var width: int
 var height: int
 var river_cells: Array[Vector2i] = []
 var cultivable_cells: Array[Vector2i] = []
-# Layers from the historical map import (issue #60). Dock basins are water; streets and terrain labels carry no rule
-# yet (#67, #88); standing buildings block building until the tracing of #152 (D-075).
+# Layers from the historical map import (issue #60). Dock basins are water; terrain labels carry no rule yet (#88);
+# standing buildings block building until the tracing of #152 (D-075). The streets are the historic network of the
+# distance model (#67).
 var dock_cells: Array[Vector2i] = []
 var road_cells: Array[Vector2i] = []
 var existing_cells: Array[Vector2i] = []
 # Only cells that are not firm ground: riverbank or marsh.
 var terrain: Dictionary[Vector2i, StringName] = {}
+# Whether this map plays the distance model (D-080): true on the strip, false on the 8x8 of the harness (D-070).
+var roads_enabled: bool = false
+# Diagonal edges between historic street cells, as (x1, y1, x2, y2) (D-058); only these connect corner to corner.
+var road_diagonals: Array[Vector4i] = []
 # Standing buildings where dense housing stands at the start, in order; startup.dense_housing_occupied says how many
 # of them (issue #154, D-075, D-079).
 var dense_housing_cells: Array[Vector2i] = []
