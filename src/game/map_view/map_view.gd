@@ -26,12 +26,15 @@ var _status_pending: bool = false
 var _status_has_result: bool = false
 var _status_accepted: bool = false
 var _status_reason: StringName = &""
+# Whether the last input came from a gamepad, so the help shows its buttons (issue #68).
+var _gamepad: bool = false
 
 
 func _ready() -> void:
 	Strings.use_default_locale()
 	# Phrases are already translated. Leaving auto-translate on would look the sentence up as a key.
 	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	GamepadBindings.install()
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
 	var loaded: DataLoadResult = _load_catalog()
@@ -57,12 +60,17 @@ func _ready() -> void:
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(background)
 	var help: VBoxContainer = VBoxContainer.new()
-	help.position = Vector2(presentation.layout["help_x"], presentation.layout["help_y"])
+	# Stops short of the panel, so at 1280×800 a long line wraps instead of running under it.
+	help.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	help.offset_left = presentation.layout["help_x"]
+	help.offset_top = presentation.layout["help_y"]
+	help.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(help)
 	for text: String in [Strings.text(Strings.LOADING), "", ""]:
 		var label: Label = Label.new()
 		label.text = text
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		help.add_child(label)
 	var legend: HBoxContainer = HBoxContainer.new()
 	legend.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -157,7 +165,7 @@ func _update_help() -> void:
 		var label: String = presentation.labels[id]
 		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
 		labels.append(label if reason.is_empty() else Strings.text(Strings.DISABLED_BUILDING) % [label, reason])
-	_help.text = Strings.text(Strings.HELP) % labels
+	_help.text = Strings.text(Strings.HELP_GAMEPAD if _gamepad else Strings.HELP) % labels
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
@@ -185,15 +193,36 @@ func _process(delta: float) -> void:
 	if geometry == null:
 		return
 	var direction: Vector2 = Vector2.ZERO
-	# Poll only camera keys; commands use unhandled events so UI can consume them.
+	var previous_center: Vector2 = geometry.center
+	var previous_zoom: float = geometry.zoom
+	# Poll only camera keys, the stick and the triggers; commands use unhandled events so UI can consume them.
 	if get_viewport().gui_get_focus_owner() == null:
 		direction.x = float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT))
 		direction.y = float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP))
-	var previous_center: Vector2 = geometry.center
-	geometry.center += direction.normalized() * presentation.camera["pan_speed"] * delta / geometry.zoom
+		direction += Input.get_vector(&"map_pan_left", &"map_pan_right", &"map_pan_up", &"map_pan_down")
+		# A trigger zooms one step per pull, like a key press.
+		if Input.is_action_just_pressed(&"map_zoom_in"):
+			geometry.zoom *= presentation.camera["zoom_step"]
+		if Input.is_action_just_pressed(&"map_zoom_out"):
+			geometry.zoom /= presentation.camera["zoom_step"]
+	geometry.center += direction.limit_length(1.0) * presentation.camera["pan_speed"] * delta / geometry.zoom
 	geometry.constrain()
-	if geometry.center != previous_center:
+	if geometry.center != previous_center or geometry.zoom != previous_zoom:
 		queue_redraw()
+
+
+# Sees every event, even those the panel takes, so the help follows whatever the player last touched.
+func _input(event: InputEvent) -> void:
+	if _help == null or session == null:
+		return
+	var gamepad: bool = _gamepad
+	if GamepadBindings.is_gamepad(event):
+		gamepad = true
+	elif (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed():
+		gamepad = false
+	if gamepad != _gamepad:
+		_gamepad = gamepad
+		_update_help()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -205,6 +234,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var previous_type: StringName = _building_type
 	var header_offset: Vector2 = Vector2(0, presentation.layout["header_height"])
 	var zoom_step: float = presentation.camera["zoom_step"]
+	if GamepadBindings.is_gamepad(event):
+		_gamepad_command(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1:
 			var type: StringName = TYPES[event.keycode - KEY_1]
@@ -220,9 +251,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
 	if event is InputEventMouseButton:
-		# Clicking the map takes keyboard focus back from HUD fields such as the tax box.
+		# Clicking the map takes keyboard focus back from HUD fields such as the tax box, and leaves the panel.
 		if event.pressed:
 			get_viewport().gui_release_focus()
+			_stats_panel.leave_focus()
 		if event.pressed and event.position.y >= header_offset.y:
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				geometry.select_cell(event.position - header_offset)
@@ -237,6 +269,46 @@ func _unhandled_input(event: InputEvent) -> void:
 		_update_mode()
 	if geometry.center != previous_center or geometry.zoom != previous_zoom or geometry.selected != previous_selection or _building_type != previous_type:
 		queue_redraw()
+
+
+# Gamepad presses on the map (issue #68). While the panel has the focus only Menu, View and B reach here: the d-pad
+# and A belong to the panel then.
+func _gamepad_command(event: InputEvent) -> void:
+	# A pressed button that hides itself (restart, the victory notice) drops the focus; the panel takes it back.
+	if _stats_panel.is_focused() and get_viewport().gui_get_focus_owner() == null:
+		_stats_panel.enter_focus()
+	if event.is_action_pressed(&"gamepad_panel"):
+		if _stats_panel.is_focused():
+			_stats_panel.leave_focus()
+		else:
+			_stats_panel.enter_focus()
+	elif event.is_action_pressed(&"gamepad_pause"):
+		_stats_panel.toggle_pause()
+	elif _stats_panel.is_focused():
+		if event.is_action_pressed(&"ui_cancel"):
+			_stats_panel.leave_focus()
+	elif event.is_action_pressed(&"ui_cancel"):
+		_building_type = &""
+	elif event.is_action_pressed(&"map_build_next") or event.is_action_pressed(&"map_build_prev"):
+		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
+	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
+		_submit(BuildCommand.new(session.context, _building_type, geometry.selected))
+	elif event.is_action_pressed(&"map_demolish") and geometry.selected != Vector2i(-1, -1):
+		_submit(DemolishCommand.new(geometry.selected))
+	else:
+		for action: StringName in GamepadBindings.CURSOR:
+			if event.is_action_pressed(action):
+				geometry.move_selection(GamepadBindings.CURSOR[action])
+				geometry.follow_selection()
+
+
+# Selecting, then every building that can be built now; the help already says why the others cannot.
+func _cycle_building(step: int) -> void:
+	var choices: Array[StringName] = [&""]
+	for type: StringName in TYPES:
+		if session.get_building_unavailable_reason(type) == &"":
+			choices.append(type)
+	_building_type = choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())]
 
 
 func _submit(command: SimulationCommand) -> void:

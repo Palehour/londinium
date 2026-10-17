@@ -70,7 +70,7 @@ londinium/
 │   │   ├── series_def.gd, series_registry.gd  # statistics series: label, unit, aggregation, dimensions (D-066)
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
-│   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57)
+│   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68)
 │   └── ui/                   # stats_panel/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
@@ -213,6 +213,19 @@ disk), plus one file per chapter stage the moment it is met (`stage_<id>.sav`), 
 does not save its met stages again. Manual saves (`manual_<unix time>.sav`) are unlimited and never overwritten. The
 saves menu (`src/ui/saves_menu/`, inside the stats panel) saves and lists every file newest first; the map view
 writes and reads them and loads a save on the parameters of its difficulty (`GameSession.load_save`).
+
+## Input: mouse, keyboard and gamepad (D-048, issue #68)
+`GamepadBindings.install()` (called by the map view) adds the gamepad actions to the `InputMap` in code, and A and B
+to `ui_accept` and `ui_cancel`, which Godot leaves without a gamepad button. The map view has two modes. **Map**
+(nothing has the focus): the d-pad moves a cell cursor, which is the selection (`MapGeometry.move_selection`, and
+`follow_selection` moves the camera when it leaves the view); LB/RB pick among the buildings that can be built now,
+A builds at the cursor, X demolishes, B goes back to selecting, the stick pans and the triggers zoom one step.
+**Panel**: Menu calls `StatsPanel.enter_focus()`, which makes buttons, switches and sliders focusable and focuses the
+first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
+map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys
+keep working after a click. The saves and mods menus give the focus back to the same button after rebuilding. The
+help in the header switches to the gamepad's buttons (`ui.help_gamepad`) while a gamepad is in use. The window opens
+at 1280×800, the Steam Deck's resolution.
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

@@ -58,3 +58,30 @@ func test_zoom_limit_is_supplied_by_configuration() -> void:
 	geometry.zoom = 100
 	geometry.constrain()
 	assert_eq(geometry.zoom, 1.5)
+
+
+func test_move_selection_starts_in_the_middle_and_clamps_to_map() -> void:
+	var geometry: MapGeometry = MapGeometry.new(Vector2i(8, 8), 100, Vector2(800, 600), 4.0)
+	var middle: Vector2i = geometry.screen_to_cell(geometry.viewport_size / 2.0)
+	assert_eq(geometry.move_selection(Vector2i.RIGHT), middle, "Without a selection the cursor starts mid-view")
+	assert_eq(geometry.move_selection(Vector2i.RIGHT), middle + Vector2i.RIGHT)
+	for step: int in range(10):
+		geometry.move_selection(Vector2i(1, 1))
+	assert_eq(geometry.selected, Vector2i(7, 7))
+	for step: int in range(10):
+		geometry.move_selection(Vector2i(-1, -1))
+	assert_eq(geometry.selected, Vector2i.ZERO)
+
+
+func test_follow_selection_recenters_only_when_out_of_view() -> void:
+	var geometry: MapGeometry = MapGeometry.new(Vector2i(8, 8), 100, Vector2(800, 600), 4.0)
+	geometry.zoom = 4.0
+	geometry.center = Vector2(400, 400)
+	geometry.constrain()
+	geometry.selected = Vector2i(4, 4)
+	var center: Vector2 = geometry.center
+	geometry.follow_selection()
+	assert_eq(geometry.center, center, "A cell already in view keeps the camera still")
+	geometry.selected = Vector2i(0, 0)
+	geometry.follow_selection()
+	assert_true(Rect2(Vector2.ZERO, geometry.viewport_size).has_point(geometry.cell_to_screen(geometry.selected)))

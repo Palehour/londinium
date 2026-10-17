@@ -24,6 +24,7 @@ const LOCALE_EN: String = "English"
 # Phrase keys. The words live in locale/ui.csv. Placeholder order is the contract:
 # GDScript's % operator cannot reorder them, so every language keeps the same order.
 const HELP: StringName = &"ui.help"
+const HELP_GAMEPAD: StringName = &"ui.help_gamepad"
 const LOADING: StringName = &"ui.loading"
 const LEGEND: StringName = &"ui.legend"
 const MAP_CREDITS: StringName = &"ui.map_credits"
@@ -322,7 +323,7 @@ static func reason(key: StringName) -> String:
 static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
-		HELP, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
+		HELP, HELP_GAMEPAD, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,
