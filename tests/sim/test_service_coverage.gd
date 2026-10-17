@@ -72,13 +72,18 @@ func test_people_fill_the_served_houses_first() -> void:
 	assert_eq(_bread_term(one), _bread_term(both))
 
 
-# The people who do not fit in the served houses go without: the class's coverage falls by their share.
-func test_class_coverage_counts_the_people_beyond_the_served_houses() -> void:
-	_initial.population = 2 * int(_params().get_value(&"building.housing.capacity"))
-	var both: Simulation = _sim([2, 3] as Array[int])
-	var one: Simulation = _sim([2, _radius + 1] as Array[int])
-	assert_gt(_bread_term(one), 0.0)
-	assert_lt(_bread_term(one), _bread_term(both))
+# D-081: a class with two houses, one served and one beyond the radius. People fill the served one first, and the
+# access is the served capacity over the people with a house. The housing bonus is off so each house holds its base.
+func test_access_is_the_served_capacity_over_the_people_with_a_house() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"needs.housing_bonus_per_category", &"set", 0))
+	var capacity: int = int(_params(role).get_value(&"building.housing.capacity"))
+	# More people than the served house holds and fewer than both: option B would give 1/2 here, D-081 does not.
+	_initial.population = capacity + 5
+	var both: Simulation = _sim([2, 3] as Array[int], role)
+	var one: Simulation = _sim([2, _radius + 1] as Array[int], role)
+	assert_gt(_bread_term(both), 0.0)
+	assert_almost_eq(_bread_term(one), _bread_term(both) * float(capacity) / _initial.population, 1e-9)
 
 
 func test_unserved_share_lowers_hunger_coverage() -> void:
