@@ -656,6 +656,38 @@ func test_terrain_labels_are_known_on_dry_cells_and_one_per_cell() -> void:
 	_assert_invalid("terrain.marsh: water or duplicate cell")
 
 
+# Issue #154 (D-079): dense housing starts only on a standing building with a street on one side.
+func test_dense_housing_start_cells_stand_on_existing_cells_beside_a_street() -> void:
+	var small: Dictionary = _documents["maps/whitechapel_1850s.json"]
+	small["existing_cells"] = [[1, 1], [3, 3]]
+	small["road_cells"] = [[1, 2]]
+	small["dense_housing_cells"] = [[1, 1]]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_eq(result.catalog.maps[&"whitechapel_1850s"].dense_housing_cells, [Vector2i(1, 1)] as Array[Vector2i])
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1]]
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 2]]
+	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [[2, 2]]
+	_assert_invalid("dense_housing_cells: [2, 2] is not a standing building")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1], [3, 3]]
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 2]]
+	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [[3, 3]]
+	_assert_invalid("dense_housing_cells: [3, 3] has no street on any side")
+
+
+func test_buildable_is_an_optional_boolean() -> void:
+	_documents["economy/buildings.json"]["bakery"]["buildable"] = "no"
+	_assert_invalid("buildings.json.bakery.buildable: expected a boolean")
+	before_each()
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_true(result.catalog.buildings[&"bakery"].buildable, "Buildable unless the data says otherwise")
+
+
 func test_a_scenario_map_must_exist() -> void:
 	_documents["scenarios/victorian_demo.json"] = {"map": "atlantis"}
 	_assert_invalid("scenarios/victorian_demo.json.map: unknown map atlantis")

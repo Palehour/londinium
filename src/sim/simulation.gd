@@ -4,6 +4,7 @@ extends RefCounted
 # Salt of the barley price generator: derived from the seed, but a stream of its own, so the barley walk
 # never moves a draw of the wheat one.
 const BARLEY_SEED_SALT: int = 0x6A09E667
+const DENSE_HOUSING: StringName = &"dense_housing"
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _barley_rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -40,11 +41,23 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	state.bread_consumed = 0.0
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
+	_place_dense_housing(state, params, context)
 	state.bread_coverage = ConsumptionSystem.new().coverage(state, params, context)
 	state.hunger_smoothed_coverage = state.bread_coverage
 	SatisfactionSystem.new().update_target(state, params, context)
 	SatisfactionSystem.new().snap_to_target(state, context)
 	return Simulation.new(params, state, seed_value, context, [], victory_stages)
+
+
+# The standing dense housing of the map (issue #154, D-075): the first startup.dense_housing_occupied of its cells.
+# No build time and no price paid, so it is an established building that refunds half its cost (D-029).
+static func _place_dense_housing(state: EconomyState, params: Params, context: EconomyContext) -> void:
+	if context == null:
+		return
+	var cells: Array[Vector2i] = context.map.dense_housing_cells
+	var count: int = mini(cells.size(), int(params.get_value(&"startup.dense_housing_occupied")))
+	for cell: Vector2i in cells.slice(0, count):
+		state.buildings.append({"definition_id": DENSE_HOUSING, "cell": [cell.x, cell.y]})
 
 
 # stats_window is snapshot()["stats"]["window"]; it is copied, so callers may keep mutating theirs.

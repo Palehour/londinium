@@ -15,12 +15,16 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
     cada casilla que cruza, así que una diagonal (D-058) queda en escalera unida por los lados.
 - `overrides.json`: ajustes a mano que se aplican después de rasterizar, para que reimportar no los pise.
   `areas`: lista de `{"class": "river|dock|marsh|existing|land", "rects": [[x, y, ancho, alto]]}` (la última
-  gana). `roads`: `{"add": [[x, y]], "remove": [[x, y]]}`.
+  gana). `roads`: `{"add": [[x, y]], "remove": [[x, y]]}`. `dense_housing_cells` (opcional): `[[x, y]]`, las
+  casillas donde arranca la vivienda densa, en orden (#154, D-075, D-079); cada una tiene que ser edificación
+  existente con una calle a un lado, y `startup.dense_housing_occupied` dice cuántas se ocupan.
 
 ## Qué sale
-`river_cells`, `dock_cells`, `road_cells`, `existing_cells` y `terrain` (`riverbank`: tierra junto al río o a
-una dársena; `marsh`: lo calcado como marisma; el resto es tierra firme). Son solo capas: las reglas son de #67
-(calles), #88 (terreno) y #154 (edificación existente). Las dársenas no se pueden edificar (D-020).
+`river_cells`, `dock_cells`, `road_cells`, `existing_cells`, `terrain` (`riverbank`: tierra junto al río o a
+una dársena; `marsh`: lo calcado como marisma; el resto es tierra firme) y, si overrides lo trae,
+`dense_housing_cells`. Las reglas de calles son de #67 y las de terreno de #88. La edificación existente no se puede
+edificar hasta el calcado de #152; la vivienda densa inicial se pone sobre ella (D-075). Las dársenas no se pueden
+edificar (D-020).
 
 ## Reimportar
 ```
