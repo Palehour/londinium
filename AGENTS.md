@@ -56,7 +56,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 ## Commands (run from repo root; `GODOT` = path to the Godot 4.7.2 *console* binary)
 - First run / after adding files: `"$GODOT" --headless --path . --import`
 - All tests: `tools/run_tests.sh` (Windows: `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1`).
-  Both save the import output to `.godot/import.log` and print it.
+  Both run `tools/check_gdscript` first (Godot 3 renames, then import, then a parse check) and save the import output to `.godot/import.log`.
 - One test file: `"$GODOT" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gtest=res://tests/sim/test_production.gd`
 - Tests are GUT 9.7.x, in `tests/`, files `test_*.gd`, `extends GutTest`. Sim tests call `sim.tick()` N times
   directly (900 ticks = 15 game minutes); they must not depend on frames, real time or the scene tree.
