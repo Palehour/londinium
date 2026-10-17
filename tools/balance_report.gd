@@ -26,7 +26,9 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
   --barley-percent <n>  replace the barley share of every set_unloading_split command, 0 to 100
                         (the grain sweep of issue #55: --scenario grain_split)
   --preset <id>         play every scenario on a difficulty preset of data/difficulty/presets.json
-                        (easy, normal, hard; issue #70). Not with --wheat-price or --wheat-max-price
+                        (easy, normal, hard; issue #70). Not with --wheat-price or --wheat-max-price.
+                        It also plays the scripts of tests/scenarios/<id>/, written for that preset
+                        (hard/: the *_hard ones of issue #128, which buy later for the 800 d of Hard)
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
@@ -66,6 +68,7 @@ func _init() -> void:
 	var scenarios: Array[Dictionary] = []
 	var paths: Array[String] = ScenarioRunner.scenario_paths()
 	paths.append_array(ScenarioRunner.long_scenario_paths())
+	paths.append_array(ScenarioRunner.preset_scenario_paths(StringName(options["preset"])))
 	for path: String in paths:
 		var scenario: Dictionary = ScenarioRunner.load_file(path)
 		var errors: Array[String] = runner.validate(scenario)

@@ -378,6 +378,29 @@ func test_long_scenario_files_are_valid_and_named_after_their_ids() -> void:
 	assert_eq(left_out, ["drift_4h", "drift_8h"] as Array[String])
 
 
+# --- Issue #128: scripts adapted to a difficulty preset ---
+
+func test_preset_scenario_paths_only_for_a_preset_with_a_folder() -> void:
+	assert_eq(ScenarioRunner.preset_scenario_paths(&""), [] as Array[String], "no preset: the runs of today")
+	assert_eq(ScenarioRunner.preset_scenario_paths(&"normal"), [] as Array[String])
+	assert_eq(ScenarioRunner.preset_scenario_paths(&"easy"), [] as Array[String])
+	assert_gt(ScenarioRunner.preset_scenario_paths(&"hard").size(), 0)
+
+
+func test_preset_scenario_files_are_valid_and_adapt_an_existing_script() -> void:
+	var originals: Dictionary[String, bool] = {}
+	for path: String in ScenarioRunner.scenario_paths() + ScenarioRunner.long_scenario_paths():
+		originals[path.get_file().get_basename()] = true
+	for path: String in ScenarioRunner.preset_scenario_paths(&"hard"):
+		var scenario: Dictionary = ScenarioRunner.load_file(path)
+		assert_false(scenario.is_empty(), "%s is not a JSON object" % path)
+		assert_eq(_runner.validate(scenario), [] as Array[String], path)
+		var id: String = String(scenario.get("id", ""))
+		assert_eq(id, path.get_file().get_basename(), path)
+		assert_true(id.ends_with("_hard") and originals.has(id.trim_suffix("_hard")),
+			"%s is named <original>_hard after an existing script" % id)
+
+
 func test_validation_rejects_bad_set_stock_relative_waits_measures_and_in_all() -> void:
 	var cut: Array = [{"tick": 0, "cmd": "demolish", "cell": [3, 5]}]
 	var cases: Dictionary[String, Dictionary] = {

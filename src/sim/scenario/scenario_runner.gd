@@ -29,6 +29,8 @@ var _context: EconomyContext
 var _map_id: StringName = &"whitechapel_1850s"
 # Difficulty modifiers (DataLayers); empty is Normal, the base values as they are.
 var _layers: Array[Modifier] = []
+# Off by default: a long game logs thousands of events and the many-seed checks keep every result.
+var keep_cause_events: bool = false
 
 
 # Returns null (and logs the errors) when data/ does not load.
@@ -90,6 +92,14 @@ static func scenario_paths() -> Array[String]:
 
 static func long_scenario_paths() -> Array[String]:
 	return _json_files(LONG_SCENARIO_DIR)
+
+
+# Scripts rewritten for one difficulty preset (issue #128: hard/ buys later, for its 800 d), in
+# tests/scenarios/<preset>/. Only balance_report --preset plays them, so the runs without a preset stay as they were.
+static func preset_scenario_paths(preset_id: StringName) -> Array[String]:
+	if preset_id == &"":
+		return [] as Array[String]
+	return _json_files(SCENARIO_DIR.path_join(String(preset_id)))
 
 
 static func _json_files(directory: String) -> Array[String]:
@@ -202,6 +212,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	result.stats_cause_events = events.size()
 	result.stats_intermittent_events = events.filter(
 		func(event: Dictionary) -> bool: return event["cause"] == CauseLog.INTERMITTENT).size()
+	if keep_cause_events:
+		result.cause_events = events
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]

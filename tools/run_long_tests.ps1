@@ -1,5 +1,5 @@
 # Runs the long scenario tests (tests/scenarios/long/long_test_*.gd) headless on Windows: 20 seeds of
-# 70-minute games and the 4- and 8-hour drift games, too slow for CI. Their files do not start with test_, so run_tests and CI never pick them up.
+# 70-minute games, the 4- and 8-hour drift games and the Hard scripts of tests/scenarios/hard/, too slow for CI. Their files do not start with test_, so run_tests and CI never pick them up.
 # Usage: $env:GODOT = "C:\Godot\Godot_v4.7.2-stable_win64_console.exe"
 #        powershell -ExecutionPolicy Bypass -File tools\run_long_tests.ps1
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GutArgs)

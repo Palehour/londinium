@@ -1,0 +1,19 @@
+{
+  "id": "big_tight_r06_smart_hard",
+  "description": "Issue #128: big_tight_r06_smart adaptado a Difícil. Los comandos son los del original (ya esperan a los 600 d); solo cambia la duración.",
+  "notes": "Mismos edificios, celdas y esperas de plata que el original, salvo lo que dice la descripción. En Difícil la ciudad arranca con 800 d y gana menos (el trigo llega a 4 d), así que las compras llegan más tarde. Todos los adaptados duran lo mismo según su tipo (75 min los de 15, 150 min los largos), un horizonte fijo decidido por Cristian en el chat del plan de #128. Solo se juega con balance_report --preset hard.",
+  "seed": 42,
+  "duration_ticks": 4500,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "set_wheat_policy", "accumulate_price": 1, "max_price": 2, "target_stock": 60, "reserve_minutes": 2},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 600},
+    {"tick": 60, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true},
+    {"tick": 60, "cmd": "build", "building": "housing", "cell": [6, 3], "with_previous": true}
+  ]
+}
