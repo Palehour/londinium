@@ -57,6 +57,7 @@ const MODS_DOWN: StringName = &"ui.mods.down"
 const MODS_CONFLICTS: StringName = &"ui.mods.conflicts"
 const MODS_CONFLICT: StringName = &"ui.mods.conflict"
 const MODS_ERROR: StringName = &"ui.mods.error"
+const SAVE_NO_MODS: StringName = &"ui.save.no_mods"
 const POPULATION: StringName = &"ui.population"
 const SATISFACTION: StringName = &"ui.satisfaction"
 const BREAD_RATE: StringName = &"ui.bread_rate"
@@ -175,6 +176,11 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"defeat_timer": &"ui.stats.defeat_timer",
 	&"victory_progress": &"ui.stats.victory_progress",
 }
+# Saved games (issue #57): why one does not load.
+const SAVE_REFUSALS: Dictionary[StringName, StringName] = {
+	&"invalid_file": &"ui.save.invalid_file", &"other_version": &"ui.save.other_version",
+	&"other_mods": &"ui.save.other_mods",
+}
 const REASONS: Dictionary[StringName, StringName] = {
 	&"arriving": &"ui.reason.arriving",
 	&"no_free_housing": &"ui.reason.no_free_housing",
@@ -256,6 +262,18 @@ static func command_result(accepted: bool, reason_id: StringName) -> String:
 	return text(SUCCESS) if accepted else reason(reason_id)
 
 
+# args come from SaveFile: the file's version and the one this game reads, or the mods the save was played with.
+static func save_refusal(reason_id: StringName, args: Array) -> String:
+	if reason_id == &"other_mods":
+		var mods: PackedStringArray = []
+		for mod: Variant in args[0]:
+			mods.append(String(mod))
+		return text(SAVE_REFUSALS[reason_id]) % (text(SAVE_NO_MODS) if mods.is_empty() else ", ".join(mods))
+	if reason_id == &"other_version":
+		return text(SAVE_REFUSALS[reason_id]) % args
+	return text(SAVE_REFUSALS.get(reason_id, SAVE_REFUSALS[&"invalid_file"]))
+
+
 static func building_label(key: String) -> String:
 	if not BUILDING_LABELS.has(key):
 		return ""
@@ -290,6 +308,7 @@ static func all_keys() -> Array[StringName]:
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
+		SAVE_NO_MODS,
 	]
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
@@ -309,6 +328,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, STATUS_LABELS[status_id])
 	for reason_id: StringName in REASONS:
 		_append_unique(keys, REASONS[reason_id])
+	for refusal_id: StringName in SAVE_REFUSALS:
+		_append_unique(keys, SAVE_REFUSALS[refusal_id])
 	for metric_id: StringName in STATS_SERIES_LABELS:
 		_append_unique(keys, STATS_SERIES_LABELS[metric_id])
 	return keys

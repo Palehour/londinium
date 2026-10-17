@@ -188,3 +188,7 @@ ui.stats.demotions,Descensos,Demotions
 ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
 ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
 ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.save.no_mods,sin mods,no mods
+ui.save.invalid_file,"No se pudo cargar: el archivo no es una partida guardada de Londinium o está dañado.","Could not load: the file is not a Londinium saved game or it is damaged."
+ui.save.other_version,"No se pudo cargar: la partida está guardada en el formato %d y este juego lee el %d.","Could not load: the game is saved in format %d and this game reads format %d."
+ui.save.other_mods,"No se pudo cargar: la partida se jugó con otros mods (%s). Ponelos en ese orden para cargarla.","Could not load: the game was played with other mods (%s). Put them in that order to load it."

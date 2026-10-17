@@ -8,6 +8,8 @@ var geometry: MapGeometry
 var presentation: MapPresentation = MapPresentation.new()
 # Where the player's mods live; a test points it elsewhere so the machine's own mods never reach it.
 var mods_root: String = ModLayer.DEFAULT_ROOT
+# Where saved games live (issue #57); a test points it elsewhere so the player's saves are never touched.
+var saves_root: String = SaveFile.DEFAULT_ROOT
 var _catalog: DataCatalog
 var _snapshot: Dictionary
 var _building_type: StringName = &""
@@ -17,6 +19,7 @@ var _help: Label
 var _legend_caption: Label
 var _terrain_labels: Dictionary[String, Label] = {}
 var _stats_panel: StatsPanel
+var _autosave: Autosave
 var _status_pending: bool = false
 var _status_has_result: bool = false
 var _status_accepted: bool = false
@@ -38,6 +41,11 @@ func _ready() -> void:
 	presentation.load_data(ids)
 	if not presentation.errors.is_empty():
 		_show_load_error(layer, presentation.errors)
+		return
+	var save_settings: SaveSettings = SaveSettings.new()
+	save_settings.load_data()
+	if not save_settings.errors.is_empty():
+		_show_load_error(layer, save_settings.errors)
 		return
 	var background: ColorRect = ColorRect.new()
 	background.color = presentation.ui_colors["header"]
@@ -85,11 +93,13 @@ func _ready() -> void:
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
 	session.mods = loaded.mods
 	session.mod_conflicts = loaded.mod_conflicts
+	_autosave = Autosave.new(session, save_settings, saves_root)
 	_update_help()
 	geometry = MapGeometry.new(Vector2i(session.context.map.width, session.context.map.height), presentation.layout["cell_size"], _map_viewport(), presentation.camera["max_zoom_factor"])
 	_snapshot = session.get_snapshot()
 	session.snapshot_changed.connect(_snapshot_received)
 	session.command_resolved.connect(_command_resolved)
+	session.snapshot_changed.connect(_autosave.observe)
 	clock = SimClock.new()
 	clock.simulation = session.simulation
 	clock.tick_advanced.connect(session.publish_tick)
@@ -300,6 +310,7 @@ func _reorder_mods(order: Array[StringName]) -> void:
 
 
 func _reset_view() -> void:
+	_autosave.reset()
 	clock.simulation = session.simulation
 	clock.reset()
 	_building_type = &""
