@@ -190,3 +190,27 @@ func test_bad_sources_are_reported_and_give_no_map() -> void:
 	var importer: MapImporter = MapImporter.new()
 	assert_true(importer.import_documents(missing, {}, {}).is_empty())
 	assert_string_contains("\n".join(importer.errors), "cell_metres")
+
+
+# Issue #67 (D-080): import.json says whether the map plays with streets and overrides.json lists the diagonal
+# edges of its historic streets one by one; without them the map has none and plays without streets.
+func test_roads_switch_and_diagonal_edges_come_from_the_sources() -> void:
+	var config: Dictionary = _config(3, 3)
+	var plain: Dictionary = _import(config, {})
+	assert_false(plain["roads_enabled"])
+	assert_eq(plain["road_diagonals"], [])
+	config["roads_enabled"] = true
+	var map: Dictionary = _import(config, {}, {"areas": [], "roads": {"add": [[0, 0], [1, 1]], "remove": [],
+		"diagonals": [[0, 0, 1, 1]]}})
+	assert_true(map["roads_enabled"])
+	assert_eq(map["road_diagonals"], [[0, 0, 1, 1]])
+	var parsed: Dictionary = JSON.parse_string(MapImporter.new().to_text(map))
+	assert_true(parsed["roads_enabled"])
+	assert_eq(parsed["road_diagonals"].size(), 1)
+
+
+func test_a_diagonal_outside_the_grid_is_reported() -> void:
+	var importer: MapImporter = MapImporter.new()
+	var map: Dictionary = importer.import_documents(_config(3, 3), {}, {"roads": {"diagonals": [[2, 2, 3, 3]]}})
+	assert_eq(map, {})
+	assert_string_contains("\n".join(importer.errors), "overrides.json.roads.diagonals")

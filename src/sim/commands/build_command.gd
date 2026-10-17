@@ -50,6 +50,9 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	var terrain_reason: StringName = _context.terrain_placement_reason(_definition_id, _cell)
 	if terrain_reason != &"":
 		return terrain_reason
+	# On a map with streets (issue #67) a street cell stays a street.
+	if map.roads_enabled and BuildRoadCommand.is_street(state, map, _cell):
+		return &"road_cell"
 	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"
 	return &""

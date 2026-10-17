@@ -2,10 +2,16 @@ class_name DemolishCommand
 extends SimulationCommand
 
 var _cell: Vector2i
+var _context: EconomyContext
 
 
 func _init(cell: Vector2i) -> void:
 	_cell = cell
+
+
+# The map, to tell a historic street (never demolished, D-070) from a cell with nothing on it.
+func use_context(context: EconomyContext) -> void:
+	_context = context
 
 
 func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
@@ -23,6 +29,28 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 			accepted = true
 			reason = &""
 			return
+	_demolish_road(state, params)
+
+
+# A street of the player refunds like a building without jobs (D-029, D-080): all of it within the correction window,
+# demolish.no_jobs_refund_ratio after it.
+func _demolish_road(state: EconomyState, params: Params) -> void:
+	for index: int in range(state.player_roads.size()):
+		var road: Dictionary = state.player_roads[index]
+		if road["cell"] != [_cell.x, _cell.y]:
+			continue
+		var refund: int = int(road["paid"])
+		if not _in_grace(state, params, road):
+			refund = roundi(refund * float(params.get_value(&"demolish.no_jobs_refund_ratio")))
+		state.money += refund
+		state.construction_spent_tick -= refund
+		state.refunds_tick += refund
+		state.player_roads.remove_at(index)
+		accepted = true
+		reason = &""
+		return
+	if _context != null and _context.map.roads_enabled and _cell in _context.map.road_cells:
+		reason = &"historic_road"
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:

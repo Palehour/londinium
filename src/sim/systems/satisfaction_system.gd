@@ -56,7 +56,7 @@ func _update_class_target(state: EconomyState, params: Params, def: ClassDef, en
 	# Terms follow the order the data declares the needs in, so the sum is the same on every run.
 	var needs_total: float = 0.0
 	for need: NeedDef in def.needs:
-		var term: float = NeedsSystem.coverage(state, need.good) * float(params.get_value(need.satisfaction_key))
+		var term: float = NeedsSystem.coverage(state, need.good, def.id) * float(params.get_value(need.satisfaction_key))
 		breakdown[String(need.good)] = breakdown.get(String(need.good), 0.0) + term
 		needs_total += term
 	breakdown["tax"] = state.tax_rate * float(params.get_value(def.tax_weight_key))

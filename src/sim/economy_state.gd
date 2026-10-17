@@ -118,6 +118,22 @@ var demotions_by_class_tick: Dictionary[StringName, int] = {}
 # The share of upkeep_tick that administration added (issue #118), and what demolitions gave back.
 var administration_tick: float = 0.0
 var refunds_tick: int = 0
+# Distance model (issue #67, D-080). The player's streets ({cell, built_at, paid}) and the transport owed below a
+# penny are saved; a save from before the streets loads with none.
+var player_roads: Array[Dictionary] = []
+var transport_fraction: float = 0.0
+# Worked out by RoadSystem and never saved, so a loaded game recomputes its coverage: why a building does not work
+# (by cell), the room of each class's connected and served houses, each class's access to each good (the share of
+# its housed people the good reaches; 1 when missing), the bread access of the whole city, every transport leg and
+# every house with the goods that reach it.
+var road_blocked: Dictionary[Vector2i, StringName] = {}
+var service_rooms: Dictionary[StringName, Dictionary] = {}
+var service_access: Dictionary[StringName, Dictionary] = {}
+var bread_access: float = 1.0
+var transport_legs: Array[Dictionary] = []
+var house_service: Array[Dictionary] = []
+# Units each building took out of the store this tick, by cell, for its transport leg. Transient: never saved.
+var transport_units_tick: Dictionary[Vector2i, int] = {}
 
 
 func reset_flows() -> void:
@@ -147,6 +163,26 @@ func reset_flows() -> void:
 	demotions_by_class_tick.clear()
 	administration_tick = 0.0
 	refunds_tick = 0
+	transport_units_tick.clear()
+
+
+# Why the streets stop this building (RoadSystem.NO_ROAD_ACCESS or NO_ROUTE), or &"" when they do not.
+func road_reason(building: Dictionary) -> StringName:
+	if road_blocked.is_empty():
+		return &""
+	return road_blocked.get(Vector2i(int(building["cell"][0]), int(building["cell"][1])), &"")
+
+
+# Share of a class's houses a good reaches (issue #67); 1 off the streets or for a good nobody hands out.
+func access(class_id: StringName, good: StringName) -> float:
+	if service_access.is_empty():
+		return 1.0
+	return float(service_access.get(class_id, {}).get(good, 1.0))
+
+
+# The smoothed bread coverage as the houses get it: of one class, or of the whole city when class_id is empty.
+func hunger_coverage(class_id: StringName = &"") -> float:
+	return hunger_smoothed_coverage * (bread_access if class_id == &"" else access(class_id, &"bread"))
 
 
 # Statistics counters (issue #130): written by the systems, never read by them.
@@ -205,6 +241,8 @@ func to_dict() -> Dictionary:
 		"beer_fraction": beer_fraction, "beer_demand": beer_demand, "beer_consumed": beer_consumed,
 		"beer_coverage": beer_coverage,
 		"class_states": _class_states_dict(),
+		"player_roads": player_roads.duplicate(true),
+		"transport_fraction": transport_fraction,
 	}
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
@@ -289,4 +327,6 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	for id: Variant in saved_classes:
 		result.class_states[StringName(id)] = ClassState.from_dict(saved_classes[id])
 	result.buildings.assign(values["buildings"].duplicate(true))
+	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
+	result.transport_fraction = float(values.get("transport_fraction", 0.0))
 	return result

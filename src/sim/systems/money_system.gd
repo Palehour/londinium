@@ -35,3 +35,17 @@ func tick(state: EconomyState, params: Params, context: EconomyContext = null) -
 	state.tax_fraction = maxf(0.0, state.tax_fraction - taxes_paid)
 	state.wage_fraction = maxf(0.0, state.wage_fraction - wages_paid)
 	state.upkeep_fraction = maxf(0.0, state.upkeep_fraction - upkeep_paid)
+	_pay_streets(state, params)
+
+
+# Streets and transport (issue #67, D-070) are upkeep too, but outside administration (D-063): the player's streets
+# pay roads.upkeep_per_minute each and every leg its units x steps x k, in whole pence with the fraction carried.
+func _pay_streets(state: EconomyState, params: Params) -> void:
+	if state.player_roads.is_empty() and state.transport_legs.is_empty():
+		return
+	state.transport_fraction += RoadSystem.transport_cost(state, params) \
+		+ state.player_roads.size() * float(params.get_value(&"roads.upkeep_per_minute")) / 60.0
+	var paid: int = ProductionSystem.whole_units(state.transport_fraction)
+	state.money -= paid
+	state.upkeep_tick += paid
+	state.transport_fraction = maxf(0.0, state.transport_fraction - paid)

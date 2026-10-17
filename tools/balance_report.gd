@@ -29,6 +29,8 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
                         (easy, normal, hard; issue #70). Not with --wheat-price or --wheat-max-price.
                         It also plays the scripts of tests/scenarios/<id>/, written for that preset
                         (hard/: the *_hard ones of issue #128, which buy later for the 800 d of Hard)
+  --strip               also play the scenarios on the 16x12 strip with streets (tests/scenarios/strip/, issue #67);
+                        without it the output is the same as before the streets
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in
 runs_refused and listed in balance_refused.csv. A scenario with a "measure" object gets extra summary
@@ -69,6 +71,9 @@ func _init() -> void:
 	var paths: Array[String] = ScenarioRunner.scenario_paths()
 	paths.append_array(ScenarioRunner.long_scenario_paths())
 	paths.append_array(ScenarioRunner.preset_scenario_paths(StringName(options["preset"])))
+	if options["strip"]:
+		paths.append_array(ScenarioRunner.strip_scenario_paths())
+		paths.append_array(ScenarioRunner.strip_long_scenario_paths())
 	for path: String in paths:
 		var scenario: Dictionary = ScenarioRunner.load_file(path)
 		var errors: Array[String] = runner.validate(scenario)
@@ -243,11 +248,11 @@ func _summary_line(scenario_id: String, metric: String, values: Array) -> String
 func _parse(args: PackedStringArray) -> Dictionary:
 	var options: Dictionary = {"scenario": ALL, "out": "", "seeds": 0, "summary": false,
 		"tax": -1.0, "wheat_price": 0, "wheat_max_price": 0, "target_stock": -1, "barley_percent": -1,
-		"preset": "", "help": false}
+		"preset": "", "help": false, "strip": false}
 	var index: int = 0
 	while index < args.size():
 		var flag: String = args[index]
-		if flag in ["--summary", "--help"]:
+		if flag in ["--summary", "--help", "--strip"]:
 			options[flag.trim_prefix("--")] = true
 			index += 1
 			continue

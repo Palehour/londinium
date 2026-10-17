@@ -18,13 +18,14 @@ func tick(state: EconomyState, params: Params) -> void:
 		if job_capacity(params, id) <= 0:
 			continue
 		for building: Dictionary in state.buildings:
-			if building["definition_id"] == id and available > 0:
+			# Without a street, or without a route to its inputs, a building does not work (issue #67).
+			if building["definition_id"] == id and available > 0 and state.road_reason(building) == &"":
 				building["workers"] = 1
 				available -= 1
 	for id: StringName in EXTRA_ROUND:
 		var jobs: int = job_capacity(params, id)
 		for building: Dictionary in state.buildings:
-			if building["definition_id"] != id:
+			if building["definition_id"] != id or state.road_reason(building) != &"":
 				continue
 			var assigned: int = mini(available, jobs - int(building["workers"]))
 			building["workers"] += assigned

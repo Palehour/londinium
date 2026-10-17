@@ -137,10 +137,11 @@ func test_demolishing_the_dense_housing_refunds_half_its_cost() -> void:
 
 # Mason's required test (D-076): a game saved with a building on a cell that is now blocked keeps it, working; the
 # blocked cell only stops something new from being built there, even after the old building is demolished.
+# Both cells have a street beside them, the access every building needs on the strip (D-080, D-079).
 func test_a_saved_building_on_a_blocked_cell_stays_and_works() -> void:
 	var params: Params = SimTestParams.isolated_params(_catalog)
-	var bakery_cell: Vector2i = Vector2i(14, 2)
-	var housing_cell: Vector2i = Vector2i(15, 2)
+	var bakery_cell: Vector2i = Vector2i(10, 5)
+	var housing_cell: Vector2i = Vector2i(11, 5)
 	var saved: Dictionary = _new_game(params).to_save()
 	var state: EconomyState = EconomyState.from_dict(saved["economy"])
 	state.buildings.append({"definition_id": &"bakery", "cell": [bakery_cell.x, bakery_cell.y]})

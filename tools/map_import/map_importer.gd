@@ -54,11 +54,15 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	var road_cells: Dictionary[Vector2i, bool] = _rasterize_roads(roads, size)
 	_apply_overrides(overrides, classes, road_cells, size)
 	var start_cells: Array = _dense_housing_cells(overrides, size)
+	var diagonals: Array = _diagonals(overrides, size)
 	if not errors.is_empty():
 		return {}
 	var map: Dictionary = _map(config, classes, road_cells, size)
 	if not start_cells.is_empty():
 		map["dense_housing_cells"] = start_cells
+	# The distance model (issue #67, D-080): whether the map plays with streets and its diagonal edges (D-058).
+	map["roads_enabled"] = config.get("roads_enabled", false)
+	map["road_diagonals"] = diagonals
 	return map
 
 
@@ -75,6 +79,11 @@ func to_text(map: Dictionary) -> String:
 	lines.append('  "terrain": {%s}' % ", ".join(labels))
 	if map.has("dense_housing_cells"):
 		lines.append('  "dense_housing_cells": %s' % _cells_text(map["dense_housing_cells"]))
+	lines.append('  "roads_enabled": %s' % ("true" if map["roads_enabled"] else "false"))
+	var edges: Array[String] = []
+	for edge: Array in map["road_diagonals"]:
+		edges.append("[%d, %d, %d, %d]" % edge)
+	lines.append('  "road_diagonals": [%s]' % ", ".join(edges))
 	return "{\n%s\n}\n" % ",\n".join(lines)
 
 
@@ -99,6 +108,8 @@ func _valid_config(config: Variant) -> bool:
 	if config["priority"] is Array and config["priority"].all(func(entry: Variant) -> bool: return entry is String):
 		priority.assign(config["priority"])
 	priority.sort()
+	if typeof(config.get("roads_enabled", false)) != TYPE_BOOL:
+		errors.append("import.json.roads_enabled: expected true or false")
 	var classes: Array[String] = AREA_CLASSES.duplicate()
 	classes.sort()
 	if priority != classes:
@@ -279,6 +290,24 @@ func _dense_housing_cells(overrides: Variant, size: Vector2i) -> Array:
 		else:
 			cells.append([cell.x, cell.y])
 	return cells
+
+
+# Diagonal edges of the historic streets, listed by hand in overrides.json (D-058, D-080): the loader checks that
+# both ends are street cells that touch corner to corner.
+func _diagonals(overrides: Variant, size: Vector2i) -> Array:
+	var edges: Array = []
+	var roads: Variant = overrides.get("roads", {}) if overrides is Dictionary else null
+	if roads is not Dictionary:
+		return edges
+	var bounds: Rect2i = Rect2i(Vector2i.ZERO, size)
+	for raw: Variant in roads.get("diagonals", []):
+		# _rect reads the four numbers; here its position is one end and its size the other.
+		var ends: Rect2i = _rect(raw)
+		if not bounds.has_point(ends.position) or not bounds.has_point(ends.size):
+			errors.append("overrides.json.roads.diagonals: %s is not [x1, y1, x2, y2] inside the grid" % str(raw))
+			continue
+		edges.append([ends.position.x, ends.position.y, ends.size.x, ends.size.y])
+	return edges
 
 
 # [x, y] as a cell, or (-1, -1) when it is not a pair of whole numbers.
