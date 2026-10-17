@@ -46,9 +46,11 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	for building: Dictionary in state.buildings:
 		if building["cell"] == [_cell.x, _cell.y]:
 			return &"occupied_cell"
-	# Water and dock basins carry no street (D-020).
+	# Water and dock basins carry no street (D-020), and the standing buildings stay a block (D-075).
 	if _cell in map.river_cells or _cell in map.dock_cells:
 		return &"requires_land"
+	if _cell in map.existing_cells:
+		return &"existing_building"
 	if state.money < int(params.get_value(&"roads.cost")):
 		return &"insufficient_money"
 	return &""

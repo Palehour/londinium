@@ -72,6 +72,20 @@ func test_mill_pays_leg_from_nearest_wharf() -> void:
 	assert_eq(_spent(sim), ProductionSystem.whole_units(_wheat_taken(sim) * 3 * _k()))
 
 
+# Field to mill (D-080): no map in data/ has cultivable cells (D-010), so this test map gets one.
+func test_mill_pays_leg_from_the_wheat_field() -> void:
+	_context.map.cultivable_cells.append(RoadTestMap.land(2))
+	var sim: Simulation = _sim([[&"wheat_field", RoadTestMap.land(2)], [&"wharf", RoadTestMap.river(12)],
+		[&"mill", RoadTestMap.land(6)]] as Array[Array])
+	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", RoadTestMap.land(6), &"wheat")
+	assert_eq(leg["supplier_cell"], [1, RoadTestMap.LAND_ROW], "the field is nearer than the wharf")
+	assert_eq(leg["supplier_id"], &"wheat_field")
+	assert_eq(leg["steps"], 5)
+	_ticks(sim, 120)
+	assert_gt(_wheat_taken(sim), 0)
+	assert_eq(_spent(sim), ProductionSystem.whole_units(_wheat_taken(sim) * 5 * _k()))
+
+
 func test_malthouse_pays_leg_from_wharf() -> void:
 	var sim: Simulation = _sim([[&"wharf", RoadTestMap.river(1)], [&"malthouse", RoadTestMap.land(4)]] as Array[Array])
 	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", RoadTestMap.land(4), &"barley")
