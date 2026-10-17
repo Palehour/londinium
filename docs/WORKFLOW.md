@@ -73,8 +73,7 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 - Los D-xxx nuevos se reservan en el issue antes de arrancar, para que dos PRs no tomen el mismo número.
 
 ### Integrar
-- Se mergea un PR por vez. Después de cada squash-merge en `develop`, los PRs abiertos se rebasean y vuelven a correr
-  `tools/run_tests` antes de pedir merge.
+- Se mergea un PR por vez. Cuándo rebasear un PR abierto después de un merge: `AGENTS.md` ("Git workflow").
 - Un worker trabado se descarta; no se mergea trabajo parcial.
 
 ### Pitfalls
