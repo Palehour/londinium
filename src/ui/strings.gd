@@ -26,6 +26,7 @@ const LOCALE_EN: String = "English"
 const HELP: StringName = &"ui.help"
 const LOADING: StringName = &"ui.loading"
 const LEGEND: StringName = &"ui.legend"
+const MAP_CREDITS: StringName = &"ui.map_credits"
 const NO_CULTIVABLE_CELLS: StringName = &"ui.no_cultivable_cells"
 const DISABLED_BUILDING: StringName = &"ui.disabled_building"
 const SELECT: StringName = &"ui.select"
@@ -128,6 +129,7 @@ const UNIT_PRICE: String = "%.2f d"
 
 const TERRAIN_LABELS: Dictionary[String, StringName] = {
 	"land": &"ui.terrain.land", "river": &"ui.terrain.river", "cultivable": &"ui.terrain.cultivable",
+	"dock": &"ui.terrain.dock", "road": &"ui.terrain.road", "existing": &"ui.terrain.existing",
 }
 const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 	&"bankruptcy": &"ui.condition.bankruptcy", &"hunger": &"ui.condition.hunger",
@@ -320,7 +322,7 @@ static func reason(key: StringName) -> String:
 static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
-		HELP, LOADING, LEGEND, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
+		HELP, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,

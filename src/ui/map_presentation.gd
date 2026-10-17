@@ -1,6 +1,9 @@
 class_name MapPresentation
 extends RefCounted
 
+# Every kind of cell the map draws, in legend order.
+const TERRAIN_KINDS: Array[String] = ["land", "river", "cultivable", "dock", "road", "existing"]
+
 var terrain: Dictionary[String, Color] = {}
 var ui_colors: Dictionary[String, Color] = {}
 var layout: Dictionary[String, float] = {}
@@ -37,7 +40,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			errors.append("data/ui/map.json.colors.%s: invalid color" % key)
 	_load_numbers(raw.get("layout"), ["cell_size", "header_height", "panel_width", "panel_margin", "help_x", "help_y", "grid_inset", "building_inset", "font_size", "label_offset_y", "selection_inset", "selection_width"], layout)
 	_load_numbers(raw.get("camera"), ["pan_speed", "zoom_step", "max_zoom_factor"], camera)
-	for kind: String in ["land", "river", "cultivable"]:
+	for kind: String in TERRAIN_KINDS:
 		var color: Variant = raw["terrain"].get(kind)
 		if _valid_color(color):
 			terrain[kind] = Color(color)

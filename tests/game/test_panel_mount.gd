@@ -105,3 +105,23 @@ func test_legend_samples_match_map_data_colors() -> void:
 		var sample: ColorRect = legend.get_child(index * 2 + 1) as ColorRect
 		assert_not_null(sample)
 		assert_eq(sample.color, presentation.terrain[keys[index]])
+
+
+func test_the_map_shows_its_layers_in_the_legend_and_credits_its_sources() -> void:
+	var viewport: SubViewport = SubViewport.new()
+	viewport.size = Vector2i(1152, 800)
+	add_child_autofree(viewport)
+	var scene: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	viewport.add_child(scene)
+	var view: Node = scene.get_node("Map")
+	var help: Label = view.get("_help") as Label
+	var legend: HBoxContainer = help.get_parent().get_child(1) as HBoxContainer
+	var presentation: MapPresentation = view.get("presentation") as MapPresentation
+	var keys: Array[String] = ["land", "river", "cultivable", "dock", "road", "existing"]
+	assert_eq(legend.get_child_count(), keys.size() * 2 + 1)
+	for index: int in range(keys.size()):
+		assert_eq((legend.get_child(index * 2 + 1) as ColorRect).color, presentation.terrain[keys[index]])
+		assert_eq((legend.get_child(index * 2 + 2) as Label).text, Strings.text(Strings.TERRAIN_LABELS[keys[index]]))
+	var credits: Label = help.get_parent().get_child(help.get_parent().get_child_count() - 1) as Label
+	assert_eq(credits.text, Strings.text(Strings.MAP_CREDITS))
+	assert_string_contains(credits.text, "CC-BY")

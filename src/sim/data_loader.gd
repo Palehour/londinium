@@ -76,6 +76,7 @@ const DIFFICULTY_FOLDER: String = "difficulty"
 const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
+const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -637,7 +638,12 @@ func _load_role(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 
 
 func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
-	if not _object(raw, ["id", "width", "height", "river_cells", "cultivable_cells"], path):
+	var fields: Array[String] = ["id", "width", "height", "river_cells", "cultivable_cells"]
+	# The imported layers (issue #60) are optional, so the 8x8 map and older fixtures stay valid.
+	for field: String in MAP_IMPORTED_FIELDS:
+		if raw.has(field):
+			fields.append(field)
+	if not _object(raw, fields, path):
 		return
 	var dimensions: DataCatalog = DataCatalog.new()
 	if raw["id"] != path.get_file().get_basename():
@@ -650,38 +656,80 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	map.id = StringName(raw["id"])
 	map.width = int(raw["width"])
 	map.height = int(raw["height"])
+	# A cell holds one area layer at most; streets are drawn over them, so they only need to be unique.
 	var occupied: Array[Vector2i] = []
-	for field: String in ["river_cells", "cultivable_cells"]:
-		if raw[field] is not Array:
-			_errors.append("%s.%s: expected an array" % [path, field])
+	var layers: Dictionary[String, Array] = {"river_cells": map.river_cells, "cultivable_cells": map.cultivable_cells,
+		"dock_cells": map.dock_cells, "existing_cells": map.existing_cells, "road_cells": map.road_cells}
+	for field: String in layers:
+		if not raw.has(field):
 			continue
-		for cell: Variant in raw[field]:
-			var location: String = "%s.%s" % [path, field]
-			if cell is not Array or cell.size() != 2:
-				_errors.append("%s: expected [x, y]" % location)
-				continue
-			if not _number(cell[0], "integer", location + ".x", "x", dimensions) \
-					or not _number(cell[1], "integer", location + ".y", "y", dimensions):
-				continue
-			var position: Vector2i = Vector2i(int(cell[0]), int(cell[1]))
-			if position.x >= map.width or position.y >= map.height or position in occupied:
-				_errors.append("%s: out of bounds or duplicate cell %s" % [location, position])
-				continue
-			occupied.append(position)
-			var cells: Array[Vector2i] = map.river_cells if field == "river_cells" else map.cultivable_cells
-			cells.append(position)
+		var taken: Array[Vector2i] = occupied
+		if field == "road_cells":
+			taken = []
+		for position: Vector2i in _map_cells(raw[field], "%s.%s" % [path, field], map, taken):
+			layers[field].append(position)
+	if raw.has("terrain"):
+		_load_terrain(raw["terrain"], path + ".terrain", map)
 	catalog.maps[map.id] = map
+
+
+# Valid cells of one layer, in order; each accepted cell is added to `taken`.
+func _map_cells(raw: Variant, location: String, map: MapDef, taken: Array[Vector2i]) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	if raw is not Array:
+		_errors.append("%s: expected an array" % location)
+		return cells
+	var dimensions: DataCatalog = DataCatalog.new()
+	for cell: Variant in raw:
+		if cell is not Array or cell.size() != 2:
+			_errors.append("%s: expected [x, y]" % location)
+			continue
+		if not _number(cell[0], "integer", location + ".x", "x", dimensions) \
+				or not _number(cell[1], "integer", location + ".y", "y", dimensions):
+			continue
+		var position: Vector2i = Vector2i(int(cell[0]), int(cell[1]))
+		if position.x >= map.width or position.y >= map.height or position in taken:
+			_errors.append("%s: out of bounds or duplicate cell %s" % [location, position])
+			continue
+		taken.append(position)
+		cells.append(position)
+	return cells
+
+
+# Basic terrain labels (D-073, D-074) on dry cells, one per cell; firm ground is every cell left out.
+func _load_terrain(raw: Variant, location: String, map: MapDef) -> void:
+	if raw is not Dictionary:
+		_errors.append("%s: expected an object" % location)
+		return
+	for label: Variant in raw:
+		if StringName(str(label)) not in MapDef.TERRAIN_LABELS:
+			_errors.append("%s.%s: unknown terrain label" % [location, label])
+			continue
+		var taken: Array[Vector2i] = []
+		for position: Vector2i in _map_cells(raw[label], "%s.%s" % [location, label], map, taken):
+			if position in map.river_cells or position in map.dock_cells or map.terrain.has(position):
+				_errors.append("%s.%s: water or duplicate cell %s" % [location, label, position])
+				continue
+			map.terrain[position] = StringName(label)
 
 
 # Scenario files are optional: a harness or old fixture without victory has no objectives.
 func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	var id: StringName = StringName(path.get_file().get_basename())
 	var stages: Array[Dictionary] = []
-	catalog.scenarios[id] = {"stages": stages}
+	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID}
 	var scenario_fields: Array[String] = []
-	if raw.has("victory"):
-		scenario_fields.append("victory")
-	if not _object(raw, scenario_fields, path) or not raw.has("victory"):
+	for field: String in ["victory", "map"]:
+		if raw.has(field):
+			scenario_fields.append(field)
+	if not _object(raw, scenario_fields, path):
+		return
+	if raw.has("map"):
+		if raw["map"] is not String or not catalog.maps.has(StringName(raw["map"])):
+			_errors.append("%s.map: unknown map %s" % [path, raw["map"]])
+		else:
+			catalog.scenarios[id]["map"] = StringName(raw["map"])
+	if not raw.has("victory"):
 		return
 	if not _object(raw["victory"], ["stages"], path + ".victory"):
 		return
