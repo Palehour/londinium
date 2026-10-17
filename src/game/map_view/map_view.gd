@@ -1,6 +1,8 @@
 extends Node2D
 
 const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
+# Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
+const DEMOLISH_RING_POINTS: int = 32
 
 var session: GameSession
 var clock: SimClock
@@ -28,6 +30,13 @@ var _status_accepted: bool = false
 var _status_reason: StringName = &""
 # Whether the last input came from a gamepad, so the help shows its buttons (issue #68).
 var _gamepad: bool = false
+# Hold X to demolish (issue #164, D-078). One press submits one command; the ring reads _demolish_progress.
+var _demolish_was_down: bool = false
+var _demolish_holding: bool = false
+var _demolish_fired: bool = false
+var _demolish_elapsed: float = 0.0
+var _demolish_progress: float = 0.0
+var _demolish_cell: Vector2i = Vector2i(-1, -1)
 
 
 func _ready() -> void:
@@ -192,6 +201,7 @@ func _resized() -> void:
 func _process(delta: float) -> void:
 	if geometry == null:
 		return
+	_advance_demolish_hold(delta)
 	var direction: Vector2 = Vector2.ZERO
 	var previous_center: Vector2 = geometry.center
 	var previous_zoom: float = geometry.zoom
@@ -293,13 +303,75 @@ func _gamepad_command(event: InputEvent) -> void:
 		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
 	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
 		_submit(BuildCommand.new(session.context, _building_type, geometry.selected))
-	elif event.is_action_pressed(&"map_demolish") and geometry.selected != Vector2i(-1, -1):
-		_submit(DemolishCommand.new(geometry.selected))
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
 				geometry.move_selection(GamepadBindings.CURSOR[action])
 				geometry.follow_selection()
+
+
+# X demolishes only after it has been held (issue #164). Frame time, so it works while the sim clock is paused.
+# Releasing, moving the cell cursor, or entering the panel cancels this press; it does not start again until X is
+# released. Finishing the hold submits one command.
+func _advance_demolish_hold(delta: float) -> void:
+	var down: bool = Input.is_action_pressed(&"map_demolish")
+	if not down:
+		_end_demolish_hold(true)
+		return
+	if get_viewport().gui_get_focus_owner() != null or (_stats_panel != null and _stats_panel.is_focused()):
+		_end_demolish_hold(false)
+		_demolish_was_down = true
+		return
+	if not _demolish_was_down:
+		_demolish_was_down = true
+		if geometry.selected == Vector2i(-1, -1):
+			return
+		_demolish_holding = true
+		_demolish_fired = false
+		_demolish_elapsed = 0.0
+		_demolish_cell = geometry.selected
+	if not _demolish_holding or _demolish_fired:
+		return
+	if geometry.selected != _demolish_cell:
+		_end_demolish_hold(false)
+		return
+	var seconds: float = presentation.input["demolish_hold_seconds"]
+	_demolish_elapsed += delta
+	if _demolish_elapsed >= seconds:
+		var cell: Vector2i = _demolish_cell
+		_demolish_fired = true
+		_demolish_holding = false
+		_demolish_elapsed = 0.0
+		_set_demolish_progress(0.0)
+		_submit(DemolishCommand.new(cell))
+		return
+	_set_demolish_progress(_demolish_elapsed / seconds)
+
+
+func _end_demolish_hold(released: bool) -> void:
+	_demolish_holding = false
+	_demolish_fired = false
+	_demolish_elapsed = 0.0
+	if released:
+		_demolish_was_down = false
+	_set_demolish_progress(0.0)
+
+
+func _set_demolish_progress(progress: float) -> void:
+	if is_equal_approx(_demolish_progress, progress):
+		return
+	_demolish_progress = progress
+	queue_redraw()
+
+
+# Half a cell, minus the inset already in data. The 0.5 is the centre of the square, not the hold time.
+func _draw_demolish_ring(cell_size: float) -> void:
+	if _demolish_progress <= 0.0:
+		return
+	var center: Vector2 = (Vector2(_demolish_cell) + Vector2.ONE * 0.5) * cell_size
+	var radius: float = cell_size * 0.5 - presentation.layout["building_inset"]
+	var start: float = -PI * 0.5
+	draw_arc(center, radius, start, start + TAU * _demolish_progress, DEMOLISH_RING_POINTS, presentation.ui_colors["selection"], presentation.layout["selection_width"])
 
 
 # Selecting, then every building that can be built now; the help already says why the others cannot.
@@ -452,3 +524,4 @@ func _draw() -> void:
 		draw_string(font, rect.get_center() + Vector2(-width / 2.0, presentation.layout["label_offset_y"]), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])
 	if geometry.selected != Vector2i(-1, -1):
 		draw_rect(Rect2(Vector2(geometry.selected) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
+	_draw_demolish_ring(cell_size)

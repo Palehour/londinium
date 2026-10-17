@@ -2,8 +2,8 @@ class_name GamepadBindings
 extends RefCounted
 
 # Gamepad actions (issue #68, D-048). Added in code rather than in project.godot: redefining ui_accept and ui_cancel
-# there means rewriting their keys too, and a missing key would break the keyboard. The map polls the stick and the
-# triggers; the rest are presses.
+# there means rewriting their keys too, and a missing key would break the keyboard. The map polls the stick, the
+# triggers and the demolish hold; the rest are presses.
 const BUTTONS: Dictionary[StringName, JoyButton] = {
 	&"map_cursor_up": JOY_BUTTON_DPAD_UP,
 	&"map_cursor_down": JOY_BUTTON_DPAD_DOWN,

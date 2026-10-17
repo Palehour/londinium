@@ -8,6 +8,7 @@
     "label_offset_y": 5, "selection_inset": 2, "selection_width": 3
   },
   "camera": {"pan_speed": 500, "zoom_step": 1.15, "max_zoom_factor": 4},
+  "input": {"demolish_hold_seconds": 0.5},
   "buildings": {
     "wharf": {"color": "#e2bd65"},
     "mill": {"color": "#cf8166"},
