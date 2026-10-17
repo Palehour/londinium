@@ -62,7 +62,12 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 
 ## Tests are guardrails
 - Every sim change ships with tests that would fail without it. Bug fix = failing test first.
-- **Never weaken, skip or delete a test to make it pass.** If a test is wrong, say so in the PR and stop.
+- **Nunca modificar, saltear, borrar ni aflojar un test para que pase:** se cambia la implementación, no el
+  resultado. Si un test parece mal, frenar y preguntar en el PR.
+- **Máximo dos rondas de arreglo por la misma falla** (CI o revisión). Si falla dos veces igual, frenar y avisar a
+  Cristian explicando qué se intentó.
+- La evidencia (test que falla antes y pasa después, archivos tocados, tests cambiados) va en la sección
+  "Evidencia" de la plantilla de PR.
 - A passing build is not "done": if it touches the screen, describe how Cristian can see it in 3 steps.
 
 ## Git workflow
@@ -74,11 +79,16 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   lines of non-test code; split otherwise.
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
+- **No tocar archivos fuera del alcance del issue** sin justificarlo en el PR (sección "Evidencia").
 - Parallel work in Orca worktrees (setup, hot files, pitfalls): `docs/WORKFLOW.md` → "Trabajo en paralelo con Orca".
 
 ## GitHub tracking
 Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
-not later. Steps and commands: `abrir-pr`. Only Cristian merges (or an agent he explicitly asks to); PRs are squash-merged into `develop`.
+not later. Steps and commands: `abrir-pr`. PRs are squash-merged into `develop`.
+- **`develop` está protegida:** no se mergea sin CI verde, y el merge solo lo hace Chief tras la autorización de
+  Bailey (que la confirma con Cristian).
+- **Si quedás trabado** (falta info, permiso, falla repetida o una decisión de diseño): agregá la etiqueta
+  `bloqueado` al issue o PR con un comentario de qué falta, y avisá. No sigas adivinando.
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.
