@@ -186,7 +186,7 @@ empty; a malformed one (other version, sizes that do not match, buckets of anoth
 warning. A series the save lacks reads as NaN for the saved buckets. The saved form uses packed arrays per series and
 is meant for `var_to_bytes` + compression (`StatsHistory.compressed_size`, the measure of the 5 MB criterion).
 
-## Save and load (D-037, issue #57, ADR 0011)
+## Save and load (D-037, D-067, issue #57, ADR 0011)
 A save is one Variant written with `store_var` into a ZSTD-compressed file, never with objects, in `user://saves/`.
 `SaveFile.build(session)` makes the envelope: `format`, `version` (`SaveFile.VERSION`), `saved_at`, `scenario`,
 `difficulty`, `knobs` (empty until something sets them), `mods` in load order and `simulation`, which is
