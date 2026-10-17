@@ -25,6 +25,10 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.height = selected_map.height
 	map.river_cells.assign(selected_map.river_cells)
 	map.cultivable_cells.assign(selected_map.cultivable_cells)
+	map.dock_cells.assign(selected_map.dock_cells)
+	map.road_cells.assign(selected_map.road_cells)
+	map.existing_cells.assign(selected_map.existing_cells)
+	map.terrain.assign(selected_map.terrain)
 
 
 func copy() -> EconomyContext:
@@ -52,7 +56,8 @@ func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
 		return &"not_cultivable"
 	if "river" in tags and cell not in map.river_cells:
 		return &"requires_river"
-	if "river" not in tags and cell in map.river_cells:
+	# A dock basin is water but not a grain source (D-020): nothing is built on it.
+	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells):
 		return &"requires_land"
 	return &""
 

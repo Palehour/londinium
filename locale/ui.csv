@@ -2,6 +2,7 @@ keys,es,en
 ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s\nClick: select/build · Del: demolish · Esc: select\nMove: middle button / WASD / arrows · Zoom: wheel / + / −
 ui.loading,Cargando mapa…,Loading map…
 ui.legend,Terrenos:,Terrain:
+ui.map_credits,Mapa: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth,Map: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth
 ui.no_cultivable_cells,Este mapa no tiene casillas cultivables.,This map has no cultivable cells.
 ui.disabled_building,%s (desactivado: %s),%s (disabled: %s)
 ui.select,Selección,Selection
@@ -87,6 +88,9 @@ ui.mobility_demoted,↓ Descensos en el último minuto: %d (%s → %s),↓ Demot
 ui.terrain.land,Tierra,Land
 ui.terrain.river,Río,River
 ui.terrain.cultivable,Cultivable,Cultivable
+ui.terrain.dock,Dársena,Dock basin
+ui.terrain.road,Calle histórica,Historic street
+ui.terrain.existing,Edificación existente,Standing buildings
 ui.building.wharf,Embarcadero,Wharf
 ui.building.mill,Molino,Mill
 ui.building.bakery,Panadería,Bakery

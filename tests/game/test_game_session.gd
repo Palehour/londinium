@@ -112,3 +112,11 @@ func test_defeat_rejection_is_immediate() -> void:
 	_session.simulation = Simulation.new(Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), state, 42, _session.context)
 	_session.submit_command(DemolishCommand.new(Vector2i.ZERO))
 	assert_eq(_results, [{"accepted": false, "reason": &"simulation_defeated"}])
+
+
+func test_the_demo_is_played_on_the_riverside_strip() -> void:
+	assert_eq(_session.context.map.id, &"riverside_strip")
+	assert_eq(Vector2i(_session.context.map.width, _session.context.map.height), Vector2i(16, 12))
+	var other: GameSession = GameSession.new(_catalog,
+		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
+	assert_eq(other.context.map.id, &"whitechapel_1850s", "A scenario without a map keeps the 8x8 map")

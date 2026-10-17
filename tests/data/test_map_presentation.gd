@@ -101,3 +101,18 @@ func test_ui_settings_are_validated_and_keep_existing_defaults() -> void:
 		invalid["colors"][key] = "invalid"
 		presentation.validate(invalid, [&"mill"])
 		assert_eq(presentation.errors.size(), 1, key)
+
+
+func test_new_map_layers_have_their_own_colors() -> void:
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.load_data([])
+	assert_true(presentation.errors.is_empty(), str(presentation.errors))
+	var seen: Array[Color] = []
+	for kind: String in ["land", "river", "cultivable", "dock", "road", "existing"]:
+		assert_true(presentation.terrain.has(kind), kind)
+		assert_false(presentation.terrain.get(kind) in seen, kind)
+		seen.append(presentation.terrain.get(kind, Color.BLACK))
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
+	raw["terrain"].erase("dock")
+	presentation.validate(raw, [])
+	assert_eq(presentation.errors, ["data/ui/map.json.terrain.dock: invalid color"] as Array[String])

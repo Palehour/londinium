@@ -18,6 +18,8 @@ var _mode: Label
 var _help: Label
 var _legend_caption: Label
 var _terrain_labels: Dictionary[String, Label] = {}
+# Attribution of the historical map sources (issue #60, CREDITS.md).
+var _credits: Label
 var _stats_panel: StatsPanel
 var _autosave: Autosave
 var _status_pending: bool = false
@@ -68,7 +70,7 @@ func _ready() -> void:
 	caption.text = Strings.text(Strings.LEGEND)
 	_legend_caption = caption
 	legend.add_child(caption)
-	for kind: String in ["land", "river", "cultivable"]:
+	for kind: String in MapPresentation.TERRAIN_KINDS:
 		var sample: ColorRect = ColorRect.new()
 		sample.color = presentation.terrain[kind]
 		sample.custom_minimum_size = Vector2.ONE * presentation.layout["font_size"]
@@ -80,6 +82,9 @@ func _ready() -> void:
 		legend.add_child(label)
 	help.add_child(legend)
 	help.move_child(legend, 1)
+	_credits = Label.new()
+	_credits.text = Strings.text(Strings.MAP_CREDITS)
+	help.add_child(_credits)
 	_mode = help.get_child(2) as Label
 	_status = help.get_child(3) as Label
 	_help = help.get_child(0) as Label
@@ -132,6 +137,7 @@ func _notification(what: int) -> void:
 		return
 	presentation.refresh_labels()
 	_legend_caption.text = Strings.text(Strings.LEGEND)
+	_credits.text = Strings.text(Strings.MAP_CREDITS)
 	for kind: String in _terrain_labels:
 		_terrain_labels[kind].text = Strings.text(Strings.TERRAIN_LABELS[kind])
 	_update_help()

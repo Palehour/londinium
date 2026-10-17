@@ -1,0 +1,18 @@
+{
+  "note": "Provisional strip (D-074): schematic layers until the tracing of #152 adds the GeoJSON sources. The origin is provisional too. Rows 7-11 stay river so the river cells of the 8x8 map keep working.",
+  "areas": [
+    {"class": "river", "rects": [[0, 7, 16, 5]]},
+    {"class": "dock", "rects": [[10, 2, 4, 3], [12, 5, 1, 2]]},
+    {"class": "existing", "rects": [[14, 2, 2, 3], [10, 5, 2, 1], [4, 5, 2, 1]]}
+  ],
+  "roads": {
+    "add": [
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0],
+      [13, 0], [14, 0], [15, 0],
+      [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+      [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6], [9, 6], [10, 6], [11, 6],
+      [1, 5], [2, 5], [2, 4], [3, 4], [3, 3], [4, 3], [5, 3], [5, 2], [6, 2], [6, 1], [7, 1]
+    ],
+    "remove": []
+  }
+}

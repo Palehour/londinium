@@ -49,7 +49,14 @@ func constrain() -> void:
 	center.y = map_size.y / 2.0 if half.y * 2.0 >= map_size.y else clampf(center.y, half.y, map_size.y - half.y)
 
 
+# One kind per cell: water first, then the historical street over whatever stands under it.
 func terrain_at(cell: Vector2i, map: MapDef) -> String:
 	if cell in map.river_cells:
 		return "river"
+	if cell in map.dock_cells:
+		return "dock"
+	if cell in map.road_cells:
+		return "road"
+	if cell in map.existing_cells:
+		return "existing"
 	return "cultivable" if cell in map.cultivable_cells else "land"

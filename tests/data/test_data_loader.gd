@@ -611,3 +611,57 @@ func test_cause_log_cap_and_duration_ranges() -> void:
 		_documents["economy/stats.json"]["causes"]["min_duration_seconds"] = valid[1]
 		var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 		assert_eq(result.errors, [] as Array[String], str(valid))
+
+
+func test_map_layers_are_optional_and_loaded_when_present() -> void:
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	assert_true(result.catalog.maps[&"whitechapel_1850s"].dock_cells.is_empty())
+	var strip: Dictionary = _documents["maps/riverside_strip.json"]
+	var map: MapDef = result.catalog.maps[&"riverside_strip"]
+	assert_eq(map.dock_cells.size(), strip["dock_cells"].size())
+	assert_eq(map.road_cells.size(), strip["road_cells"].size())
+	assert_eq(map.existing_cells.size(), strip["existing_cells"].size())
+	assert_eq(map.terrain.size(), strip["terrain"]["riverbank"].size() + strip["terrain"]["marsh"].size())
+
+
+func test_a_dock_basin_cannot_overlap_the_river() -> void:
+	_documents["maps/whitechapel_1850s.json"]["dock_cells"] = [[0, 7]]
+	_assert_invalid("dock_cells: out of bounds or duplicate cell")
+
+
+func test_standing_buildings_cannot_stand_on_water() -> void:
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 7]]
+	_assert_invalid("existing_cells: out of bounds or duplicate cell")
+
+
+func test_road_cells_must_be_inside_the_map_and_unique() -> void:
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[8, 0]]
+	_assert_invalid("road_cells: out of bounds or duplicate cell")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 1], [1, 1]]
+	_assert_invalid("road_cells: out of bounds or duplicate cell")
+
+
+func test_terrain_labels_are_known_on_dry_cells_and_one_per_cell() -> void:
+	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"swamp": [[1, 1]]}
+	_assert_invalid("terrain.swamp: unknown terrain label")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"riverbank": [[0, 7]]}
+	_assert_invalid("terrain.riverbank: water or duplicate cell")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"riverbank": [[1, 6]], "marsh": [[1, 6]]}
+	_assert_invalid("terrain.marsh: water or duplicate cell")
+
+
+func test_a_scenario_map_must_exist() -> void:
+	_documents["scenarios/victorian_demo.json"] = {"map": "atlantis"}
+	_assert_invalid("scenarios/victorian_demo.json.map: unknown map atlantis")
+	before_each()
+	_documents["scenarios/victorian_demo.json"] = {"map": "riverside_strip"}
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_eq(result.catalog.scenarios[&"victorian_demo"]["map"], &"riverside_strip")

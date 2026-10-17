@@ -40,8 +40,9 @@ func restart_with(params: Params, preset_id: StringName) -> void:
 
 
 func _use_catalog(catalog: DataCatalog) -> void:
-	_victory_stages.assign(catalog.scenarios.get(_scenario_id, {}).get("stages", []))
-	context = EconomyContext.new(catalog, catalog.maps[&"whitechapel_1850s"])
+	var scenario: Dictionary = catalog.scenarios.get(_scenario_id, {})
+	_victory_stages.assign(scenario.get("stages", []))
+	context = EconomyContext.new(catalog, catalog.maps[scenario.get("map", MapDef.DEFAULT_ID)])
 
 
 func _start(params: Params, preset_id: StringName) -> void:

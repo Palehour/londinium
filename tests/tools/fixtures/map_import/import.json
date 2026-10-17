@@ -1,0 +1,4 @@
+{
+  "id": "fixture", "width": 4, "height": 4, "origin": [100, 240], "cell_metres": 10, "samples_per_axis": 5,
+  "priority": ["river", "dock", "marsh", "existing", "land"]
+}

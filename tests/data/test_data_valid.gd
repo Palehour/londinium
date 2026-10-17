@@ -10,7 +10,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	assert_eq(catalog.goods.size(), 7)
 	assert_eq(catalog.buildings.size(), 8)
 	assert_eq(catalog.roles.size(), 1)
-	assert_eq(catalog.maps.size(), 1)
+	# The 8x8 map of the scripted scenarios and the strip the game plays on (D-074).
+	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s"] as Array[StringName])
 	for good: GoodDef in catalog.goods.values():
 		assert_false(good.unit.is_empty())
 	var mill: RecipeDef = catalog.buildings[&"mill"].recipe
