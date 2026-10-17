@@ -92,8 +92,8 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 ## GitHub tracking
 Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
 not later. Steps and commands: `abrir-pr`. PRs are squash-merged into `develop`.
-- **`develop` está protegida:** no se mergea sin CI verde, y el merge solo lo hace Chief tras la autorización de
-  Bailey (que la confirma con Cristian).
+- **`develop` está protegida:** no se mergea sin CI verde, y el merge lo hace Cristian, o Chief en su nombre, tras la autorización de
+  Bailey (que confirma con Cristian a través de Chief).
 - **Si quedás trabado** (falta info, permiso, falla repetida o una decisión de diseño): agregá la etiqueta
   `bloqueado` al issue o PR con un comentario de qué falta, y avisá. No sigas adivinando.
 
