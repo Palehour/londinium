@@ -1,9 +1,8 @@
 extends GutTest
 
-# Issue #128: the scripts of tests/scenarios/hard/ are the Normal ones rewritten for the 800 d of Hard,
-# so that balance_report --preset hard plays every run. Here each one plays once, with the seed of its
-# file; the 20 seeds are in long/long_test_hard.gd (tools/run_long_tests). A refusal after a change in
-# data/ or in the preset means "recalibrate the script", not that the simulator broke.
+# Issue #128: the scripts of tests/scenarios/hard/ are the Normal ones rewritten for the 800 d of Hard. Playing
+# them (75 and 150 min) does not fit in the CI time limit, so their 20 seeds are only in long/long_test_hard.gd
+# (tools/run_long_tests); test_scenario_runner.gd checks the files. This one keeps the short finding of #128.
 
 const PRESET: StringName = &"hard"
 # The finding behind the 0.6 of crisis_recovery_hard (Cristian's decision in #128): at 0.4 the one-chain city
@@ -11,20 +10,6 @@ const PRESET: StringName = &"hard"
 const LOW_TAX: float = 0.4
 const LOW_TAX_SEED: int = 5
 const LOW_TAX_TICKS: int = 1200
-
-
-func test_every_hard_script_runs_clean_on_its_seed() -> void:
-	var runner: ScenarioRunner = ScenarioRunner.create()
-	assert_not_null(runner, "data/ must load")
-	if runner == null:
-		return
-	assert_eq(runner.use_difficulty(PRESET), [] as Array[String])
-	var paths: Array[String] = ScenarioRunner.preset_scenario_paths(PRESET)
-	assert_gt(paths.size(), 0)
-	for path: String in paths:
-		var result: ScenarioResult = runner.run(ScenarioRunner.load_file(path))
-		assert_eq(result.unexpected_rejections(), [] as Array[Dictionary],
-			"%s: a scripted command was refused or never ran on Hard" % result.id)
 
 
 # The "why?" of #73 will read the cause log (D-066): before the city empties it must name the lack of money (the
