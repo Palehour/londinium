@@ -12,6 +12,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		var copy: BuildingDef = BuildingDef.new()
 		copy.id = definition.id
 		copy.tags.assign(definition.tags)
+		copy.buildable = definition.buildable
 		if definition.recipe != null:
 			copy.recipe = RecipeDef.new()
 			copy.recipe.inputs.assign(definition.recipe.inputs)
@@ -29,6 +30,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.road_cells.assign(selected_map.road_cells)
 	map.existing_cells.assign(selected_map.existing_cells)
 	map.terrain.assign(selected_map.terrain)
+	map.dense_housing_cells.assign(selected_map.dense_housing_cells)
 
 
 func copy() -> EconomyContext:
@@ -41,6 +43,8 @@ func copy() -> EconomyContext:
 func building_unavailable_reason(id: StringName) -> StringName:
 	if not buildings.has(id):
 		return &"unknown_building"
+	if not buildings[id].buildable:
+		return &"not_buildable"
 	if "cultivable" in buildings[id].tags and map.cultivable_cells.is_empty():
 		return &"no_cultivable_cells"
 	for x: int in range(map.width):
@@ -59,6 +63,10 @@ func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
 	# A dock basin is water but not a grain source (D-020): nothing is built on it.
 	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells):
 		return &"requires_land"
+	# Standing buildings stay a block until the tracing of #152 (D-075). Only new building is stopped: a saved
+	# building on one of these cells stays and works (D-076).
+	if cell in map.existing_cells:
+		return &"existing_building"
 	return &""
 
 

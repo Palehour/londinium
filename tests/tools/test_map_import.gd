@@ -105,6 +105,24 @@ func test_overrides_replace_what_the_sources_say() -> void:
 	assert_eq(_cells(removed["road_cells"]), [Vector2i(0, 0), Vector2i(2, 0)] as Array[Vector2i])
 
 
+# Issue #154 (D-079): the cells where dense housing starts are listed by hand and travel to the map unchanged.
+func test_overrides_list_the_dense_housing_start_cells() -> void:
+	var config: Dictionary = _config(3, 2)
+	var overrides: Dictionary = {"areas": [{"class": "existing", "rects": [[0, 0, 2, 1]]}],
+		"roads": {"add": [[0, 1]], "remove": []}, "dense_housing_cells": [[0, 0]]}
+	var importer: MapImporter = MapImporter.new()
+	var map: Dictionary = importer.import_documents(config, {}, overrides)
+	assert_eq(importer.errors, [] as Array[String])
+	assert_eq(_cells(map["dense_housing_cells"]), [Vector2i(0, 0)] as Array[Vector2i])
+	var parsed: Dictionary = JSON.parse_string(importer.to_text(map))
+	assert_eq(_cells(parsed["dense_housing_cells"]), [Vector2i(0, 0)] as Array[Vector2i])
+	assert_false(JSON.parse_string(importer.to_text(_import(config, {}))).has("dense_housing_cells"),
+		"A map without them writes no field")
+	var outside: MapImporter = MapImporter.new()
+	outside.import_documents(config, {}, {"areas": [], "dense_housing_cells": [[5, 0]]})
+	assert_false(outside.errors.is_empty(), "A start cell outside the grid is an error")
+
+
 func test_land_beside_water_is_riverbank_and_marsh_is_kept() -> void:
 	var config: Dictionary = _config(4, 3)
 	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 2, 4, 3)]]),

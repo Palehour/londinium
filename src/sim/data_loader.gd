@@ -11,7 +11,7 @@ const BUILDING_FIELDS: Dictionary = {
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
-		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean"},
+		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
@@ -76,7 +76,7 @@ const DIFFICULTY_FOLDER: String = "difficulty"
 const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
-const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain"]
+const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain", "dense_housing_cells"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -342,16 +342,24 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			continue
 		if not _known_tags(building.tags, path + ".tags"):
 			continue
+		if raw[id].has("buildable"):
+			if raw[id]["buildable"] is not bool:
+				_errors.append("%s.buildable: expected a boolean" % path)
+				continue
+			building.buildable = raw[id]["buildable"]
 		var is_housing: bool = "housing" in building.tags
 		var schema: Dictionary = BUILDING_FIELDS.duplicate()
 		schema["capacity" if is_housing else "recipe"] = "integer"
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
+		if raw[id].has("buildable"):
+			fields.append("buildable")
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
 		numeric.erase("tags")
+		numeric.erase("buildable")
 		if not is_housing:
 			building.recipe = _recipe(numeric["recipe"], path + ".recipe",
 				"building.%s.recipe" % id, catalog)
@@ -670,7 +678,21 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 			layers[field].append(position)
 	if raw.has("terrain"):
 		_load_terrain(raw["terrain"], path + ".terrain", map)
+	if raw.has("dense_housing_cells"):
+		_load_dense_housing_cells(raw["dense_housing_cells"], path + ".dense_housing_cells", map)
 	catalog.maps[map.id] = map
+
+
+# Where dense housing stands at the start (issue #154): on a standing building with a street on one side, the access
+# every housing needs (D-079).
+func _load_dense_housing_cells(raw: Variant, location: String, map: MapDef) -> void:
+	for position: Vector2i in _map_cells(raw, location, map, []):
+		if position not in map.existing_cells:
+			_errors.append("%s: [%d, %d] is not a standing building" % [location, position.x, position.y])
+		elif not map.beside_road(position):
+			_errors.append("%s: [%d, %d] has no street on any side" % [location, position.x, position.y])
+		else:
+			map.dense_housing_cells.append(position)
 
 
 # Valid cells of one layer, in order; each accepted cell is added to `taken`.

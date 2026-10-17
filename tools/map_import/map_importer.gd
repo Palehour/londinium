@@ -53,9 +53,13 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	var classes: Dictionary[Vector2i, String] = _rasterize_areas(areas, size, config)
 	var road_cells: Dictionary[Vector2i, bool] = _rasterize_roads(roads, size)
 	_apply_overrides(overrides, classes, road_cells, size)
+	var start_cells: Array = _dense_housing_cells(overrides, size)
 	if not errors.is_empty():
 		return {}
-	return _map(config, classes, road_cells, size)
+	var map: Dictionary = _map(config, classes, road_cells, size)
+	if not start_cells.is_empty():
+		map["dense_housing_cells"] = start_cells
+	return map
 
 
 # Fixed layout so a reimport only changes the lines whose cells changed.
@@ -69,6 +73,8 @@ func to_text(map: Dictionary) -> String:
 	for label: String in map["terrain"]:
 		labels.append('"%s": %s' % [label, _cells_text(map["terrain"][label])])
 	lines.append('  "terrain": {%s}' % ", ".join(labels))
+	if map.has("dense_housing_cells"):
+		lines.append('  "dense_housing_cells": %s' % _cells_text(map["dense_housing_cells"]))
 	return "{\n%s\n}\n" % ",\n".join(lines)
 
 
@@ -254,6 +260,25 @@ func _apply_overrides(overrides: Variant, classes: Dictionary[Vector2i, String],
 				road_cells[cell] = true
 			else:
 				road_cells.erase(cell)
+
+
+# Where dense housing stands at the start (issue #154), picked by hand in the order given. The data loader checks that
+# each one is a standing building beside a street (D-079).
+func _dense_housing_cells(overrides: Variant, size: Vector2i) -> Array:
+	var cells: Array = []
+	if overrides is not Dictionary:
+		return cells
+	var raw: Variant = overrides.get("dense_housing_cells", [])
+	if raw is not Array:
+		errors.append("overrides.json.dense_housing_cells: expected a list of cells")
+		return cells
+	for entry: Variant in raw:
+		var cell: Vector2i = _cell(entry)
+		if not Rect2i(Vector2i.ZERO, size).has_point(cell):
+			errors.append("overrides.json.dense_housing_cells: cell %s is outside the grid" % str(entry))
+		else:
+			cells.append([cell.x, cell.y])
+	return cells
 
 
 # [x, y] as a cell, or (-1, -1) when it is not a pair of whole numbers.
