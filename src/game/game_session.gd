@@ -59,6 +59,17 @@ func _start(params: Params, preset_id: StringName) -> void:
 	simulation = Simulation.create_new(params, _initial_state, _seed, context, _victory_stages)
 
 
+# A saved game (issue #57) on the parameters of its difficulty: a later restart starts a new game on them.
+func load_save(saved: Dictionary, params: Params) -> void:
+	_pending.clear()
+	_start(params, StringName(saved["difficulty"]))
+	simulation = Simulation.from_save(params, context, _victory_stages, saved["simulation"])
+
+
+func scenario_id() -> StringName:
+	return _scenario_id
+
+
 func get_snapshot() -> Dictionary:
 	return simulation.snapshot()
 

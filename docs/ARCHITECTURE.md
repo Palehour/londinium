@@ -44,6 +44,8 @@ londinium/
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates, head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064)
+│   ├── game/
+│   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
 │   ├── roles/
 │   │   └── neutral_administrator.json   # { "modifiers": [] }  ← the role hook (D-014)
 │   └── maps/
@@ -65,7 +67,8 @@ londinium/
 │   │   ├── stats.gd          # rolling 60-tick windows for "per minute" figures
 │   │   ├── series_def.gd, series_registry.gd  # statistics series: label, unit, aggregation, dimensions (D-066)
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
-│   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera
+│   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
+│   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57)
 │   └── ui/                   # stats_panel/, mods_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
@@ -126,7 +129,7 @@ without them, so nothing on the machine changes their results. The mods menu (`s
 stats panel) lists the active mods in order, their conflicts and the winner of each, and moves a mod up or down: the
 map view saves the new `load_order.json`, loads the data again and starts a new game on the same difficulty. If the
 new order does not validate, the previous list is written back and the game goes on. `GameSession` keeps the
-difficulty, the active mods and their conflicts for saving (#57).
+difficulty, the active mods and their conflicts for saving (#57, see "Save and load").
 
 ## Chapter objectives (D-064, issue #56)
 `data/scenarios/victorian_demo.json` defines `victory.stages`; a scenario without that property has no victory.
@@ -183,6 +186,28 @@ empty; a malformed one (other version, sizes that do not match, buckets of anoth
 warning. A series the save lacks reads as NaN for the saved buckets. The saved form uses packed arrays per series and
 is meant for `var_to_bytes` + compression (`StatsHistory.compressed_size`, the measure of the 5 MB criterion).
 
+## Save and load (D-037, D-067, issue #57, ADR 0011)
+A save is one Variant written with `store_var` into a ZSTD-compressed file, never with objects, in `user://saves/`.
+`SaveFile.build(session)` makes the envelope: `format`, `version` (`SaveFile.VERSION`), `saved_at`, `scenario`,
+`difficulty`, `knobs` (empty until something sets them), `mods` in load order and `simulation`, which is
+`Simulation.to_save()`: `EconomyState.to_dict()`, the stats window, `stats_history_to_dict()`, the tick, the seed and
+both generators' states. `Simulation.from_save()` rebuilds it and restores the tick and the generators, so a game
+saved at minute N and played to M ends in the same state as one never saved (`tests/sim/test_save_round_trip.gd`).
+The tick and its order do not change.
+
+A save holds the state at the end of the last tick; commands still queued stay in the running game and are not
+in the file. `SaveFile.read` refuses a file that is not a save or whose economy
+lacks a field (or its kind of value) that a new `EconomyState` has, and one of another version;
+`SaveFile.check_compatible` refuses another scenario, an unknown difficulty and other mods (another set or order).
+Each refusal is a message from `Strings.save_refusal` and the current game goes on. A missing or broken history
+still loads (D-066).
+
+`Autosave` listens to `GameSession.snapshot_changed`, so it always runs right after a tick: every
+`autosave_interval_seconds` into `autosave_slots` rotating files (`autosave_<n>.sav`, going on after the newest one on
+disk), plus one file per chapter stage the moment it is met (`stage_<id>.sav`), outside the rotation; a loaded game
+does not save its met stages again. Manual saves (`manual_<unix time>.sav`) are unlimited and never overwritten.
+`GameSession.load_save` loads a save on the parameters of its difficulty.
+
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json
 // data/economy/buildings.json
@@ -206,6 +231,7 @@ Keys with ids from the era's data follow the same rule: `needs.<category>.thresh
 - Monetary parameters round to the nearest penny once, after the entire modifier list;
   ties round away from zero (2.5 → 3, -2.5 → -3). Non-monetary parameters are not rounded.
 - Time in data is in game seconds; the UI may show minutes.
-- Save/load is out of M1, but state classes expose `to_dict()`/`from_dict()` so it's cheap later.
+- State classes expose `to_dict()`/`from_dict()`; saving builds on them (see "Save and load"), so a new field has to
+  travel in both.
 - Player-facing text is a key in `locale/ui.csv` (Spanish and English) and is read only through `Strings` in `src/ui/strings.gd`. It is presentation and is not part of the tick.
 - Renderer: **Compatibility** (OpenGL) — enough for 2D squares, runs on older Macs/PCs and in CI.

@@ -90,6 +90,37 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 			_satisfaction.prime_class(_state, _params, _context, def)
 
 
+# A saved game (issue #57) resumes where it stopped: same tick and the same point of both generators, so playing on
+# gives what the game would have given without the save. `saved` is to_save(); its history may be missing.
+static func from_save(params: Params, context: EconomyContext, victory_stages: Array[Dictionary],
+		saved: Dictionary) -> Simulation:
+	var window: Array = saved.get("stats_window", [])
+	var history: Dictionary = saved.get("stats_history", {})
+	var sim: Simulation = Simulation.new(params, EconomyState.from_dict(saved["economy"]), int(saved["seed"]),
+		context, window, victory_stages, history)
+	sim._tick_count = int(saved["tick_count"])
+	sim._rng.state = int(saved["rng_state"])
+	sim._barley_rng.state = int(saved["barley_rng_state"])
+	return sim
+
+
+# The state at the end of the last tick. Commands still queued are not part of it: a save is taken between ticks.
+func to_save() -> Dictionary:
+	return {
+		"economy": _state.to_dict(),
+		"stats_window": _stats.snapshot()["window"],
+		"stats_history": stats_history_to_dict(),
+		"tick_count": _tick_count,
+		"seed": _seed,
+		"rng_state": get_rng_state(),
+		"barley_rng_state": get_barley_rng_state(),
+	}
+
+
+func has_queued_commands() -> bool:
+	return not _commands.is_empty()
+
+
 func get_building_unavailable_reason(id: StringName) -> StringName:
 	return _context.building_unavailable_reason(id) if _context != null else &"unknown_building"
 
