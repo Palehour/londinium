@@ -15,7 +15,7 @@ Las reglas de fondo están en `AGENTS.md`; acá solo el orden de trabajo.
    `docs/ARCHITECTURE.md` y los ADR en estado Aceptado de `docs/adr/`.
 4. **Plan.** Si Cristian pidió modo plan, usá `planificar-issue` y esperá su aprobación.
 5. **Decisiones.** Si falta un número de balance, una regla o un P-xxx, **detenete** y usá `decision-diseno`.
-6. **Tests primero** en la simulación: test que falla, implementación, verde.
+6. **Tests primero** en la simulación: test que falla, implementación, verde (ver `tests-primero`).
    - `src/sim/`: clases `RefCounted`, sin nodos.
    - Aleatoriedad solo con el `RandomNumberGenerator` con semilla de la simulación.
    - Dinero en peniques, `int`.

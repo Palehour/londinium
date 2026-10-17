@@ -4,9 +4,10 @@ Rules for every coding agent (Codex, Claude Code, Grok Build, Cursor) working in
 Short on purpose. If something here conflicts with a task description, this file wins; ask in the PR.
 
 ## Skills
-Process lives in six skills under `.agents/skills/<name>/SKILL.md`: `planificar-issue`, `implementar-issue`,
-`decision-diseno`, `abrir-pr`, `revisar-pr`, `docs-vivos`. Codex and Cursor load them on their own; if your
-agent does not (Claude Code does not read `.agents/`), read the matching `SKILL.md` before starting.
+Process lives in eight skills under `.agents/skills/<name>/SKILL.md`: `planificar-issue`, `implementar-issue`,
+`tests-primero`, `decision-diseno`, `abrir-pr`, `revisar-pr`, `docs-vivos`, `reflexionar`. Codex and Cursor load
+them on their own; if your agent does not (Claude Code does not read `.agents/`), read the matching `SKILL.md`
+before starting.
 A task prompt only needs the issue number, the skills that apply and, if wanted, plan mode.
 
 ## What this is
