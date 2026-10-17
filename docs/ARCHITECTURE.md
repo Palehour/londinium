@@ -78,7 +78,7 @@ londinium/
 │   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 │       └── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
-├── tools/                    # run_tests.sh / run_tests.ps1, run_long_tests.sh / .ps1, balance report script
+├── tools/                    # run_tests.sh / run_tests.ps1, check_gdscript.sh / .ps1, run_long_tests.sh / .ps1, balance report script
 ├── docs/                     # GDD.md, DECISIONS.md (canonical), ARCHITECTURE.md, WORKFLOW.md
 └── .github/                  # ci.yml, export.yml, PR template
 ```

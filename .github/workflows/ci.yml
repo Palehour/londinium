@@ -36,8 +36,17 @@ jobs:
           use-dotnet: false     # GDScript only
           include-templates: false
 
+      # Renames do not need Godot. Parse runs after import so class_name is already cached.
+      # Cristian approved adding both steps here on 2026-10-17 (issue #114).
+      - name: Check Godot 3 API renames
+        run: bash tools/check_gdscript.sh --renames-only
+
       - name: Import project (builds .godot cache / class_name list)
         run: godot --headless --path . --import
+        timeout-minutes: 5
+
+      - name: Check GDScript parse
+        run: bash tools/check_gdscript.sh --parse-only
         timeout-minutes: 5
 
       - name: Run tests

@@ -18,6 +18,11 @@ func test_every_project_script_compiles() -> void:
 
 func _collect(root: String) -> Array[String]:
 	var found: Array[String] = []
+	# DirAccess lists folders Godot's importer skips. A .gdignore marks fixtures that are
+	# not project scripts (tools/check_gdscript names them on purpose). The asserts above
+	# still apply to every script the project actually loads.
+	if FileAccess.file_exists(root.path_join(".gdignore")):
+		return found
 	var dir: DirAccess = DirAccess.open(root)
 	if dir == null:
 		return found
