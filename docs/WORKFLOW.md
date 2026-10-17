@@ -28,7 +28,7 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
 4. **PR chica** a `develop` con el template (qué cambió, cómo verificarlo en ≤ 3 pasos, dudas de docs).
 5. **CI** (`ci.yml`, job `tests (headless GUT)`): importa el proyecto y corre GUT headless en Linux. Tiene que estar verde.
 6. **Revisión de Cristian**: lee el resumen, prueba los 3 pasos en el PC si toca pantalla, mergea con
-   *squash merge*. Bailey revisa la PR antes (ver la skill `revisar-pr`) y confirma con Cristian las autorizaciones de edición de
+   *squash merge*. Bailey revisa la PR antes (ver la skill `revisar-pr`) y confirma con Cristian, a través de Chief, las autorizaciones de edición de
    `GDD.md`/`DECISIONS.md`. Opcional: pedirle además a un segundo agente que revise.
 7. Un agente por issue a la vez; issues que tocan los mismos archivos, en serie (ver "Trabajo en paralelo con Orca").
 
