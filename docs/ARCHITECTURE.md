@@ -219,7 +219,11 @@ writes and reads them and loads a save on the parameters of its difficulty (`Gam
 to `ui_accept` and `ui_cancel`, which Godot leaves without a gamepad button. The map view has two modes. **Map**
 (nothing has the focus): the d-pad moves a cell cursor, which is the selection (`MapGeometry.move_selection`, and
 `follow_selection` moves the camera when it leaves the view); LB/RB pick among the buildings that can be built now,
-A builds at the cursor, X demolishes, B goes back to selecting, the stick pans and the triggers zoom one step.
+A builds at the cursor. X demolishes only after it is held for `demolish_hold_seconds` (`MapPresentation.input`, from
+`data/ui/map.json`); a ring on that cell fills during the hold (issue #164, D-078). Releasing X early, or moving the
+cell cursor, cancels without a command, and finishing the hold submits one demolish even if X stays down. The stick
+does not cancel it. While the panel has the focus, X does not start or finish a hold. B goes back to selecting, the
+stick pans and the triggers zoom one step. Delete still demolishes on press.
 **Panel**: Menu calls `StatsPanel.enter_focus()`, which makes buttons, switches and sliders focusable and focuses the
 first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
 map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys

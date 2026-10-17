@@ -1,6 +1,6 @@
 keys,es,en
 ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s\nClick: select/build · Del: demolish · Esc: select\nMove: middle button / WASD / arrows · Zoom: wheel / + / −
-ui.help_gamepad,LB/RB elige: %s · %s · %s · %s · %s\n%s · %s · %s\nA: construir · X: demoler · B: seleccionar · Cruceta: cursor\nStick: mover · LT/RT: zoom · Menú: panel (B vuelve) · Vista: pausa,LB/RB pick: %s · %s · %s · %s · %s\n%s · %s · %s\nA: build · X: demolish · B: select · D-pad: cursor\nStick: move · LT/RT: zoom · Menu: panel (B returns) · View: pause
+ui.help_gamepad,LB/RB elige: %s · %s · %s · %s · %s\n%s · %s · %s\nA: construir · mantener X: demoler · B: seleccionar · Cruceta: cursor\nStick: mover · LT/RT: zoom · Menú: panel (B vuelve) · Vista: pausa,LB/RB pick: %s · %s · %s · %s · %s\n%s · %s · %s\nA: build · hold X: demolish · B: select · D-pad: cursor\nStick: move · LT/RT: zoom · Menu: panel (B returns) · View: pause
 ui.loading,Cargando mapa…,Loading map…
 ui.legend,Terrenos:,Terrain:
 ui.map_credits,Mapa: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth,Map: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth

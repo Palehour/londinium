@@ -8,6 +8,8 @@ var terrain: Dictionary[String, Color] = {}
 var ui_colors: Dictionary[String, Color] = {}
 var layout: Dictionary[String, float] = {}
 var camera: Dictionary[String, float] = {}
+# Hold X to demolish (issue #164). Not an economic parameter: the map reads it here, like the camera timings.
+var input: Dictionary[String, float] = {}
 var colors: Dictionary[StringName, Color] = {}
 var labels: Dictionary[StringName, String] = {}
 var errors: Array[String] = []
@@ -27,6 +29,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	ui_colors.clear()
 	layout.clear()
 	camera.clear()
+	input.clear()
 	colors.clear()
 	labels.clear()
 	if raw is not Dictionary or raw.get("terrain") is not Dictionary or raw.get("buildings") is not Dictionary:
@@ -40,6 +43,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			errors.append("data/ui/map.json.colors.%s: invalid color" % key)
 	_load_numbers(raw.get("layout"), ["cell_size", "header_height", "panel_width", "panel_margin", "help_x", "help_y", "grid_inset", "building_inset", "font_size", "label_offset_y", "selection_inset", "selection_width"], layout)
 	_load_numbers(raw.get("camera"), ["pan_speed", "zoom_step", "max_zoom_factor"], camera)
+	_load_numbers(raw.get("input"), ["demolish_hold_seconds"], input)
 	for kind: String in TERRAIN_KINDS:
 		var color: Variant = raw["terrain"].get(kind)
 		if _valid_color(color):
