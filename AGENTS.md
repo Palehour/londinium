@@ -80,6 +80,12 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
 - **No tocar archivos fuera del alcance del issue** sin justificarlo en el PR (sección "Evidencia").
+- **Rebasear solo ante conflictos reales** o cuando la rama necesita un arreglo de CI que ya entró en `develop`;
+  estar atrasada respecto de `develop` no es motivo. Siempre rebase sobre `develop`, nunca mergear `develop` dentro
+  de la rama.
+- **Antes de pedir revisión a Bailey**, el PR necesita dos corridas de CI verdes seguidas sobre el mismo commit final,
+  sin cambios en el medio (o una corrida verde y una re-verificación de que el tip no cambió). Si se pushea algo, se
+  vuelve a esperar.
 - Parallel work in Orca worktrees (setup, hot files, pitfalls): `docs/WORKFLOW.md` → "Trabajo en paralelo con Orca".
 
 ## GitHub tracking
