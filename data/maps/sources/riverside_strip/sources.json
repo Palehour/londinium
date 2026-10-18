@@ -6,6 +6,26 @@
     "url": "https://overpass-api.openhistoricalmap.org/api/interpreter",
     "downloaded": "2026-10-18",
     "licence": "CC0 1.0 (OpenHistoricalMap, https://www.openhistoricalmap.org/copyright)",
-    "layers": ["roads.geojson"]
+    "layers": ["roads.geojson", "river.geojson", "docks.geojson"]
+  },
+  "nls": {
+    "tiles": "nls_1862_74",
+    "url": "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/London-1870s/{z}/{x}/{y}.png",
+    "series": "Ordnance Survey, London 1:1056, surveyed 1862-74 (georeferenced continuous layer)",
+    "downloaded": "2026-10-18",
+    "licence": "CC-BY (NLS): Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/",
+    "sheets": [
+      {"sheet": "VII.78", "surveyed": 1873, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950218"},
+      {"sheet": "VII.87", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950233"},
+      {"sheet": "VII.88", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950236"}
+    ],
+    "gap": "The north-west corner falls on sheet VII.77, which has no 1862-74 edition (its tiles are missing or transparent): only the OHM streets there, and the blocks stay free land (option A, decision of Cristian, 2026-10-18).",
+    "layers": ["existing.geojson"],
+    "zoom": 17,
+    "probes_per_axis": 4,
+    "paper_window_metres": 100,
+    "paper_percentile": 0.95,
+    "ink_contrast": 0.06,
+    "building_min_fraction": 0.5
   }
 }

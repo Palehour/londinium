@@ -76,6 +76,30 @@ func test_the_same_export_always_gives_the_same_text() -> void:
 	assert_eq(_names(parsed), ["Burr Street", "Wapping Dock Street"] as Array[String])
 
 
+# Decision of Cristian (2026-10-18): water comes from OHM, because on the NLS sheets it is the same cream as streets.
+func test_river_and_dock_water_standing_in_the_year_become_polygons() -> void:
+	var ring: Array = [[51.505, -0.065], [51.505, -0.064], [51.504, -0.064], [51.505, -0.065]]
+	var converter: OhmConverter = OhmConverter.new()
+	var water: Dictionary = converter.water(_export([
+		_way(1, {"natural": "water", "water": "river", "name": "River Thames"}, ring),
+		_way(2, {"waterway": "dock", "name": "London Docks Western Dock", "start_date": "1805", "end_date": "1969"}, ring),
+		_way(3, {"natural": "water", "water": "lock", "start_date": "1805", "end_date": "1969"}, ring),
+		_way(4, {"waterway": "dock", "name": "Filled in", "start_date": "1805", "end_date": "1860"}, ring),
+		_way(5, {"natural": "water", "name": "Undated pond"}, ring),
+		_way(6, {"waterway": "dock", "name": "Open ring", "start_date": "1805"}, ring.slice(0, 3)),
+	]), YEAR)
+	assert_eq(_names(water["river.geojson"]), ["River Thames"] as Array[String],
+		"OHM gives the Thames no dates: a river with none stands in every year")
+	assert_eq(_names(water["docks.geojson"]), ["London Docks Western Dock", ""] as Array[String])
+	assert_string_contains("
+".join(converter.errors), "6: water is not a closed ring")
+	var polygon: Dictionary = water["docks.geojson"]["features"][0]["geometry"]
+	assert_eq(polygon["type"], "Polygon")
+	assert_eq(polygon["coordinates"][0].size(), 4)
+	var parsed: Variant = JSON.parse_string(OhmConverter.new().to_text(water["river.geojson"]))
+	assert_eq(parsed["features"][0]["geometry"]["type"], "Polygon")
+
+
 func test_a_broken_export_is_reported() -> void:
 	var converter: OhmConverter = OhmConverter.new()
 	converter.roads({"version": 0.6}, YEAR)
