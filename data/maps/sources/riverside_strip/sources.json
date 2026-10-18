@@ -1,0 +1,11 @@
+{
+  "year": 1870,
+  "ohm": {
+    "export": "ohm_export.json",
+    "query": "ohm_1870.overpassql",
+    "url": "https://overpass-api.openhistoricalmap.org/api/interpreter",
+    "downloaded": "2026-10-18",
+    "licence": "CC0 1.0 (OpenHistoricalMap, https://www.openhistoricalmap.org/copyright)",
+    "layers": ["roads.geojson"]
+  }
+}
