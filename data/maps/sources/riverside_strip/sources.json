@@ -9,23 +9,15 @@
     "layers": ["roads.geojson", "river.geojson", "docks.geojson"]
   },
   "nls": {
-    "tiles": "nls_1862_74",
-    "url": "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/London-1870s/{z}/{x}/{y}.png",
-    "series": "Ordnance Survey, London 1:1056, surveyed 1862-74 (georeferenced continuous layer)",
-    "downloaded": "2026-10-18",
-    "licence": "CC-BY (NLS): Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/",
+    "series": "Ordnance Survey, London 1:1056, surveyed 1862-74, single sheets through IIIF (decision of Cristian, 2026-10-18: not the tile bucket)",
+    "licence": "CC-BY (NLS), https://maps.nls.uk/copyright.html",
+    "credit": "Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/",
     "sheets": [
       {"sheet": "VII.78", "surveyed": 1873, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950218"},
       {"sheet": "VII.87", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950233"},
       {"sheet": "VII.88", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950236"}
     ],
-    "gap": "The north-west corner falls on sheet VII.77, which has no 1862-74 edition (its tiles are missing or transparent): only the OHM streets there, and the blocks stay free land (option A, decision of Cristian, 2026-10-18).",
-    "layers": ["existing.geojson"],
-    "zoom": 17,
-    "probes_per_axis": 4,
-    "paper_window_metres": 100,
-    "paper_percentile": 0.95,
-    "ink_contrast": 0.06,
-    "building_min_fraction": 0.5
+    "use": "Only the anchors and named sites of overrides.json are read on the sheets; water and streets come from OHM. The georeferenced sheets and the comparison image come with the tools of issue #170.",
+    "gap": "The north-west corner (cells x 0-5, y 0-3) falls on sheet VII.77, which has no 1862-74 edition: only the OHM streets there, and the land stays free (option A, decision of Cristian, 2026-10-18)."
   }
 }

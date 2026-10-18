@@ -1,5 +1,8 @@
 extends GutTest
 
+# A scenario id with no file: its game is played on the 8x8 map (MapDef.DEFAULT_ID).
+const NO_ANCHORS: StringName = &"no_objectives"
+
 var _catalog: DataCatalog
 var _session: GameSession
 var _clock: SimClock
@@ -43,10 +46,18 @@ func _new_panel(session: GameSession) -> StatsPanel:
 	return panel
 
 
-func _new_session(modifiers: Array[Modifier]) -> GameSession:
+func _new_session(modifiers: Array[Modifier], scenario_id: StringName = &"victorian_demo") -> GameSession:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign(modifiers)
-	return GameSession.new(_catalog, Params.new(_catalog, role))
+	return GameSession.new(_catalog, Params.new(_catalog, role), scenario_id)
+
+
+# Since issue #152 the demo strip starts with Oliver's Wharf standing (option A of Cristian, 2026-10-18). The panel
+# texts that need a game with no wharf yet are read on a game without a map of its own, the 8x8, with no anchors.
+func _use_game_without_anchors(modifiers: Array[Modifier] = []) -> void:
+	_session = _new_session(modifiers, NO_ANCHORS)
+	_clock.simulation = _session.simulation
+	_panel = _new_panel(_session)
 
 
 func _tick() -> void:
@@ -109,6 +120,7 @@ func test_objectives_are_hidden_when_the_scenario_has_no_victory() -> void:
 
 
 func test_panel_shows_economy_in_pounds_shillings_pence_without_sending_commands() -> void:
+	_use_game_without_anchors()
 	_panel.update_snapshot(_session.get_snapshot())
 	assert_true(_session.get("_pending").is_empty(), "binding a snapshot must not submit commands")
 	assert_eq(Strings.money(10000), "£41 13s 4d")
@@ -148,8 +160,7 @@ func test_the_unloading_slider_sends_the_split_and_follows_the_snapshot() -> voi
 
 
 func test_panel_explains_missing_bread_from_diagnostics() -> void:
-	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
-	_panel = _new_panel(_session)
+	_use_game_without_anchors([Modifier.new(&"population.initial_bread", &"set", 0)])
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
 		var cell: Vector2i = Vector2i(0, 7) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size(), 1)
 		_session.submit_command(BuildCommand.new(_session.context, id, cell))
@@ -165,8 +176,7 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 
 # Issue #106: one staffed wharf at 30 % barley brings 7 of the 10 wheat a staffed mill grinds.
 func _bread_chain_with_split(barley_percent: int) -> void:
-	_session = _new_session([Modifier.new(&"population.initial_bread", &"set", 0)])
-	_panel = _new_panel(_session)
+	_use_game_without_anchors([Modifier.new(&"population.initial_bread", &"set", 0)])
 	_session.submit_command(SetUnloadingSplitCommand.new(barley_percent))
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
 		var cell: Vector2i = Vector2i(0, 7) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size(), 1)
@@ -583,6 +593,7 @@ func test_import_switches_send_commands_and_reflect_state() -> void:
 
 
 func test_import_rows_show_tea_stock_and_coverage_flour_price_and_why_there_is_none() -> void:
+	_use_game_without_anchors()
 	_panel.update_snapshot(_session.get_snapshot())
 	var imports: Dictionary = _session.get_snapshot()["imports"]
 	assert_string_contains(_text("_tea_row"), Strings.reason(&"tea_imports_disabled"))

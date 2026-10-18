@@ -1,16 +1,16 @@
 {
   "id": "strip_chain_far",
-  "description": "Issue #67, escenario (a), lejos: la misma cadena que strip_chain_near, pero el molino y la panadería quedan arriba, sobre la calle del norte. El trigo hace 16 pasos de calle hasta el molino y la harina 14 hasta la panadería; las dos viviendas siguen dentro del radio de la panadería.",
+  "description": "Issue #67, escenario (a), lejos: la misma cadena que strip_chain_near, pero el molino y la panadería quedan arriba, sobre Old Gravel Lane, al norte. El trigo y la harina hacen muchos más pasos de calle; las dos viviendas siguen dentro del radio de la panadería.",
   "notes": "Mismos edificios y mismos costos de construcción que strip_chain_near: lo único que cambia es la distancia por calle, así que la diferencia de superávit es el transporte (D-070).",
   "map": "riverside_strip",
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [1, 1]},
-    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [14, 1]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [13, 1]},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [11, 8]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [11, 1]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [14, 2]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [14, 1]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [15, 1]}
   ]
 }

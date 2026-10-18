@@ -33,6 +33,8 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.existing_cells.assign(selected_map.existing_cells)
 	map.terrain.assign(selected_map.terrain)
 	map.dense_housing_cells.assign(selected_map.dense_housing_cells)
+	map.anchors.assign(selected_map.anchors)
+	map.named_sites.assign(selected_map.named_sites)
 	map.roads_enabled = selected_map.roads_enabled
 	map.road_diagonals.assign(selected_map.road_diagonals)
 
@@ -67,8 +69,8 @@ func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
 	# A dock basin is water but not a grain source (D-020): nothing is built on it.
 	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells):
 		return &"requires_land"
-	# Standing buildings stay a block until the tracing of #152 (D-075). Only new building is stopped: a saved
-	# building on one of these cells stays and works (D-076).
+	# Standing buildings, the anchors of the traced map (#152), stay a block (D-075). Only new building is stopped: a
+	# saved building on one of these cells stays and works (D-076).
 	if cell in map.existing_cells:
 		return &"existing_building"
 	return &""

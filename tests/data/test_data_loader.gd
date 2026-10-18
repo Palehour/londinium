@@ -637,6 +637,36 @@ func test_standing_buildings_cannot_stand_on_water() -> void:
 	_assert_invalid("existing_cells: out of bounds or duplicate cell")
 
 
+# Issue #152 (option A, 2026-10-18): each anchor stands where its building can: on the river for a wharf, on a
+# standing building otherwise, and dense housing only on a start cell (D-079).
+func test_anchors_must_stand_where_their_building_can() -> void:
+	var cases: Array[Array] = [
+		[{"name": "Church", "cell": [1, 1], "building": "", "source": "NLS"}, "[1, 1] is not a standing building"],
+		[{"name": "Wharf", "cell": [1, 1], "building": "wharf", "source": "NLS"}, "[1, 1] is not on the river"],
+		[{"name": "House", "cell": [1, 1], "building": "dense_housing", "source": "NLS"},
+			"[1, 1] is not a dense housing start cell"],
+		[{"name": "Mill", "cell": [1, 7], "building": "windmill", "source": "NLS"}, "unknown building windmill"],
+		[{"name": "", "cell": [1, 7], "building": "wharf", "source": "NLS"}, "needs a name and a source"],
+	]
+	for entry: Array in cases:
+		before_each()
+		if entry[0]["building"] == "dense_housing":
+			# A standing building, so only the missing start cell is wrong.
+			_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1]]
+		_documents["maps/whitechapel_1850s.json"]["anchors"] = [entry[0]]
+		_assert_invalid(entry[1])
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["anchors"] = [
+		{"name": "Wharf", "cell": [1, 7], "building": "wharf", "source": "NLS"}]
+	_documents["maps/whitechapel_1850s.json"]["named_sites"] = [{"name": "Stairs", "cell": [2, 7], "source": "NLS"}]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_eq(result.errors, [] as Array[String])
+	if result.is_ok():
+		var map: MapDef = result.catalog.maps[&"whitechapel_1850s"]
+		assert_eq(map.anchors, {Vector2i(1, 7): &"wharf"} as Dictionary[Vector2i, StringName])
+		assert_eq(map.named_sites, {Vector2i(2, 7): "Stairs"} as Dictionary[Vector2i, String])
+
+
 func test_road_cells_must_be_inside_the_map_and_unique() -> void:
 	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[8, 0]]
 	_assert_invalid("road_cells: out of bounds or duplicate cell")

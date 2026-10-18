@@ -8,7 +8,7 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
   `cell_metres` el lado de la casilla (50 m, D-069), `width`/`height` en casillas, `samples_per_axis` cuántas
   muestras por eje se toman en cada casilla, y `priority` el orden de desempate entre clases. `roads_enabled`
   (opcional, `false` si falta) dice si el mapa se juega con calles (#67, D-080): `true` en la franja.
-- Capas calcadas en QGIS, exportadas como GeoJSON en EPSG:27700 (todas opcionales):
+- Capas en GeoJSON, EPSG:27700 (todas opcionales). En la franja salen del export de OpenHistoricalMap (ver abajo):
   - `river.geojson`, `docks.geojson`, `marsh.geojson`, `existing.geojson`: polígonos (se admiten huecos y
     MultiPolygon). Cada casilla toma la clase que cubre la mayoría de sus muestras; lo que no cubre ningún
     polígono es tierra.
@@ -18,16 +18,21 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
   `areas`: lista de `{"class": "river|dock|marsh|existing|land", "rects": [[x, y, ancho, alto]]}` (la última
   gana). `roads`: `{"add": [[x, y]], "remove": [[x, y]], "diagonals": [[x1, y1, x2, y2]]}`. Las diagonales (D-058) son
   aristas entre dos calles históricas que se tocan por la esquina; se listan una por una y nunca se deducen de las
-  casillas. En la franja provisoria la lista está vacía y la completa #152. `dense_housing_cells` (opcional):
+  casillas. En la franja la lista está vacía: con las calles de OHM ninguna pasa de una casilla a otra solo por la esquina.
+  `dense_housing_cells` (opcional):
   `[[x, y]]`, las casillas donde arranca la vivienda densa, en orden (#154, D-075, D-079); cada una tiene que ser
   edificación existente con una calle a un lado, y `startup.dense_housing_occupied` dice cuántas se ocupan.
+  `anchors` (opcional, #152): anclas históricas leídas en las hojas, `{"name", "cell", "building", "source"}`.
+  `building` es el edificio que está desde el arranque (`""` si no tiene función). Un ancla en tierra es
+  edificación existente; la de un `wharf` va sobre el río. Ningún ancla se demuele. `named_sites` (opcional):
+  `{"name", "cell", "source"}`, solo un nombre en una casilla; no bloquea nada.
 
 ## Qué sale
 `river_cells`, `dock_cells`, `road_cells`, `existing_cells`, `terrain` (`riverbank`: tierra junto al río o a
 una dársena; `marsh`: lo calcado como marisma; el resto es tierra firme), `roads_enabled`, `road_diagonals` y, si
-overrides lo trae, `dense_housing_cells`. Las reglas de calles son de #67 (en `src/sim/road_network.gd`) y las de
-terreno de #88. La edificación existente no se puede edificar hasta el calcado de #152; la vivienda densa inicial se
-pone sobre ella (D-075). Las dársenas no se pueden edificar (D-020).
+overrides lo trae, `dense_housing_cells`, `anchors` y `named_sites`. Las reglas de calles son de #67 (en
+`src/sim/road_network.gd`) y las de terreno de #88. La edificación existente no se puede edificar; la vivienda densa
+inicial se pone sobre ella (D-075). Las dársenas no se pueden edificar (D-020).
 
 ## Reimportar
 ```
@@ -37,8 +42,24 @@ GODOT=/ruta/a/godot tools/map_import.sh all --check          # solo compara, sal
 En Windows: `powershell -ExecutionPolicy Bypass -File tools\map_import.ps1 riverside_strip`.
 El test `tests/tools/test_map_import.gd` falla si un mapa commiteado no coincide con sus fuentes.
 
+## La franja de Wapping (`riverside_strip`, #152)
+Opción A de Cristian (2026-10-18): el agua, las calles y las anclas históricas quedan fijas y el resto de la tierra
+queda libre. `sources.json` dice de dónde sale cada cosa:
+- **Calles, río y dársenas:** OpenHistoricalMap, CC0. `ohm_export.json` es la respuesta de Overpass a
+  `ohm_1870.overpassql`, bajada el 2026-10-18; se guardan solo las vías en pie en 1870. OHM no tiene Wapping High
+  Street ni la calle de la ribera: la franja no la trae.
+- **Anclas y sitios con nombre:** leídos en las hojas OS London 1:1056 VII.78, VII.87 y VII.88 (NLS, CC-BY, por
+  IIIF, con la capa moderna apagada). El georreferenciado de las hojas y la imagen de comparación vienen con las
+  herramientas de #170.
+- **Esquina noroeste** (casillas x 0-5, y 0-3): cae en la hoja VII.77, que no tiene edición de 1862-74; ahí van
+  solo las calles de OHM y la tierra queda libre.
+
+Para bajar el export otra vez (no lo hace ningún test ni el CI):
+```
+curl -s --data-urlencode data@data/maps/sources/riverside_strip/ohm_1870.overpassql https://overpass-api.openhistoricalmap.org/api/interpreter > data/maps/sources/riverside_strip/ohm_export.json
+```
+
 ## Fuentes y atribución
-Base: OS London 1:1056 (1862–1874), National Library of Scotland, CC-BY. Nombres y calles: Stanford's Library
-Map of London (1862). Antes de descargar teselas, revisar los términos de uso de NLS; si no, calcar a mano desde
-el visor. Créditos en `CREDITS.md` y en el juego. La franja `riverside_strip` es provisoria (D-074): sale solo de
-`overrides.json` hasta el calcado de #152.
+Base: OS London 1:1056 (1862–1874), National Library of Scotland, CC-BY: «Reproduced with the permission of the
+National Library of Scotland» (https://maps.nls.uk/). Calles y agua de la franja: OpenHistoricalMap (CC0). Nombres
+y calles del 8×8: Stanford's Library Map of London (1862). Créditos en `CREDITS.md` y en el juego.

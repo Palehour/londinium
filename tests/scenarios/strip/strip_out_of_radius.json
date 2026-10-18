@@ -1,16 +1,16 @@
 {
   "id": "strip_out_of_radius",
-  "description": "Issue #67, escenario (b): la cadena de strip_chain_near más una tercera vivienda en la esquina noreste, a 16 pasos de calle de la panadería (radio 8). Esa vivienda queda fuera del radio: no recibe pan aunque el almacén tenga, y el diagnóstico y el overlay la marcan.",
+  "description": "Issue #67, escenario (b): la cadena de strip_chain_near más una tercera vivienda en la esquina noreste, lejos por calle de la panadería (radio 8). Esa vivienda queda fuera del radio: no recibe pan aunque el almacén tenga, y el diagnóstico y el overlay la marcan.",
   "notes": "Mide que la vivienda de [15, 1] aparece como no servida en snapshot.distance.houses. Si falla después de un cambio de radio en data/, hay que recalibrarlo con Mason.",
   "map": "riverside_strip",
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [3, 5]},
-    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 5]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [7, 5]},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [11, 8]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [9, 7]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [9, 6]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [13, 6]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [15, 1]}
   ]
 }

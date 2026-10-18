@@ -1,4 +1,16 @@
 {
   "areas": [],
-  "roads": {"add": [], "remove": [], "diagonals": []}
+  "roads": {"add": [], "remove": [], "diagonals": []},
+  "dense_housing_cells": [[8, 6]],
+  "anchors": [
+    {"name": "Pier Head", "cell": [8, 6], "building": "dense_housing", "source": "NLS OS London 1:1056, sheet VII.87 (1872): the west Pier Head stands at (6, 6), which has no OHM street on any side, so the starting house is on the nearest lot beside one (decision of Cristian, 2026-10-18): Green Bank at (8, 5), two cells from it and one from the east Pier Head (7, 7)"},
+    {"name": "Oliver's Wharf", "cell": [10, 8], "building": "wharf", "source": "NLS OS London 1:1056, sheet VII.87 (1872): the warehouse is at (8, 7), where no OHM street reaches the river, so the wharf is on the nearest river cell beside one, Well Alley (the rule of Cristian for Pier Head, 2026-10-18)"},
+    {"name": "St John's Church", "cell": [9, 5], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872); it shares the cell with Green Bank (OHM)"},
+    {"name": "St Peter's Church", "cell": [13, 0], "building": "", "source": "NLS OS London 1:1056, sheet VII.78 (1873)"},
+    {"name": "Town of Ramsgate", "cell": [7, 6], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872): no label on the sheet; the inn stands beside Wapping Old Stairs, to be confirmed by Chronicler"}
+  ],
+  "named_sites": [
+    {"name": "Thames Police Station", "cell": [12, 7], "source": "NLS OS London 1:1056, sheet VII.88 (1872)"},
+    {"name": "Wapping Old Stairs", "cell": [7, 7], "source": "NLS OS London 1:1056, sheet VII.87 (1872)"}
+  ]
 }

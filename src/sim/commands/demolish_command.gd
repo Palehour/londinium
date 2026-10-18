@@ -19,6 +19,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	reason = &"no_building"
 	for index: int in range(state.buildings.size()):
 		if state.buildings[index]["cell"] == [_cell.x, _cell.y]:
+			if _is_anchor(state.buildings[index]["definition_id"]):
+				reason = &"historic_anchor"
+				return
 			var refund: int = _refund(state, params, state.buildings[index])
 			state.money += refund
 			# Net spending keeps the panel's construction line honest.
@@ -49,8 +52,17 @@ func _demolish_road(state: EconomyState, params: Params) -> void:
 		accepted = true
 		reason = &""
 		return
-	if _context != null and _context.map.roads_enabled and _cell in _context.map.road_cells:
+	# An anchor may share its cell with a historic street, like St John's with Green Bank: the anchor is what stands.
+	if _is_anchor(&""):
+		reason = &"historic_anchor"
+	elif _context != null and _context.map.roads_enabled and _cell in _context.map.road_cells:
 		reason = &"historic_road"
+
+
+# A historic anchor of the map is never demolished (issue #152): the building it stands with, or the cell itself when
+# it has no use. Another building on the cell, like one from a saved game (D-076), is demolished as usual.
+func _is_anchor(definition_id: StringName) -> bool:
+	return _context != null and _context.map.anchors.has(_cell) and _context.map.anchors[_cell] == definition_id
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:

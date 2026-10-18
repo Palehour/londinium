@@ -69,7 +69,7 @@ func test_streets_go_only_on_free_land() -> void:
 	assert_eq(_build_road(sim, LAND).reason, &"road_cell")
 
 
-# The standing buildings of the map block new building until the tracing of #152 (D-075): streets too.
+# The standing buildings of the map block new building (D-075): streets too.
 func test_no_street_on_a_standing_building() -> void:
 	_context.map.existing_cells.append(LAND)
 	var sim: Simulation = _sim()

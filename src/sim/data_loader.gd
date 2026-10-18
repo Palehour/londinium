@@ -83,7 +83,7 @@ const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
 const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain", "dense_housing_cells",
-	"roads_enabled", "road_diagonals"]
+	"roads_enabled", "road_diagonals", "anchors", "named_sites"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -716,7 +716,51 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 			map.roads_enabled = raw["roads_enabled"]
 	if raw.has("road_diagonals"):
 		_load_diagonals(raw["road_diagonals"], path + ".road_diagonals", map)
+	if raw.has("anchors"):
+		_load_anchors(raw["anchors"], path + ".anchors", map, catalog)
+	if raw.has("named_sites"):
+		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
+			map.named_sites[entry["cell"]] = entry["name"]
 	catalog.maps[map.id] = map
+
+
+# Historic anchors (issue #152): each stands where its building can, on the river for a wharf and on a standing
+# building otherwise; dense housing only on a start cell, so the startup knob of D-075 still decides it.
+func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
+	for entry: Dictionary in _named_places(raw, location, map):
+		var cell: Vector2i = entry["cell"]
+		var building: StringName = StringName(str(entry.get("building")))
+		var problem: String = ""
+		if entry.get("building") is not String or (building != &"" and not catalog.buildings.has(building)):
+			problem = "unknown building %s" % building
+		elif building != &"" and "river" in catalog.buildings[building].tags:
+			problem = "" if cell in map.river_cells else "is not on the river"
+		elif cell not in map.existing_cells:
+			problem = "is not a standing building"
+		elif building == Simulation.DENSE_HOUSING and cell not in map.dense_housing_cells:
+			problem = "is not a dense housing start cell"
+		if not problem.is_empty():
+			_errors.append("%s: [%d, %d] %s" % [location, cell.x, cell.y, problem])
+			continue
+		map.anchors[cell] = building
+
+
+# Entries with a name, a source and a cell of the map, each with its cell as a Vector2i.
+func _named_places(raw: Variant, location: String, map: MapDef) -> Array[Dictionary]:
+	var places: Array[Dictionary] = []
+	if raw is not Array:
+		_errors.append("%s: expected an array" % location)
+		return places
+	for entry: Variant in raw:
+		if entry is not Dictionary or entry.get("name") is not String or entry.get("source") is not String \
+				or entry["name"].is_empty() or entry["source"].is_empty():
+			_errors.append("%s: %s needs a name and a source" % [location, str(entry)])
+			continue
+		for cell: Vector2i in _map_cells([entry.get("cell")], location, map, []):
+			var place: Dictionary = entry.duplicate()
+			place["cell"] = cell
+			places.append(place)
+	return places
 
 
 # Diagonal edges of the historic streets (D-058, D-080): listed one by one, never guessed from the cells. Each joins

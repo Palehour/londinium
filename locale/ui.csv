@@ -3,7 +3,7 @@ ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Calle\nC
 ui.help_gamepad,LB/RB elige: %s · %s · %s · %s · %s\n%s · %s · %s · Calle\nA: construir · mantener X: demoler · B: seleccionar · Cruceta: cursor\nStick: mover · LT/RT: zoom · Menú: panel (B vuelve) · Vista: pausa,LB/RB pick: %s · %s · %s · %s · %s\n%s · %s · %s · Street\nA: build · hold X: demolish · B: select · D-pad: cursor\nStick: move · LT/RT: zoom · Menu: panel (B returns) · View: pause
 ui.loading,Cargando mapa…,Loading map…
 ui.legend,Terrenos:,Terrain:
-ui.map_credits,Mapa: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth,Map: OS 1:1056 (1862–1874) · NLS · CC-BY · Stanford (1862) · Booth
+ui.map_credits,Mapa: OS 1:1056 (1862–1874) · NLS · CC-BY · OHM (CC0) · Stanford (1862) · Booth,Map: OS 1:1056 (1862–1874) · NLS · CC-BY · OHM (CC0) · Stanford (1862) · Booth
 ui.no_cultivable_cells,Este mapa no tiene casillas cultivables.,This map has no cultivable cells.
 ui.disabled_building,%s (desactivado: %s),%s (disabled: %s)
 ui.select,Selección,Selection
@@ -170,6 +170,7 @@ ui.reason.no_road_access,Sin acceso a calle.,No street access.
 ui.reason.no_route,Sin ruta: ninguna calle lo une con quien le trae el insumo.,No route: no street joins it to whoever brings its input.
 ui.reason.road_cell,La casilla es una calle.,The cell is a street.
 ui.reason.historic_road,Las calles históricas no se demuelen.,Historic streets cannot be demolished.
+ui.reason.historic_anchor,Los edificios históricos del mapa no se demuelen.,The historic buildings of the map cannot be demolished.
 ui.reason.roads_disabled,En este mapa no se construyen calles.,Streets cannot be built on this map.
 ui.objectives,Objetivos del capítulo,Chapter objectives
 ui.objective_population,Población: %.1f / %d · media de %d s · %s,Population: %.1f / %d · %d s average · %s
