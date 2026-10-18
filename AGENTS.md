@@ -95,6 +95,7 @@ not later. Steps and commands: `abrir-pr`. PRs are squash-merged into `develop`.
 - **Labels al crear cada PR y su issue:** `area:*` (obligatorio; `area:docs` para cambios solo de documentación), `tipo:*`, prioridad `p1`/`p2`/`p3`, `en-revision`
   en el PR, `agente:*` según quién lo hizo (`agente:codex`, `agente:claude`, `agente:grok` = Grok Build,
   `agente:grokbot` = Chief y los bots de Grok Bot) y `hito-N` si pertenece a un hito.
+- **Título de issue y PR:** `tipo(área): descripción en minúscula`, en castellano; épicas `Hito N (épica): …`; D-xxx/P-xxx y dependencias (tras #N) van en el cuerpo.
 - **`develop` está protegida:** no se mergea sin CI verde, y el merge lo hace Cristian, o Chief en su nombre, tras la autorización de
   Bailey (que confirma con Cristian a través de Chief).
 - **Si quedás trabado** (falta info, permiso, falla repetida o una decisión de diseño): agregá la etiqueta
