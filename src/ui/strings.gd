@@ -32,6 +32,9 @@ const NO_CULTIVABLE_CELLS: StringName = &"ui.no_cultivable_cells"
 const DISABLED_BUILDING: StringName = &"ui.disabled_building"
 const SELECT: StringName = &"ui.select"
 const MODE: StringName = &"ui.mode"
+# The player's street on the build cycle (issue #168), and the panel's warning for a long transport leg (D-080).
+const ROAD: StringName = &"ui.road"
+const TRANSPORT_EXPENSIVE: StringName = &"ui.transport_expensive"
 const PENDING: StringName = &"ui.pending"
 const SUCCESS: StringName = &"ui.success"
 const LOAD_ERROR: StringName = &"ui.load_error"
@@ -130,7 +133,8 @@ const UNIT_PRICE: String = "%.2f d"
 
 const TERRAIN_LABELS: Dictionary[String, StringName] = {
 	"land": &"ui.terrain.land", "river": &"ui.terrain.river", "cultivable": &"ui.terrain.cultivable",
-	"dock": &"ui.terrain.dock", "road": &"ui.terrain.road", "existing": &"ui.terrain.existing",
+	"dock": &"ui.terrain.dock", "road": &"ui.terrain.road", "player_road": &"ui.terrain.player_road",
+	"existing": &"ui.terrain.existing",
 }
 const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 	&"bankruptcy": &"ui.condition.bankruptcy", &"hunger": &"ui.condition.hunger",
@@ -332,7 +336,7 @@ static func reason(key: StringName) -> String:
 static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
-		HELP, HELP_GAMEPAD, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, PENDING, SUCCESS,
+		HELP, HELP_GAMEPAD, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, ROAD, TRANSPORT_EXPENSIVE, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,

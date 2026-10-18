@@ -4,6 +4,9 @@ extends RefCounted
 signal snapshot_changed(snapshot: Dictionary)
 signal command_resolved(accepted: bool, reason: StringName)
 
+# The player's street on the build menu (issue #168, D-080). Not a building: it can be placed on any map with streets.
+const ROAD: StringName = &"road"
+
 var simulation: Simulation
 var context: EconomyContext
 # The preset this game runs on (D-065), kept for saving (#57).
@@ -76,6 +79,8 @@ func get_snapshot() -> Dictionary:
 
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
+	if id == ROAD:
+		return &"" if context.map.roads_enabled else &"roads_disabled"
 	return simulation.get_building_unavailable_reason(id)
 
 

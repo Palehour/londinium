@@ -851,3 +851,21 @@ func test_a_split_off_the_notch_shows_as_it_is_until_the_slider_moves() -> void:
 	_tick()
 	_session.publish_tick()
 	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 40)
+
+
+# Issue #168 (D-080): a leg of 10 steps or more (transport.expensive_steps) is named under the buildings; a short one
+# is not.
+func test_panel_warns_about_an_expensive_transport_leg() -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["distance"]["legs"] = [
+		{"cell": [3, 4], "definition_id": &"bakery", "good": &"flour", "supplier_cell": [7, 8],
+			"supplier_id": &"mill", "steps": 12, "cost_per_minute": 1.2, "expensive": true},
+		{"cell": [5, 5], "definition_id": &"mill", "good": &"wheat", "supplier_cell": [5, 6],
+			"supplier_id": &"wharf", "steps": 2, "cost_per_minute": 0.2, "expensive": false},
+	]
+	_panel.update_snapshot(snapshot)
+	var buildings: String = _text("_buildings")
+	assert_string_contains(buildings, Strings.text(Strings.TRANSPORT_EXPENSIVE)
+		% [Strings.building_label("bakery"), 3, 4, Strings.building_label("mill"), 7, 8, 12])
+	assert_false(buildings.contains(Strings.text(Strings.TRANSPORT_EXPENSIVE)
+		% [Strings.building_label("mill"), 5, 5, Strings.building_label("wharf"), 5, 6, 2]), "A short leg is not named")

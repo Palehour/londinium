@@ -1,6 +1,10 @@
 extends Node2D
 
 const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
+# The player's street (issue #168, D-080): not a building, so it stays out of TYPES. It is the last entry of the
+# LB/RB cycle and key 9, only on a map with streets.
+const ROAD: StringName = GameSession.ROAD
+const ROAD_KEY: Key = KEY_9
 # Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
 const DEMOLISH_RING_POINTS: int = 32
 
@@ -247,8 +251,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GamepadBindings.is_gamepad(event):
 		_gamepad_command(event)
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1:
-			var type: StringName = TYPES[event.keycode - KEY_1]
+		if (event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1) or event.keycode == ROAD_KEY:
+			var type: StringName = ROAD if event.keycode == ROAD_KEY else TYPES[event.keycode - KEY_1]
 			var reason_id: StringName = session.get_building_unavailable_reason(type)
 			var reason: String = presentation.building_unavailable_reason(reason_id)
 			_building_type = type if reason.is_empty() else &""
@@ -269,7 +273,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				geometry.select_cell(event.position - header_offset)
 				if _building_type != &"":
-					_submit(BuildCommand.new(session.context, _building_type, geometry.screen_to_cell(event.position - header_offset)))
+					_submit(_place_command(geometry.screen_to_cell(event.position - header_offset)))
 			elif event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 				geometry.zoom *= zoom_step if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / zoom_step
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
@@ -302,7 +306,7 @@ func _gamepad_command(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"map_build_next") or event.is_action_pressed(&"map_build_prev"):
 		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
 	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
-		_submit(BuildCommand.new(session.context, _building_type, geometry.selected))
+		_submit(_place_command(geometry.selected))
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
@@ -374,13 +378,19 @@ func _draw_demolish_ring(cell_size: float) -> void:
 	draw_arc(center, radius, start, start + TAU * _demolish_progress, DEMOLISH_RING_POINTS, presentation.ui_colors["selection"], presentation.layout["selection_width"])
 
 
-# Selecting, then every building that can be built now; the help already says why the others cannot.
+# Selecting, then every building that can be built now and the street; the help already says why the others cannot.
 func _cycle_building(step: int) -> void:
 	var choices: Array[StringName] = [&""]
-	for type: StringName in TYPES:
+	for type: StringName in TYPES + [ROAD]:
 		if session.get_building_unavailable_reason(type) == &"":
 			choices.append(type)
 	_building_type = choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())]
+
+
+func _place_command(cell: Vector2i) -> SimulationCommand:
+	if _building_type == ROAD:
+		return BuildRoadCommand.new(session.context, cell)
+	return BuildCommand.new(session.context, _building_type, cell)
 
 
 func _submit(command: SimulationCommand) -> void:
@@ -499,7 +509,8 @@ func _reset_view() -> void:
 
 
 func _update_mode() -> void:
-	_mode.text = Strings.text(Strings.MODE) % [presentation.labels.get(_building_type, Strings.text(Strings.SELECT)), geometry.selected]
+	var label: String = Strings.text(Strings.ROAD) if _building_type == ROAD else presentation.labels.get(_building_type, Strings.text(Strings.SELECT))
+	_mode.text = Strings.text(Strings.MODE) % [label, geometry.selected]
 
 
 func _draw() -> void:
@@ -512,6 +523,10 @@ func _draw() -> void:
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
 			draw_rect(Rect2(Vector2(cell) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain[geometry.terrain_at(cell, map)])
+	# The player's streets come from the state, not the map, in their own colour: unlike the historic ones they can be
+	# demolished.
+	for road: Array in _snapshot["distance"]["player_roads"]:
+		draw_rect(Rect2(Vector2(road[0], road[1]) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain["player_road"])
 	var font: Font = ThemeDB.fallback_font
 	for building: Dictionary in _snapshot["economy"]["buildings"]:
 		var cell: Vector2 = Vector2(building["cell"][0], building["cell"][1])

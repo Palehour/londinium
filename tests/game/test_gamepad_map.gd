@@ -451,3 +451,103 @@ func test_help_switches_to_gamepad_glyphs_and_back() -> void:
 	key.pressed = true
 	_viewport.push_input(key)
 	assert_eq(help.text, Strings.text(Strings.HELP) % _labels(view))
+
+
+# The player's streets (issue #168, D-080): one more entry of the LB/RB cycle on a map with streets; A puts one cell
+# down and holding X takes it away like a building.
+func _street_at(view: Node2D, cell: Vector2i) -> bool:
+	return [cell.x, cell.y] in _session(view).get_snapshot()["distance"]["player_roads"]
+
+
+func _pick_street(view: Node2D) -> void:
+	for press: int in range(view.get("TYPES").size() + 2):
+		if view.get("_building_type") == view.get("ROAD"):
+			return
+		_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq(view.get("_building_type"), view.get("ROAD"), "The cycle reaches the street")
+
+
+func _place_street(view: Node2D) -> Vector2i:
+	var cell: Vector2i = _free_land_cell(view)
+	assert_ne(cell, Vector2i(-1, -1))
+	_move_cursor_to(view, cell)
+	_pick_street(view)
+	_pad(JOY_BUTTON_A)
+	_tick(view)
+	assert_true(_street_at(view, cell), "A puts a street on the cursor")
+	return cell
+
+
+func test_bumpers_cycle_includes_the_street() -> void:
+	var view: Node2D = await _view()
+	assert_true(_session(view).context.map.roads_enabled, "The game plays the strip, which has streets")
+	_pick_street(view)
+	var mode: Label = view.get("_mode") as Label
+	assert_string_contains(mode.text, Strings.text(Strings.ROAD))
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq(view.get("_building_type"), &"", "After the street the cycle goes back to selecting")
+	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	assert_eq(view.get("_building_type"), view.get("ROAD"), "LB from selecting goes back to the street")
+
+
+func test_a_places_a_street_at_cursor() -> void:
+	var view: Node2D = await _view()
+	_listen(view)
+	var cell: Vector2i = _place_street(view)
+	assert_eq(_accepted, 1)
+	assert_eq(_building_at(view, cell), &"", "A street is not a building")
+
+
+func test_holding_x_demolishes_a_player_street() -> void:
+	var view: Node2D = await _view()
+	view.set_process(false)
+	var cell: Vector2i = _place_street(view)
+	_listen(view)
+	_press_x()
+	view.call("_process", _hold_seconds(view) * 2.0)
+	_release_x()
+	_tick(view)
+	assert_false(_street_at(view, cell), "Holding X demolishes the player's street")
+	assert_eq(_accepted, 1)
+
+
+func test_key_9_and_click_place_a_street() -> void:
+	var view: Node2D = await _view()
+	var cell: Vector2i = _free_land_cell(view)
+	assert_ne(cell, Vector2i(-1, -1))
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_9
+	key.pressed = true
+	_viewport.push_input(key)
+	assert_eq(view.get("_building_type"), view.get("ROAD"), "9 picks the street")
+	var presentation: MapPresentation = view.get("presentation") as MapPresentation
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = _geometry(view).cell_to_screen(cell) + Vector2(0, presentation.layout["header_height"])
+	_viewport.push_input(click)
+	_tick(view)
+	assert_true(_street_at(view, cell), "A click puts the street down")
+
+
+func test_help_names_the_street() -> void:
+	var view: Node2D = await _view()
+	var help: Label = view.get("_help") as Label
+	assert_string_contains(help.text, Strings.text(Strings.ROAD))
+	_pad(JOY_BUTTON_DPAD_UP)
+	assert_string_contains(help.text, Strings.text(Strings.ROAD))
+
+
+# D-082: with the keyboard, Delete takes a player street away at once, like a building.
+func test_delete_demolishes_a_player_street() -> void:
+	var view: Node2D = await _view()
+	view.set_process(false)
+	var cell: Vector2i = _place_street(view)
+	_listen(view)
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_DELETE
+	key.pressed = true
+	_viewport.push_input(key)
+	_tick(view)
+	assert_false(_street_at(view, cell), "Delete demolishes the player's street")
+	assert_eq(_accepted, 1)

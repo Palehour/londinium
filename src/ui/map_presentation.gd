@@ -1,8 +1,8 @@
 class_name MapPresentation
 extends RefCounted
 
-# Every kind of cell the map draws, in legend order.
-const TERRAIN_KINDS: Array[String] = ["land", "river", "cultivable", "dock", "road", "existing"]
+# Every kind of cell the map draws, in legend order. The player's streets (issue #168) are drawn from the state.
+const TERRAIN_KINDS: Array[String] = ["land", "river", "cultivable", "dock", "road", "player_road", "existing"]
 
 var terrain: Dictionary[String, Color] = {}
 var ui_colors: Dictionary[String, Color] = {}
