@@ -56,8 +56,11 @@ queda libre. `sources.json` dice de dónde sale cada cosa:
 - **Libertades** (`history_notes`): el Támesis de OHM no tiene fecha [DEBATED], y la esclusa de Wapping no entra a
   50 m por casilla, así que la Wapping Basin queda cerrada al río [INVENTED].
 - **Anclas y sitios con nombre:** leídos en las hojas OS London 1:1056 VII.78, VII.87 y VII.88 (NLS, CC-BY, por
-  IIIF, con la capa moderna apagada). El georreferenciado de las hojas y la imagen de comparación vienen con las
-  herramientas de #170.
+  IIIF, con la capa moderna apagada). Los recortes a 1/8 están en `nls_sheets/`; `sources.json` (`nls`) da sus
+  puntos de control (esquinas de calles de OHM por id de nodo y esquinas de marco compartidas) y dónde está cada
+  sitio en su hoja. `tools/map_sources --compare` (#170) escribe `nls_report.md` (el error de cada punto y la casilla
+  de cada sitio según la hoja) y `docs/screenshots/riverside_strip_compare.png`; `--check` avisa si quedaron viejos.
+  Cómo bajar y unir una hoja: `tools/map_sources/README.md`.
 - **Esquina noroeste** (casillas x 0-5, y 0-3): cae en la hoja VII.77, que no tiene edición de 1862-74; ahí van
   solo las calles de OHM y la tierra queda libre.
 
