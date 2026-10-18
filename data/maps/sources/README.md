@@ -22,10 +22,14 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
   `dense_housing_cells` (opcional):
   `[[x, y]]`, las casillas donde arranca la vivienda densa, en orden (#154, D-075, D-079); cada una tiene que ser
   edificación existente con una calle a un lado, y `startup.dense_housing_occupied` dice cuántas se ocupan.
-  `anchors` (opcional, #152): anclas históricas leídas en las hojas, `{"name", "cell", "building", "source"}`.
+  `anchors` (opcional, #152): anclas históricas leídas en las hojas,
+  `{"name", "cell", "building", "source", "history"}`.
   `building` es el edificio que está desde el arranque (`""` si no tiene función). Un ancla en tierra es
   edificación existente; la de un `wharf` va sobre el río. Ningún ancla se demuele. `named_sites` (opcional):
-  `{"name", "cell", "source"}`, solo un nombre en una casilla; no bloquea nada.
+  `{"name", "cell", "source", "history"}`, solo un nombre en una casilla; no bloquea nada. `history` abre con la
+  etiqueta de Chronicler (`[FACT]`, `[FACT ±1]`, `[DEBATED]`, `[LEGEND]` o `[INVENTED]`) y dice qué es cierto y qué
+  no. `history_notes` (opcional): las libertades del mapa entero, cada una con su etiqueta. Las tres listas pasan
+  tal cual al JSON del mapa.
 
 ## Qué sale
 `river_cells`, `dock_cells`, `road_cells`, `existing_cells`, `terrain` (`riverbank`: tierra junto al río o a
@@ -46,8 +50,11 @@ El test `tests/tools/test_map_import.gd` falla si un mapa commiteado no coincide
 Opción A de Cristian (2026-10-18): el agua, las calles y las anclas históricas quedan fijas y el resto de la tierra
 queda libre. `sources.json` dice de dónde sale cada cosa:
 - **Calles, río y dársenas:** OpenHistoricalMap, CC0. `ohm_export.json` es la respuesta de Overpass a
-  `ohm_1870.overpassql`, bajada el 2026-10-18; se guardan solo las vías en pie en 1870. OHM no tiene Wapping High
-  Street ni la calle de la ribera: la franja no la trae.
+  `ohm_1870.overpassql`, bajada el 2026-10-18; se guardan solo las vías en pie en 1870. **Hueco conocido de OHM:** no
+  tiene Wapping High Street ni ninguna calle de la ribera, así que la franja no la trae (`sources.json`,
+  `known_gaps`). Agregarla desde la hoja NLS es una decisión aparte: costaría unas 11 casillas libres.
+- **Libertades** (`history_notes`): el Támesis de OHM no tiene fecha [DEBATED], y la esclusa de Wapping no entra a
+  50 m por casilla, así que la Wapping Basin queda cerrada al río [INVENTED].
 - **Anclas y sitios con nombre:** leídos en las hojas OS London 1:1056 VII.78, VII.87 y VII.88 (NLS, CC-BY, por
   IIIF, con la capa moderna apagada). El georreferenciado de las hojas y la imagen de comparación vienen con las
   herramientas de #170.

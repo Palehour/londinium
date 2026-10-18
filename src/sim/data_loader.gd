@@ -82,8 +82,8 @@ const DIFFICULTY_FOLDER: String = "difficulty"
 const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
-const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain", "dense_housing_cells",
-	"roads_enabled", "road_diagonals", "anchors", "named_sites"]
+const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain",
+	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -721,6 +721,10 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	if raw.has("named_sites"):
 		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
 			map.named_sites[entry["cell"]] = entry["name"]
+	# Liberties of the whole map (issue #152): only checked here, the simulation never reads them.
+	if raw.has("history_notes") and (raw["history_notes"] is not Array
+			or not raw["history_notes"].all(MapDef.is_history_note)):
+		_errors.append("%s.history_notes: expected notes that open with a history tag" % path)
 	catalog.maps[map.id] = map
 
 
@@ -753,8 +757,9 @@ func _named_places(raw: Variant, location: String, map: MapDef) -> Array[Diction
 		return places
 	for entry: Variant in raw:
 		if entry is not Dictionary or entry.get("name") is not String or entry.get("source") is not String \
-				or entry["name"].is_empty() or entry["source"].is_empty():
-			_errors.append("%s: %s needs a name and a source" % [location, str(entry)])
+				or entry["name"].is_empty() or entry["source"].is_empty() \
+				or not MapDef.is_history_note(entry.get("history")):
+			_errors.append("%s: %s needs a name, a source and a history tag" % [location, str(entry)])
 			continue
 		for cell: Vector2i in _map_cells([entry.get("cell")], location, map, []):
 			var place: Dictionary = entry.duplicate()

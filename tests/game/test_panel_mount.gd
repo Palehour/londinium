@@ -125,3 +125,6 @@ func test_the_map_shows_its_layers_in_the_legend_and_credits_its_sources() -> vo
 	var credits: Label = help.get_parent().get_child(help.get_parent().get_child_count() - 1) as Label
 	assert_eq(credits.text, Strings.text(Strings.MAP_CREDITS))
 	assert_string_contains(credits.text, "CC-BY")
+	# The credit NLS asks for, word for word, with its site (issue #152).
+	assert_string_contains(credits.text, "Reproduced with the permission of the National Library of Scotland")
+	assert_string_contains(credits.text, "maps.nls.uk")

@@ -69,6 +69,10 @@ func test_the_strip_lists_its_anchors_and_named_sites_with_their_source() -> voi
 	for entry: Dictionary in entries:
 		assert_false(str(entry["name"]).is_empty())
 		assert_string_contains(str(entry["source"]), "NLS", entry["name"])
+		assert_true(MapDef.is_history_note(entry["history"]), "%s has Chronicler's tag" % entry["name"])
+	var notes: String = "\n".join(raw["history_notes"])
+	assert_string_contains(notes, "[DEBATED] The Thames", "The OHM river has no date")
+	assert_string_contains(notes, "[INVENTED] The Wapping lock", "The basin stays closed at this scale")
 
 
 func test_there_are_enough_free_cells_with_and_without_the_corner_with_no_sheet() -> void:
@@ -88,8 +92,11 @@ func test_olivers_wharf_stands_established_and_working_at_the_start() -> void:
 	assert_gt(int(_building_at(sim, OLIVERS_WHARF).get("workers", 0)), 0, "It hires like any wharf")
 
 
-func test_the_anchor_buildings_are_never_demolished() -> void:
-	for cell: Vector2i in [PIER_HEAD, OLIVERS_WHARF]:
+# Mason's criterion for D-084: every anchor the map lists, with or without a use, refuses a demolish and pays nothing.
+func test_every_anchor_of_the_map_is_never_demolished() -> void:
+	var anchors: Dictionary[Vector2i, StringName] = _catalog.maps[STRIP].anchors
+	assert_eq(anchors.size(), 5, "Pier Head, Oliver's Wharf, St John's, St Peter's and the Town of Ramsgate")
+	for cell: Vector2i in anchors:
 		var sim: Simulation = _new_game(SimTestParams.isolated_params(_catalog))
 		var kept: Simulation = _new_game(SimTestParams.isolated_params(_catalog))
 		var command: DemolishCommand = DemolishCommand.new(cell)
@@ -98,7 +105,7 @@ func test_the_anchor_buildings_are_never_demolished() -> void:
 		kept.tick()
 		assert_false(command.accepted, str(cell))
 		assert_eq(command.reason, &"historic_anchor", str(cell))
-		assert_false(_building_at(sim, cell).is_empty(), str(cell))
+		assert_eq(StringName(_building_at(sim, cell).get("definition_id", &"")), anchors[cell], str(cell))
 		assert_eq(sim.snapshot()["economy"]["money"], kept.snapshot()["economy"]["money"], "No refund %s" % cell)
 
 

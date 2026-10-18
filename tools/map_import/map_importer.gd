@@ -20,6 +20,8 @@ const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vect
 # named sites only a name. Both say which sheet they come from.
 const ANCHORS: String = "anchors"
 const PLACE_FIELDS: Array[String] = [ANCHORS, "named_sites"]
+# Liberties of the map as a whole, like water with no date (issue #152), each opening with its tag.
+const HISTORY_NOTES: String = "history_notes"
 
 var errors: Array[String] = []
 
@@ -62,6 +64,7 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	var places: Dictionary[String, Array] = {}
 	for field: String in PLACE_FIELDS:
 		places[field] = _places(overrides, field, size)
+	var history_notes: Array = _history_notes(overrides)
 	# An anchor on land is a standing building (D-075 blocks building there); one on the water, like a wharf, stays water.
 	for anchor: Dictionary in places[ANCHORS]:
 		var cell: Vector2i = Vector2i(anchor["cell"][0], anchor["cell"][1])
@@ -75,6 +78,8 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	for field: String in PLACE_FIELDS:
 		if not places[field].is_empty():
 			map[field] = places[field]
+	if not history_notes.is_empty():
+		map[HISTORY_NOTES] = history_notes
 	# The distance model (issue #67, D-080): whether the map plays with streets and its diagonal edges (D-058).
 	map["roads_enabled"] = config.get("roads_enabled", false)
 	map["road_diagonals"] = diagonals
@@ -97,6 +102,11 @@ func to_text(map: Dictionary) -> String:
 	for field: String in PLACE_FIELDS:
 		if map.has(field):
 			lines.append('  "%s": [\n%s\n  ]' % [field, ",\n".join(_places_text(map[field]))])
+	if map.has(HISTORY_NOTES):
+		var notes: Array[String] = []
+		for note: String in map[HISTORY_NOTES]:
+			notes.append("    %s" % JSON.stringify(note))
+		lines.append('  "%s": [\n%s\n  ]' % [HISTORY_NOTES, ",\n".join(notes)])
 	lines.append('  "roads_enabled": %s' % ("true" if map["roads_enabled"] else "false"))
 	var edges: Array[String] = []
 	for edge: Array in map["road_diagonals"]:
@@ -337,7 +347,7 @@ func _places(overrides: Variant, field: String, size: Vector2i) -> Array:
 		return places
 	for entry: Variant in raw:
 		if not _valid_place(entry, field == ANCHORS, size):
-			errors.append("overrides.json.%s: %s needs a name, a source and a cell inside the grid%s"
+			errors.append("overrides.json.%s: %s needs a name, a source, a history tag and a cell inside the grid%s"
 				% [field, str(entry), " and a building" if field == ANCHORS else ""])
 			continue
 		var cell: Vector2i = _cell(entry["cell"])
@@ -345,6 +355,7 @@ func _places(overrides: Variant, field: String, size: Vector2i) -> Array:
 		if field == ANCHORS:
 			place["building"] = entry["building"]
 		place["source"] = str(entry["source"])
+		place["history"] = str(entry["history"])
 		places.append(place)
 	return places
 
@@ -354,9 +365,17 @@ func _valid_place(entry: Variant, needs_building: bool, size: Vector2i) -> bool:
 		return false
 	if entry.get("name") is not String or entry.get("source") is not String:
 		return false
-	if entry["name"].is_empty() or entry["source"].is_empty():
+	if entry["name"].is_empty() or entry["source"].is_empty() or not MapDef.is_history_note(entry.get("history")):
 		return false
 	return not needs_building or entry.get("building") is String
+
+
+func _history_notes(overrides: Variant) -> Array:
+	var raw: Variant = overrides.get(HISTORY_NOTES, []) if overrides is Dictionary else []
+	if raw is not Array or not raw.all(MapDef.is_history_note):
+		errors.append("overrides.json.%s: expected a list of notes, each opening with a history tag" % HISTORY_NOTES)
+		return []
+	return raw.duplicate()
 
 
 func _places_text(places: Array) -> Array[String]:

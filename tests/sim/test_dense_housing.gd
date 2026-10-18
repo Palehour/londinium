@@ -138,6 +138,7 @@ func test_the_dense_housing_of_pier_head_is_not_demolished() -> void:
 	assert_eq(sim.snapshot()["economy"]["money"], kept.snapshot()["economy"]["money"], "No refund")
 	var over: BuildCommand = _build(sim, _strip, &"housing", START_CELL)
 	assert_false(over.accepted)
+	assert_eq(over.reason, &"occupied_cell", "The house is still there")
 
 
 # Mason's required test (D-076): a game saved with a building on a cell that is now blocked keeps it, working; the

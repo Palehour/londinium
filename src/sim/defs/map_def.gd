@@ -4,6 +4,8 @@ extends RefCounted
 # The map of a scenario that names none, and of the scripted scenarios and balance tools (D-074).
 const DEFAULT_ID: StringName = &"whitechapel_1850s"
 const TERRAIN_LABELS: Array[StringName] = [&"riverbank", &"marsh"]
+# Chronicler's tags (issue #152): every historic place and liberty of a traced map opens with one of them.
+const HISTORY_TAGS: Array[String] = ["[FACT", "[DEBATED]", "[LEGEND]", "[INVENTED]"]
 
 var id: StringName
 var width: int
@@ -29,6 +31,16 @@ var dense_housing_cells: Array[Vector2i] = []
 # with no use. None is ever demolished. Named sites are only a name on a cell and block nothing.
 var anchors: Dictionary[Vector2i, StringName] = {}
 var named_sites: Dictionary[Vector2i, String] = {}
+
+
+# A tag and some words after it; "[FACT" also covers a FACT with a margin, like "[FACT ±1]".
+static func is_history_note(note: Variant) -> bool:
+	if note is not String:
+		return false
+	for tag: String in HISTORY_TAGS:
+		if note.begins_with(tag) and note.length() > tag.length() + 1:
+			return true
+	return false
 
 
 func beside_road(cell: Vector2i) -> bool:

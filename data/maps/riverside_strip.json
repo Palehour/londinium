@@ -8,15 +8,19 @@
   "terrain": {"riverbank": [[1, 0], [10, 0], [0, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [1, 2], [6, 2], [8, 2], [0, 3], [6, 3], [8, 3], [0, 4], [6, 4], [8, 4], [1, 5], [2, 5], [3, 5], [7, 5], [15, 5], [4, 6], [5, 6], [6, 6], [13, 6], [14, 6], [7, 7], [8, 7], [9, 7], [10, 7], [11, 7], [12, 7]], "marsh": []},
   "dense_housing_cells": [[8, 6]],
   "anchors": [
-    {"name": "Pier Head", "cell": [8, 6], "building": "dense_housing", "source": "NLS OS London 1:1056, sheet VII.87 (1872): the west Pier Head stands at (6, 6), which has no OHM street on any side, so the starting house is on the nearest lot beside one (decision of Cristian, 2026-10-18): Green Bank at (8, 5), two cells from it and one from the east Pier Head (7, 7)"},
-    {"name": "Oliver's Wharf", "cell": [10, 8], "building": "wharf", "source": "NLS OS London 1:1056, sheet VII.87 (1872): the warehouse is at (8, 7), where no OHM street reaches the river, so the wharf is on the nearest river cell beside one, Well Alley (the rule of Cristian for Pier Head, 2026-10-18)"},
-    {"name": "St John's Church", "cell": [9, 5], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872); it shares the cell with Green Bank (OHM)"},
-    {"name": "St Peter's Church", "cell": [13, 0], "building": "", "source": "NLS OS London 1:1056, sheet VII.78 (1873)"},
-    {"name": "Town of Ramsgate", "cell": [7, 6], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872): no label on the sheet; the inn stands beside Wapping Old Stairs, to be confirmed by Chronicler"}
+    {"name": "Pier Head", "cell": [8, 6], "building": "dense_housing", "source": "NLS OS London 1:1056, sheet VII.87 (1872): the Pier Head houses stand at (6, 6) and (7, 6), with no OHM street on any side, so the starting house is on the nearest lot beside one (decision of Cristian, 2026-10-18): Green Bank at (8, 5)", "history": "[INVENTED] Workers' housing: the Pier Head houses were built c.1811 for officials of the London Docks. Moved from (6, 6) to (8, 6), the nearest lot beside a street, so the starting house has one (D-079, D-084)."},
+    {"name": "Oliver's Wharf", "cell": [10, 8], "building": "wharf", "source": "NLS OS London 1:1056, sheet VII.87 (1872); the wharf touches Well Alley (decision of Cristian, 2026-10-18, D-084)", "history": "[INVENTED] casilla de juego; el almacén real de 1869-70 está en (8,7) [HE 1065806]."},
+    {"name": "St John's Church", "cell": [9, 5], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872); it shares the cell with Green Bank (OHM)", "history": "[FACT] Built 1756 [HE 1241683]."},
+    {"name": "St Peter's Church", "cell": [13, 0], "building": "", "source": "NLS OS London 1:1056, sheet VII.78 (1873)", "history": "[FACT] Built 1865-66 [HE 1065844]."},
+    {"name": "Town of Ramsgate", "cell": [7, 6], "building": "", "source": "NLS OS London 1:1056, sheet VII.87 (1872): no label on the sheet; the inn stands beside Wapping Old Stairs", "history": "[FACT ±1] The inn beside Wapping Old Stairs; its cell may be off by one (confirmed by Chronicler, 2026-10-18)."}
   ],
   "named_sites": [
-    {"name": "Thames Police Station", "cell": [12, 7], "source": "NLS OS London 1:1056, sheet VII.88 (1872)"},
-    {"name": "Wapping Old Stairs", "cell": [7, 7], "source": "NLS OS London 1:1056, sheet VII.87 (1872)"}
+    {"name": "Thames Police Station", "cell": [12, 7], "source": "NLS OS London 1:1056, sheet VII.88 (1872)", "history": "[FACT] Site of the Thames (Marine) Police since 1798 [HE 1242394]; a named site with no building."},
+    {"name": "Wapping Old Stairs", "cell": [7, 7], "source": "NLS OS London 1:1056, sheet VII.87 (1872)", "history": "[FACT] River stairs named on the sheet; a named site with no building."}
+  ],
+  "history_notes": [
+    "[DEBATED] The Thames comes from OHM way 188212040, which has no start_date: its banks are taken as those of 1870.",
+    "[INVENTED] The Wapping lock (Wapping Entrance) does not fit at 50 m a cell, so Wapping Basin stays closed from the river (plan B of Mason): no water is added and the free-cell count does not change."
   ],
   "roads_enabled": true,
   "road_diagonals": []
