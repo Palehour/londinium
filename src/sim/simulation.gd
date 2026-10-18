@@ -59,10 +59,11 @@ static func _place_dense_housing(state: EconomyState, params: Params, context: E
 	var count: int = mini(cells.size(), int(params.get_value(&"startup.dense_housing_occupied")))
 	for cell: Vector2i in cells.slice(0, count):
 		state.buildings.append({"definition_id": DENSE_HOUSING, "cell": [cell.x, cell.y]})
-	# The other anchors with a use, like Oliver's Wharf (issue #152), stand established in the same way.
+	# The other anchors with a use, like Oliver's Wharf (issue #152) and the 1870 houses (#176, empty: the people of
+	# the startup do not change), stand established in the same way.
 	for cell: Vector2i in context.map.anchors:
 		var building: StringName = context.map.anchors[cell]
-		if building != &"" and building != DENSE_HOUSING:
+		if building != &"" and cell not in cells:
 			state.buildings.append({"definition_id": building, "cell": [cell.x, cell.y]})
 
 

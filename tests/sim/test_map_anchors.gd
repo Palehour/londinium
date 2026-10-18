@@ -95,7 +95,9 @@ func test_olivers_wharf_stands_established_and_working_at_the_start() -> void:
 # Mason's criterion for D-084: every anchor the map lists, with or without a use, refuses a demolish and pays nothing.
 func test_every_anchor_of_the_map_is_never_demolished() -> void:
 	var anchors: Dictionary[Vector2i, StringName] = _catalog.maps[STRIP].anchors
-	assert_eq(anchors.size(), 5, "Pier Head, Oliver's Wharf, St John's, St Peter's and the Town of Ramsgate")
+	# The four 1870 houses of #176 carry the same mark (D-083).
+	assert_eq(anchors.size(), 9,
+		"Pier Head, Oliver's Wharf, St John's, St Peter's, the Town of Ramsgate and the four 1870 houses")
 	for cell: Vector2i in anchors:
 		var sim: Simulation = _new_game(SimTestParams.isolated_params(_catalog))
 		var kept: Simulation = _new_game(SimTestParams.isolated_params(_catalog))

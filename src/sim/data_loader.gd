@@ -83,7 +83,8 @@ const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
 const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain",
-	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes"]
+	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes",
+	"period_houses", "damaged_wharves", "lot_styles"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -721,6 +722,13 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	if raw.has("named_sites"):
 		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
 			map.named_sites[entry["cell"]] = entry["name"]
+	if raw.has("period_houses"):
+		_load_period_houses(raw["period_houses"], path + ".period_houses", map)
+	if raw.has("damaged_wharves"):
+		_load_damaged_wharves(raw["damaged_wharves"], path + ".damaged_wharves", map)
+	# After the period houses, which turn their cells into standing buildings.
+	if raw.has("lot_styles"):
+		_load_lot_styles(raw["lot_styles"], path + ".lot_styles", map)
 	# Liberties of the whole map (issue #152): only checked here, the simulation never reads them.
 	if raw.has("history_notes") and (raw["history_notes"] is not Array
 			or not raw["history_notes"].all(MapDef.is_history_note)):
@@ -747,6 +755,60 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 			_errors.append("%s: [%d, %d] %s" % [location, cell.x, cell.y, problem])
 			continue
 		map.anchors[cell] = building
+
+
+# The 1870 houses (issue #176, D-083): plain dense housing that stands like the start house of D-079, on a standing
+# building with a street on one side, and that is never demolished, the mark of the anchors (D-084).
+func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
+	for entry: Dictionary in _named_places(raw, location, map):
+		var cell: Vector2i = entry["cell"]
+		if cell not in map.existing_cells:
+			_errors.append("%s: [%d, %d] is not a standing building" % [location, cell.x, cell.y])
+		elif not map.beside_road(cell):
+			_errors.append("%s: [%d, %d] has no street on any side" % [location, cell.x, cell.y])
+		elif map.anchors.has(cell) or cell in map.period_houses:
+			_errors.append("%s: [%d, %d] already has an anchor" % [location, cell.x, cell.y])
+		else:
+			map.period_houses.append(cell)
+			map.anchors[cell] = Simulation.DENSE_HOUSING
+
+
+# Damaged wharves (issue #176, D-083): on the river, where a wharf stands, with the share of a new wharf's cost that
+# repairing one takes: above 0, or it would be free, and at most 1, or a new wharf would be cheaper.
+func _load_damaged_wharves(raw: Variant, location: String, map: MapDef) -> void:
+	for entry: Dictionary in _named_places(raw, location, map):
+		var cell: Vector2i = entry["cell"]
+		var ratio: Variant = entry.get("repair_cost_ratio")
+		if cell not in map.river_cells:
+			_errors.append("%s: [%d, %d] is not on the river" % [location, cell.x, cell.y])
+		elif typeof(ratio) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(ratio)) or float(ratio) <= 0.0 				or float(ratio) > 1.0:
+			_errors.append("%s: [%d, %d] repair_cost_ratio must be above 0 and at most 1"
+				% [location, cell.x, cell.y])
+		else:
+			map.damaged_wharves[cell] = float(ratio)
+
+
+# Lot styles (issue #176, D-083): only drawing, one for each cell of free land and none anywhere else.
+func _load_lot_styles(raw: Variant, location: String, map: MapDef) -> void:
+	if raw is not Dictionary or not raw.keys().all(func(style: Variant) -> bool: return style is String):
+		_errors.append("%s: expected an object of style to cells" % location)
+		return
+	var taken: Array[Vector2i] = []
+	for style: String in raw:
+		for cell: Vector2i in _map_cells(raw[style], "%s.%s" % [location, style], map, taken):
+			if not _is_free_land(map, cell):
+				_errors.append("%s.%s: [%d, %d] is not free land" % [location, style, cell.x, cell.y])
+			else:
+				map.lot_styles[cell] = StringName(style)
+	for y: int in range(map.height):
+		for x: int in range(map.width):
+			var cell: Vector2i = Vector2i(x, y)
+			if _is_free_land(map, cell) and cell not in taken:
+				_errors.append("%s: [%d, %d] has no lot style" % [location, cell.x, cell.y])
+
+
+static func _is_free_land(map: MapDef, cell: Vector2i) -> bool:
+	return cell not in map.river_cells and cell not in map.dock_cells and cell not in map.road_cells 		and cell not in map.existing_cells
 
 
 # Entries with a name, a source and a cell of the map, each with its cell as a Vector2i.

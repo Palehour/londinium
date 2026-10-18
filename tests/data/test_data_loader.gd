@@ -679,6 +679,79 @@ func test_anchors_must_stand_where_their_building_can() -> void:
 	_assert_invalid("history_notes: expected notes that open with a history tag")
 
 
+# The 8x8 with a standing building at (1,1) beside a street at (1,0), every free cell styled as a yard.
+func _period_map() -> Dictionary:
+	var map: Dictionary = _documents["maps/whitechapel_1850s.json"]
+	map["existing_cells"] = [[1, 1]]
+	map["road_cells"] = [[1, 0]]
+	var free: Array = []
+	for y: int in range(7):
+		for x: int in range(8):
+			if [x, y] not in [[1, 1], [1, 0]]:
+				free.append([x, y])
+	map["lot_styles"] = {"yard": free}
+	return map
+
+
+func _damaged_wharf(cell: Array, ratio: Variant, history: String = "[INVENTED] Damaged.") -> Dictionary:
+	var wharf: Dictionary = _place("Damaged wharf", cell, null, history)
+	wharf["repair_cost_ratio"] = ratio
+	return wharf
+
+
+# Issue #176 (D-083): a period house stands like the dense housing of D-079, a damaged wharf where a wharf can, with a
+# repair ratio above 0 and at most 1, and a lot style only on free land, one per free cell.
+func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_says() -> void:
+	before_each()
+	var map: Dictionary = _period_map()
+	map["period_houses"] = [_place("Period house", [1, 1], null, "[INVENTED] A house.")]
+	map["damaged_wharves"] = [_damaged_wharf([2, 7], 0.5)]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_eq(result.errors, [] as Array[String])
+	if result.is_ok():
+		var loaded: MapDef = result.catalog.maps[&"whitechapel_1850s"]
+		assert_eq(loaded.period_houses, [Vector2i(1, 1)] as Array[Vector2i])
+		assert_eq(loaded.anchors, {Vector2i(1, 1): &"dense_housing"} as Dictionary[Vector2i, StringName])
+		assert_eq(loaded.damaged_wharves, {Vector2i(2, 7): 0.5} as Dictionary[Vector2i, float])
+		assert_eq(loaded.lot_styles.size(), 54)
+		assert_eq(loaded.lot_styles[Vector2i(0, 0)], &"yard")
+	var cases: Array[Array] = [
+		["period_houses", [_place("House", [2, 2], null, "[INVENTED] A house.")], "[2, 2] is not a standing building"],
+		["period_houses", [_place("House", [1, 1])], ""],
+		["period_houses", [_place("House", [1, 1], null, "A house")], "needs a name, a source and a history tag"],
+		["damaged_wharves", [_damaged_wharf([2, 2], 0.5)], "[2, 2] is not on the river"],
+		["damaged_wharves", [_damaged_wharf([2, 7], 0)], "repair_cost_ratio must be above 0 and at most 1"],
+		["damaged_wharves", [_damaged_wharf([2, 7], 1.5)], "repair_cost_ratio must be above 0 and at most 1"],
+		["damaged_wharves", [_damaged_wharf([2, 7], "half")], "repair_cost_ratio must be above 0 and at most 1"],
+		["damaged_wharves", [_damaged_wharf([2, 7], 0.5, "Damaged")], "needs a name, a source and a history tag"],
+	]
+	for entry: Array in cases:
+		before_each()
+		_period_map()[entry[0]] = entry[1]
+		if entry[2].is_empty():
+			assert_true(DataLoader.new().load_documents(_documents).is_ok(), "Any tag will do for a house")
+		else:
+			_assert_invalid(entry[2])
+	before_each()
+	_period_map()["road_cells"] = [[3, 3]]
+	_documents["maps/whitechapel_1850s.json"]["lot_styles"]["yard"].erase([3, 3])
+	_documents["maps/whitechapel_1850s.json"]["lot_styles"]["yard"].append([1, 0])
+	_documents["maps/whitechapel_1850s.json"]["period_houses"] = [_place("House", [1, 1])]
+	_assert_invalid("[1, 1] has no street on any side")
+	before_each()
+	_period_map()["lot_styles"]["garden"] = [[2, 7]]
+	_assert_invalid("lot_styles.garden: [2, 7] is not free land")
+	before_each()
+	_period_map()["lot_styles"]["garden"] = [[0, 0]]
+	_assert_invalid("lot_styles.garden: out of bounds or duplicate cell")
+	before_each()
+	_period_map()["lot_styles"]["yard"].erase([0, 0])
+	_assert_invalid("lot_styles: [0, 0] has no lot style")
+	before_each()
+	_period_map()["lot_styles"] = [[0, 0]]
+	_assert_invalid("lot_styles: expected an object of style to cells")
+
+
 func test_road_cells_must_be_inside_the_map_and_unique() -> void:
 	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[8, 0]]
 	_assert_invalid("road_cells: out of bounds or duplicate cell")

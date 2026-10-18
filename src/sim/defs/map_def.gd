@@ -31,6 +31,12 @@ var dense_housing_cells: Array[Vector2i] = []
 # with no use. None is ever demolished. Named sites are only a name on a cell and block nothing.
 var anchors: Dictionary[Vector2i, StringName] = {}
 var named_sites: Dictionary[Vector2i, String] = {}
+# Tierra de época (issue #176, D-083). The 1870 houses are plain dense housing that stands from the start and carries
+# the anchor mark, so each is also in `anchors`. A damaged wharf is a river cell with the share of a new wharf's cost
+# that repairing it takes (#177). Lot styles are only for drawing (#178): the simulation never reads them.
+var period_houses: Array[Vector2i] = []
+var damaged_wharves: Dictionary[Vector2i, float] = {}
+var lot_styles: Dictionary[Vector2i, StringName] = {}
 
 
 # A tag and some words after it; "[FACT" also covers a FACT with a margin, like "[FACT ±1]".
