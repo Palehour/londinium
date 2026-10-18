@@ -1,0 +1,15 @@
+{
+  "version": 0.6,
+  "elements": [
+    {"type": "way", "id": 11, "nodes": [1, 2], "tags": {"highway": "unclassified", "name": "Green Bank", "start_date": "1746"},
+      "geometry": [{"lat": 51.5050, "lon": -0.0620}, {"lat": 51.5050, "lon": -0.0600}]},
+    {"type": "way", "id": 12, "nodes": [3, 2, 4], "tags": {"highway": "unclassified", "name": "Red Lion Street", "start_date": "1746"},
+      "geometry": [{"lat": 51.5055, "lon": -0.0600}, {"lat": 51.5050, "lon": -0.0600}, {"lat": 51.5045, "lon": -0.0600}]},
+    {"type": "way", "id": 13, "nodes": [5, 6], "tags": {"highway": "unclassified", "name": "Gone by 1870", "start_date": "1746", "end_date": "1804"},
+      "geometry": [{"lat": 51.5052, "lon": -0.0615}, {"lat": 51.5052, "lon": -0.0605}]},
+    {"type": "way", "id": 21, "nodes": [7, 8, 9, 10, 7], "tags": {"waterway": "dock", "name": "A Basin", "start_date": "1805", "end_date": "1969"},
+      "geometry": [{"lat": 51.5054, "lon": -0.0615}, {"lat": 51.5054, "lon": -0.0608}, {"lat": 51.5051, "lon": -0.0608}, {"lat": 51.5051, "lon": -0.0615}, {"lat": 51.5054, "lon": -0.0615}]},
+    {"type": "way", "id": 31, "nodes": [11, 12, 13, 14, 11], "tags": {"natural": "water", "water": "river", "name": "River Thames"},
+      "geometry": [{"lat": 51.5046, "lon": -0.0630}, {"lat": 51.5046, "lon": -0.0580}, {"lat": 51.5040, "lon": -0.0580}, {"lat": 51.5040, "lon": -0.0630}, {"lat": 51.5046, "lon": -0.0630}]}
+  ]
+}
