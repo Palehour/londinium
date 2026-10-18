@@ -83,12 +83,15 @@ londinium/
 │   ├── sim/                  # unit tests per system (test_production.gd, test_needs.gd, test_defeat.gd …)
 │   ├── data/                 # test_data_valid.gd: every JSON loads, keys exist, no orphan params
 │   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
-│   ├── tools/                # test_map_import.gd: rasterizing, overrides, and committed maps match their sources
+│   ├── tools/                # test_map_import.gd: rasterizing, overrides, and committed maps match their sources;
+│   │                         #   map_sources (#170): projection, OHM, sheet fits, digitizer, comparison image
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 │       ├── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
 │       └── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them
 ├── tools/                    # run_tests.sh / run_tests.ps1, check_gdscript.sh / .ps1, run_long_tests.sh / .ps1, balance report script,
-│                             # map_import.sh / .ps1 (map_import/: data/maps/sources/<map>/ → data/maps/<map>.json)
+│                             # map_import.sh / .ps1 (map_import/: data/maps/sources/<map>/ → data/maps/<map>.json),
+│                             # map_sources.sh / .ps1 (map_sources/, #170: OHM export and NLS sheets → GeoJSON layers,
+│                             #   comparison image and nls_report.md; README.md there)
 ├── docs/                     # GDD.md, DECISIONS.md (canonical), ARCHITECTURE.md, WORKFLOW.md
 └── .github/                  # ci.yml, export.yml, PR template
 ```

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rebuilds the GeoJSON layers of data/maps/sources/<id>/ from its committed raw downloads (sources.json); then run
 # tools/map_import.sh. Usage:
-#   GODOT=/path/to/godot tools/map_sources.sh <map_id>|all [--check]
+#   GODOT=/path/to/godot tools/map_sources.sh <map_id>|all [--check|--compare]   (tools/map_sources/README.md)
 set -euo pipefail
 GODOT="${GODOT:-godot}"
 cd "$(dirname "$0")/.."

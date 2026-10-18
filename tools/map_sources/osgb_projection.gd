@@ -1,7 +1,7 @@
 class_name OsgbProjection
 extends RefCounted
 
-# WGS84 latitude/longitude (OpenHistoricalMap, Web Mercator tiles) to British National Grid metres (EPSG:27700) and
+# WGS84 latitude/longitude (OpenHistoricalMap) to British National Grid metres (EPSG:27700) and
 # back, for the sources of the historic maps (issue #152). Formulas and constants are the Ordnance Survey's ("A guide
 # to coordinate systems in Great Britain"): a 7-parameter Helmert shift between WGS84 and OSGB36, good to about 5 m
 # (a tenth of a cell), and the Transverse Mercator projection of the National Grid on the Airy 1830 ellipsoid.
@@ -25,7 +25,6 @@ const HELMERT_R: Array[float] = [-0.1502, -0.247, -0.8421]
 # Stops the inverse projection once the meridional arc is within 0.01 mm.
 const ARC_TOLERANCE: float = 0.00001
 const LATITUDE_ITERATIONS: int = 10
-const TILE_PIXELS: float = 256.0
 
 
 static func wgs84_to_bng(lat_lon: PackedFloat64Array) -> PackedFloat64Array:
@@ -79,20 +78,6 @@ static func bng_to_osgb36(en: PackedFloat64Array) -> PackedFloat64Array:
 	var de: float = en[0] - E0
 	return PackedFloat64Array([rad_to_deg(lat - vii * de * de + viii * pow(de, 4) - ix * pow(de, 6)),
 		LON0 + rad_to_deg(x * de - xi * pow(de, 3) + xii * pow(de, 5) - xiia * pow(de, 7))])
-
-
-# Global pixel of a Web Mercator tile pyramid (256 px tiles): tile x = floor(pixel[0] / 256).
-static func wgs84_to_tile_pixel(lat_lon: PackedFloat64Array, zoom: int) -> PackedFloat64Array:
-	var size: float = TILE_PIXELS * pow(2.0, zoom)
-	var lat: float = deg_to_rad(lat_lon[0])
-	return PackedFloat64Array([(lat_lon[1] + 180.0) / 360.0 * size,
-		(1.0 - log(tan(lat) + 1.0 / cos(lat)) / PI) / 2.0 * size])
-
-
-static func tile_pixel_to_wgs84(pixel: PackedFloat64Array, zoom: int) -> PackedFloat64Array:
-	var size: float = TILE_PIXELS * pow(2.0, zoom)
-	var lat: float = atan(sinh(PI * (1.0 - 2.0 * pixel[1] / size)))
-	return PackedFloat64Array([rad_to_deg(lat), pixel[0] / size * 360.0 - 180.0])
 
 
 static func _eccentricity_squared(a: float, b: float) -> float:

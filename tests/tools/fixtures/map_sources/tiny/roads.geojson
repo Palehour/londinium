@@ -1,0 +1,7 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"name": "Green Bank", "ohm_id": 11}, "geometry": {"type": "LineString", "coordinates": [[534602.00, 180232.07], [534740.80, 180235.75]]}},
+    {"type": "Feature", "properties": {"name": "Red Lion Street", "ohm_id": 12}, "geometry": {"type": "LineString", "coordinates": [[534739.32, 180291.35], [534740.80, 180235.75], [534742.27, 180180.15]]}}
+  ]
+}

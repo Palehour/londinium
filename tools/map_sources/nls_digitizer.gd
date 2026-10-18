@@ -1,22 +1,25 @@
 class_name NlsDigitizer
 extends RefCounted
 
-# Reads the standing buildings of a map grid from the NLS tiles of OS London 1:1056 (1862-74) and writes them as the
-# existing.geojson that tools/map_import rasterizes (issue #152). Buildings are the grey fill of the sheets; water
-# and streets are the same cream as yards, so water comes from OpenHistoricalMap instead (decision of Cristian,
-# 2026-10-18). Each cell is split like the importer splits it (samples_per_axis² squares): a square is a building
-# when most of its probes are clearly darker than the paper around the cell, since every sheet has its own tone.
+# Reads the standing buildings of a map grid from the georeferenced NLS sheets of OS London 1:1056 (1862-74) and
+# writes them as the existing.geojson that tools/map_import rasterizes (issues #152 and #170). Buildings are the grey
+# fill of the sheets; water and streets are the same cream as yards, so water comes from OpenHistoricalMap instead
+# (decision of Cristian, 2026-10-18). Each cell is split like the importer splits it (samples_per_axis² squares): a
+# square is a building when most of its probes are clearly darker than the paper around the cell, since every sheet
+# has its own tone.
 
-const SETTINGS: Array[String] = ["zoom", "probes_per_axis", "paper_window_metres", "paper_percentile", "ink_contrast",
+const SETTINGS: Array[String] = ["probes_per_axis", "paper_window_metres", "paper_percentile", "ink_contrast",
 	"building_min_fraction"]
+# How many cells of sheet the paper window may reach on each side of a cell.
+const WINDOW_MARGIN: int = 2
 const RING_FORMAT: String = "[[%.2f, %.2f], [%.2f, %.2f], [%.2f, %.2f], [%.2f, %.2f], [%.2f, %.2f]]"
 
 var errors: Array[String] = []
-var _projection: GridProjection
+var _grid: Dictionary
 
 
 # A FeatureCollection with one rectangle per run of building squares in a row.
-func buildings(mosaic: NlsMosaic, grid: Dictionary, settings: Dictionary) -> Dictionary:
+func buildings(sheets: NlsSheets, grid: Dictionary, settings: Dictionary) -> Dictionary:
 	errors.clear()
 	var collection: Dictionary = {"type": "FeatureCollection", "features": []}
 	for field: String in SETTINGS:
@@ -27,20 +30,20 @@ func buildings(mosaic: NlsMosaic, grid: Dictionary, settings: Dictionary) -> Dic
 	var size: Vector2i = Vector2i(int(grid["width"]), int(grid["height"]))
 	var samples: int = int(grid["samples_per_axis"])
 	var cell_metres: float = float(grid["cell_metres"])
-	if float(settings["paper_window_metres"]) > cell_metres * (1 + 2 * GridProjection.MARGIN):
-		errors.append("nls.paper_window_metres: at most %d" % int(cell_metres * (1 + 2 * GridProjection.MARGIN)))
+	if float(settings["paper_window_metres"]) > cell_metres * (1 + 2 * WINDOW_MARGIN):
+		errors.append("nls.paper_window_metres: at most %d" % int(cell_metres * (1 + 2 * WINDOW_MARGIN)))
 		return collection
-	_projection = GridProjection.new(grid, int(settings["zoom"]))
+	_grid = grid
 	var squares: Dictionary[Vector2i, bool] = {}
 	for y: int in range(size.y):
 		for x: int in range(size.x):
-			var paper: float = _paper(mosaic, Vector2i(x, y), cell_metres, settings)
-			if paper == NlsMosaic.NO_DATA:
+			var paper: float = _paper(sheets, Vector2i(x, y), cell_metres, settings)
+			if paper == NlsSheets.NO_DATA:
 				continue
 			for sy: int in range(samples):
 				for sx: int in range(samples):
 					var square: Vector2i = Vector2i(x * samples + sx, y * samples + sy)
-					if _is_building(mosaic, square, samples, paper, settings):
+					if _is_building(sheets, square, samples, paper, settings):
 						squares[square] = true
 	collection["features"] = _rectangles(squares, size * samples, grid)
 	return collection
@@ -60,31 +63,32 @@ func to_text(collection: Dictionary) -> String:
 
 # The paper tone around a cell: a high percentile of the luminance in a window centred on it, or NO_DATA when the
 # window has no sheet.
-func _paper(mosaic: NlsMosaic, cell: Vector2i, cell_metres: float, settings: Dictionary) -> float:
+func _paper(sheets: NlsSheets, cell: Vector2i, cell_metres: float, settings: Dictionary) -> float:
 	var window: float = float(settings["paper_window_metres"]) / cell_metres
 	var steps: int = int(settings["probes_per_axis"]) * ceili(window * 2)
 	var start: Vector2 = Vector2(cell) + Vector2.ONE * (0.5 - window / 2.0)
 	var values: Array[float] = []
 	for j: int in range(steps):
 		for i: int in range(steps):
-			var value: float = mosaic.luminance_at(_projection.pixel(start + Vector2(i + 0.5, j + 0.5) * window / steps))
-			if value != NlsMosaic.NO_DATA:
+			var point: Vector2 = start + Vector2(i + 0.5, j + 0.5) * window / steps
+			var value: float = sheets.luminance_at(NlsSheets.grid_bng(_grid, point))
+			if value != NlsSheets.NO_DATA:
 				values.append(value)
 	if values.is_empty():
-		return NlsMosaic.NO_DATA
+		return NlsSheets.NO_DATA
 	values.sort()
 	return values[int(float(settings["paper_percentile"]) * (values.size() - 1))]
 
 
-func _is_building(mosaic: NlsMosaic, square: Vector2i, samples: int, paper: float, settings: Dictionary) -> bool:
+func _is_building(sheets: NlsSheets, square: Vector2i, samples: int, paper: float, settings: Dictionary) -> bool:
 	var probes: int = int(settings["probes_per_axis"])
 	var valid: int = 0
 	var ink: int = 0
 	for j: int in range(probes):
 		for i: int in range(probes):
 			var point: Vector2 = (Vector2(square) + Vector2(i + 0.5, j + 0.5) / probes) / samples
-			var value: float = mosaic.luminance_at(_projection.pixel(point))
-			if value == NlsMosaic.NO_DATA:
+			var value: float = sheets.luminance_at(NlsSheets.grid_bng(_grid, point))
+			if value == NlsSheets.NO_DATA:
 				continue
 			valid += 1
 			if value <= paper - float(settings["ink_contrast"]):

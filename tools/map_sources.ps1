@@ -1,7 +1,7 @@
 # Rebuilds the GeoJSON layers of data/maps/sources/<id>/ from its committed raw downloads (sources.json) on Windows;
 # then run tools\map_import.ps1.
 # Usage: $env:GODOT = "C:\Godot\Godot_v4.7.2-stable_win64_console.exe"
-#        powershell -ExecutionPolicy Bypass -File tools\map_sources.ps1 <map_id>|all [--check]
+#        powershell -ExecutionPolicy Bypass -File tools\map_sources.ps1 <map_id>|all [--check|--compare]
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$SourceArgs)
 # "Continue": Godot writes warnings to stderr, which must not abort the script.
 $ErrorActionPreference = "Continue"

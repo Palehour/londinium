@@ -58,6 +58,21 @@ func water(export: Variant, year: int) -> Dictionary[String, Dictionary]:
 	return layers
 
 
+# Every node of the export by its OHM id, in British National Grid metres: the control points of the NLS sheets
+# name the street corners they were read at by these ids (issue #170).
+func node_positions(export: Variant) -> Dictionary[int, PackedFloat64Array]:
+	errors.clear()
+	var positions: Dictionary[int, PackedFloat64Array] = {}
+	for way: Dictionary in _ways(export):
+		var nodes: Variant = way.get("nodes")
+		if nodes is not Array or nodes.size() != way["geometry"].size():
+			continue
+		var line: Array = _line(way)
+		for index: int in range(line.size()):
+			positions[int(nodes[index])] = PackedFloat64Array(line[index])
+	return positions
+
+
 # Standing in `year`: built in or before it and not gone by then. OHM dates start with the year ("1746",
 # "1869-12-07"); a way without a start date is not dated, so it is left out rather than guessed.
 static func is_standing(tags: Dictionary, year: int) -> bool:

@@ -1,7 +1,7 @@
 extends GutTest
 
-# Issue #152: the sources of the riverside strip come in WGS84 (OpenHistoricalMap) and Web Mercator tiles (NLS);
-# the map importer reads British National Grid metres (EPSG:27700).
+# Issue #152: the streets and water of the riverside strip come in WGS84 (OpenHistoricalMap); the map importer reads
+# British National Grid metres (EPSG:27700).
 
 # Worked example of the Ordnance Survey's "A guide to coordinate systems in Great Britain" (annex C): a point on
 # the Airy 1830 ellipsoid (OSGB36) and its National Grid easting and northing.
@@ -42,13 +42,3 @@ func test_the_datum_shift_is_applied() -> void:
 	var unshifted: PackedFloat64Array = OsgbProjection.osgb36_to_bng(lat_lon)
 	assert_between(Vector2(shifted[0] - unshifted[0], shifted[1] - unshifted[1]).length(), 100.0, 150.0)
 
-
-func test_web_mercator_pixels_follow_the_tile_scheme() -> void:
-	var centre: PackedFloat64Array = OsgbProjection.wgs84_to_tile_pixel(PackedFloat64Array([0.0, 0.0]), 1)
-	assert_almost_eq(centre[0], 256.0, MILLIMETRE)
-	assert_almost_eq(centre[1], 256.0, MILLIMETRE)
-	var lat_lon: PackedFloat64Array = PackedFloat64Array([51.5045, -0.0620])
-	var pixel: PackedFloat64Array = OsgbProjection.wgs84_to_tile_pixel(lat_lon, 19)
-	var back: PackedFloat64Array = OsgbProjection.tile_pixel_to_wgs84(pixel, 19)
-	assert_almost_eq(back[0], lat_lon[0], CENTIMETRE_IN_DEGREES)
-	assert_almost_eq(back[1], lat_lon[1], CENTIMETRE_IN_DEGREES)

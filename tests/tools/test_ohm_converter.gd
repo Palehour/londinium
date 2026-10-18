@@ -5,6 +5,7 @@ extends GutTest
 
 const YEAR: int = 1870
 const SOURCES: String = "res://data/maps/sources"
+const FIXTURE: String = "res://tests/tools/fixtures/map_sources/tiny"
 
 
 func _way(id: int, tags: Dictionary, points: Array) -> Dictionary:
@@ -106,18 +107,30 @@ func test_a_broken_export_is_reported() -> void:
 	assert_false(converter.errors.is_empty())
 
 
-# Bailey's review requirement: the generated layers are exactly what the committed raw sources give.
-func test_every_committed_street_layer_is_what_its_ohm_export_gives() -> void:
-	var checked: int = 0
+# Bailey's review requirement: the generated layers are exactly what the committed raw sources give, in the small
+# fixture of this folder and in every map of data/maps/sources/ that has a sources.json.
+func test_every_committed_layer_is_what_its_ohm_export_gives() -> void:
+	var folders: Array[String] = [FIXTURE]
 	for folder: String in DirAccess.get_directories_at(SOURCES):
-		var path: String = SOURCES.path_join(folder)
-		if not FileAccess.file_exists(path.path_join("sources.json")):
-			continue
+		if FileAccess.file_exists(SOURCES.path_join(folder).path_join(MapSourceConverter.MANIFEST)):
+			folders.append(SOURCES.path_join(folder))
+	for path: String in folders:
 		var sources: MapSourceConverter = MapSourceConverter.new()
 		var layers: Dictionary[String, String] = sources.generate_folder(path)
-		assert_eq(sources.errors, [] as Array[String], folder)
+		assert_eq(sources.errors, [] as Array[String], path)
+		assert_false(layers.is_empty(), path)
 		for layer: String in layers:
 			assert_eq(layers[layer], FileAccess.get_file_as_string(path.path_join(layer)),
-				"%s/%s is out of date: run tools/map_sources" % [folder, layer])
-		checked += 1
-	assert_gt(checked, 0, "The riverside strip has its sources.json")
+				"%s/%s is out of date: run tools/map_sources" % [path, layer])
+
+
+# Issue #170: the control points of the NLS sheets name OHM street corners by node id.
+func test_every_node_of_the_export_has_its_grid_position() -> void:
+	var export: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIXTURE.path_join("ohm_export.json")))
+	var converter: OhmConverter = OhmConverter.new()
+	var nodes: Dictionary[int, PackedFloat64Array] = converter.node_positions(export)
+	assert_eq(converter.errors, [] as Array[String])
+	var corner: PackedFloat64Array = OsgbProjection.wgs84_to_bng(PackedFloat64Array([51.5050, -0.0600]))
+	assert_almost_eq(nodes[2][0], corner[0], 0.01, "Green Bank meets Red Lion Street at node 2")
+	assert_almost_eq(nodes[2][1], corner[1], 0.01)
+	assert_eq(nodes.size(), 14)
