@@ -196,7 +196,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
-	_buildings.text = _buildings_text(snapshot["diagnostics"])
+	_buildings.text = _buildings_text(snapshot["diagnostics"], snapshot["distance"])
 	_crises.text = _crises_text(defeat)
 
 
@@ -747,7 +747,7 @@ func _tenths(value: float, round_up: bool) -> float:
 	return (ceilf(value * 10.0) if round_up else floorf(value * 10.0)) / 10.0
 
 
-func _buildings_text(diagnostics: Dictionary) -> String:
+func _buildings_text(diagnostics: Dictionary, distance: Dictionary) -> String:
 	var buildings: Array = diagnostics["buildings"]
 	var lines: Array[String] = [Strings.text(Strings.BUILDINGS)]
 	# Said once, under the first mill: the split is the wharf's, not one mill's.
@@ -760,6 +760,12 @@ func _buildings_text(diagnostics: Dictionary) -> String:
 			split = ""
 	if buildings.is_empty():
 		lines.append(Strings.text(Strings.NO_BUILDINGS))
+	# A leg of transport.expensive_steps or more (issue #168, D-080); the simulation marks it.
+	for leg: Dictionary in distance["legs"]:
+		if leg["expensive"]:
+			lines.append(Strings.text(Strings.TRANSPORT_EXPENSIVE) % [Strings.building_label(String(leg["definition_id"])),
+				leg["cell"][0], leg["cell"][1], Strings.building_label(String(leg["supplier_id"])), leg["supplier_cell"][0],
+				leg["supplier_cell"][1], leg["steps"]])
 	return "\n".join(lines)
 
 

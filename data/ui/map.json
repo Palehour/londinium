@@ -1,6 +1,6 @@
 {
   "terrain": {"land": "#545961", "river": "#287ba8", "cultivable": "#659c48", "dock": "#1d5675", "road": "#8a8172",
-    "existing": "#6e5a55"},
+    "player_road": "#b3a68f", "existing": "#6e5a55"},
   "colors": {"header": "#20242b", "label": "#000000", "selection": "#ffffff", "alert": "#ff8a7a"},
   "layout": {
     "cell_size": 112, "header_height": 243, "panel_width": 360, "panel_margin": 8, "help_x": 16, "help_y": 8,

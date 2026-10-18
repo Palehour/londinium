@@ -117,7 +117,7 @@ func test_the_map_shows_its_layers_in_the_legend_and_credits_its_sources() -> vo
 	var help: Label = view.get("_help") as Label
 	var legend: HBoxContainer = help.get_parent().get_child(1) as HBoxContainer
 	var presentation: MapPresentation = view.get("presentation") as MapPresentation
-	var keys: Array[String] = ["land", "river", "cultivable", "dock", "road", "existing"]
+	var keys: Array[String] = ["land", "river", "cultivable", "dock", "road", "player_road", "existing"]
 	assert_eq(legend.get_child_count(), keys.size() * 2 + 1)
 	for index: int in range(keys.size()):
 		assert_eq((legend.get_child(index * 2 + 1) as ColorRect).color, presentation.terrain[keys[index]])

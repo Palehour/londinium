@@ -140,3 +140,14 @@ func test_new_map_layers_have_their_own_colors() -> void:
 	raw["terrain"].erase("dock")
 	presentation.validate(raw, [])
 	assert_eq(presentation.errors, ["data/ui/map.json.terrain.dock: invalid color"] as Array[String])
+
+
+# The player's streets (issue #168) are drawn apart from the historic ones, which cannot be demolished.
+func test_player_streets_have_their_own_color_and_legend() -> void:
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.load_data([])
+	assert_true(presentation.errors.is_empty(), str(presentation.errors))
+	assert_true("player_road" in MapPresentation.TERRAIN_KINDS)
+	assert_true(presentation.terrain.has("player_road"))
+	assert_ne(presentation.terrain.get("player_road", presentation.terrain["road"]), presentation.terrain["road"])
+	assert_true(Strings.TERRAIN_LABELS.has("player_road"))
