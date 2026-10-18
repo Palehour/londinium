@@ -726,7 +726,7 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 		_load_period_houses(raw["period_houses"], path + ".period_houses", map)
 	if raw.has("damaged_wharves"):
 		_load_damaged_wharves(raw["damaged_wharves"], path + ".damaged_wharves", map)
-	# After the period houses, which turn their cells into standing buildings.
+	# After the period houses, whose cells carry no lot style.
 	if raw.has("lot_styles"):
 		_load_lot_styles(raw["lot_styles"], path + ".lot_styles", map)
 	# Liberties of the whole map (issue #152): only checked here, the simulation never reads them.
@@ -757,20 +757,17 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 		map.anchors[cell] = building
 
 
-# The 1870 houses (issue #176, D-083): plain dense housing that stands like the start house of D-079, on a standing
-# building with a street on one side, and that is never demolished, the mark of the anchors (D-084).
+# The 1870 houses (issue #176, D-083): free land with a street on one side, the access every housing needs (D-079).
+# Only data for now: the simulation does not place them yet.
 func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
-		if cell not in map.existing_cells:
-			_errors.append("%s: [%d, %d] is not a standing building" % [location, cell.x, cell.y])
+		if not _is_free_land(map, cell):
+			_errors.append("%s: [%d, %d] is not free land" % [location, cell.x, cell.y])
 		elif not map.beside_road(cell):
 			_errors.append("%s: [%d, %d] has no street on any side" % [location, cell.x, cell.y])
-		elif map.anchors.has(cell) or cell in map.period_houses:
-			_errors.append("%s: [%d, %d] already has an anchor" % [location, cell.x, cell.y])
 		else:
 			map.period_houses.append(cell)
-			map.anchors[cell] = Simulation.DENSE_HOUSING
 
 
 # Damaged wharves (issue #176, D-083): on the river, where a wharf stands, with the share of a new wharf's cost that
@@ -788,7 +785,8 @@ func _load_damaged_wharves(raw: Variant, location: String, map: MapDef) -> void:
 			map.damaged_wharves[cell] = float(ratio)
 
 
-# Lot styles (issue #176, D-083): only drawing, one for each cell of free land and none anywhere else.
+# Lot styles (issue #176, D-083): only drawing, one for each cell of free land that is not a period house and none
+# anywhere else.
 func _load_lot_styles(raw: Variant, location: String, map: MapDef) -> void:
 	if raw is not Dictionary or not raw.keys().all(func(style: Variant) -> bool: return style is String):
 		_errors.append("%s: expected an object of style to cells" % location)
@@ -796,14 +794,14 @@ func _load_lot_styles(raw: Variant, location: String, map: MapDef) -> void:
 	var taken: Array[Vector2i] = []
 	for style: String in raw:
 		for cell: Vector2i in _map_cells(raw[style], "%s.%s" % [location, style], map, taken):
-			if not _is_free_land(map, cell):
+			if not _is_free_land(map, cell) or cell in map.period_houses:
 				_errors.append("%s.%s: [%d, %d] is not free land" % [location, style, cell.x, cell.y])
 			else:
 				map.lot_styles[cell] = StringName(style)
 	for y: int in range(map.height):
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
-			if _is_free_land(map, cell) and cell not in taken:
+			if _is_free_land(map, cell) and cell not in taken and cell not in map.period_houses:
 				_errors.append("%s: [%d, %d] has no lot style" % [location, cell.x, cell.y])
 
 

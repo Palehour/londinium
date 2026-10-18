@@ -19,8 +19,8 @@ const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vect
 # Historic places read on the sheets by hand (issue #152): anchors carry the building that stands there ("" for none),
 # named sites only a name. Both say which sheet they come from.
 const ANCHORS: String = "anchors"
-# Tierra de época (issue #176, D-083): the 1870 houses stand on land like an anchor; a damaged wharf carries the share
-# of a new wharf's cost that repairing it takes.
+# Tierra de época (issue #176, D-083): the 1870 houses are listed on free land (placing them in the simulation is a later
+# issue); a damaged wharf carries the share of a new wharf's cost that repairing it takes.
 const PERIOD_HOUSES: String = "period_houses"
 const DAMAGED_WHARVES: String = "damaged_wharves"
 const REPAIR_COST_RATIO: String = "repair_cost_ratio"
@@ -73,9 +73,8 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 		places[field] = _places(overrides, field, size)
 	var history_notes: Array = _history_notes(overrides)
 	var lot_styles: Dictionary = _lot_styles(overrides, size)
-	# An anchor or a period house on land is a standing building (D-075 blocks building there); one on the water, like
-	# a wharf, stays water.
-	for anchor: Dictionary in places[ANCHORS] + places[PERIOD_HOUSES]:
+	# An anchor on land is a standing building (D-075 blocks building there); one on the water, like a wharf, stays water.
+	for anchor: Dictionary in places[ANCHORS]:
 		var cell: Vector2i = Vector2i(anchor["cell"][0], anchor["cell"][1])
 		if classes[cell] not in WATER:
 			classes[cell] = "existing"

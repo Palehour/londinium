@@ -103,8 +103,8 @@ londinium/
    standing buildings (`existing_cells`) block new building (D-075), but a saved building on one of them stays and
    works (D-076). Before tick 0, `Simulation.create_new` puts down the map's starting dense housing
    (`dense_housing_cells`, as many as `startup.dense_housing_occupied`; not buildable by the player) and the other
-   anchors with a use (`anchors`, #152), among them the four 1870 houses (`period_houses`, #176, D-083), which start
-   empty. A demolish never removes an anchor (`historic_anchor`).
+   anchors with a use (`anchors`, #152). A demolish never removes an anchor (`historic_anchor`). The 1870 houses of the
+   map (`period_houses`, #176, D-083) are only data for now: nothing places them yet.
 1b. Streets (`RoadSystem`, issue #67, D-034, D-070, D-080), only on a map with `roads_enabled` (the strip; the 8x8 of the
    harness has none, so nothing changes there). It runs here because the layout only changes in step 1 and the
    connection decides who works. From the historic streets of the map, the player's streets that join them side by

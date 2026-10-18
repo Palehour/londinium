@@ -208,7 +208,7 @@ func test_overrides_list_the_anchors_and_named_sites() -> void:
 
 
 # Issue #176 (D-083): period houses, damaged wharves and lot styles are listed by hand and travel to the map unchanged;
-# a period house on land is a standing building, like an anchor, and a damaged wharf stays water.
+# a period house stays free land (only data for now) and a damaged wharf stays water.
 func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:
 	var config: Dictionary = _config(3, 2)
 	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 1, 3, 2)]])}
@@ -221,7 +221,7 @@ func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:
 	var map: Dictionary = importer.import_documents(config, layers,
 		{"areas": [], "period_houses": [house], "damaged_wharves": [wharf], "lot_styles": styles})
 	assert_eq(importer.errors, [] as Array[String])
-	assert_eq(_cells(map["existing_cells"]), [Vector2i(1, 0)] as Array[Vector2i])
+	assert_eq(map["existing_cells"], [], "The period house is not a standing building yet")
 	assert_true([1, 1] in map["river_cells"], "The damaged wharf stays on the river")
 	var parsed: Dictionary = JSON.parse_string(importer.to_text(map))
 	assert_eq(parsed["period_houses"], JSON.parse_string(JSON.stringify([house])))
