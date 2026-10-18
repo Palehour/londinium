@@ -1,0 +1,6 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"name": "River Thames", "ohm_id": 31}, "geometry": {"type": "Polygon", "coordinates": [[[534533.78, 180185.75], [534880.77, 180194.95], [534882.54, 180128.22], [534535.54, 180119.03], [534533.78, 180185.75]]]}}
+  ]
+}

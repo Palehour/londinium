@@ -1,0 +1,6 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"name": "A Basin", "ohm_id": 21}, "geometry": {"type": "Polygon", "coordinates": [[[534635.52, 180277.47], [534684.10, 180278.76], [534684.98, 180245.40], [534636.40, 180244.11], [534635.52, 180277.47]]]}}
+  ]
+}
