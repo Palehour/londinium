@@ -1,5 +1,5 @@
 {
-  "id": "riverside_strip", "width": 16, "height": 12, "origin": [534200, 180700], "cell_metres": 50,
+  "id": "riverside_strip", "width": 16, "height": 12, "origin": [534200, 180400], "cell_metres": 50,
   "samples_per_axis": 5, "priority": ["river", "dock", "marsh", "existing", "land"],
   "roads_enabled": true
 }

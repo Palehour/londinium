@@ -2,7 +2,8 @@ extends GutTest
 
 # Issue #67, scenarios (a), (b) and (c) on the 16x12 strip with streets (D-070, D-074, D-080). They live in
 # tests/scenarios/strip/, apart from the 8x8 scripts, so the parity of the existing scenarios stays byte for byte;
-# balance_report plays them with --strip.
+# balance_report plays them with --strip. Since issue #152 they stand on the traced streets of Wapping: only their
+# cells moved, what each one measures did not.
 
 var _runner: ScenarioRunner
 var _results: Dictionary[String, ScenarioResult] = {}
@@ -63,13 +64,13 @@ func test_the_same_chain_far_from_the_river_has_a_smaller_surplus() -> void:
 func test_a_house_beyond_the_radius_is_reported_unserved() -> void:
 	var houses: Array = _result("strip_out_of_radius").final_distance["houses"]
 	assert_false(_entry(houses, [15, 1])["served"][&"bread"])
-	assert_true(_entry(houses, [7, 5])["served"][&"bread"])
+	assert_true(_entry(houses, [13, 6])["served"][&"bread"])
 
 
 # (c) Cutting the player's street breaks the chain, and the diagnostics name why.
 func test_cutting_a_street_breaks_the_chain_and_the_panel_says_why() -> void:
 	var diagnostics: Dictionary = _result("strip_cut_street").final_diagnostics
-	assert_eq(_entry(diagnostics["buildings"], [1, 2])["reason"], &"no_road_access")
-	assert_eq(_entry(diagnostics["buildings"], [6, 5])["reason"], &"no_route")
+	assert_eq(_entry(diagnostics["buildings"], [8, 3])["reason"], &"no_road_access")
+	assert_eq(_entry(diagnostics["buildings"], [9, 6])["reason"], &"no_route")
 	assert_true(diagnostics["bread_causes"].has({"definition_id": &"mill", "reason": &"no_road_access"}),
 		str(diagnostics["bread_causes"]))

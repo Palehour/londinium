@@ -1,13 +1,16 @@
 extends GutTest
 
 # Issue #154: the standing buildings of the riverside strip. D-075: one full dense housing at the start, the rest of
-# existing_cells is a block until the tracing of #152. D-076: a saved building on a blocked cell stays and works.
-# D-079: the starting house stands beside a historical street.
+# existing_cells is a block. D-076: a saved building on a blocked cell stays and works. D-079: the starting house
+# stands beside a historical street. Issue #152 (option A of Cristian, 2026-10-18): on the traced strip the starting
+# house is the Pier Head anchor, which is never demolished.
 
 const STRIP: StringName = &"riverside_strip"
 const SMALL: StringName = &"whitechapel_1850s"
 const DENSE: StringName = &"dense_housing"
-const START_CELL: Vector2i = Vector2i(4, 5)
+# Pier Head (issue #152): its own cell (6,6) has no street on any side, so it stands on the nearest lot beside one,
+# Green Bank.
+const START_CELL: Vector2i = Vector2i(8, 6)
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
 var _catalog: DataCatalog
@@ -61,7 +64,8 @@ func test_new_game_on_the_strip_starts_with_one_full_dense_housing() -> void:
 	var sim: Simulation = _new_game(_params())
 	var houses: Array[Dictionary] = _buildings_of(sim, DENSE)
 	assert_eq(houses.size(), 1)
-	assert_eq(sim.snapshot()["economy"]["buildings"].size(), 1, "Nothing else stands at the start")
+	assert_eq(sim.snapshot()["economy"]["buildings"].size(), 2, "Only the anchors stand at the start")
+	assert_eq(_buildings_of(sim, &"wharf").size(), 1, "Oliver's Wharf, the other anchor with a use (#152)")
 	if houses.is_empty():
 		return
 	assert_eq(_cell_of(houses[0]), START_CELL)
@@ -117,22 +121,24 @@ func test_dense_housing_is_not_built_by_the_player() -> void:
 	assert_eq(_strip.building_unavailable_reason(DENSE), &"not_buildable")
 
 
-func test_demolishing_the_dense_housing_refunds_half_its_cost() -> void:
-	# Without taxes, wages or upkeep, the refund is the only money that differs from a game that keeps the house.
+# Issue #152 (option A of Cristian, 2026-10-18): no anchor is demolished, so the starting house of Pier Head refunds
+# nothing; until #152 it refunded half its cost (D-029, D-075).
+func test_the_dense_housing_of_pier_head_is_not_demolished() -> void:
+	# Without taxes, wages or upkeep, a refund would be the only money that differs from a game that keeps the house.
 	var params: Params = SimTestParams.isolated_params(_catalog)
 	var kept: Simulation = _new_game(params)
 	var sim: Simulation = _new_game(params)
-	sim.apply_command(DemolishCommand.new(START_CELL))
+	var command: DemolishCommand = DemolishCommand.new(START_CELL)
+	sim.apply_command(command)
 	sim.tick()
 	kept.tick()
-	assert_true(_buildings_of(sim, DENSE).is_empty())
-	var cost: int = int(params.get_value(&"building.dense_housing.cost"))
-	var ratio: float = float(params.get_value(&"demolish.no_jobs_refund_ratio"))
-	var refund: int = sim.snapshot()["economy"]["money"] - kept.snapshot()["economy"]["money"]
-	assert_eq(refund, roundi(cost * ratio), "D-029: 50 % of 60")
-	# Every standing-building cell stays a block until the tracing of #152 (D-075), its own included.
-	var rebuilt: BuildCommand = _build(sim, _strip, &"housing", START_CELL)
-	assert_eq(rebuilt.reason, &"existing_building")
+	assert_false(command.accepted)
+	assert_eq(command.reason, &"historic_anchor")
+	assert_eq(_buildings_of(sim, DENSE).size(), 1)
+	assert_eq(sim.snapshot()["economy"]["money"], kept.snapshot()["economy"]["money"], "No refund")
+	var over: BuildCommand = _build(sim, _strip, &"housing", START_CELL)
+	assert_false(over.accepted)
+	assert_eq(over.reason, &"occupied_cell", "The house is still there")
 
 
 # Mason's required test (D-076): a game saved with a building on a cell that is now blocked keeps it, working; the
@@ -140,8 +146,9 @@ func test_demolishing_the_dense_housing_refunds_half_its_cost() -> void:
 # Both cells have a street beside them, the access every building needs on the strip (D-080, D-079).
 func test_a_saved_building_on_a_blocked_cell_stays_and_works() -> void:
 	var params: Params = SimTestParams.isolated_params(_catalog)
-	var bakery_cell: Vector2i = Vector2i(10, 5)
-	var housing_cell: Vector2i = Vector2i(11, 5)
+	# St Peter's and St John's (issue #152): the standing buildings beside a street that are not the starting house.
+	var bakery_cell: Vector2i = Vector2i(13, 0)
+	var housing_cell: Vector2i = Vector2i(9, 5)
 	var saved: Dictionary = _new_game(params).to_save()
 	var state: EconomyState = EconomyState.from_dict(saved["economy"])
 	state.buildings.append({"definition_id": &"bakery", "cell": [bakery_cell.x, bakery_cell.y]})

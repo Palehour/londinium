@@ -252,6 +252,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"no_route": &"ui.reason.no_route",
 	&"road_cell": &"ui.reason.road_cell",
 	&"historic_road": &"ui.reason.historic_road",
+	# Historic anchors of the traced map (issue #152).
+	&"historic_anchor": &"ui.reason.historic_anchor",
 	&"roads_disabled": &"ui.reason.roads_disabled",
 }
 

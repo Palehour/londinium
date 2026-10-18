@@ -30,10 +30,20 @@ func test_the_strip_is_16_by_12_with_every_layer() -> void:
 	assert_true(map.terrain.values().has(&"riverbank"))
 
 
-func test_the_strip_keeps_the_river_cells_of_the_small_map() -> void:
+# Issue #152: the traced Thames (OHM, 1870) fills the rows below the Wapping shore; it replaces the copy of row 7 of
+# the 8x8 that the provisional strip kept (approved by Cristian on 2026-10-18, issue #152 comment 6246250267).
+func test_the_strip_river_comes_from_the_traced_sources() -> void:
 	var strip: MapDef = _catalog.maps[STRIP]
-	for cell: Vector2i in _catalog.maps[SMALL].river_cells:
-		assert_true(cell in strip.river_cells, str(cell))
+	for y: int in range(8, strip.height):
+		for x: int in range(strip.width):
+			assert_true(Vector2i(x, y) in strip.river_cells, str(Vector2i(x, y)))
+	for cell: Vector2i in _all_cells(strip):
+		var beside_river: bool = false
+		for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			beside_river = beside_river or (cell + side) in strip.river_cells
+		var dry: bool = cell not in strip.river_cells and cell not in strip.dock_cells
+		if dry and beside_river and cell not in strip.existing_cells:
+			assert_eq(strip.terrain.get(cell), &"riverbank", "Land beside the river is riverbank %s" % cell)
 
 
 func test_the_wharf_goes_only_on_the_river() -> void:
@@ -65,7 +75,7 @@ func test_streets_and_terrain_labels_do_not_block_building() -> void:
 		assert_eq(context.terrain_placement_reason(&"housing", cell), &"", str(cell))
 
 
-# Standing buildings block building until the tracing of #152 (issue #154, D-075).
+# Standing buildings block building (issue #154, D-075); on the traced strip they are the anchors of #152.
 func test_standing_buildings_block_building() -> void:
 	var context: EconomyContext = _context(STRIP)
 	for cell: Vector2i in context.map.existing_cells:

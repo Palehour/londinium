@@ -170,6 +170,43 @@ func test_every_committed_map_is_what_its_sources_import_to() -> void:
 			"data/maps/%s.json is out of date: run tools/map_import" % folder)
 
 
+# Issue #152 (option A of Cristian, 2026-10-18): the historic anchors and named sites are listed by hand with their
+# source and travel to the map unchanged; an anchor on land is a standing building, one on the river stays water.
+func test_overrides_list_the_anchors_and_named_sites() -> void:
+	var config: Dictionary = _config(3, 2)
+	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 1, 3, 2)]])}
+	var church: Dictionary = {"name": "Church", "cell": [1, 0], "building": "", "source": "Sheet A",
+		"history": "[FACT] Built 1756."}
+	var wharf: Dictionary = {"name": "Wharf", "cell": [1, 1], "building": "wharf", "source": "Sheet A",
+		"history": "[INVENTED] Game cell."}
+	var stairs: Dictionary = {"name": "Stairs", "cell": [2, 1], "source": "Sheet B", "history": "[FACT ±1] Stairs."}
+	var notes: Array = ["[DEBATED] Undated water."]
+	var importer: MapImporter = MapImporter.new()
+	var map: Dictionary = importer.import_documents(config, layers,
+		{"areas": [], "anchors": [church, wharf], "named_sites": [stairs], "history_notes": notes})
+	assert_eq(importer.errors, [] as Array[String])
+	assert_eq(_cells(map["existing_cells"]), [Vector2i(1, 0)] as Array[Vector2i])
+	assert_true([1, 1] in map["river_cells"], "The wharf anchor stays on the river")
+	var parsed: Dictionary = JSON.parse_string(importer.to_text(map))
+	# Through JSON both ways, since parsing turns the cell numbers into floats.
+	assert_eq(parsed["anchors"], JSON.parse_string(JSON.stringify([church, wharf])))
+	assert_eq(parsed["named_sites"], JSON.parse_string(JSON.stringify([stairs])))
+	assert_eq(parsed["history_notes"], notes)
+	assert_false(JSON.parse_string(importer.to_text(_import(config, {}))).has("anchors"),
+		"A map without them writes no field")
+	var tagged: String = "[FACT] A"
+	for broken: Dictionary in [
+			{"anchors": [{"name": "", "cell": [0, 0], "building": "", "source": "A", "history": tagged}]},
+			{"anchors": [{"name": "Off", "cell": [5, 0], "building": "", "source": "A", "history": tagged}]},
+			{"anchors": [{"name": "Unsourced", "cell": [0, 0], "building": "", "history": tagged}]},
+			{"anchors": [{"name": "Untagged", "cell": [0, 0], "building": "", "source": "A", "history": "Built"}]},
+			{"named_sites": [{"name": "Unsourced", "cell": [0, 0], "history": tagged}]},
+			{"history_notes": ["Undated water"]}]:
+		var bad: MapImporter = MapImporter.new()
+		assert_eq(bad.import_documents(config, {}, broken), {}, str(broken))
+		assert_false(bad.errors.is_empty(), str(broken))
+
+
 func test_bad_sources_are_reported_and_give_no_map() -> void:
 	var config: Dictionary = _config(2, 2)
 	var cases: Dictionary = {

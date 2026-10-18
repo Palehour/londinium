@@ -104,6 +104,8 @@ func _ready() -> void:
 	help.add_child(legend)
 	help.move_child(legend, 1)
 	_credits = Label.new()
+	# The full NLS credit line (issue #152) is long: it wraps instead of widening the header.
+	_credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_credits.text = Strings.text(Strings.MAP_CREDITS)
 	help.add_child(_credits)
 	_mode = help.get_child(2) as Label
