@@ -245,8 +245,8 @@ writes and reads them and loads a save on the parameters of its difficulty (`Gam
 to `ui_accept` and `ui_cancel`, which Godot leaves without a gamepad button. The map view has two modes. **Map**
 (nothing has the focus): the d-pad moves a cell cursor, which is the selection (`MapGeometry.move_selection`, and
 `follow_selection` moves the camera when it leaves the view); LB/RB pick among the buildings that can be built now,
-and last the player's street on a map with streets (`GameSession.ROAD`, issue #168, D-080; key 9 with the
-keyboard), A builds at the cursor (a street is a `BuildRoadCommand`, one cell). The map draws the player's streets
+and last the player's street on a map with streets (`GameSession.ROAD`, issue #168, D-080; key 9 and a click with the
+keyboard, Delete demolishes it, D-082), A builds at the cursor (a street is a `BuildRoadCommand`, one cell). The map draws the player's streets
 from the snapshot (`distance.player_roads`) in their own colour, and the panel names each transport leg the snapshot
 marks `expensive` under the buildings. X demolishes only after it is held for `demolish_hold_seconds` (`MapPresentation.input`, from
 `data/ui/map.json`); a ring on that cell fills during the hold (issue #164, D-078). Releasing X early, or moving the

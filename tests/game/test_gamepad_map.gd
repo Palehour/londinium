@@ -536,3 +536,18 @@ func test_help_names_the_street() -> void:
 	assert_string_contains(help.text, Strings.text(Strings.ROAD))
 	_pad(JOY_BUTTON_DPAD_UP)
 	assert_string_contains(help.text, Strings.text(Strings.ROAD))
+
+
+# D-082: with the keyboard, Delete takes a player street away at once, like a building.
+func test_delete_demolishes_a_player_street() -> void:
+	var view: Node2D = await _view()
+	view.set_process(false)
+	var cell: Vector2i = _place_street(view)
+	_listen(view)
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_DELETE
+	key.pressed = true
+	_viewport.push_input(key)
+	_tick(view)
+	assert_false(_street_at(view, cell), "Delete demolishes the player's street")
+	assert_eq(_accepted, 1)
