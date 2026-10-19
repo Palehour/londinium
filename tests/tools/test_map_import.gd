@@ -214,7 +214,7 @@ func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:
 	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 1, 3, 2)]])}
 	var house: Dictionary = {"name": "Period house", "cell": [1, 0], "source": "No sheet",
 		"history": "[INVENTED] A house."}
-	var wharf: Dictionary = {"name": "Damaged wharf", "cell": [1, 1], "repair_cost_ratio": 0.5, "source": "No sheet",
+	var wharf: Dictionary = {"name": "Damaged wharf", "cell": [1, 1], "source": "No sheet",
 		"history": "[INVENTED] Damaged."}
 	var styles: Dictionary = {"yard": [[0, 0]], "garden": [[2, 0]]}
 	var importer: MapImporter = MapImporter.new()
@@ -233,7 +233,7 @@ func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:
 	for broken: Dictionary in [
 			{"period_houses": [{"name": "Off", "cell": [5, 0], "source": "A", "history": "[INVENTED] A"}]},
 			{"period_houses": [{"name": "Untagged", "cell": [1, 0], "source": "A", "history": "A house"}]},
-			{"damaged_wharves": [{"name": "Unpriced", "cell": [1, 1], "source": "A", "history": "[INVENTED] A"}]},
+			{"damaged_wharves": [{"name": "Untagged", "cell": [1, 1], "source": "A", "history": "A wharf"}]},
 			{"lot_styles": {"yard": [[9, 9]]}},
 			{"lot_styles": [[0, 0]]}]:
 		var bad: MapImporter = MapImporter.new()

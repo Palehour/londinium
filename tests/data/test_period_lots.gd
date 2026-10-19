@@ -72,14 +72,16 @@ func test_the_period_houses_start_empty() -> void:
 		assert_eq(map.period_house_population.get(cell), 0, str(cell))
 
 
-func test_the_damaged_wharf_is_an_invented_river_cell_with_its_repair_ratio() -> void:
+func test_the_damaged_wharf_is_an_invented_river_cell() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
-	assert_eq(map.damaged_wharves.keys(), [DAMAGED_WHARF])
+	assert_eq(map.damaged_wharves, [DAMAGED_WHARF] as Array[Vector2i])
 	assert_true(DAMAGED_WHARF in map.river_cells, "Water, like the cell of a wharf")
 	assert_true(map.beside_road(DAMAGED_WHARF), "A wharf works only beside a street")
 	assert_false(map.anchors.has(DAMAGED_WHARF), "Nothing stands there yet")
 	var entry: Dictionary = _raw["damaged_wharves"][0]
-	assert_eq(map.damaged_wharves[DAMAGED_WHARF], float(entry["repair_cost_ratio"]), "Read from the map's data")
+	# Issue #177 (Cristian, 2026-10-19): the repair cost lives once, in economy/repair.json, not in the map.
+	assert_false(entry.has("repair_cost_ratio"), "Read through Params as repair.wharf_cost_ratio")
+	assert_false(str(entry["history"]).contains("repair_cost_ratio"))
 	assert_string_starts_with(str(entry["history"]), "[INVENTED]")
 	# Cristian's rule: a damaged wharf never takes the name of a real one.
 	assert_string_contains(str(entry["history"]), "fronts the real Swan/Sun Wharf frontage; not one of them")

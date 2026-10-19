@@ -105,7 +105,9 @@ londinium/
    (`dense_housing_cells`, as many as `startup.dense_housing_occupied`; not buildable by the player) and the other
    anchors with a use (`anchors`, #152). A demolish never removes an anchor (`historic_anchor`). The 1870 houses of the
    map (`period_houses`, #176, D-083) stand there too as dense housing with their `start_population` (0 on the strip),
-   and a demolish never removes them either (`historic_anchor`, #180, D-085).
+   and a demolish never removes them either (`historic_anchor`, #180, D-085). A `RepairWharfCommand` turns a damaged
+   wharf of the map (`damaged_wharves`) with nothing on it into a wharf for `repair.wharf_cost_ratio`
+   (`economy/repair.json`) of a new wharf, rounded down (#177, D-083). A new wharf may still be built there instead.
 1b. Streets (`RoadSystem`, issue #67, D-034, D-070, D-080), only on a map with `roads_enabled` (the strip; the 8x8 of the
    harness has none, so nothing changes there). It runs here because the layout only changes in step 1 and the
    connection decides who works. From the historic streets of the map, the player's streets that join them side by
