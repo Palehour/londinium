@@ -59,6 +59,12 @@ func use_difficulty(preset_id: StringName) -> Array[String]:
 	return layers.errors
 
 
+# Checks of one rule (issue #180): every later run sets these values on top of data/, like a difficulty preset.
+func use_modifiers(modifiers: Array[Modifier]) -> void:
+	_layers = modifiers
+	_params = _new_params()
+
+
 func _new_params() -> Params:
 	return Params.new(_catalog, _catalog.roles[&"neutral_administrator"], _layers)
 

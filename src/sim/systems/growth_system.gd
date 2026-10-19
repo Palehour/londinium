@@ -26,7 +26,7 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 	if entry.satisfaction_departure_age_seconds >= 0:
 		entry.satisfaction_departure_age_seconds += 1
 	var residents: int = entry.population
-	var free_housing: int = maxi(0, entry.housing_capacity - residents)
+	var free_housing: int = free_room(state, params, def, entry)
 	if entry.hunger_emigration_active:
 		entry.hunger_emigration_active = state.hunger_coverage(def.id) \
 			< float(params.get_value(def.hunger_recovery_key))
@@ -66,6 +66,16 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 		entry.emigration_fraction = 0.0
 
 
+# The room immigrants can take (issue #180, D-085): only the free room of the served houses. People fill the served
+# houses first (D-081), so that is the served room minus everybody, never more than the free room of all houses.
+static func free_room(state: EconomyState, params: Params, def: ClassDef, entry: ClassState) -> int:
+	var free: int = maxi(0, entry.housing_capacity - entry.population)
+	if def.served_categories.is_empty() or not bool(params.get_value(&"population.growth.served_capacity_only")):
+		return free
+	var served: int = RoadSystem.served_room(state, params, def, entry.housing_capacity)
+	return mini(free, maxi(0, served - entry.population))
+
+
 static func is_satisfaction_emigration_active(state: EconomyState, params: Params) -> bool:
 	var threshold: float = float(params.get_value(&"population.growth.emigration_threshold"))
 	return state.satisfaction < threshold and state.satisfaction_target < threshold
@@ -84,6 +94,6 @@ static func reason(state: EconomyState, params: Params, def: ClassDef, entry: Cl
 		return REASON_UNHAPPY
 	if entry.satisfaction < float(params.get_value(def.immigration_threshold_key)):
 		return REASON_SATISFACTION_LOW
-	if entry.housing_capacity - entry.population <= 0:
+	if free_room(state, params, def, entry) <= 0:
 		return REASON_NO_FREE_HOUSING
 	return REASON_ARRIVING if entry.population > 0 or state.bread_coverage > 0.0 else REASON_STABLE

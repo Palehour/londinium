@@ -12,6 +12,8 @@ const DENSE: StringName = &"dense_housing"
 # Green Bank.
 const START_CELL: Vector2i = Vector2i(8, 6)
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+# Base capacity of a dense housing (D-075). Since issue #180 (D-085) the four empty 1870 houses add theirs too.
+const DENSE_CAPACITY: int = 20
 
 var _catalog: DataCatalog
 var _strip: EconomyContext
@@ -49,6 +51,12 @@ func _buildings_of(sim: Simulation, id: StringName) -> Array[Dictionary]:
 	return found
 
 
+# The dense housing of startup.dense_housing_occupied (D-075), without the 1870 houses of D-085.
+func _start_houses(sim: Simulation) -> Array[Dictionary]:
+	return _buildings_of(sim, DENSE).filter(func(building: Dictionary) -> bool:
+		return _cell_of(building) not in _catalog.maps[STRIP].period_houses)
+
+
 func _cell_of(building: Dictionary) -> Vector2i:
 	return Vector2i(int(building["cell"][0]), int(building["cell"][1]))
 
@@ -62,9 +70,11 @@ func _build(sim: Simulation, context: EconomyContext, id: StringName, cell: Vect
 
 func test_new_game_on_the_strip_starts_with_one_full_dense_housing() -> void:
 	var sim: Simulation = _new_game(_params())
-	var houses: Array[Dictionary] = _buildings_of(sim, DENSE)
+	var houses: Array[Dictionary] = _start_houses(sim)
+	var period_houses: int = _catalog.maps[STRIP].period_houses.size()
 	assert_eq(houses.size(), 1)
-	assert_eq(sim.snapshot()["economy"]["buildings"].size(), 2, "Only the anchors stand at the start")
+	assert_eq(sim.snapshot()["economy"]["buildings"].size(), 2 + period_houses,
+		"Only the anchors and the 1870 houses (D-085) stand at the start")
 	assert_eq(_buildings_of(sim, &"wharf").size(), 1, "Oliver's Wharf, the other anchor with a use (#152)")
 	if houses.is_empty():
 		return
@@ -72,7 +82,8 @@ func test_new_game_on_the_strip_starts_with_one_full_dense_housing() -> void:
 	sim.tick()
 	var economy: Dictionary = sim.snapshot()["economy"]
 	assert_eq(economy["population"], 20)
-	assert_eq(economy["housing_capacity"], 20, "Full with the 20 people of startup.json")
+	assert_eq(economy["housing_capacity"], DENSE_CAPACITY * (1 + period_houses),
+		"Pier Head full with the 20 people of startup.json; the 1870 houses empty (D-085)")
 	assert_eq(economy["overcrowding"], 0.0)
 
 
@@ -90,9 +101,9 @@ func test_the_start_cell_is_a_standing_building_beside_a_historical_street() -> 
 func test_the_occupied_knob_sets_how_many_houses_start() -> void:
 	assert_eq(_params().get_value(&"startup.dense_housing_occupied"), 1)
 	var none: Simulation = _new_game(_params([Modifier.new(&"startup.dense_housing_occupied", &"set", 0)]))
-	assert_true(_buildings_of(none, DENSE).is_empty())
+	assert_true(_start_houses(none).is_empty())
 	var more: Simulation = _new_game(_params([Modifier.new(&"startup.dense_housing_occupied", &"set", 5)]))
-	assert_eq(_buildings_of(more, DENSE).size(), _catalog.maps[STRIP].dense_housing_cells.size(),
+	assert_eq(_start_houses(more).size(), _catalog.maps[STRIP].dense_housing_cells.size(),
 		"Never more houses than the map lists")
 
 
@@ -134,7 +145,7 @@ func test_the_dense_housing_of_pier_head_is_not_demolished() -> void:
 	kept.tick()
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"historic_anchor")
-	assert_eq(_buildings_of(sim, DENSE).size(), 1)
+	assert_eq(_start_houses(sim).size(), 1)
 	assert_eq(sim.snapshot()["economy"]["money"], kept.snapshot()["economy"]["money"], "No refund")
 	var over: BuildCommand = _build(sim, _strip, &"housing", START_CELL)
 	assert_false(over.accepted)
@@ -162,7 +173,8 @@ func test_a_saved_building_on_a_blocked_cell_stays_and_works() -> void:
 	var economy: Dictionary = sim.snapshot()["economy"]
 	assert_eq(_buildings_of(sim, &"bakery").size(), 1, "The saved bakery is still there")
 	assert_gt(economy["stocks"][&"bread"], bread_before, "and still bakes")
-	assert_eq(economy["housing_capacity"], 40, "The saved housing still counts: 20 dense + 20")
+	assert_eq(economy["housing_capacity"], 40 + DENSE_CAPACITY * _catalog.maps[STRIP].period_houses.size(),
+		"The saved housing still counts: 20 dense + 20, beside the 1870 houses (D-085)")
 	var occupied: BuildCommand = _build(sim, _strip, &"mill", bakery_cell)
 	assert_false(occupied.accepted)
 	sim.apply_command(DemolishCommand.new(bakery_cell))
@@ -170,3 +182,28 @@ func test_a_saved_building_on_a_blocked_cell_stays_and_works() -> void:
 	var blocked: BuildCommand = _build(sim, _strip, &"mill", bakery_cell)
 	assert_false(blocked.accepted)
 	assert_eq(blocked.reason, &"existing_building")
+
+
+# Issue #180 (D-085): the four 1870 houses of D-083 stand from the start as dense housing, empty, and like the anchors
+# of D-084 they are never demolished nor refunded.
+func test_the_period_houses_stand_empty_and_are_never_demolished() -> void:
+	var params: Params = SimTestParams.isolated_params(_catalog)
+	var map: MapDef = _catalog.maps[STRIP]
+	assert_eq(map.period_houses.size(), 4)
+	var kept: Simulation = _new_game(params)
+	var sim: Simulation = _new_game(params)
+	for cell: Vector2i in map.period_houses:
+		var houses: Array[Dictionary] = _buildings_of(sim, DENSE).filter(
+			func(building: Dictionary) -> bool: return _cell_of(building) == cell)
+		assert_eq(houses.size(), 1, "A dense housing stands on %s" % cell)
+		var command: DemolishCommand = DemolishCommand.new(cell)
+		sim.apply_command(command)
+		sim.tick()
+		kept.tick()
+		assert_false(command.accepted, str(cell))
+		assert_eq(command.reason, &"historic_anchor", "The same reason as the anchors (%s)" % cell)
+	var economy: Dictionary = sim.snapshot()["economy"]
+	assert_eq(_buildings_of(sim, DENSE).size(), 1 + map.period_houses.size(), "Pier Head and the four houses")
+	assert_eq(economy["money"], kept.snapshot()["economy"]["money"], "No refund")
+	assert_eq(economy["population"], int(params.get_value(&"startup.population")),
+		"The houses start with nobody: the people are the ones of startup.json, all in Pier Head")

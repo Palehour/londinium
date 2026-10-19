@@ -17,7 +17,8 @@
       "emigration_per_minute": "population.growth.emigration_per_minute",
       "hunger_emigration_threshold": "population.growth.hunger_emigration_threshold",
       "hunger_emigration_recovery": "population.growth.hunger_emigration_recovery",
-      "hunger_emigration_multiplier": "population.growth.hunger_emigration_multiplier"
+      "hunger_emigration_multiplier": "population.growth.hunger_emigration_multiplier",
+      "served_categories": ["sustento"]
     },
     "tax": { "basis": "employed", "base": "population.tax.base_per_employed_worker_per_minute" },
     "needs": {

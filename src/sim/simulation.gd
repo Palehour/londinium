@@ -59,6 +59,11 @@ static func _place_dense_housing(state: EconomyState, params: Params, context: E
 	var count: int = mini(cells.size(), int(params.get_value(&"startup.dense_housing_occupied")))
 	for cell: Vector2i in cells.slice(0, count):
 		state.buildings.append({"definition_id": DENSE_HOUSING, "cell": [cell.x, cell.y]})
+	# The 1870 houses (issue #180, D-085) stand the same way, with the people the map gives them (none on the strip),
+	# who join the base class like the people of startup.json.
+	for cell: Vector2i in context.map.period_houses:
+		state.buildings.append({"definition_id": DENSE_HOUSING, "cell": [cell.x, cell.y]})
+		state.population += int(context.map.period_house_population.get(cell, 0))
 	# The other anchors with a use, like Oliver's Wharf (issue #152), stand established in the same way.
 	for cell: Vector2i in context.map.anchors:
 		var building: StringName = context.map.anchors[cell]

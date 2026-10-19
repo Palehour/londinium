@@ -19,11 +19,13 @@ const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vect
 # Historic places read on the sheets by hand (issue #152): anchors carry the building that stands there ("" for none),
 # named sites only a name. Both say which sheet they come from.
 const ANCHORS: String = "anchors"
-# Tierra de época (issue #176, D-083): the 1870 houses are listed on free land (placing them in the simulation is a later
-# issue); a damaged wharf carries the share of a new wharf's cost that repairing it takes.
+# Tierra de época (issue #176, D-083): the 1870 houses are listed on free land, and the simulation places them as dense
+# housing (#180, D-085); a damaged wharf carries the share of a new wharf's cost that repairing it takes.
 const PERIOD_HOUSES: String = "period_houses"
 const DAMAGED_WHARVES: String = "damaged_wharves"
 const REPAIR_COST_RATIO: String = "repair_cost_ratio"
+# How many people a period house starts with (issue #180, D-085). Optional: without it the house starts empty.
+const START_POPULATION: String = "start_population"
 const PLACE_FIELDS: Array[String] = [ANCHORS, "named_sites", PERIOD_HOUSES, DAMAGED_WHARVES]
 # Style of each free lot, only for drawing (#176): style -> cells. The data loader checks that each free cell has one.
 const LOT_STYLES: String = "lot_styles"
@@ -371,6 +373,8 @@ func _places(overrides: Variant, field: String, size: Vector2i) -> Array:
 			place["building"] = entry["building"]
 		elif field == DAMAGED_WHARVES:
 			place[REPAIR_COST_RATIO] = entry[REPAIR_COST_RATIO]
+		elif field == PERIOD_HOUSES and entry.has(START_POPULATION):
+			place[START_POPULATION] = entry[START_POPULATION]
 		place["source"] = str(entry["source"])
 		place["history"] = str(entry["history"])
 		places.append(place)
@@ -387,6 +391,8 @@ func _valid_place(entry: Variant, field: String, size: Vector2i) -> bool:
 	if field == ANCHORS:
 		return entry.get("building") is String
 	# Only that it is a number: the data loader checks its range.
+	if field == PERIOD_HOUSES and entry.has(START_POPULATION):
+		return typeof(entry[START_POPULATION]) in [TYPE_INT, TYPE_FLOAT]
 	return field != DAMAGED_WHARVES or typeof(entry.get(REPAIR_COST_RATIO)) in [TYPE_INT, TYPE_FLOAT]
 
 

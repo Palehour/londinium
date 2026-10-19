@@ -45,7 +45,7 @@ londinium/
 │   ├── eras/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
-│   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates, head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
+│   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
@@ -104,7 +104,8 @@ londinium/
    works (D-076). Before tick 0, `Simulation.create_new` puts down the map's starting dense housing
    (`dense_housing_cells`, as many as `startup.dense_housing_occupied`; not buildable by the player) and the other
    anchors with a use (`anchors`, #152). A demolish never removes an anchor (`historic_anchor`). The 1870 houses of the
-   map (`period_houses`, #176, D-083) are only data for now: nothing places them yet.
+   map (`period_houses`, #176, D-083) stand there too as dense housing with their `start_population` (0 on the strip),
+   and a demolish never removes them either (`historic_anchor`, #180, D-085).
 1b. Streets (`RoadSystem`, issue #67, D-034, D-070, D-080), only on a map with `roads_enabled` (the strip; the 8x8 of the
    harness has none, so nothing changes there). It runs here because the layout only changes in step 1 and the
    connection decides who works. From the historic streets of the map, the player's streets that join them side by
@@ -130,7 +131,7 @@ londinium/
 5. Consumption: each class eats the goods it lists as needs at its own rate (bread by everyone, tea by the workers, beer by the artisans, D-025, D-033); tea and beer are drawn from the global store like a single balance; stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
 7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
-8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008).
+8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008). With `population.growth.served_capacity_only`, the room immigrants count is only that of the served houses: those with every good of the class's `growth.served_categories` within reach (step 1b), minus the people, who fill the served houses first (D-081). No served room means no arrivals and no backlog; losing the bread evicts nobody (#180, D-085). Without streets every house counts.
    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
    Then the streets (issue #67): the units each building took out of the store this tick (counted in step 4) times its

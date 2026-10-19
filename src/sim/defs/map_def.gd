@@ -31,11 +31,12 @@ var dense_housing_cells: Array[Vector2i] = []
 # with no use. None is ever demolished. Named sites are only a name on a cell and block nothing.
 var anchors: Dictionary[Vector2i, StringName] = {}
 var named_sites: Dictionary[Vector2i, String] = {}
-# Tierra de época (issue #176, D-083), only data for now. The 1870 houses are free land beside a street where plain
-# dense housing will stand; the simulation does not place them yet (Cristian, 2026-10-18: with them the long game of
-# D-080 drops to 14 of 20 seeds). A damaged wharf is a river cell with the share of a new wharf's cost that repairing
-# it takes (#177). Lot styles are only for drawing (#178): the simulation never reads them.
+# Tierra de época (issue #176, D-083). The 1870 houses are free land beside a street where the simulation places plain
+# dense housing, never demolished, with the people of period_house_population (issue #180, D-085). A damaged wharf is
+# a river cell with the share of a new wharf's cost that repairing it takes (#177). Lot styles are only for drawing
+# (#178): the simulation never reads them.
 var period_houses: Array[Vector2i] = []
+var period_house_population: Dictionary[Vector2i, int] = {}
 var damaged_wharves: Dictionary[Vector2i, float] = {}
 var lot_styles: Dictionary[Vector2i, StringName] = {}
 
