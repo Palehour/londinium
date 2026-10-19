@@ -1,12 +1,17 @@
 extends GutTest
 
 # Issue #176 (D-083, task 1 of Mason's breakdown of #171): the free land of the Wapping strip is drawn as 1870 lots,
-# four 1870 houses are listed on the north-west street stub (4,4)-(4,5) and one damaged wharf waits on the river.
-# Only data (Cristian, 2026-10-18): placing the houses in the simulation is a later issue, and repairing the wharf #177.
+# four 1870 houses are listed around the street at (4,4)-(4,5) and one damaged wharf waits on the river. Only data
+# (Cristian, 2026-10-18): placing the houses in the simulation is for Milestone 3, and repairing the wharf #177.
 
 const STRIP: StringName = &"riverside_strip"
 const HOUSES: Array[Vector2i] = [Vector2i(4, 3), Vector2i(3, 4), Vector2i(5, 4), Vector2i(5, 5)]
+# Only (4,3) is in the corner of sheet VII.77; the other three cells are on sheet VII.87 (review of PR #179).
+const HOUSES_ON_VII_87: Array[Vector2i] = [Vector2i(3, 4), Vector2i(5, 4), Vector2i(5, 5)]
 const DAMAGED_WHARF: Vector2i = Vector2i(14, 7)
+# Cells of a real place of the sheets ([FACT]): their lot style says nothing about a use (review of PR #179).
+const FACT_CELLS: Array[Vector2i] = [Vector2i(8, 7), Vector2i(12, 7), Vector2i(6, 6), Vector2i(7, 7)]
+const NEUTRAL_STYLE: StringName = &"plain"
 # The count of #152, which D-083 keeps: free cells in total and without the corner with no sheet (VII.77).
 const FREE_TOTAL: int = 65
 const FREE_WITHOUT_CORNER: int = 47
@@ -52,6 +57,10 @@ func test_the_strip_lists_four_invented_period_houses_beside_a_street() -> void:
 	for entry: Dictionary in _raw["period_houses"]:
 		assert_string_starts_with(str(entry["history"]), "[INVENTED]", str(entry["cell"]))
 		assert_false(entry.has("building"), "Always dense housing (D-083): the field would be a second source")
+		var cell: Vector2i = Vector2i(int(entry["cell"][0]), int(entry["cell"][1]))
+		var on_vii_87: bool = cell in HOUSES_ON_VII_87
+		assert_eq(str(entry["source"]).contains("sheet VII.87"), on_vii_87, "Sheet of %s" % cell)
+		assert_eq(str(entry["source"]).contains("VII.77"), not on_vii_87, "Only (4,3) is in the corner of VII.77")
 
 
 func test_the_damaged_wharf_is_an_invented_river_cell_with_its_repair_ratio() -> void:
@@ -63,6 +72,8 @@ func test_the_damaged_wharf_is_an_invented_river_cell_with_its_repair_ratio() ->
 	var entry: Dictionary = _raw["damaged_wharves"][0]
 	assert_eq(map.damaged_wharves[DAMAGED_WHARF], float(entry["repair_cost_ratio"]), "Read from the map's data")
 	assert_string_starts_with(str(entry["history"]), "[INVENTED]")
+	# Cristian's rule: a damaged wharf never takes the name of a real one.
+	assert_string_contains(str(entry["history"]), "fronts the real Swan/Sun Wharf frontage; not one of them")
 
 
 func test_every_free_lot_has_one_style_and_nothing_else_has_one() -> void:
@@ -74,6 +85,9 @@ func test_every_free_lot_has_one_style_and_nothing_else_has_one() -> void:
 	assert_eq(map.lot_styles.size(), _raw["lot_styles"].values().reduce(
 		func(total: int, cells: Array) -> int: return total + cells.size(), 0), "Each cell listed once")
 	assert_string_contains("\n".join(_raw["history_notes"]), "[INVENTED] Lot styles")
+	for cell: Vector2i in FACT_CELLS:
+		assert_eq(map.lot_styles.get(cell), NEUTRAL_STYLE, "%s is a real place of the sheets" % cell)
+	assert_false(&"ropewalk" in map.lot_styles.values(), "(2-5,2) is inside the London Docks wall (1805)")
 
 
 func test_the_free_cell_count_is_the_same_as_in_152() -> void:
