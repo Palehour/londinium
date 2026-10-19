@@ -357,14 +357,17 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 				_errors.append("%s.buildable: expected a boolean" % path)
 				continue
 			building.buildable = raw[id]["buildable"]
+		if raw[id].has("footprint") and not _footprint(raw[id]["footprint"], path + ".footprint", building):
+			continue
 		var is_housing: bool = "housing" in building.tags
 		var schema: Dictionary = BUILDING_FIELDS.duplicate()
 		schema["capacity" if is_housing else "recipe"] = "integer"
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
-		if raw[id].has("buildable"):
-			fields.append("buildable")
+		for field: String in ["buildable", "footprint"]:
+			if raw[id].has(field):
+				fields.append(field)
 		for field: String in BUILDING_SERVICE_FIELDS:
 			if raw[id].has(field):
 				fields.append(field)
@@ -373,6 +376,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var numeric: Dictionary = raw[id].duplicate()
 		numeric.erase("tags")
 		numeric.erase("buildable")
+		numeric.erase("footprint")
 		if numeric.has("service_radius"):
 			schema["service_radius"] = "integer"
 		for field: String in ["distributes", "supplies"]:
@@ -387,6 +391,16 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			schema.erase("recipe")
 		_numbers(numeric, schema, path, "building.%s" % id, catalog)
 		catalog.buildings[building.id] = building
+
+
+# Cells the building covers, [w, h] (issue #184, D-086): structure like the tags, not a balance number.
+func _footprint(raw: Variant, path: String, building: BuildingDef) -> bool:
+	if raw is not Array or raw.size() != 2 \
+			or not raw.all(func(side: Variant) -> bool: return _is_whole_number(side) and float(side) >= 1.0):
+		_errors.append("%s: expected [w, h] of whole numbers of at least 1" % path)
+		return false
+	building.footprint = Vector2i(int(raw[0]), int(raw[1]))
+	return true
 
 
 func _goods_list(raw: Variant, path: String, target: Array[StringName], catalog: DataCatalog) -> bool:

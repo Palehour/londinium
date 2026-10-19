@@ -42,16 +42,19 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	if not _context.buildings[_definition_id].buildable:
 		return &"not_buildable"
 	var map: MapDef = _context.map
-	if _cell.x < 0 or _cell.y < 0 or _cell.x >= map.width or _cell.y >= map.height:
+	# The whole footprint counts, its cell being the north-west corner (issue #184, D-086).
+	var area: Rect2i = Rect2i(_cell, _context.buildings[_definition_id].footprint)
+	if not Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area):
 		return &"outside_map"
 	for building: Dictionary in state.buildings:
-		if building["cell"] == [_cell.x, _cell.y]:
+		if _context.area_of(building).intersects(area):
 			return &"occupied_cell"
-	var terrain_reason: StringName = _context.terrain_placement_reason(_definition_id, _cell)
+	var terrain_reason: StringName = _context.placement_reason(_definition_id, _cell)
 	if terrain_reason != &"":
 		return terrain_reason
 	# On a map with streets (issue #67) a street cell stays a street.
-	if map.roads_enabled and BuildRoadCommand.is_street(state, map, _cell):
+	if map.roads_enabled and EconomyContext.cells_of(area).any(func(cell: Vector2i) -> bool:
+			return BuildRoadCommand.is_street(state, map, cell)):
 		return &"road_cell"
 	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"

@@ -41,7 +41,7 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 	state.service_rooms.clear()
 	var connected: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
-		if network.has_access(RoadNetwork.cell_of(building)):
+		if network.has_access(context.area_of(building)):
 			connected.append(building)
 		else:
 			state.road_blocked[RoadNetwork.cell_of(building)] = NO_ROAD_ACCESS
@@ -105,7 +105,7 @@ static func _add_legs(state: EconomyState, params: Params, context: EconomyConte
 			any_supplier = true
 			if other not in connected:
 				continue
-			var steps: int = network.steps(RoadNetwork.cell_of(other), cell)
+			var steps: int = network.steps(context.area_of(other), context.area_of(building))
 			if steps != RoadNetwork.NO_ROUTE and (nearest_steps == RoadNetwork.NO_ROUTE or steps < nearest_steps):
 				nearest = other
 				nearest_steps = steps
@@ -220,7 +220,7 @@ static func _is_served(params: Params, context: EconomyContext, network: RoadNet
 		var radius: int = int(params.get_value(StringName("building.%s.service_radius" % building["definition_id"])))
 		if radius == 0:
 			return true
-		var steps: int = network.steps(RoadNetwork.cell_of(building), RoadNetwork.cell_of(house))
+		var steps: int = network.steps(context.area_of(building), context.area_of(house))
 		if steps != RoadNetwork.NO_ROUTE and steps <= radius:
 			return true
 	return false

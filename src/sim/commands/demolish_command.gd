@@ -18,8 +18,8 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	accepted = false
 	reason = &"no_building"
 	for index: int in range(state.buildings.size()):
-		if state.buildings[index]["cell"] == [_cell.x, _cell.y]:
-			if _is_anchor(state.buildings[index]["definition_id"]):
+		if _covers(state.buildings[index]):
+			if _is_anchor(state.buildings[index]["definition_id"], RoadNetwork.cell_of(state.buildings[index])):
 				reason = &"historic_anchor"
 				return
 			var refund: int = _refund(state, params, state.buildings[index])
@@ -53,21 +53,29 @@ func _demolish_road(state: EconomyState, params: Params) -> void:
 		reason = &""
 		return
 	# An anchor may share its cell with a historic street, like St John's with Green Bank: the anchor is what stands.
-	if _is_anchor(&""):
+	if _is_anchor(&"", _cell):
 		reason = &"historic_anchor"
 	elif _context != null and _context.map.roads_enabled and _cell in _context.map.road_cells:
 		reason = &"historic_road"
 
 
+# Any cell of a building's footprint picks it (issue #184, D-086). Without the map only its own cell does.
+func _covers(building: Dictionary) -> bool:
+	if _context == null:
+		return RoadNetwork.cell_of(building) == _cell
+	return _context.area_of(building).has_point(_cell)
+
+
 # A historic anchor of the map is never demolished (issue #152): the building it stands with, or the cell itself when
 # it has no use. The dense housing of an 1870 house is kept the same way (issue #180, D-085). Another building on the
-# cell, like one from a saved game (D-076), is demolished as usual.
-func _is_anchor(definition_id: StringName) -> bool:
+# cell, like one from a saved game (D-076), is demolished as usual. A building is known by the cell it stands on, the
+# north-west corner of its footprint, whichever of its cells was touched (D-086).
+func _is_anchor(definition_id: StringName, origin: Vector2i) -> bool:
 	if _context == null:
 		return false
-	if definition_id == Simulation.DENSE_HOUSING and _cell in _context.map.period_houses:
+	if definition_id == Simulation.DENSE_HOUSING and origin in _context.map.period_houses:
 		return true
-	return _context.map.anchors.has(_cell) and _context.map.anchors[_cell] == definition_id
+	return _context.map.anchors.has(origin) and _context.map.anchors[origin] == definition_id
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:
