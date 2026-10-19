@@ -48,6 +48,8 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"unloading": {"default_barley_percent": "integer", "step_percent": "integer"}},
 	"demolish": {"refund_ratio": "fraction", "refund_grace_seconds": "number",
 		"no_jobs_refund_ratio": "fraction"},
+	# Repairing a damaged wharf of the map (issue #177, D-083): the share of a new wharf's cost it takes.
+	"repair": {"wharf_cost_ratio": "fraction"},
 	# Streets and transport of the distance model (issue #67, D-070, D-080).
 	"roads": {"cost": "money", "upkeep_per_minute": "money"},
 	"transport": {"cost_per_unit_per_step": "number", "expensive_steps": "positive_integer"},
@@ -802,19 +804,15 @@ func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
 			map.period_house_population[cell] = int(people)
 
 
-# Damaged wharves (issue #176, D-083): on the river, where a wharf stands, with the share of a new wharf's cost that
-# repairing one takes: above 0, or it would be free, and at most 1, or a new wharf would be cheaper.
+# Damaged wharves (issue #176, D-083): on the river, where a wharf stands. What repairing one costs is not the map's:
+# it is repair.wharf_cost_ratio in economy/repair.json (#177).
 func _load_damaged_wharves(raw: Variant, location: String, map: MapDef) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
-		var ratio: Variant = entry.get("repair_cost_ratio")
 		if cell not in map.river_cells:
 			_errors.append("%s: [%d, %d] is not on the river" % [location, cell.x, cell.y])
-		elif typeof(ratio) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(ratio)) or float(ratio) <= 0.0 				or float(ratio) > 1.0:
-			_errors.append("%s: [%d, %d] repair_cost_ratio must be above 0 and at most 1"
-				% [location, cell.x, cell.y])
 		else:
-			map.damaged_wharves[cell] = float(ratio)
+			map.damaged_wharves.append(cell)
 
 
 # Lot styles (issue #176, D-083): only drawing, one for each cell of free land that is not a period house and none

@@ -38,6 +38,9 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"demolish.no_jobs_refund_ratio": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
+	# Above 0, or a repair would be free, and at most 1, or a new wharf would be cheaper (issue #177, D-083).
+	&"repair.wharf_cost_ratio": {
+		"min": 0.0, "max": 1.0, "min_inclusive": false, "max_inclusive": true},
 	&"demolish.refund_grace_seconds": {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.grace_seconds": {

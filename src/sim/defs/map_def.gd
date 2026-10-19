@@ -33,11 +33,11 @@ var anchors: Dictionary[Vector2i, StringName] = {}
 var named_sites: Dictionary[Vector2i, String] = {}
 # Tierra de época (issue #176, D-083). The 1870 houses are free land beside a street where the simulation places plain
 # dense housing, never demolished, with the people of period_house_population (issue #180, D-085). A damaged wharf is
-# a river cell with the share of a new wharf's cost that repairing it takes (#177). Lot styles are only for drawing
-# (#178): the simulation never reads them.
+# a river cell that can be repaired into a wharf; what that costs is repair.wharf_cost_ratio in data/economy (#177).
+# Lot styles are only for drawing (#178): the simulation never reads them.
 var period_houses: Array[Vector2i] = []
 var period_house_population: Dictionary[Vector2i, int] = {}
-var damaged_wharves: Dictionary[Vector2i, float] = {}
+var damaged_wharves: Array[Vector2i] = []
 var lot_styles: Dictionary[Vector2i, StringName] = {}
 
 

@@ -535,6 +535,27 @@ func test_demolish_refund_parameters_are_required_and_validate_ranges() -> void:
 	_assert_invalid("Params: invalid range for 'demolish.no_jobs_refund_ratio'")
 
 
+# Issue #177 (D-083): a repair costs above 0, or it would be free, and at most a new wharf.
+func test_repair_cost_ratio_is_required_and_above_0_and_at_most_1() -> void:
+	before_each()
+	_documents["economy/repair.json"].erase("wharf_cost_ratio")
+	_assert_invalid("wharf_cost_ratio: missing field")
+	before_each()
+	_documents.erase("economy/repair.json")
+	_assert_invalid("economy/repair.json: missing file")
+	for invalid: float in [0.0, -0.1, 1.5]:
+		before_each()
+		_documents["economy/repair.json"]["wharf_cost_ratio"] = invalid
+		_assert_invalid("repair.json.wharf_cost_ratio: invalid fraction")
+		before_each()
+		_set_modifier({"key": "repair.wharf_cost_ratio", "op": "set", "value": invalid})
+		_assert_invalid("Params: invalid range for 'repair.wharf_cost_ratio'")
+	for valid: float in [0.01, 1.0]:
+		before_each()
+		_documents["economy/repair.json"]["wharf_cost_ratio"] = valid
+		assert_true(DataLoader.new().load_documents(_documents).is_ok(), str(valid))
+
+
 func test_barley_and_unloading_parameters_are_required_and_validate_ranges() -> void:
 	for field: String in ["base_price", "min_price", "max_price", "price_update_seconds", "max_step", "reversion",
 			"storage_capacity", "decay_fraction_per_minute"]:
@@ -693,37 +714,32 @@ func _period_map(house: Array = [2, 0]) -> Dictionary:
 	return map
 
 
-func _damaged_wharf(cell: Array, ratio: Variant, history: String = "[INVENTED] Damaged.") -> Dictionary:
-	var wharf: Dictionary = _place("Damaged wharf", cell, null, history)
-	wharf["repair_cost_ratio"] = ratio
-	return wharf
+func _damaged_wharf(cell: Array, history: String = "[INVENTED] Damaged.") -> Dictionary:
+	return _place("Damaged wharf", cell, null, history)
 
 
 # Issue #176 (D-083): a period house is free land beside a street (D-079) with no lot style, a damaged wharf is on the
-# river with a repair ratio above 0 and at most 1, and every other free cell has one lot style.
+# river, and every other free cell has one lot style. What a repair costs is economy/repair.json's (#177).
 func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_says() -> void:
 	before_each()
 	var map: Dictionary = _period_map()
 	map["period_houses"] = [_place("Period house", [2, 0], null, "[INVENTED] A house.")]
-	map["damaged_wharves"] = [_damaged_wharf([2, 7], 0.5)]
+	map["damaged_wharves"] = [_damaged_wharf([2, 7])]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(result.errors, [] as Array[String])
 	if result.is_ok():
 		var loaded: MapDef = result.catalog.maps[&"whitechapel_1850s"]
 		assert_eq(loaded.period_houses, [Vector2i(2, 0)] as Array[Vector2i])
 		assert_true(loaded.anchors.is_empty(), "Only data: a period house is not an anchor yet")
-		assert_eq(loaded.damaged_wharves, {Vector2i(2, 7): 0.5} as Dictionary[Vector2i, float])
+		assert_eq(loaded.damaged_wharves, [Vector2i(2, 7)] as Array[Vector2i])
 		assert_eq(loaded.lot_styles.size(), 53)
 		assert_eq(loaded.lot_styles[Vector2i(0, 0)], &"yard")
 	var cases: Array[Array] = [
 		["period_houses", [_place("House", [1, 1], null, "[INVENTED] A house.")], "[1, 1] is not free land"],
 		["period_houses", [_place("House", [2, 0])], ""],
 		["period_houses", [_place("House", [2, 0], null, "A house")], "needs a name, a source and a history tag"],
-		["damaged_wharves", [_damaged_wharf([2, 2], 0.5)], "[2, 2] is not on the river"],
-		["damaged_wharves", [_damaged_wharf([2, 7], 0)], "repair_cost_ratio must be above 0 and at most 1"],
-		["damaged_wharves", [_damaged_wharf([2, 7], 1.5)], "repair_cost_ratio must be above 0 and at most 1"],
-		["damaged_wharves", [_damaged_wharf([2, 7], "half")], "repair_cost_ratio must be above 0 and at most 1"],
-		["damaged_wharves", [_damaged_wharf([2, 7], 0.5, "Damaged")], "needs a name, a source and a history tag"],
+		["damaged_wharves", [_damaged_wharf([2, 2])], "[2, 2] is not on the river"],
+		["damaged_wharves", [_damaged_wharf([2, 7], "Damaged")], "needs a name, a source and a history tag"],
 	]
 	for entry: Array in cases:
 		before_each()
