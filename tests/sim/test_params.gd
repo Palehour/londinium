@@ -77,6 +77,21 @@ func test_unknown_key_is_an_error_not_zero() -> void:
 	assert_push_error("Params: unknown key 'missing.key'")
 
 
+# Params keeps the values that validated (PR #108, CI time); a read that fails is not kept, so it fails and
+# reports again every time instead of turning into a remembered value.
+func test_a_failed_read_reports_its_error_every_time() -> void:
+	var key: StringName = &"market.wheat.base_price"
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(key, &"set", -3.0))
+	var params: Params = Params.new(_catalog, role)
+	assert_null(params.get_value(key))
+	assert_null(params.get_value(key))
+	assert_push_error_count(2)
+	var good: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	assert_eq(good.get_value(key), _catalog.base_values[key])
+	assert_eq(good.get_value(key), _catalog.base_values[key], "a kept value is the validated one")
+
+
 func test_role_cannot_invert_depopulation_thresholds_on_either_read() -> void:
 	var invalid: Dictionary[StringName, float] = {
 		&"defeat.depopulation.defeat_fraction": 0.75,
@@ -148,7 +163,8 @@ func test_modified_defeat_thresholds_match_schema_ranges() -> void:
 
 func test_every_defeat_key_has_post_modifier_range_and_rejects_nonfinite_values() -> void:
 	for key: StringName in _catalog.base_values:
-		if not String(key).begins_with("defeat."):
+		# Switches (defeat.enabled, issue #70) have no numeric range: test_defeat_switch_only_accepts_zero_or_one.
+		if not String(key).begins_with("defeat.") or key in _catalog.boolean_keys:
 			continue
 		assert_true(ParameterRanges.BY_KEY.has(key), str(key))
 		for value: float in [INF, NAN]:
@@ -156,6 +172,17 @@ func test_every_defeat_key_has_post_modifier_range_and_rejects_nonfinite_values(
 			role.modifiers.append(Modifier.new(key, &"set", value))
 			assert_null(Params.new(_catalog, role).get_value(key))
 			assert_push_error("Params: nonfinite result for '%s'" % key)
+
+
+func test_defeat_switch_only_accepts_zero_or_one() -> void:
+	for value: float in [INF, NAN, 0.5, 2.0, -1.0]:
+		var role: RoleDef = RoleDef.new()
+		role.modifiers.append(Modifier.new(&"defeat.enabled", &"set", value))
+		assert_null(Params.new(_catalog, role).get_value(&"defeat.enabled"), str(value))
+		assert_push_error("Params: boolean 'defeat.enabled' only accepts set 0 or 1")
+	var off: RoleDef = RoleDef.new()
+	off.modifiers.append(Modifier.new(&"defeat.enabled", &"set", 0.0))
+	assert_false(Params.new(_catalog, off).get_value(&"defeat.enabled"))
 
 
 func test_modified_defeat_schema_boundaries_and_money_rounding() -> void:

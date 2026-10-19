@@ -1,4 +1,5 @@
 {
   "wheat": { "default_accumulate_price": -1, "default_max_price": -1, "default_target_stock": 0,
-    "default_reserve_minutes": 2 }
+    "default_reserve_minutes": 2 },
+  "unloading": { "default_barley_percent": 0, "step_percent": 10 }
 }

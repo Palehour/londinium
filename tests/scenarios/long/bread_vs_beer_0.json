@@ -1,0 +1,28 @@
+{
+  "id": "bread_vs_beer_0",
+  "description": "Issue #55, pan contra cerveza, reparto de 0 % de cebada: la ciudad de artisans_beer sin harina importada (decisión de Cristian del 2026-10-14: con la harina importada, que tiene prioridad de descarga, la ciudad de 30 % se queda sin cebada y no es estable). Construye la cadena de la cerveza y las viviendas de artesanos, pero todo el embarcadero descarga trigo: no hay cerveza ni artesanos. Es el equilibrio del pan contra el que se compara bread_vs_beer_30.",
+  "notes": "Criterio (a) del #55, aprobado por Cristian el 2026-10-13: recaudación total promedio por minuto entre los minutos 50 y 70 (measure.tax_window), mediana de 20 semillas, comparada con bread_vs_beer_30; cumple si (alta − baja) / baja >= 0,30. Medido: mediana 158,40 (de 158,38 a 161,52), estable al final en 20 de 20 semillas. Las 20 semillas se corren con tools/run_long_tests (long_test_hito2.gd); la suite corta juega la semilla de este archivo.",
+  "seed": 42,
+  "duration_ticks": 4200,
+  "measure": {"tax_window": [50, 70]},
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 537},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 198},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [2, 3], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [6, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 0, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true}
+  ]
+}

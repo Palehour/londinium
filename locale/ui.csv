@@ -1,0 +1,224 @@
+keys,es,en
+ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Calle\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Street\nClick: select/build · Del: demolish · Esc: select\nMove: middle button / WASD / arrows · Zoom: wheel / + / −
+ui.help_gamepad,LB/RB elige: %s · %s · %s · %s · %s\n%s · %s · %s · Calle\nA: construir · mantener X: demoler · B: seleccionar · Cruceta: cursor\nStick: mover · LT/RT: zoom · Menú: panel (B vuelve) · Vista: pausa,LB/RB pick: %s · %s · %s · %s · %s\n%s · %s · %s · Street\nA: build · hold X: demolish · B: select · D-pad: cursor\nStick: move · LT/RT: zoom · Menu: panel (B returns) · View: pause
+ui.loading,Cargando mapa…,Loading map…
+ui.legend,Terrenos:,Terrain:
+ui.map_credits,"OS 1:1056 (1862–74): Reproduced with the permission of the National Library of Scotland, maps.nls.uk, CC-BY · OHM CC0 · Stanford 1862 · Booth","OS 1:1056 (1862–74): Reproduced with the permission of the National Library of Scotland, maps.nls.uk, CC-BY · OHM CC0 · Stanford 1862 · Booth"
+ui.no_cultivable_cells,Este mapa no tiene casillas cultivables.,This map has no cultivable cells.
+ui.disabled_building,%s (desactivado: %s),%s (disabled: %s)
+ui.select,Selección,Selection
+ui.mode,Modo: %s · Casilla: %s,Mode: %s · Cell: %s
+ui.road,Calle,Street
+ui.transport_expensive,"Transporte caro: %s (%d, %d) ← %s (%d, %d) · %d pasos","Expensive transport: %s (%d, %d) ← %s (%d, %d) · %d steps"
+ui.pending,Comando pendiente…,Command pending…
+ui.success,Comando realizado.,Command done.
+ui.load_error,No se pudo iniciar la partida. Revisá el registro para ver los detalles.,Could not start the game. Check the log for details.
+ui.panel_title,Estadísticas,Statistics
+ui.tax_label,Impuestos (%),Tax (%)
+ui.wheat_purchases,Comprar trigo automáticamente,Buy wheat automatically
+ui.accumulate_label,Acumular trigo hasta el precio,Stockpile wheat until the price
+ui.max_price_label,Precio máximo de compra,Maximum purchase price
+ui.target_label,Stock objetivo: %d,Target stock: %d
+ui.reserve_label,Mínimo de seguridad: %d min de molino,Safety reserve: %d min of mill
+ui.wheat_row,Trigo: %d/%d · precio %s %s · alcanza para %s de molino,Wheat: %d/%d · price %s %s · covers %s of mill
+ui.barley_row,"Cebada: %d/%d · precio %s %s · descarga del embarcadero: %d %% cebada, %d %% trigo","Barley: %d/%d · price %s %s · wharf unloading: %d %% barley, %d %% wheat"
+ui.malt_beer_row,Malta: %d/%d · cerveza: %d/%d,Malt: %d/%d · beer: %d/%d
+ui.unloading_label,Descarga del embarcadero para cebada: %d %%,Wharf unloading for barley: %d %%
+ui.wheat_blocked_note,Compra frenada por precio máximo.,Buying stopped by the maximum price.
+ui.minutes_covered,%.1f min,%.1f min
+ui.pause,Pausa,Pause
+ui.resume,Reanudar,Resume
+ui.restart,Reiniciar partida,Restart game
+ui.difficulty,Dificultad (empieza una partida nueva):,Difficulty (starts a new game):
+ui.difficulty.easy,Fácil,Easy
+ui.difficulty.normal,Normal,Normal
+ui.difficulty.hard,Difícil,Hard
+ui.mods.title,Mods en orden de carga (si dos cambian el mismo valor gana el último; cambiar el orden empieza una partida nueva):,Mods in load order (when two change the same value the last one wins; changing the order starts a new game):
+ui.mods.none,Sin mods. Para agregar uno: %s/<nombre>/data/,No mods. To add one: %s/<name>/data/
+ui.mods.up,Subir,Up
+ui.mods.down,Bajar,Down
+ui.mods.conflicts,Conflictos:,Conflicts:
+ui.mods.conflict,"%s: %s; gana %s","%s: %s; %s wins"
+ui.mods.error,"No se pudo aplicar el orden nuevo, se mantiene el anterior: %s","Could not apply the new order, the previous one stays: %s"
+ui.population,Población: %d · empleados %d · desempleados %d,Population: %d · employed %d · unemployed %d
+ui.satisfaction,Satisfacción: %.0f/100 (pan +%.0f · té +%.0f · impuestos −%.0f · hacinamiento −%.0f),Satisfaction: %.0f/100 (bread +%.0f · tea +%.0f · tax −%.0f · overcrowding −%.0f)
+ui.bread_rate,Pan/min: producido %.1f · consumido %.1f · demanda %.1f,Bread/min: produced %.1f · consumed %.1f · demand %.1f
+ui.bread_ok,El pan alcanza.,There is enough bread.
+ui.bread_short,Falta pan porque:,Short of bread because:
+ui.bread_cause,• %s: %s,• %s: %s
+ui.bread_chain_cause,• %s,• %s
+ui.unloading_split_short,El molino recibe %.1f de trigo por minuto de los %.1f que necesita: el embarcadero reparte sus descargas con la cebada. Construí otro embarcadero o bajá la parte de la cebada.,The mill receives %.1f wheat per minute of the %.1f it needs: the wharf shares its unloading with the barley. Build another wharf or lower the barley share.
+ui.stocks,Stocks: trigo %d · harina %d · pan %d,Stocks: wheat %d · flour %d · bread %d
+ui.treasury,Tesoro: %s,Treasury: %s
+ui.operating_balance,Balance operativo: %s/min,Operating balance: %s/min
+ui.balance_breakdown,  impuestos %s − salarios %s − mantenimiento %s − trigo %s − cebada %s − importaciones %s,  tax %s − wages %s − upkeep %s − wheat %s − barley %s − imports %s
+ui.construction,Construcción: %s/min (aparte del balance),Construction: %s/min (separate from the balance)
+ui.wheat_price,Precio del trigo: %s,Wheat price: %s
+ui.tea_imports,Importar té,Import tea
+ui.flour_imports,Importar harina (se saltea el molino),Import flour (skips the mill)
+ui.tea_row,Té: %d en almacén · cobertura %.0f %% · precio %s por unidad · +%.0f de satisfacción\n  %s,Tea: %d in storage · coverage %.0f %% · price %s each · +%.0f satisfaction\n  %s
+ui.flour_row,Harina importada: lote de %d a %s (%s por unidad) · harina en almacén %d\n  %s,Imported flour: lot of %d at %s (%s each) · flour in storage %d\n  %s
+ui.window_partial,Promedios sobre %d de %d s,Averages over %d of %d s
+ui.buildings,Trabajadores por edificio,Workers by building
+ui.no_buildings,Sin edificios con puestos.,No buildings with jobs.
+ui.building_status,"%s (%d, %d): %d/%d · %s","%s (%d, %d): %d/%d · %s"
+ui.crises,Condiciones de derrota,Defeat conditions
+ui.condition,%s: %s · %s,%s: %s · %s
+ui.timer, · %d/%d s (quedan %d s), · %d/%d s (%d s left)
+ui.grace,Período de gracia: %d s restantes,Grace period: %d s left
+ui.alert_warning,⚠ Aviso: %s,⚠ Warning: %s
+ui.alert_defeat,✖ Derrota: %s. Reiniciá para jugar otra vez.,✖ Defeat: %s. Restart to play again.
+ui.metric_bankruptcy,tesoro %s (umbral %s),treasury %s (threshold %s)
+ui.metric_hunger,pan cubierto %.0f %% (umbral %.0f %%),bread covered %.0f %% (threshold %.0f %%)
+ui.metric_depopulation,población %d de pico %.0f,population %d of peak %.0f
+ui.needs_title,Clases y necesidades,Classes and needs
+ui.class_header,%s: %d habitantes · satisfacción %.0f,%s: %d residents · satisfaction %.0f
+ui.coverage_row,%s · cobertura: %s,%s · coverage: %s
+ui.good_coverage,%s %.0f %%,%s %.0f %%
+ui.promotion_active,Ascenso a %s: %.1f por minuto,Promotion to %s: %.1f per minute
+ui.promotion_blocked,Por qué nadie asciende a %s:,Why nobody rises to %s:
+ui.promotion_blocker,  · %s,  · %s
+ui.promotion_category_below,%s %.1f/%.1f · falta %s,%s %.1f/%.1f · short of %s
+ui.promotion_category_reason,%s %.1f/%.1f · %s,%s %.1f/%.1f · %s
+ui.promotion_satisfaction_low,Satisfacción de %s %.0f/%.0f,Satisfaction of %s %.0f/%.0f
+ui.needs_met,%s · %s: %.1f/%.1f ✓,%s · %s: %.1f/%.1f ✓
+ui.needs_short,%s · %s: %.1f/%.1f · falta %s,%s · %s: %.1f/%.1f · short of %s
+ui.needs_short_reason,%s · %s: %.1f/%.1f · %s,%s · %s: %.1f/%.1f · %s
+ui.needs_no_class,Sin necesidades definidas.,No needs defined.
+ui.housing_row,%s · vivienda: base %d + bono %d (máximo %d),%s · housing: base %d + bonus %d (maximum %d)
+ui.mobility_promoted,↑ Ascensos en el último minuto: %d (%s → %s),↑ Promotions in the last minute: %d (%s → %s)
+ui.mobility_demoted,↓ Descensos en el último minuto: %d (%s → %s),↓ Demotions in the last minute: %d (%s → %s)
+ui.terrain.land,Tierra,Land
+ui.terrain.river,Río,River
+ui.terrain.cultivable,Cultivable,Cultivable
+ui.terrain.dock,Dársena,Dock basin
+ui.terrain.road,Calle histórica,Historic street
+ui.terrain.player_road,Calle del jugador,Player street
+ui.terrain.existing,Edificación existente,Standing buildings
+ui.building.wharf,Embarcadero,Wharf
+ui.building.mill,Molino,Mill
+ui.building.bakery,Panadería,Bakery
+ui.building.housing,Vivienda,Housing
+ui.building.wheat_field,Campo de trigo,Wheat field
+ui.building.malthouse,Maltería,Malthouse
+ui.building.brewery,Cervecería,Brewery
+ui.building.artisan_housing,Vivienda de artesanos,Artisan housing
+ui.building.dense_housing,Vivienda densa,Dense housing
+ui.class.worker,Trabajadores,Workers
+ui.class.artisan,Artesanos,Artisans
+ui.category.sustento,Sustento,Sustenance
+ui.category.abrigo,Abrigo,Shelter
+ui.category.salud,Salud,Health
+ui.category.comunidad,Comunidad o fe,Community or faith
+ui.category.estatus,Estatus,Status
+ui.good.wheat,trigo,wheat
+ui.good.barley,cebada,barley
+ui.good.flour,harina,flour
+ui.good.bread,pan,bread
+ui.good.malt,malta,malt
+ui.good.beer,cerveza,beer
+ui.good.tea,té,tea
+ui.condition.bankruptcy,Quiebra,Bankruptcy
+ui.condition.hunger,Motín de hambre,Hunger riot
+ui.condition.depopulation,Despoblación,Depopulation
+ui.status.ok,estable,stable
+ui.status.warning,aviso,warning
+ui.status.defeat,derrota,defeat
+ui.reason.arriving,Llegan nuevos habitantes.,New residents are arriving.
+ui.reason.no_free_housing,No hay lugar libre en su vivienda.,There is no free room in their housing.
+ui.reason.satisfaction_below_threshold,La satisfacción no alcanza para que lleguen.,Satisfaction is too low for them to arrive.
+ui.reason.hungry_leaving,Se van por hambre.,They leave because of hunger.
+ui.reason.unhappy_leaving,Se van por la baja satisfacción.,They leave because satisfaction is low.
+ui.reason.stable,Sin cambios.,No change.
+ui.reason.no_source_population,No hay nadie en la clase de origen.,Nobody is in the source class.
+ui.reason.category_below,Una necesidad no llega al mínimo para ascender.,A need is below the minimum to rise.
+ui.reason.source_satisfaction_low,La satisfacción de la clase de origen no alcanza para ascender.,The source class is not satisfied enough to rise.
+ui.reason.below_threshold,Por debajo del umbral.,Below the threshold.
+ui.reason.unreachable_threshold,Ni con todos los bienes cubiertos se llega al umbral.,"Even with every good covered, the threshold is out of reach."
+ui.reason.unknown_building,Tipo de edificio desconocido.,Unknown building type.
+ui.reason.outside_map,La ubicación está fuera del mapa.,The location is outside the map.
+ui.reason.occupied_cell,La casilla está ocupada.,The cell is occupied.
+ui.reason.not_cultivable,La casilla no es cultivable.,The cell is not cultivable.
+ui.reason.requires_river,El edificio requiere una casilla de río.,The building requires a river cell.
+ui.reason.requires_land,El edificio requiere una casilla de tierra.,The building requires a land cell.
+ui.reason.existing_building,En la casilla hay edificación existente.,There is a standing building on the cell.
+ui.reason.not_buildable,Este edificio no se construye: solo viene del mapa.,This building cannot be built: it only comes with the map.
+ui.reason.insufficient_money,No hay dinero suficiente.,There is not enough money.
+ui.reason.no_money_for_wheat,Sin dinero para comprar trigo.,No money to buy wheat.
+ui.reason.no_building,No hay edificio para demoler.,There is no building to demolish.
+ui.reason.simulation_defeated,La partida terminó: no se aceptan comandos.,The game is over: commands are not accepted.
+ui.reason.wheat_purchases_disabled,Compra de trigo desactivada.,Wheat buying is disabled.
+ui.reason.tea_imports_disabled,Importación de té desactivada.,Tea imports are disabled.
+ui.reason.flour_imports_disabled,Importación de harina desactivada.,Flour imports are disabled.
+ui.reason.no_wharf_for_imports,Hace falta un embarcadero con trabajadores para importar.,A staffed wharf is required to import.
+ui.reason.no_money_for_imports,Sin dinero para importar.,No money to import.
+ui.reason.wharf_unloading_busy,El embarcadero todavía descarga el lote anterior.,The wharf is still unloading the previous lot.
+ui.reason.mill_covers_flour,El molino cubre a las panaderías: no hace falta importar.,The mill covers the bakeries: no need to import.
+ui.reason.invalid_wheat_policy,Política de compra de trigo inválida.,Invalid wheat purchase policy.
+ui.reason.invalid_unloading_split,Reparto de descarga inválido: va de 0 a 100 %.,Invalid unloading split: it runs from 0 to 100 %.
+ui.reason.no_workers,Sin trabajadores.,No workers.
+ui.reason.no_input,Sin insumo.,No input.
+ui.reason.no_barley,Sin cebada.,No barley.
+ui.reason.no_malt,Sin malta.,No malt.
+ui.reason.storage_full,Almacén lleno.,Storage is full.
+ui.reason.missing_building,No hay ninguno construido.,None built.
+ui.reason.understaffed,Faltan trabajadores para cubrir los puestos.,Not enough workers to fill the jobs.
+ui.reason.insufficient_capacity,La cadena hace menos pan del que se come: hacen falta más edificios.,The chain makes less bread than is eaten: more buildings are needed.
+ui.reason.invalid_tax_rate,Tasa de impuestos inválida.,Invalid tax rate.
+ui.reason.ok,Operativo.,Operating.
+ui.reason.no_road_access,Sin acceso a calle.,No street access.
+ui.reason.no_route,Sin ruta: ninguna calle lo une con quien le trae el insumo.,No route: no street joins it to whoever brings its input.
+ui.reason.road_cell,La casilla es una calle.,The cell is a street.
+ui.reason.historic_road,Las calles históricas no se demuelen.,Historic streets cannot be demolished.
+ui.reason.historic_anchor,Los edificios históricos del mapa no se demuelen.,The historic buildings of the map cannot be demolished.
+ui.reason.roads_disabled,En este mapa no se construyen calles.,Streets cannot be built on this map.
+ui.objectives,Objetivos del capítulo,Chapter objectives
+ui.objective_population,Población: %.1f / %d · media de %d s · %s,Population: %.1f / %d · %d s average · %s
+ui.objective_class,%s: %.1f / %d · media de %d s · %s,%s: %.1f / %d · %d s average · %s
+ui.objective_revenue,Recaudación ≥ %s/min: %d / %d minutos consecutivos · %s,Tax revenue ≥ %s/min: %d / %d consecutive minutes · %s
+ui.objective_met,Cumplido,Completed
+ui.objective_pending,En progreso,In progress
+ui.victory_why,"¿Por qué? El minuto %d cortó la racha: se recaudó %s, menos que el mínimo de %s.","Why? Minute %d broke the streak: tax revenue was %s, below the required %s."
+ui.victory_no_break,¿Por qué? Cada minuto completo debe alcanzar el mínimo; un minuto inferior reinicia la racha.,Why? Each complete minute must reach the minimum; a minute below it resets the streak.
+ui.victory_message,¡Victoria! Completaste todos los objetivos del capítulo. Podés seguir jugando; las derrotas siguen activas.,Victory! You completed every chapter objective. You can keep playing; defeat is still possible.
+ui.victory_dismiss,Continuar,Continue
+ui.alert_defeat_after_victory,Ciudad perdida después de la victoria: %s,City lost after victory: %s
+ui.stats.money,Caja,Treasury
+ui.stats.income,Ingresos,Income
+ui.stats.expense,Gastos,Expenses
+ui.stats.stock,Existencias,Stock
+ui.stats.coverage,Cobertura,Coverage
+ui.stats.produced,Producción,Production
+ui.stats.consumed,Consumo,Consumption
+ui.stats.spoiled,Merma,Spoilage
+ui.stats.bought,Compras,Purchases
+ui.stats.price,Precio,Price
+ui.stats.population,Población,Population
+ui.stats.immigration,Inmigración,Immigration
+ui.stats.emigration,Emigración,Emigration
+ui.stats.satisfaction,Satisfacción,Satisfaction
+ui.stats.housing_capacity,Capacidad de vivienda,Housing capacity
+ui.stats.housing_occupancy,Ocupación de vivienda,Housing occupancy
+ui.stats.need_score,Necesidad por categoría,Need by category
+ui.stats.promotions,Ascensos,Promotions
+ui.stats.demotions,Descensos,Demotions
+ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
+ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
+ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.save.title,Partidas guardadas:,Saved games:
+ui.save.none,Todavía no hay partidas guardadas.,No saved games yet.
+ui.save.save,Guardar partida,Save game
+ui.save.load,Cargar,Load
+ui.save.entry,"%s · minuto %d · %s","%s · minute %d · %s"
+ui.save.unreadable,"%s · no se puede leer (%s)","%s · cannot be read (%s)"
+ui.save.saved,Partida guardada.,Game saved.
+ui.save.saved_without_queue,"Partida guardada. Las órdenes que todavía no se aplicaron no quedaron en el archivo.","Game saved. Orders that have not been applied yet are not in the file."
+ui.save.write_error,"No se pudo guardar la partida.","Could not save the game."
+ui.save.loaded,Partida cargada.,Game loaded.
+ui.save.no_mods,sin mods,no mods
+ui.save.kind.manual,Guardada a mano,Manual save
+ui.save.kind.autosave,Autoguardado %d,Autosave %d
+ui.save.kind.stage,Etapa cumplida,Stage met
+ui.save.invalid_file,"No se pudo cargar: el archivo no es una partida guardada de Londinium o está dañado.","Could not load: the file is not a Londinium saved game or it is damaged."
+ui.save.other_version,"No se pudo cargar: la partida está guardada en el formato %d y este juego lee el %d.","Could not load: the game is saved in format %d and this game reads format %d."
+ui.save.other_mods,"No se pudo cargar: la partida se jugó con otros mods (%s). Ponelos en ese orden para cargarla.","Could not load: the game was played with other mods (%s). Put them in that order to load it."

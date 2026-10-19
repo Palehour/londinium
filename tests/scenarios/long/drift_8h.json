@@ -1,0 +1,30 @@
+{
+  "id": "drift_8h",
+  "description": "Issue #55, largo B: el script de artisans_beer jugado 8 horas. Queda fuera de balance_report --scenario all (in_all: false); se corre por nombre o con tools/run_long_tests (long_test_drift.gd, 5 semillas).",
+  "notes": "Largo B aprobado por Cristian el 2026-10-13 (8 h, 5 semillas, sujeto a validación). Medido: 5 de 5 sobreviven; el dinero crece de +7150 a +12786 por hora; 0 minutos en negativo; el pan más bajo va de 0,70 a 0,80 y no empeora con las horas; la cerveza queda en 0 en las semillas 1 y 3 y en 0,35 en la 2.",
+  "seed": 42,
+  "duration_ticks": 28800,
+  "in_all": false,
+  "measure": {"hourly": true},
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 537},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 198},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [2, 3], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [6, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 15, "with_previous": true},
+    {"tick": 30, "cmd": "set_flour_imports", "enabled": true, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true}
+  ]
+}

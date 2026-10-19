@@ -38,11 +38,12 @@ No hay ningún molino harinero documentado en Whitechapel o Stepney en los 1850.
 
 ## Población y necesidades
 
-Una sola clase en la fase 1: trabajadores. Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería) y después el resto con la prioridad panadería, molino, embarcadero. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
+Una sola clase en la fase 1: trabajadores (las clases y sus necesidades son datos por era, D-027 y D-032). Cada trabajador es a la vez consumidor y mano de obra, y esa es la tensión central: para hacer más pan hacen falta más bocas. Los trabajadores se reparten solos entre los edificios: primero uno por edificio en el orden de la cadena (embarcadero, molino, panadería, maltería, cervecería) y después el resto con la prioridad panadería, molino, embarcadero, maltería, cervecería. Cuando la gente se va, los puestos se liberan en el orden inverso (D-021).
 
 - **Necesidad básica, pan.** Sin pan hay hambre, y con hambre la gente se va rápido.
 - **Preferencia, té.** Se importa en el muelle y es caro. No es obligatorio, pero sube la satisfacción, lo que permite cobrar más impuesto sin frenar el crecimiento.
-- **Satisfacción (0 a 100).** Suma el pan cubierto y el té disponible, y resta la carga impositiva y el hacinamiento.
+- **Categorías de necesidades (D-032).** Cada bien cuenta en una categoría: el pan en sustento (umbral 75) y el té en comunidad (umbral 50). Cumplir el umbral de una categoría agrega +2 a la capacidad de cada vivienda de la clase, hasta un tope por clase; para los trabajadores el tope es 0, así que su vivienda sigue en 20. Pasarse del umbral no da más bono. El panel explica qué categoría falta.
+- **Satisfacción (0 a 100).** El pan (categoría sustento) y el té (categoría comunidad) suman según lo cubierto que esté cada uno, y se resta la carga impositiva y el hacinamiento. La capacidad de las viviendas crece con las categorías cumplidas (hoy 0 para los trabajadores).
 - **Crecimiento.** Con satisfacción alta y lugar libre en viviendas llegan inmigrantes. Con satisfacción baja la gente se va. Solo los trabajadores empleados pagan impuestos.
 
 ## Decisiones interesantes del jugador
@@ -75,7 +76,7 @@ Los roles llegan después del hito 1, pero el código ya los prevé. Todos los p
 
 ## Panel de estadísticas
 
-Población, satisfacción con su desglose, producción y consumo de pan por minuto, stocks, dinero y balance por minuto, precio del trigo, trabajadores por edificio y el estado de cada condición de derrota.
+Población, satisfacción con su desglose, producción y consumo de pan por minuto, stocks, dinero y balance por minuto, precio del trigo, trabajadores por edificio y el estado de cada condición de derrota. Desde la fase 2 muestra además, para cada clase, su población, su satisfacción y la cobertura de cada bien que consume, y por qué nadie asciende a la clase siguiente (falta de vivienda, de cerveza o de pan, o trabajadores poco satisfechos). Ahí también está el control del reparto de la descarga del embarcadero entre cebada y trigo, en pasos de 10 % (D-031).
 
 ## Criterios de éxito del hito
 
@@ -88,10 +89,10 @@ Todos los números del prototipo son placeholders para balancear, no datos hist�
 
 ## Siguiente fase y fuera de alcance
 
-**Fase 2 (decidida):** una cervecería como segunda cadena, con promoción a artesanos. Truman's está en Brick Lane, así que encaja con Whitechapel. La tensión nueva es que el grano se disputa entre el pan y la cerveza. Históricamente la cerveza se hacía con cebada malteada, que bajaba por el Lea desde Hertfordshire, y no con trigo. Por eso propongo que los dos granos entren por el embarcadero y se disputen su capacidad, el dinero y los trabajadores, en lugar de usar el mismo trigo (P-013). La cerveza sería la necesidad que permite que un trabajador ascienda a artesano (P-014).
+**Fase 2 (decidida):** una cervecería como segunda cadena, con la clase artesano, que vive en viviendas propias y consume pan y cerveza (D-033). Un trabajador asciende a artesano cuando hay lugar en la vivienda de artesanos, cerveza y pan suficientes y los trabajadores están satisfechos; si falta la cerveza durante un minuto, los artesanos vuelven a ser trabajadores (D-061). Truman's está en Brick Lane, así que encaja con Whitechapel. La tensión nueva es que el grano se disputa entre el pan y la cerveza. Históricamente la cerveza se hacía con cebada malteada, que bajaba por el Lea desde Hertfordshire, y no con trigo. Por eso los dos granos entran por el embarcadero y se disputan su capacidad, el dinero y los trabajadores, en lugar de usar el mismo trigo (D-031). La cerveza es la necesidad de comunidad del artesano (D-033) y la que permite que un trabajador ascienda a artesano (D-061).
 
 **Fuera del hito 1:** roles (más allá del gancho), eras, eventos históricos (el primero va a ser el cólera de 1866, D-016), folklore, transporte físico, arte final y música integrada.
 
 ## Preguntas abiertas
 
-Ninguna que bloquee el hito 1. Para la fase 2 falta confirmar cómo se disputa el grano (P-013) y qué hace ascender a un trabajador a artesano (P-014).
+Ninguna que bloquee el hito 1. Para la fase 2 ya están decididos la cerveza como necesidad del artesano (D-033), el ascenso y el descenso entre trabajador y artesano (D-061) y cómo se disputa el grano (D-031).

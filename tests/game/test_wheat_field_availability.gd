@@ -9,9 +9,14 @@ class FixtureView extends "res://src/game/map_view/map_view.gd":
 		return fixture_catalog
 
 
+# "%s (disabled: %s)" with an empty reason, without the closing parenthesis, so it matches the help prefix.
+func _disabled_mark(building: String) -> String:
+	return (Strings.text(Strings.DISABLED_BUILDING) % [building, ""]).trim_suffix(")").trim_suffix(" ")
+
+
 func _fixture(has_cultivable_cells: bool, changed_tags: bool = false) -> Node2D:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
@@ -55,14 +60,15 @@ func _click(view: Node2D, cell: Vector2i) -> void:
 func test_no_cultivable_cells_disables_help_and_shortcut_with_same_reason() -> void:
 	var view: Node2D = _fixture(false)
 	var help: String = (view.get("_help") as Label).text
-	assert_string_contains(help, "desactivado")
-	assert_string_contains(help, "Este mapa no tiene casillas cultivables.")
+	var unavailable: String = Strings.text(Strings.NO_CULTIVABLE_CELLS)
+	assert_string_contains(help, _disabled_mark(""))
+	assert_string_contains(help, unavailable)
 	_press(view, KEY_2)
 	assert_eq(view.get("_building_type"), &"mill")
 	_press(view, KEY_5)
 	assert_eq(view.get("_building_type"), &"")
 	var reason: String = (view.get("_status") as Label).text
-	assert_eq(reason, "Este mapa no tiene casillas cultivables.")
+	assert_eq(reason, unavailable)
 	assert_string_contains(help, reason)
 	var session: GameSession = view.get("session") as GameSession
 	var geometry: MapGeometry = view.get("geometry") as MapGeometry
@@ -80,12 +86,12 @@ func test_no_cultivable_cells_disables_help_and_shortcut_with_same_reason() -> v
 func test_cultivable_cells_keep_normal_help_and_construction_mode() -> void:
 	var view: Node2D = _fixture(true)
 	var help: String = (view.get("_help") as Label).text
-	assert_string_contains(help, "5 Campo de trigo")
-	assert_false(help.contains("desactivado"))
-	assert_false(help.contains("Este mapa no tiene casillas cultivables."))
+	assert_string_contains(help, "5 %s" % Strings.building_label("wheat_field"))
+	assert_false(help.contains(_disabled_mark("")))
+	assert_false(help.contains(Strings.text(Strings.NO_CULTIVABLE_CELLS)))
 	_press(view, KEY_5)
 	assert_eq(view.get("_building_type"), &"wheat_field")
-	assert_ne((view.get("_status") as Label).text, "Este mapa no tiene casillas cultivables.")
+	assert_ne((view.get("_status") as Label).text, Strings.text(Strings.NO_CULTIVABLE_CELLS))
 	_click(view, Vector2i(2, 2))
 	var session: GameSession = view.get("session") as GameSession
 	var buildings: Array = session.get_snapshot()["economy"]["buildings"]
@@ -98,10 +104,57 @@ func test_cultivable_cells_keep_normal_help_and_construction_mode() -> void:
 func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> void:
 	var view: Node2D = _fixture(false, true)
 	var help: String = (view.get("_help") as Label).text
-	assert_string_contains(help, "5 Campo de trigo\n")
-	assert_string_contains(help, "3 Panadería (desactivado:")
+	assert_string_contains(help, "5 %s\n" % Strings.building_label("wheat_field"))
+	assert_string_contains(help, "3 " + _disabled_mark(Strings.building_label("bakery")))
 	_press(view, KEY_5)
 	assert_eq(view.get("_building_type"), &"wheat_field")
 	_press(view, KEY_3)
 	assert_eq(view.get("_building_type"), &"")
-	assert_eq((view.get("_status") as Label).text, Strings.NO_CULTIVABLE_CELLS)
+	assert_eq((view.get("_status") as Label).text, Strings.text(Strings.NO_CULTIVABLE_CELLS))
+
+
+# Issue #52: the housing of the artisans is the eighth building, so keys 1 to 7 keep their meaning.
+func test_artisan_housing_is_built_from_key_eight() -> void:
+	var view: Node2D = _fixture(false)
+	var help: String = (view.get("_help") as Label).text
+	assert_string_contains(help, "8 %s" % Strings.building_label("artisan_housing"))
+	_press(view, KEY_8)
+	assert_eq(view.get("_building_type"), &"artisan_housing")
+	_click(view, Vector2i(4, 2))
+	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
+	assert_eq(buildings.size(), 1)
+	assert_eq(buildings[0]["definition_id"], &"artisan_housing")
+
+
+# Issue #51: the beer chain sits after wheat_field so keys 1 to 5 keep their meaning.
+func test_malthouse_and_brewery_are_built_from_keys_six_and_seven() -> void:
+	var view: Node2D = _fixture(false)
+	var help: String = (view.get("_help") as Label).text
+	assert_string_contains(help, "6 %s · 7 %s" % [Strings.building_label("malthouse"), Strings.building_label("brewery")])
+	assert_false(help.contains("6 " + _disabled_mark(Strings.building_label("malthouse"))))
+	_press(view, KEY_6)
+	assert_eq(view.get("_building_type"), &"malthouse")
+	_click(view, Vector2i(2, 2))
+	_press(view, KEY_7)
+	assert_eq(view.get("_building_type"), &"brewery")
+	_click(view, Vector2i(3, 2))
+	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
+	assert_eq(buildings.size(), 2)
+	assert_eq(buildings[0]["definition_id"], &"malthouse")
+	assert_eq(buildings[1]["definition_id"], &"brewery")
+
+
+func test_beer_buildings_availability_comes_from_the_catalog_tags_not_their_ids() -> void:
+	var documents: Dictionary[String, Dictionary] = {}
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
+			if file_name.ends_with(".json"):
+				var path: String = folder.path_join(file_name)
+				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
+	documents["economy/buildings.json"]["brewery"]["tags"].append("river")
+	documents["maps/whitechapel_1850s.json"]["river_cells"] = []
+	var loaded: DataLoadResult = DataLoader.new().load_documents(documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog, loaded.catalog.maps[&"whitechapel_1850s"])
+	assert_eq(context.building_unavailable_reason(&"malthouse"), &"")
+	assert_eq(context.building_unavailable_reason(&"brewery"), &"requires_river")

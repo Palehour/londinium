@@ -10,22 +10,37 @@ var _base_values: Dictionary[StringName, Variant] = {}
 var _money_keys: Array[StringName] = []
 var _boolean_keys: Array[StringName] = []
 var _modifiers: Array[Modifier] = []
+# Values that already passed validation. Base values and modifiers never change after _init, so a key that
+# validated once always gives the same value; the systems ask for the same keys many times a tick (once per
+# class since issue #52), and validating every time was the slowest part of a tick. Failed reads are not
+# kept, so every one of them still reports its errors.
+var _validated: Dictionary[StringName, Variant] = {}
 
 
-func _init(catalog: DataCatalog, role: RoleDef) -> void:
+# `layers` are the difficulty's `set` modifiers (DataLayers). They go first so the role still applies last (D-065).
+func _init(catalog: DataCatalog, role: RoleDef, layers: Array[Modifier] = []) -> void:
 	_base_values.assign(catalog.base_values)
 	_money_keys.assign(catalog.money_keys)
 	_boolean_keys.assign(catalog.boolean_keys)
-	for modifier: Modifier in role.modifiers:
+	for modifier: Modifier in layers + role.modifiers:
 		_modifiers.append(Modifier.new(modifier.key, modifier.op, modifier.value))
 
 
 func get_value(key: StringName) -> Variant:
+	if _validated.has(key):
+		return _validated[key]
 	var errors: Array[String] = []
 	var value: Variant = _get_validated_value(key, errors)
 	for message: String in errors:
 		push_error(message)
+	if errors.is_empty():
+		_validated[key] = value
 	return value
+
+
+# True when the data defines the key, so callers can ask about an optional parameter without an error.
+func has_value(key: StringName) -> bool:
+	return _base_values.has(key)
 
 
 func validation_errors() -> Array[String]:
@@ -62,12 +77,36 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 		if recovery < threshold:
 			errors.append("Params: population.growth.hunger_emigration_recovery must be >= population.growth.hunger_emigration_threshold after role modifiers")
 			return null
+	var partner: StringName = _class_hunger_partner(key)
+	if partner != &"":
+		var other_hunger: Variant = _get_modified_value(partner, errors)
+		if other_hunger == null:
+			return null
+		var is_threshold: bool = String(key).ends_with("hunger_emigration_threshold")
+		var class_threshold: float = float(value if is_threshold else other_hunger)
+		var class_recovery: float = float(other_hunger if is_threshold else value)
+		if class_recovery < class_threshold:
+			errors.append("Params: %s must be >= %s after role modifiers" % [
+				key if not is_threshold else partner, partner if not is_threshold else key])
+			return null
 	if key in WHEAT_POLICY_KEYS:
 		var message: String = _wheat_policy_error(errors)
 		if not message.is_empty():
 			errors.append("Params: %s after role modifiers" % message)
 			return null
 	return value
+
+
+# The other key of the hunger hysteresis pair of a class (class.<id>.growth.*), or &"" for any other key.
+func _class_hunger_partner(key: StringName) -> StringName:
+	var text: String = String(key)
+	if not text.begins_with("class."):
+		return &""
+	if text.ends_with(".growth.hunger_emigration_threshold"):
+		return StringName(text.trim_suffix("threshold") + "recovery")
+	if text.ends_with(".growth.hunger_emigration_recovery"):
+		return StringName(text.trim_suffix("recovery") + "threshold")
+	return &""
 
 
 func _wheat_policy_error(errors: Array[String]) -> String:

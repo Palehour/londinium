@@ -4,9 +4,10 @@ Rules for every coding agent (Codex, Claude Code, Grok Build, Cursor) working in
 Short on purpose. If something here conflicts with a task description, this file wins; ask in the PR.
 
 ## Skills
-Process lives in six skills under `.agents/skills/<name>/SKILL.md`: `planificar-issue`, `implementar-issue`,
-`decision-diseno`, `abrir-pr`, `revisar-pr`, `docs-vivos`. Codex and Cursor load them on their own; if your
-agent does not (Claude Code does not read `.agents/`), read the matching `SKILL.md` before starting.
+Process lives in eight skills under `.agents/skills/<name>/SKILL.md`: `planificar-issue`, `implementar-issue`,
+`tests-primero`, `decision-diseno`, `abrir-pr`, `revisar-pr`, `docs-vivos`, `reflexionar`. Codex and Cursor load
+them on their own; if your agent does not (Claude Code does not read `.agents/`), read the matching `SKILL.md`
+before starting.
 A task prompt only needs the issue number, the skills that apply and, if wanted, plan mode.
 
 ## What this is
@@ -18,6 +19,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - `docs/GDD.md` and `docs/DECISIONS.md` are canonical and drafted by the designer/historian bots; agents edit
   them only as the `decision-diseno` skill says. If you think a doc is wrong or ambiguous, write it under
   "Decisiones y docs" in your PR and implement the most conservative reading.
+- Mason (design bot) may commit `docs/DECISIONS.md` on a branch only when the PR quotes Cristian's approvals; Cristian, or Chief on his behalf, merges (approved by Cristian 2026-10-17, relayed by Chief).
 - Implement only **Decided** items (D-xxx). **Proposals (P-xxx) are not implemented** unless the issue
   says the proposal was approved.
 - All balance numbers live in `data/`. Never hardcode a cost, rate, threshold or weight in code.
@@ -41,7 +43,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   `CONSTANT_CASE` constants, signals in past tense (`stock_changed`). One `class_name` per file, file name =
   snake_case of the class.
 - Small functions, early returns, no magic numbers, comments explain *why*. Code and identifiers in English;
-  player-facing strings in one place (`src/ui/strings.gd`).
+  player-facing strings live in `locale/ui.csv` and are read only through `src/ui/strings.gd`.
 
 ## Scenes and scripts
 - One scene per folder with its script next to it (`src/ui/stats_panel/stats_panel.tscn` + `.gd`).
@@ -54,14 +56,19 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 ## Commands (run from repo root; `GODOT` = path to the Godot 4.7.2 *console* binary)
 - First run / after adding files: `"$GODOT" --headless --path . --import`
 - All tests: `tools/run_tests.sh` (Windows: `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1`).
-  Both save the import output to `.godot/import.log` and print it.
+  Both run `tools/check_gdscript` first (Godot 3 renames, then import, then a parse check) and save the import output to `.godot/import.log`.
 - One test file: `"$GODOT" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gtest=res://tests/sim/test_production.gd`
 - Tests are GUT 9.7.x, in `tests/`, files `test_*.gd`, `extends GutTest`. Sim tests call `sim.tick()` N times
   directly (900 ticks = 15 game minutes); they must not depend on frames, real time or the scene tree.
 
 ## Tests are guardrails
 - Every sim change ships with tests that would fail without it. Bug fix = failing test first.
-- **Never weaken, skip or delete a test to make it pass.** If a test is wrong, say so in the PR and stop.
+- **Nunca modificar, saltear, borrar ni aflojar un test para que pase:** se cambia la implementación, no el
+  resultado. Si un test parece mal, frenar y preguntar en el PR.
+- **Máximo dos rondas de arreglo por la misma falla** (CI o revisión). Si falla dos veces igual, frenar y avisar a
+  Cristian explicando qué se intentó.
+- La evidencia (test que falla antes y pasa después, archivos tocados, tests cambiados) va en la sección
+  "Evidencia" de la plantilla de PR.
 - A passing build is not "done": if it touches the screen, describe how Cristian can see it in 3 steps.
 
 ## Git workflow
@@ -73,10 +80,26 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   lines of non-test code; split otherwise.
 - Don't add dependencies, addons, MCP servers or CI services without asking in the issue first.
 - Don't refactor or "improve" code outside the issue's scope. Report it in the PR instead.
+- **No tocar archivos fuera del alcance del issue** sin justificarlo en el PR (sección "Evidencia").
+- **Rebasear solo ante conflictos reales** o cuando la rama necesita un arreglo de CI que ya entró en `develop`;
+  estar atrasada respecto de `develop` no es motivo. Siempre rebase sobre `develop`, nunca mergear `develop` dentro
+  de la rama.
+- **Antes de pedir revisión a Bailey**, el PR necesita dos corridas de CI verdes seguidas sobre el mismo commit final,
+  sin cambios en el medio (o una corrida verde y una re-verificación de que el tip no cambió). Si se pushea algo, se
+  vuelve a esperar.
+- Parallel work in Orca worktrees (setup, hot files, pitfalls): `docs/WORKFLOW.md` → "Trabajo en paralelo con Orca".
 
 ## GitHub tracking
 Labels, milestone, assignee and the project board (Status, Prioridad, Agente) are set when you open the PR,
-not later. Steps and commands: `abrir-pr`. Only Cristian merges (or an agent he explicitly asks to); PRs are squash-merged into `develop`.
+not later. Steps and commands: `abrir-pr`. PRs are squash-merged into `develop`.
+- **Labels al crear cada PR y su issue:** `area:*` (obligatorio; `area:docs` para cambios solo de documentación), `tipo:*`, prioridad `p1`/`p2`/`p3`, `en-revision`
+  en el PR, `agente:*` según quién lo hizo (`agente:codex`, `agente:claude`, `agente:grok` = Grok Build,
+  `agente:grokbot` = Chief y los bots de Grok Bot) y `hito-N` si pertenece a un hito.
+- **Título de issue y PR:** `tipo(área): descripción en minúscula`, en castellano; épicas `Hito N (épica): …`; D-xxx/P-xxx y dependencias (tras #N) van en el cuerpo.
+- **`develop` está protegida:** no se mergea sin CI verde, y el merge lo hace Cristian, o Chief en su nombre, tras la autorización de
+  Bailey (que confirma con Cristian a través de Chief).
+- **Si quedás trabado** (falta info, permiso, falla repetida o una decisión de diseño): agregá la etiqueta
+  `bloqueado` al issue o PR con un comentario de qué falta, y avisá. No sigas adivinando.
 
 ## Definition of done (every task)
 1. All acceptance criteria of the linked issue are met, and each one is mapped to a test or a manual step in the PR.

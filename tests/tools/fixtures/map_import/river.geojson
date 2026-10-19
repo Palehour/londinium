@@ -1,0 +1,4 @@
+{"type": "FeatureCollection", "features": [
+  {"type": "Feature", "properties": {"name": "fixture river"}, "geometry": {"type": "Polygon",
+    "coordinates": [[[100, 200], [140, 200], [140, 210], [100, 210], [100, 200]]]}}
+]}

@@ -22,6 +22,17 @@ func _chain() -> Array:
 	]
 
 
+func test_difficulty_applies_to_later_runs_and_rejects_unknown_presets() -> void:
+	assert_eq(_runner.use_difficulty(&"nightmare"), ["difficulty: unknown preset 'nightmare'"])
+	assert_eq(_runner.param(&"startup.money"), 1050, "A rejected preset leaves the runner on the base values")
+	assert_true(_runner.use_difficulty(&"hard").is_empty())
+	assert_eq(_runner.param(&"startup.money"), 800)
+	# Without commands the only difference in the first minute is the money each game starts with.
+	var hard: ScenarioResult = _runner.run(_scenario([], 42, 60))
+	var normal: ScenarioResult = ScenarioRunner.create().run(_scenario([], 42, 60))
+	assert_eq(int(normal.rows[0]["money"]) - int(hard.rows[0]["money"]), 1050 - 800)
+
+
 func test_valid_scenario_has_no_errors() -> void:
 	assert_eq(_runner.validate(_scenario(_chain())).size(), 0)
 
@@ -348,3 +359,197 @@ func test_a_wait_after_a_build_in_a_lost_game_ends_as_simulation_defeated_not_ne
 	assert_eq(result.commands[1]["reason"], &"simulation_defeated")
 	assert_eq(int(result.commands[1]["executed_tick"]), 599, "it ran on its tick instead of being left waiting")
 	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+
+
+# --- Issue #55: stock schedule, measure, in_all and the grain sweep ---
+
+func test_long_scenario_files_are_valid_and_named_after_their_ids() -> void:
+	var paths: Array[String] = ScenarioRunner.long_scenario_paths()
+	assert_gt(paths.size(), 0)
+	var left_out: Array[String] = []
+	for path: String in paths:
+		var scenario: Dictionary = ScenarioRunner.load_file(path)
+		assert_false(scenario.is_empty(), "%s is not a JSON object" % path)
+		assert_eq(_runner.validate(scenario), [] as Array[String], path)
+		assert_eq(String(scenario.get("id", "")), path.get_file().get_basename(), path)
+		if scenario.get("in_all", true) == false:
+			left_out.append(String(scenario["id"]))
+	# Only the hours-long drift games are too slow for balance_report --scenario all.
+	assert_eq(left_out, ["drift_4h", "drift_8h"] as Array[String])
+
+
+# --- Issue #128: scripts adapted to a difficulty preset ---
+
+func test_preset_scenario_paths_only_for_a_preset_with_a_folder() -> void:
+	assert_eq(ScenarioRunner.preset_scenario_paths(&""), [] as Array[String], "no preset: the runs of today")
+	assert_eq(ScenarioRunner.preset_scenario_paths(&"normal"), [] as Array[String])
+	assert_eq(ScenarioRunner.preset_scenario_paths(&"easy"), [] as Array[String])
+	assert_gt(ScenarioRunner.preset_scenario_paths(&"hard").size(), 0)
+
+
+func test_preset_scenario_files_are_valid_and_adapt_an_existing_script() -> void:
+	var originals: Dictionary[String, bool] = {}
+	for path: String in ScenarioRunner.scenario_paths() + ScenarioRunner.long_scenario_paths():
+		originals[path.get_file().get_basename()] = true
+	for path: String in ScenarioRunner.preset_scenario_paths(&"hard"):
+		var scenario: Dictionary = ScenarioRunner.load_file(path)
+		assert_false(scenario.is_empty(), "%s is not a JSON object" % path)
+		assert_eq(_runner.validate(scenario), [] as Array[String], path)
+		var id: String = String(scenario.get("id", ""))
+		assert_eq(id, path.get_file().get_basename(), path)
+		assert_true(id.ends_with("_hard") and originals.has(id.trim_suffix("_hard")),
+			"%s is named <original>_hard after an existing script" % id)
+
+
+func test_validation_rejects_bad_set_stock_relative_waits_measures_and_in_all() -> void:
+	var cut: Array = [{"tick": 0, "cmd": "demolish", "cell": [3, 5]}]
+	var cases: Dictionary[String, Dictionary] = {
+		"in_all not a bool": {"in_all": "no"},
+		"unknown good": {"commands": [{"tick": 0, "cmd": "set_stock", "good": "gin", "amount": 0}]},
+		"negative amount": {"commands": [{"tick": 0, "cmd": "set_stock", "good": "beer", "amount": -1}]},
+		"amount not whole": {"commands": [{"tick": 0, "cmd": "set_stock", "good": "beer", "amount": 0.5}]},
+		"negative artisan wait": {"commands": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "after_artisans_ticks": -1}]},
+		"previous wait not whole": {"commands": [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "after_previous_ticks": "soon"}]},
+		"with_previous and a wait": {"commands": cut + [{"tick": 0, "cmd": "set_tax", "rate": 0.5,
+			"with_previous": true, "after_previous_ticks": 60}]},
+		"measure not an object": {"measure": []},
+		"unknown measure": {"measure": {"wealth": true}},
+		"tax window past the end": {"measure": {"tax_window": [10, 16]}},
+		"tax window backwards": {"measure": {"tax_window": [10, 5]}},
+		"no recovery window": {"measure": {"beer_cut": {"recovery_minutes": 0, "recovered_share": 0.8}}},
+		"share above one": {"measure": {"beer_cut": {"recovery_minutes": 5, "recovered_share": 1.5}}},
+		"hourly in a short game": {"measure": {"hourly": true}},
+	}
+	for label: String in cases:
+		var scenario: Dictionary = _scenario(_chain())
+		scenario.merge(cases[label], true)
+		assert_gt(_runner.validate(scenario).size(), 0, label)
+	var good: Dictionary = _scenario(_chain() + [{"tick": 0, "cmd": "demolish", "cell": [3, 5],
+		"after_artisans_ticks": 60}, {"tick": 0, "cmd": "set_stock", "good": "beer", "amount": 0, "with_previous": true},
+		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5], "after_previous_ticks": 300,
+		"wait_for_money": 100}])
+	good.merge({"in_all": false, "measure": {"tax_window": [10, 15],
+		"beer_cut": {"recovery_minutes": 5, "recovered_share": 0.8}}}, true)
+	assert_eq(_runner.validate(good), [] as Array[String])
+
+
+func test_set_stock_sets_the_store_before_the_tick_it_runs_on() -> void:
+	# Malt with no brewery and no spoilage stays where the command puts it, so the rows show it exactly.
+	var commands: Array = _chain() + [{"tick": 0, "cmd": "set_stock", "good": "malt", "amount": 25},
+		{"tick": 300, "cmd": "set_stock", "good": "malt", "amount": 0}]
+	var result: ScenarioResult = _runner.run(_scenario(commands))
+	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary])
+	assert_eq(int(result.row(0)["malt_stock"]), 0, "minute 0 is before the first tick")
+	assert_eq(int(result.row(1)["malt_stock"]), 25)
+	assert_eq(int(result.row(5)["malt_stock"]), 25, "row 5 is written after tick 299")
+	assert_eq(int(result.row(6)["malt_stock"]), 0, "tick 300 is the first tick of minute 6")
+
+
+func test_after_previous_ticks_waits_from_when_the_command_before_ran() -> void:
+	# The first command waits for its money, so the second one counts from wherever that happened.
+	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.5, "wait_for_money": 0},
+		{"tick": 0, "cmd": "set_tax", "rate": 0.4, "after_previous_ticks": 120}]
+	var result: ScenarioResult = _runner.run(_scenario(commands))
+	assert_eq(int(result.commands[1]["executed_tick"]), 120)
+
+
+func test_after_artisans_ticks_never_runs_in_a_city_with_no_artisans() -> void:
+	var commands: Array = _chain() + [{"tick": 0, "cmd": "set_tax", "rate": 0.4, "after_artisans_ticks": 0}]
+	var result: ScenarioResult = _runner.run(_scenario(commands))
+	assert_eq(result.first_artisan_tick, -1)
+	assert_eq(result.commands[3]["reason"], &"never_ran")
+
+
+func test_after_artisans_ticks_counts_from_the_first_artisans() -> void:
+	var scenario: Dictionary = ScenarioRunner.load_file("res://tests/scenarios/long/beer_crisis.json")
+	var result: ScenarioResult = _runner.run(scenario)
+	assert_gt(result.first_artisan_tick, 0, "artisans arrive")
+	var wait: int = -1
+	for entry: Dictionary in scenario["commands"]:
+		if entry.has("after_artisans_ticks"):
+			wait = int(entry["after_artisans_ticks"])
+	var cut: Dictionary = result.commands.filter(func(entry: Dictionary) -> bool: return entry["cmd"] == "demolish")[0]
+	assert_eq(int(cut["executed_tick"]), result.first_artisan_tick + wait)
+
+
+func test_with_barley_percent_replaces_only_the_unloading_split() -> void:
+	var scenario: Dictionary = _scenario([{"tick": 0, "cmd": "set_unloading_split", "barley_percent": 15},
+		{"tick": 0, "cmd": "set_tax", "rate": 0.4}])
+	var swept: Dictionary = ScenarioRunner.with_barley_percent(scenario, 30)
+	assert_eq(swept["commands"][0]["barley_percent"], 30)
+	assert_eq(swept["commands"][1], {"tick": 0, "cmd": "set_tax", "rate": 0.4})
+	assert_eq(scenario["commands"][0]["barley_percent"], 15, "the original is not modified")
+
+
+func _measured_result(columns: Dictionary[String, Array]) -> ScenarioResult:
+	var result: ScenarioResult = ScenarioResult.new()
+	var count: int = columns.values()[0].size()
+	for minute: int in range(count):
+		var values: Dictionary = {}
+		for column: String in columns:
+			values[column] = columns[column][minute]
+		result.rows.append(values)
+	return result
+
+
+func test_tax_window_is_the_mean_of_taxes_per_minute_over_both_ends() -> void:
+	var result: ScenarioResult = _measured_result({"taxes_pm": [0.0, 10.0, 20.0, 30.0, 99.0]})
+	assert_eq(result.measured({"tax_window": [1, 3]}), {"taxes_pm_window": 20.0})
+	assert_eq(result.measured({}), {}, "no measure, no extra metrics")
+
+
+# A result whose beer is cut at `cut_tick` and comes back at `back_tick` (-1: that command never ran).
+func _cut_result(artisans: Array, cut_tick: int, back_tick: int) -> ScenarioResult:
+	var result: ScenarioResult = _measured_result({"artisan_population": artisans})
+	result.commands.append({"cmd": "demolish", "executed_tick": cut_tick, "accepted": cut_tick >= 0})
+	result.commands.append({"cmd": "build", "executed_tick": back_tick, "accepted": back_tick >= 0})
+	return result
+
+
+func test_beer_cut_counts_the_artisans_lost_and_the_minutes_to_recover() -> void:
+	# Cut in minute 1 with 10 artisans, beer back during minute 3: 80 % (8) is reached at minute 5, two later.
+	var result: ScenarioResult = _cut_result([10, 10, 6, 5, 7, 8, 9], 70, 150)
+	var cut: Dictionary = {"recovery_minutes": 3, "recovered_share": 0.8}
+	var found: Dictionary = result.measured({"beer_cut": cut})
+	assert_eq(found["beer_cut_minute"], 70.0 / 60.0)
+	assert_eq(found["beer_cut_minutes"], 80.0 / 60.0)
+	assert_eq(found["artisans_before_cut"], 10.0)
+	assert_eq(found["artisans_lowest_after_cut"], 5.0)
+	assert_eq(found["artisans_lost_in_cut"], 5.0)
+	assert_eq(found["artisans_recovery_minutes"], 2)
+	assert_eq(found["artisans_recovered"], 1)
+	cut["recovery_minutes"] = 1
+	assert_eq(result.measured({"beer_cut": cut})["artisans_recovered"], 0, "minute 5 is outside the window")
+	assert_eq(result.measured({"beer_cut": cut})["artisans_recovery_minutes"], -1)
+
+
+func test_beer_cut_with_no_artisans_before_it_is_not_a_recovery() -> void:
+	var cut: Dictionary = {"recovery_minutes": 2, "recovered_share": 0.8}
+	var found: Dictionary = _cut_result([0, 0, 0, 0, 0], 60, 120).measured({"beer_cut": cut})
+	assert_eq(found["artisans_recovered"], 0)
+	assert_eq(found["artisans_recovery_minutes"], -1)
+
+
+func test_beer_cut_that_never_ran_is_not_a_recovery() -> void:
+	var cut: Dictionary = {"recovery_minutes": 2, "recovered_share": 0.8}
+	var found: Dictionary = _cut_result([5, 5, 5, 5, 5], -1, -1).measured({"beer_cut": cut})
+	assert_eq(found["beer_cut_minute"], -1.0)
+	assert_eq(found["artisans_recovered"], 0)
+
+
+func test_hourly_drift_starts_after_the_first_hour() -> void:
+	# Three hours: money climbs 100 per minute after minute 60 and dips under zero twice in the first hour.
+	var money: Array = []
+	var bread: Array = []
+	var beer: Array = []
+	for minute: int in range(181):
+		money.append(-5 if minute in [10, 11] else maxi(0, minute - 60) * 100)
+		bread.append(0.5 if minute == 30 else (0.9 if minute == 150 else 1.0))
+		beer.append(0.0 if minute < 60 else 0.7)
+	var result: ScenarioResult = _measured_result({"money": money, "bread_coverage": bread, "beer_coverage": beer})
+	var found: Dictionary = result.measured({"hourly": true})
+	assert_eq(found["money_drift_per_hour"], 6000.0)
+	assert_eq(found["bread_coverage_lowest_after_hour1"], 0.9, "minute 30 is still the build-up")
+	assert_eq(found["beer_coverage_lowest_after_hour1"], 0.7)
+	assert_eq(found["minutes_in_debt"], 2)
+	assert_eq(result.lowest_per_hour("bread_coverage"), [1.0, 0.9] as Array[float])

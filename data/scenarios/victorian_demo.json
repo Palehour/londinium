@@ -1,0 +1,29 @@
+{
+  "map": "riverside_strip",
+  "victory": {
+    "stages": [
+      {
+        "id": "population",
+        "metric": "population",
+        "mode": "mean",
+        "threshold": 60,
+        "duration_seconds": 120
+      },
+      {
+        "id": "artisans",
+        "metric": "class_population",
+        "class_id": "artisan",
+        "mode": "mean",
+        "threshold": 20,
+        "duration_seconds": 300
+      },
+      {
+        "id": "revenue",
+        "metric": "revenue",
+        "mode": "consecutive_minutes",
+        "threshold": 250,
+        "required_minutes": 30
+      }
+    ]
+  }
+}

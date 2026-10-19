@@ -1,0 +1,84 @@
+{
+  "worker": {
+    "base": true,
+    "takes_jobs": true,
+    "housing_building": "housing",
+    "housing_max_bonus": 0,
+    "satisfaction": {
+      "tax_weight": "population.satisfaction.tax_weight",
+      "overcrowding_weight": "population.satisfaction.overcrowding_weight",
+      "smoothing_per_second": "population.satisfaction.smoothing_per_second",
+      "snap_epsilon": "population.satisfaction.snap_epsilon"
+    },
+    "growth": {
+      "immigration_threshold": "population.growth.immigration_threshold",
+      "emigration_threshold": "population.growth.emigration_threshold",
+      "immigration_per_minute": "population.growth.immigration_per_minute",
+      "emigration_per_minute": "population.growth.emigration_per_minute",
+      "hunger_emigration_threshold": "population.growth.hunger_emigration_threshold",
+      "hunger_emigration_recovery": "population.growth.hunger_emigration_recovery",
+      "hunger_emigration_multiplier": "population.growth.hunger_emigration_multiplier"
+    },
+    "tax": { "basis": "employed", "base": "population.tax.base_per_employed_worker_per_minute" },
+    "needs": {
+      "bread": {
+        "category": "sustento", "value": 100,
+        "satisfaction_key": "population.satisfaction.bread_weight",
+        "consumption_key": "population.bread_per_person_per_minute"
+      },
+      "tea": {
+        "category": "comunidad", "value": 100,
+        "satisfaction_key": "population.tea.satisfaction_bonus",
+        "consumption_key": "population.tea.per_person_per_minute"
+      }
+    }
+  },
+  "artisan": {
+    "base": false,
+    "takes_jobs": false,
+    "housing_building": "artisan_housing",
+    "housing_max_bonus": 4,
+    "satisfaction": {
+      "tax_weight": 50,
+      "overcrowding_weight": 30,
+      "smoothing_per_second": "population.satisfaction.smoothing_per_second",
+      "snap_epsilon": "population.satisfaction.snap_epsilon"
+    },
+    "growth": {
+      "immigration_threshold": 75,
+      "emigration_threshold": 35,
+      "immigration_per_minute": 3,
+      "emigration_per_minute": 2,
+      "hunger_emigration_threshold": 0.6,
+      "hunger_emigration_recovery": 0.75,
+      "hunger_emigration_multiplier": 2
+    },
+    "tax": { "basis": "residents", "base": 20 },
+    "needs": {
+      "bread": {
+        "category": "sustento", "value": 100,
+        "satisfaction_key": 60,
+        "consumption_key": 1.0
+      },
+      "beer": {
+        "category": "comunidad", "value": 100,
+        "satisfaction_key": 40,
+        "consumption_key": 0.4
+      }
+    },
+    "mobility": {
+      "from": "worker",
+      "promotion": {
+        "min_scores": { "comunidad": 80, "sustento": "needs.sustento.threshold" },
+        "source_satisfaction": 70,
+        "per_minute": 2
+      },
+      "demotion": {
+        "category": "comunidad",
+        "below": "needs.comunidad.threshold",
+        "seconds": 60,
+        "per_minute": 2
+      }
+    }
+  }
+}

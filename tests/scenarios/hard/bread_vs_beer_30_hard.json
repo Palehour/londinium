@@ -1,0 +1,27 @@
+{
+  "id": "bread_vs_beer_30_hard",
+  "description": "Issue #128: bread_vs_beer_30 adaptado a Difícil. Los comandos son los del original; solo cambia la duración.",
+  "notes": "Mismos edificios, celdas y esperas de plata que el original, salvo lo que dice la descripción. En Difícil la ciudad arranca con 800 d y gana menos (el trigo llega a 4 d), así que las compras llegan más tarde. Todos los adaptados duran lo mismo según su tipo (75 min los de 15, 150 min los largos), un horizonte fijo decidido por Cristian en el chat del plan de #128. Solo se juega con balance_report --preset hard.",
+  "seed": 42,
+  "duration_ticks": 9000,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [2, 4], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [3, 4], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [5, 4], "wait_for_money": 537},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [6, 7], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [4, 4], "wait_for_money": 198},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [2, 3], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [3, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [6, 3], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [7, 3], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 30, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true}
+  ]
+}

@@ -3,22 +3,90 @@ extends RefCounted
 
 const SECONDS_PER_MINUTE: float = 60.0
 const FULL_RATE: float = 1.0
+const PERCENT: float = 100.0
+const WHOLE_PERCENT: int = 100
+# Debt below this is floating point noise from summing capacity, not a unit still to unload.
+const DEBT_EPSILON: float = 1e-9
 
 
-func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int) -> void:
+# Barley has its own generator so its price walk never shifts the wheat series.
+func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int,
+		barley_rng: RandomNumberGenerator = null) -> void:
 	var interval: int = int(params.get_value(&"market.wheat.price_update_seconds"))
 	# Nonpositive modifier results disable repricing, not purchases at the saved price.
 	if interval > 0 and tick_count % interval == 0:
 		state.wheat_previous_price = state.wheat_price
 		state.wheat_price = next_price(state.wheat_price, params, rng)
+	if barley_rng != null:
+		_reprice_barley(state, params, barley_rng, tick_count)
 	# Before buying and before the mill runs, so it never touches wheat bought this tick.
 	_decay(state, params)
-	if not state.wheat_purchases_enabled:
-		return
+	_decay_barley(state, params)
+	state.malt_decay_fraction = _decayed(state, params, &"malt", state.malt_decay_fraction)
+	state.beer_decay_fraction = _decayed(state, params, &"beer", state.beer_decay_fraction)
+	# The part of a unit left after drinking spoils at the same rate as the whole units (PR #108).
+	var beer_fraction: float = state.beer_fraction
+	state.beer_fraction *= pow(1.0 - float(params.get_value(&"market.beer.decay_fraction_per_minute")),
+		1.0 / SECONDS_PER_MINUTE)
+	state.count_spoiled(&"beer", beer_fraction - state.beer_fraction)
 	var wharves: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
 		if building["definition_id"] == &"wharf":
 			wharves.append(building)
+	# The barley share is reserved first and the flour never touches it (issue #116); the flour comes before the
+	# wheat on the rest (issue #50).
+	var wheat_fraction: float = _pay_flour_unloading(state, wharves, params)
+	if state.wheat_purchases_enabled:
+		_buy_wheat(state, params, wharves, wheat_fraction)
+	_buy_barley(state, params, wharves, FULL_RATE)
+
+
+# The barley's share of the capacity is reserved before anything else (issue #116); the lots of flour already
+# bought are unloaded from the rest, before the wheat. Returns the fraction of this tick's capacity that is
+# left for wheat.
+func _pay_flour_unloading(state: EconomyState, wharves: Array[Dictionary], params: Params) -> float:
+	var wheat_part: float = wheat_share(state)
+	if state.flour_unloading_debt <= 0.0:
+		return wheat_part
+	var capacity: float = unloading_capacity(params, wharves)
+	if capacity <= 0.0:
+		return wheat_part
+	var flour_capacity: float = capacity * wheat_part
+	var paid: float = minf(state.flour_unloading_debt, flour_capacity)
+	state.flour_unloading_debt -= paid
+	if state.flour_unloading_debt < DEBT_EPSILON:
+		state.flour_unloading_debt = 0.0
+	return (flour_capacity - paid) / capacity
+
+
+# Units per second the staffed wharves can unload, whatever the good (a wharf's wheat output is its capacity).
+static func unloading_capacity(params: Params, wharves: Array[Dictionary]) -> float:
+	var capacity: float = 0.0
+	for building: Dictionary in wharves:
+		capacity += ProductionSystem.staffed_rate(params, building, "outputs.wheat")
+	return capacity
+
+
+# Wheat per minute the split lets the staffed wharves unload, before price, money or the imported flour
+# (issue #106: the diagnostic blames only the split, the other causes have their own reasons).
+static func wheat_unloading_per_minute(state: EconomyState, params: Params) -> float:
+	var wharves: Array[Dictionary] = []
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"wharf":
+			wharves.append(building)
+	return unloading_capacity(params, wharves) * wheat_share(state) * SECONDS_PER_MINUTE
+
+
+# Share of the capacity left for grain that goes to wheat; 1.0 until the player gives some to barley.
+static func wheat_share(state: EconomyState) -> float:
+	return float(WHOLE_PERCENT - barley_percent(state)) / PERCENT
+
+
+static func barley_percent(state: EconomyState) -> int:
+	return clampi(state.unloading_barley_percent, 0, WHOLE_PERCENT)
+
+
+func _buy_wheat(state: EconomyState, params: Params, wharves: Array[Dictionary], share: float) -> void:
 	# A price above the player's maximum stops the wharf (it does not bank capacity), unless the stock
 	# is under the safety reserve: then it buys at any price, but only what the mills consume. The
 	# limit is shared by all the wharves in proportion to what each one can buy.
@@ -26,16 +94,15 @@ func tick(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_
 	if is_blocked_by_price(state):
 		if reserve_covered(state, params):
 			return
-		rate_scale = _emergency_scale(state, params, wharves)
+		rate_scale = _emergency_scale(state, params, wharves, share)
 	for building: Dictionary in wharves:
-		_buy(state, params, building, rate_scale)
+		_buy(state, params, building, rate_scale, share)
 
 
-# Fraction of every wharf's staffed capacity that keeps the total at what the mills consume.
-func _emergency_scale(state: EconomyState, params: Params, wharves: Array[Dictionary]) -> float:
-	var capacity: float = 0.0
-	for building: Dictionary in wharves:
-		capacity += ProductionSystem.staffed_rate(params, building, "outputs.wheat")
+# Fraction of every wharf's staffed capacity that keeps the total at what the mills consume. share is the
+# part of the capacity wheat has this tick (barley and the flour take the rest).
+func _emergency_scale(state: EconomyState, params: Params, wharves: Array[Dictionary], share: float) -> float:
+	var capacity: float = unloading_capacity(params, wharves) * share
 	if capacity <= 0.0:
 		return FULL_RATE
 	return minf(FULL_RATE, mill_consumption_per_second(state, params) / capacity)
@@ -90,9 +157,12 @@ static func is_halted_by_price(state: EconomyState, params: Params) -> bool:
 		and could_buy(state, params)
 
 
-# Some wharf has hands, there is room in the warehouse and the treasury pays for a unit.
+# Some wharf has hands, wheat has a share of the unloading capacity, there is room in the warehouse and the
+# treasury pays for a unit.
 static func could_buy(state: EconomyState, params: Params) -> bool:
 	if int(state.stocks.get(&"wheat", 0)) >= int(params.get_value(&"market.wheat.storage_capacity")):
+		return false
+	if wheat_share(state) <= 0.0 or _flour_takes_all_capacity(state, params):
 		return false
 	if affordable_wheat(state, 1) <= 0:
 		return false
@@ -102,18 +172,30 @@ static func could_buy(state: EconomyState, params: Params) -> bool:
 	return false
 
 
+# The lots of flour still to unload keep all the capacity the barley does not reserve, so the wheat gets none of it.
+static func _flour_takes_all_capacity(state: EconomyState, params: Params) -> bool:
+	if state.flour_unloading_debt <= 0.0:
+		return false
+	var wharves: Array[Dictionary] = []
+	for building: Dictionary in state.buildings:
+		if building["definition_id"] == &"wharf":
+			wharves.append(building)
+	return state.flour_unloading_debt >= unloading_capacity(params, wharves) * wheat_share(state)
+
+
 static func is_accumulating(state: EconomyState) -> bool:
 	return state.wheat_accumulate_price != WheatPolicy.OFF and state.wheat_price <= state.wheat_accumulate_price \
 		and int(state.stocks.get(&"wheat", 0)) < state.wheat_target_stock
 
 
-func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale: float) -> void:
+func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale: float, share: float) -> void:
 	var stock: int = int(state.stocks.get(&"wheat", 0))
 	var rate: float = ProductionSystem.staffed_rate(params, building, "outputs.wheat")
 	var accumulating: bool = is_accumulating(state)
 	if accumulating:
 		rate *= float(params.get_value(&"market.wheat.accumulate_factor"))
 	rate *= rate_scale
+	rate *= share
 	var capacity: float = float(building.get("output_fraction", 0.0)) + rate
 	var units: int = ProductionSystem.whole_units(capacity)
 	building["output_fraction"] = maxf(0.0, capacity - units)
@@ -125,25 +207,36 @@ func _buy(state: EconomyState, params: Params, building: Dictionary, rate_scale:
 	state.money -= units * state.wheat_price
 	state.wheat_spent_tick += units * state.wheat_price
 	state.stocks[&"wheat"] = stock + units
+	state.count_bought(&"wheat", units)
 
 
 func _decay(state: EconomyState, params: Params) -> void:
-	var stock: int = int(state.stocks.get(&"wheat", 0))
-	var rate: float = float(params.get_value(&"market.wheat.decay_fraction_per_minute"))
+	state.wheat_decay_fraction = _decayed(state, params, &"wheat", state.wheat_decay_fraction)
+
+
+func _decay_barley(state: EconomyState, params: Params) -> void:
+	state.barley_decay_fraction = _decayed(state, params, &"barley", state.barley_decay_fraction)
+
+
+# Spoils a stock in whole units; returns the fraction of a unit lost but not yet counted.
+func _decayed(state: EconomyState, params: Params, good: StringName, carried: float) -> float:
+	var stock: int = int(state.stocks.get(good, 0))
+	var rate: float = float(params.get_value(StringName("market.%s.decay_fraction_per_minute" % good)))
 	# Loss accrued against stock that is gone does not carry over to the next delivery.
 	if stock <= 0:
-		state.wheat_decay_fraction = 0.0
-		return
+		return 0.0
 	if rate <= 0.0:
-		return
+		return carried
 	# The configured fraction is what is lost in a minute, so each tick keeps (1 - rate)^(1/60), as the bread does.
-	state.wheat_decay_fraction += float(stock) * (1.0 - pow(1.0 - rate, 1.0 / SECONDS_PER_MINUTE))
-	var lost: int = mini(stock, ProductionSystem.whole_units(state.wheat_decay_fraction))
-	state.wheat_decay_fraction -= float(lost)
-	state.stocks[&"wheat"] = stock - lost
+	carried += float(stock) * (1.0 - pow(1.0 - rate, 1.0 / SECONDS_PER_MINUTE))
+	var lost: int = mini(stock, ProductionSystem.whole_units(carried))
+	carried -= float(lost)
+	state.stocks[good] = stock - lost
+	state.count_spoiled(good, float(lost))
 	# Decay that empties the warehouse leaves nothing owed to the delivery that may refill it this tick.
 	if stock - lost <= 0:
-		state.wheat_decay_fraction = 0.0
+		return 0.0
+	return carried
 
 
 # Mean-reverting walk: one update moves the price by at most market.wheat.max_step and never leaves
@@ -152,15 +245,81 @@ func _decay(state: EconomyState, params: Params) -> void:
 # taken, in this order, so a series depends only on the seed (a modifier that fixes the price
 # still consumes its scheduled draws).
 static func next_price(price: int, params: Params, rng: RandomNumberGenerator) -> int:
-	var minimum: int = int(params.get_value(&"market.wheat.min_price"))
-	var maximum: int = int(params.get_value(&"market.wheat.max_price"))
-	var base: int = int(params.get_value(&"market.wheat.base_price"))
-	var max_step: int = int(params.get_value(&"market.wheat.max_step"))
-	var reverts: bool = rng.randf() < float(params.get_value(&"market.wheat.reversion"))
+	return _walk_price(&"wheat", price, params, rng)
+
+
+static func next_barley_price(price: int, params: Params, rng: RandomNumberGenerator) -> int:
+	return _walk_price(&"barley", price, params, rng)
+
+
+static func _walk_price(good: StringName, price: int, params: Params, rng: RandomNumberGenerator) -> int:
+	var minimum: int = int(params.get_value(StringName("market.%s.min_price" % good)))
+	var maximum: int = int(params.get_value(StringName("market.%s.max_price" % good)))
+	var base: int = int(params.get_value(StringName("market.%s.base_price" % good)))
+	var max_step: int = int(params.get_value(StringName("market.%s.max_step" % good)))
+	var reverts: bool = rng.randf() < float(params.get_value(StringName("market.%s.reversion" % good)))
 	var step: int = rng.randi_range(-max_step, max_step)
 	if reverts and price != base:
 		step = clampi(base - price, -max_step, max_step)
 	return clampi(price + step, mini(minimum, maximum), maxi(minimum, maximum))
+
+
+func _reprice_barley(state: EconomyState, params: Params, rng: RandomNumberGenerator, tick_count: int) -> void:
+	var interval: int = int(params.get_value(&"market.barley.price_update_seconds"))
+	if state.barley_price < 0:
+		state.barley_price = int(params.get_value(&"market.barley.base_price"))
+	if interval > 0 and tick_count % interval == 0:
+		state.barley_previous_price = state.barley_price
+		state.barley_price = next_barley_price(state.barley_price, params, rng)
+
+
+# Barley takes its reserved share of the capacity, whatever the flour owes. It has no purchase policy yet (nothing consumes it), so
+# it only stops at a full warehouse or an empty treasury; units that do not fit are lost like the wheat ones.
+func _buy_barley(state: EconomyState, params: Params, wharves: Array[Dictionary], grain_fraction: float) -> void:
+	var share: float = float(barley_percent(state)) / PERCENT
+	if share <= 0.0:
+		return
+	var price: int = _barley_price(state, params)
+	var room: int = int(params.get_value(&"market.barley.storage_capacity"))
+	for building: Dictionary in wharves:
+		var rate: float = ProductionSystem.staffed_rate(params, building, "outputs.wheat") * grain_fraction * share
+		var capacity: float = float(building.get("barley_fraction", 0.0)) + rate
+		var units: int = ProductionSystem.whole_units(capacity)
+		building["barley_fraction"] = maxf(0.0, capacity - units)
+		var stock: int = int(state.stocks.get(&"barley", 0))
+		units = ImportSystem.affordable(state, mini(units, maxi(0, room - stock)), price)
+		state.money -= units * price
+		state.barley_spent_tick += units * price
+		state.stocks[&"barley"] = stock + units
+		state.count_bought(&"barley", units)
+
+
+# Before the simulation loads the price (systems driven by hand in tests) barley sells at its base price.
+static func _barley_price(state: EconomyState, params: Params) -> int:
+	return state.barley_price if state.barley_price >= 0 else int(params.get_value(&"market.barley.base_price"))
+
+
+# Everything the panel shows about barley and the split of the wharf's capacity, so the UI holds no rules.
+static func barley_snapshot(state: EconomyState, params: Params) -> Dictionary:
+	var price: int = _barley_price(state, params)
+	return {
+		"stock": int(state.stocks.get(&"barley", 0)),
+		"capacity": int(params.get_value(&"market.barley.storage_capacity")),
+		"price": price,
+		"previous_price": state.barley_previous_price if state.barley_previous_price >= 0 else price,
+		"barley_percent": barley_percent(state), "wheat_percent": WHOLE_PERCENT - barley_percent(state),
+		# The notch of the on-screen control (issue #54); the command itself takes any whole percent (D-031).
+		"step_percent": int(params.get_value(&"policy.unloading.step_percent")),
+		"flour_unloading_debt": state.flour_unloading_debt,
+	}
+
+
+# Stock and cap of a good that is made but not traded (malt, beer), for the panel.
+static func storage_snapshot(state: EconomyState, params: Params, good: StringName) -> Dictionary:
+	return {
+		"stock": int(state.stocks.get(good, 0)),
+		"capacity": int(params.get_value(StringName("market.%s.storage_capacity" % good))),
+	}
 
 
 # Shared with BreadDiagnostics so the panel's "no money" reason matches what the wharf buys.

@@ -32,7 +32,7 @@ func test_missing_labels_and_invalid_colors_fail_cleanly() -> void:
 
 func test_startup_data_is_required_and_rejects_invalid_values() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
@@ -53,7 +53,7 @@ func test_building_labels_resolve_by_id_and_reject_unknown_ids() -> void:
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
 	var presentation: MapPresentation = MapPresentation.new()
 	presentation.validate(raw, [&"mill"])
-	assert_eq(presentation.labels[&"mill"], "Molino")
+	assert_eq(presentation.labels[&"mill"], Strings.building_label("mill"))
 	raw["buildings"]["unknown"] = {"color": "#123456"}
 	presentation.validate(raw, [&"unknown"])
 	assert_eq(presentation.errors.size(), 1)
@@ -65,7 +65,7 @@ func test_building_labels_resolve_by_id_and_reject_unknown_ids() -> void:
 
 func test_invalid_startup_role_modifiers_are_rejected() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
@@ -101,3 +101,53 @@ func test_ui_settings_are_validated_and_keep_existing_defaults() -> void:
 		invalid["colors"][key] = "invalid"
 		presentation.validate(invalid, [&"mill"])
 		assert_eq(presentation.errors.size(), 1, key)
+
+
+func test_demolish_hold_seconds_comes_from_data() -> void:
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.validate(raw, [&"mill"])
+	assert_true(presentation.errors.is_empty(), str(presentation.errors))
+	var input: Variant = presentation.get("input")
+	assert_true(input is Dictionary, "data/ui/map.json input.demolish_hold_seconds")
+	if input is Dictionary:
+		assert_eq(float((input as Dictionary)["demolish_hold_seconds"]), 0.5)
+	assert_true(raw.has("input") and raw["input"] is Dictionary, "data/ui/map.json has input.demolish_hold_seconds")
+	if raw.has("input") and raw["input"] is Dictionary:
+		for value: Variant in [NAN, 0, -0.5, "0.5"]:
+			var invalid: Dictionary = raw.duplicate(true)
+			invalid["input"]["demolish_hold_seconds"] = value
+			presentation.validate(invalid, [&"mill"])
+			assert_eq(presentation.errors, ["data/ui/map.json.demolish_hold_seconds: invalid positive value"] as Array[String], str(value))
+			var rejected: Variant = presentation.get("input")
+			assert_false(rejected is Dictionary and (rejected as Dictionary).has("demolish_hold_seconds"), str(value))
+		var missing: Dictionary = raw.duplicate(true)
+		missing.erase("input")
+		presentation.validate(missing, [&"mill"])
+		assert_eq(presentation.errors, ["data/ui/map.json.demolish_hold_seconds: invalid positive value"] as Array[String])
+
+
+func test_new_map_layers_have_their_own_colors() -> void:
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.load_data([])
+	assert_true(presentation.errors.is_empty(), str(presentation.errors))
+	var seen: Array[Color] = []
+	for kind: String in ["land", "river", "cultivable", "dock", "road", "existing"]:
+		assert_true(presentation.terrain.has(kind), kind)
+		assert_false(presentation.terrain.get(kind) in seen, kind)
+		seen.append(presentation.terrain.get(kind, Color.BLACK))
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/ui/map.json"))
+	raw["terrain"].erase("dock")
+	presentation.validate(raw, [])
+	assert_eq(presentation.errors, ["data/ui/map.json.terrain.dock: invalid color"] as Array[String])
+
+
+# The player's streets (issue #168) are drawn apart from the historic ones, which cannot be demolished.
+func test_player_streets_have_their_own_color_and_legend() -> void:
+	var presentation: MapPresentation = MapPresentation.new()
+	presentation.load_data([])
+	assert_true(presentation.errors.is_empty(), str(presentation.errors))
+	assert_true("player_road" in MapPresentation.TERRAIN_KINDS)
+	assert_true(presentation.terrain.has("player_road"))
+	assert_ne(presentation.terrain.get("player_road", presentation.terrain["road"]), presentation.terrain["road"])
+	assert_true(Strings.TERRAIN_LABELS.has("player_road"))

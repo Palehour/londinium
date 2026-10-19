@@ -13,8 +13,7 @@ description: Mantiene al día docs, ADRs y skills cuando un PR cambia algo que d
   Aceptado en un commit del mismo PR, **antes del merge** (el merge no reescribe archivos). El revisor no aprueba
   para mergear un ADR que quedó en Propuesto sin avisar.
 - **`docs/GDD.md` y `docs/DECISIONS.md`:** la regla completa está en `decision-diseno`; no se repite acá.
-- **Corregir dos veces por lo mismo:** si hubo que corregir a un agente dos veces por el mismo error,
-  la corrección entra en la sección Gotchas de la skill que corresponda.
+- **Errores y correcciones de revisión:** cuándo se vuelven regla y dónde van está en `reflexionar`; no se repite acá.
 
 ## Gotchas
 - Cada regla vive en un solo lugar (`AGENTS.md` o una skill); en los demás sitios, apuntá a ella en vez de copiarla.

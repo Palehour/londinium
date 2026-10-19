@@ -1,0 +1,65 @@
+{
+  "year": 1870,
+  "ohm": {
+    "export": "ohm_export.json",
+    "query": "ohm_1870.overpassql",
+    "url": "https://overpass-api.openhistoricalmap.org/api/interpreter",
+    "downloaded": "2026-10-18",
+    "licence": "CC0 1.0 (OpenHistoricalMap, https://www.openhistoricalmap.org/copyright)",
+    "layers": ["roads.geojson", "river.geojson", "docks.geojson"],
+    "known_gaps": ["OHM has no Wapping High Street (nor any street along the river), so the strip has none; adding it from the NLS sheet is a separate decision, since it would cost about 11 free cells."]
+  },
+  "nls": {
+    "series": "Ordnance Survey, London 1:1056, surveyed 1862-74, single sheets through IIIF (decision of Cristian, 2026-10-18: not the tile bucket)",
+    "licence": "CC-BY (NLS), https://maps.nls.uk/copyright.html",
+    "credit": "Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/",
+    "downloaded": "2026-10-18",
+    "use": "The sheets are only drawn in the comparison image and read for the anchors and named sites (places); water and streets come from OHM. Pixels are full-resolution pixels of each IIIF sheet; the committed images are crops at 1/8, joined with tools/map_sources --join.",
+    "sheets": [
+      {"sheet": "VII.88", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950236",
+        "iiif": "https://map-view.nls.uk/iiif/2/22995%2F229950236", "image": "nls_sheets/VII.88.jpg", "image_origin": [1000, 600], "image_scale": 8,
+        "map_area": [1037, 683, 15410, 10234],
+        "control_points": [
+          {"name": "Green Bank x Well Alley", "pixel": [4553.6, 2348.0], "ohm_node": 2093038598},
+          {"name": "Green Bank x Red Lion Street", "pixel": [5086.4, 2346.4], "ohm_node": 2093038601},
+          {"name": "Green Bank x Queen's Head Alley", "pixel": [5473.6, 2344.0], "ohm_node": 2093038605},
+          {"name": "Old Gravel Lane x Brewhouse Lane x Cinnamon Street", "pixel": [7576.0, 1496.0], "ohm_node": 2093038642},
+          {"name": "Wapping Dock Street x Cinnamon Street", "pixel": [7944.0, 1272.0], "ohm_node": 2093038641}
+        ]},
+      {"sheet": "VII.78", "surveyed": 1873, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950218",
+        "iiif": "https://map-view.nls.uk/iiif/2/22995%2F229950218", "image": "nls_sheets/VII.78.jpg", "image_origin": [752, 7680], "image_scale": 8,
+        "map_area": [832, 700, 15013, 10300],
+        "control_points": [
+          {"name": "Neatline corner shared with VII.88 (its top left)", "pixel": [832.0, 10238.4], "same_as": {"sheet": "VII.88", "pixel": [1083.2, 683.2]}},
+          {"name": "Neatline corner shared with VII.88 (its top right)", "pixel": [15013.6, 10300.0], "same_as": {"sheet": "VII.88", "pixel": [15410.4, 737.6]}},
+          {"name": "Bostock Street x Old Gravel Lane", "pixel": [5883.2, 7955.2], "ohm_node": 2093038575},
+          {"name": "Chandler Street x Old Gravel Lane", "pixel": [5883.2, 8371.2], "ohm_node": 2093038621},
+          {"name": "London Docks Western Dock, south-east corner", "pixel": [3690.4, 8618.4], "ohm_node": 2090239864},
+          {"name": "Wapping Basin, north-west corner", "pixel": [1354.4, 9680.0], "ohm_node": 2090239661},
+          {"name": "Wapping Basin, north-east corner", "pixel": [2714.4, 9642.4], "ohm_node": 2090239678}
+        ]},
+      {"sheet": "VII.87", "surveyed": 1872, "published": 1875, "licence": "CC-BY (NLS)", "url": "https://maps.nls.uk/view/229950233",
+        "iiif": "https://map-view.nls.uk/iiif/2/22995%2F229950233", "image": "nls_sheets/VII.87.jpg", "image_origin": [10680, 616], "image_scale": 8,
+        "map_area": [976, 698, 15287, 10280],
+        "control_points": [
+          {"name": "Neatline corner shared with VII.88 (its top left)", "pixel": [15272.0, 698.4], "same_as": {"sheet": "VII.88", "pixel": [1083.2, 683.2]}},
+          {"name": "Neatline corner shared with VII.88 (its bottom left)", "pixel": [15286.4, 10280.0], "same_as": {"sheet": "VII.88", "pixel": [1037.6, 10233.6]}},
+          {"name": "Plough Alley x Great Hermitage Street", "pixel": [14260.0, 1406.4], "ohm_node": 2091778369},
+          {"name": "Plough Alley x High Street", "pixel": [13998.4, 2476.0], "ohm_node": 2091778366}
+        ]}
+    ],
+    "places": [
+      {"name": "Pier Head", "sheet": "VII.88", "pixel": [1386.4, 3333.6]},
+      {"name": "Oliver's Wharf", "sheet": "VII.88", "pixel": [2773.6, 3680.0]},
+      {"name": "St John's Church", "sheet": "VII.88", "pixel": [3640.0, 2466.4]},
+      {"name": "St Peter's Church", "sheet": "VII.78", "pixel": [6408.0, 8504.0]},
+      {"name": "Town of Ramsgate", "sheet": "VII.88", "pixel": [2373.6, 3386.4]},
+      {"name": "Thames Police Station", "sheet": "VII.88", "pixel": [6053.6, 3946.4]},
+      {"name": "Wapping Old Stairs", "sheet": "VII.88", "pixel": [2413.6, 3946.4]}
+    ],
+    "gap": {
+      "cells": [0, 0, 6, 4],
+      "note": "The north-west corner falls on sheet VII.77, which has no 1862-74 edition: only the OHM streets there, and the land stays free (option A, decision of Cristian, 2026-10-18)."
+    }
+  }
+}

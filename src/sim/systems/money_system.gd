@@ -2,7 +2,7 @@ class_name MoneySystem
 extends RefCounted
 
 
-func tick(state: EconomyState, params: Params) -> void:
+func tick(state: EconomyState, params: Params, context: EconomyContext = null) -> void:
 	var employed: int = 0
 	var wages: float = 0.0
 	var upkeep: float = 0.0
@@ -12,9 +12,16 @@ func tick(state: EconomyState, params: Params) -> void:
 		employed += workers
 		wages += workers * float(params.get_value(StringName(prefix + ".wage_per_worker_per_minute")))
 		upkeep += float(params.get_value(StringName(prefix + ".upkeep_per_minute")))
-	state.tax_fraction += employed * state.tax_rate \
-		* float(params.get_value(&"population.tax.base_per_employed_worker_per_minute")) / 60.0
+	# Head tax per class: on the jobs its members hold or on all of its residents (the data says which).
+	for def: ClassDef in ClassStates.defs(context):
+		var heads: int = employed if def.tax_basis == ClassDef.TAX_EMPLOYED else ClassStates.population_of(state, def)
+		var collected: float = heads * state.tax_rate * float(params.get_value(def.tax_base_key)) / 60.0
+		state.tax_fraction += collected
+		state.class_tax_tick[def.id] = collected
 	state.wage_fraction += wages / 60.0
+	# Administration (issue #118): a bigger city pays more upkeep for every building; wages do not grow.
+	var multiplier: float = BuildingCosts.administration_multiplier(params, state.buildings.size())
+	upkeep *= multiplier
 	state.upkeep_fraction += upkeep / 60.0
 	var taxes_paid: int = ProductionSystem.whole_units(state.tax_fraction)
 	var wages_paid: int = ProductionSystem.whole_units(state.wage_fraction)
@@ -23,6 +30,22 @@ func tick(state: EconomyState, params: Params) -> void:
 	state.taxes_tick = taxes_paid
 	state.wages_tick = wages_paid
 	state.upkeep_tick = upkeep_paid
+	# The statistics split what was paid, so base upkeep and administration always add up to it.
+	state.administration_tick = upkeep_paid * maxf(0.0, 1.0 - 1.0 / multiplier) if multiplier > 0.0 else 0.0
 	state.tax_fraction = maxf(0.0, state.tax_fraction - taxes_paid)
 	state.wage_fraction = maxf(0.0, state.wage_fraction - wages_paid)
 	state.upkeep_fraction = maxf(0.0, state.upkeep_fraction - upkeep_paid)
+	_pay_streets(state, params)
+
+
+# Streets and transport (issue #67, D-070) are upkeep too, but outside administration (D-063): the player's streets
+# pay roads.upkeep_per_minute each and every leg its units x steps x k, in whole pence with the fraction carried.
+func _pay_streets(state: EconomyState, params: Params) -> void:
+	if state.player_roads.is_empty() and state.transport_legs.is_empty():
+		return
+	state.transport_fraction += RoadSystem.transport_cost(state, params) \
+		+ state.player_roads.size() * float(params.get_value(&"roads.upkeep_per_minute")) / 60.0
+	var paid: int = ProductionSystem.whole_units(state.transport_fraction)
+	state.money -= paid
+	state.upkeep_tick += paid
+	state.transport_fraction = maxf(0.0, state.transport_fraction - paid)

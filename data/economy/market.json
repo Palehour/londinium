@@ -2,6 +2,11 @@
   "wheat": { "base_price": 2, "min_price": 1, "max_price": 3, "price_update_seconds": 60,
     "max_step": 1, "reversion": 0.5,
     "storage_capacity": 100, "decay_fraction_per_minute": 0.01, "accumulate_factor": 2.0 },
-  "imported_flour": { "price_per_lot": 25, "lot_size": 10 },
+  "barley": { "base_price": 2, "min_price": 1, "max_price": 3, "price_update_seconds": 60,
+    "max_step": 1, "reversion": 0.35,
+    "storage_capacity": 80, "decay_fraction_per_minute": 0.01 },
+  "malt": { "storage_capacity": 40, "decay_fraction_per_minute": 0.0 },
+  "beer": { "storage_capacity": 60, "decay_fraction_per_minute": 0.02 },
+  "imported_flour": { "price_per_lot": 25, "lot_size": 10, "max_debt_lots": 2 },
   "tea": { "price": 2, "buffer_seconds": 60 }
 }

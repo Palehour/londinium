@@ -1,0 +1,16 @@
+{
+  "id": "strip_chain_near",
+  "description": "Issue #67, escenario (a), cerca: en la franja 16×12 con calles, la cadena del pan pegada al río. Embarcadero, molino y panadería a pocos pasos por las calles que bajan al río (Well Alley, Red Lion Street); dos viviendas dentro del radio de la panadería. Desde #152 son las calles calcadas de Wapping.",
+  "notes": "Se compara con strip_chain_far, que juega la misma cadena lejos del río: la diferencia de superávit es el transporte (D-070). Si falla después de un cambio en data/, hay que recalibrarlo con Mason.",
+  "map": "riverside_strip",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [11, 8]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [9, 7]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [9, 6]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [13, 6]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [12, 7]}
+  ]
+}

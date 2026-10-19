@@ -2,15 +2,22 @@ class_name StatsPanel
 extends PanelContainer
 
 signal restart_requested
+signal difficulty_selected(preset_id: StringName)
+signal mod_order_requested(order: Array[StringName])
+signal save_requested
+signal load_requested(path: String)
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
+# Floating point noise of rates summed per second, not a threshold: 10.0000000001 per minute is still 10.0.
+const RATE_NOISE: float = 1e-6
 
 var session: GameSession
 var clock: SimClock
 var _speed: int = 1
 var _syncing: bool = false
 var _alert: Label
+var _notice: Label
 var _restart: Button
 var _tax: SpinBox
 var _wheat: CheckButton
@@ -27,45 +34,99 @@ var _tea: CheckButton
 var _flour: CheckButton
 var _tea_row: Label
 var _flour_row: Label
+var _barley_row: Label
+var _malt_beer_row: Label
+var _unloading: HSlider
+var _unloading_label: Label
 var _dragging_target: bool = false
 var _dragging_reserve: bool = false
+var _dragging_unloading: bool = false
+# Split the simulation reported last, so releasing the slider where it was sends nothing.
+var _unloading_current: int = 0
+# Notch of the control, from data (issue #54).
+var _unloading_notch: float = 1.0
 var _pause: Button
 var _speed_buttons: Dictionary[int, Button] = {}
+var _title: Label
+var _tax_label: Label
+var _locale_es: Button
+var _locale_en: Button
+var _locale_group: ButtonGroup
+var _difficulty_label: Label
+var _difficulty_buttons: Dictionary[StringName, Button] = {}
+var _mods_menu: ModsMenu
+var _saves_menu: SavesMenu
+# Where the player puts mods, shown by the mods menu when there are none.
+var _mods_folder: String = ""
+var _snapshot: Dictionary = {}
 var _bread: Label
 var _economy: Label
+var _needs: Label
 var _buildings: Label
 var _crises: Label
+var _objectives: Label
+var _victory_why: Label
+var _victory_progress: ProgressBar
+var _victory_message: Label
+var _victory_dismiss: Button
+var _victory_notice: VBoxContainer
+var _victory_announced: bool = false
+# The player moves through the panel with a gamepad (issue #68); with the mouse nothing keeps the focus.
+var _focused: bool = false
 
 
 func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	session = game_session
 	clock = game_clock
+	# Phrases are already translated. Leaving auto-translate on would look the sentence up as a key.
+	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	# The panel owns every click and wheel event over it, so none reach the map.
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# Godot forwards unhandled wheel events to the parent by default, which would zoom the map.
 	mouse_force_pass_scroll_events = false
 	var root: VBoxContainer = VBoxContainer.new()
 	add_child(root)
-	root.add_child(_label(Strings.PANEL_TITLE))
+	_title = _label(Strings.text(Strings.PANEL_TITLE))
+	root.add_child(_title)
 	_alert = _label("")
 	_alert.visible = false
 	root.add_child(_alert)
-	_restart = _button(Strings.RESTART, func() -> void: restart_requested.emit())
+	_victory_notice = VBoxContainer.new()
+	_victory_notice.visible = false
+	root.add_child(_victory_notice)
+	_victory_message = _label("")
+	_victory_notice.add_child(_victory_message)
+	_victory_dismiss = _button(Strings.text(Strings.VICTORY_DISMISS), func() -> void: _victory_notice.hide())
+	_victory_notice.add_child(_victory_dismiss)
+	_notice = _label("")
+	_notice.visible = false
+	root.add_child(_notice)
+	_restart = _button(Strings.text(Strings.RESTART), func() -> void: restart_requested.emit())
 	_restart.visible = false
 	root.add_child(_restart)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	root.add_child(scroll)
 	var content: VBoxContainer = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	_objectives = _label("")
+	content.add_child(_objectives)
+	_victory_progress = ProgressBar.new()
+	_victory_progress.show_percentage = false
+	_victory_progress.step = 1.0
+	content.add_child(_victory_progress)
+	_victory_why = _label("")
+	content.add_child(_victory_why)
 	_build_controls(content)
 	_bread = _label("")
 	_economy = _label("")
+	_needs = _label("")
 	_buildings = _label("")
 	_crises = _label("")
-	for label: Label in [_bread, _economy, _buildings, _crises]:
+	for label: Label in [_bread, _economy, _needs, _buildings, _crises]:
 		content.add_child(label)
 
 
@@ -77,7 +138,41 @@ func apply_style(background: Color, alert: Color, margin: float) -> void:
 	_alert.add_theme_color_override("font_color", alert)
 
 
+# Gamepad focus (issue #68): buttons, switches and sliders take the focus only from here to leave_focus(), so a
+# mouse click never leaves one holding it and the map's keys keep working. The focus starts on the first visible
+# control: restart or the victory notice when they show.
+func enter_focus() -> void:
+	_focused = true
+	_set_focusable(true)
+	for node: Node in find_children("*", "Control", true, false):
+		var control: Control = node as Control
+		if control.focus_mode != Control.FOCUS_NONE and control.is_visible_in_tree():
+			control.grab_focus()
+			return
+
+
+func leave_focus() -> void:
+	_focused = false
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	if focus_owner != null and is_ancestor_of(focus_owner):
+		focus_owner.release_focus()
+	_set_focusable(false)
+
+
+func is_focused() -> bool:
+	return _focused
+
+
+func _set_focusable(on: bool) -> void:
+	var mode: Control.FocusMode = Control.FOCUS_ALL if on else Control.FOCUS_NONE
+	for node: Node in find_children("*", "BaseButton", true, false) + find_children("*", "Slider", true, false):
+		(node as Control).focus_mode = mode
+	_saves_menu.focusable = on
+	_mods_menu.focusable = on
+
+
 func update_snapshot(snapshot: Dictionary) -> void:
+	_snapshot = snapshot
 	var economy: Dictionary = snapshot["economy"]
 	var stats: Dictionary = snapshot["stats"]
 	var defeat: Dictionary = snapshot["defeat"]
@@ -88,43 +183,179 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_wheat_row.text = _wheat_text(market)
 	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
 	_flour_row.text = _flour_text(snapshot["imports"]["flour"])
+	_barley_row.text = _barley_text(snapshot["market"]["barley"])
+	_update_unloading(snapshot["market"]["barley"], defeated)
+	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
+	_update_victory(snapshot.get("victory", {}), defeated)
+	_notice.text = _mobility_text(stats, snapshot["needs"])
+	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
+	_sync_difficulty_buttons()
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
-	_buildings.text = _buildings_text(snapshot["diagnostics"]["buildings"])
+	_needs.text = _needs_text(snapshot["needs"])
+	_buildings.text = _buildings_text(snapshot["diagnostics"], snapshot["distance"])
 	_crises.text = _crises_text(defeat)
 
 
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or _pause == null:
+		return
+	_apply_static_texts()
+	if not _snapshot.is_empty():
+		update_snapshot(_snapshot)
+
+
+func _apply_static_texts() -> void:
+	_title.text = Strings.text(Strings.PANEL_TITLE)
+	_restart.text = Strings.text(Strings.RESTART)
+	_tax_label.text = Strings.text(Strings.TAX_LABEL)
+	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
+	_tea.text = Strings.text(Strings.TEA_IMPORTS)
+	_flour.text = Strings.text(Strings.FLOUR_IMPORTS)
+	_accumulate_on.text = Strings.text(Strings.ACCUMULATE_LABEL)
+	_limit_on.text = Strings.text(Strings.MAX_PRICE_LABEL)
+	if _dragging_target:
+		_target_label.text = Strings.text(Strings.TARGET_LABEL) % int(_target.value)
+	if _dragging_reserve:
+		_reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(_reserve.value)
+	if _dragging_unloading:
+		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(_unloading.value)
+	_difficulty_label.text = Strings.text(Strings.DIFFICULTY)
+	for preset_id: StringName in _difficulty_buttons:
+		_difficulty_buttons[preset_id].text = Strings.text(Strings.DIFFICULTY_LABELS[preset_id])
+	_update_clock_controls()
+	_sync_locale_buttons()
+
+
+func _build_locale_row(content: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	_locale_group = ButtonGroup.new()
+	_locale_group.allow_unpress = false
+	_locale_es = _locale_button(Strings.LOCALE_ES, "es")
+	_locale_en = _locale_button(Strings.LOCALE_EN, "en")
+	row.add_child(_locale_es)
+	row.add_child(_locale_en)
+	content.add_child(row)
+	_sync_locale_buttons()
+
+
+func _locale_button(caption: String, locale: String) -> Button:
+	var button: Button = _button(caption, _select_locale.bind(locale))
+	button.toggle_mode = true
+	button.button_group = _locale_group
+	return button
+
+
+func _select_locale(locale: String) -> void:
+	Strings.set_locale(locale)
+
+
+func _sync_locale_buttons() -> void:
+	if _locale_es == null:
+		return
+	var english: bool = TranslationServer.get_locale().begins_with("en")
+	_locale_en.set_pressed_no_signal(english)
+	_locale_es.set_pressed_no_signal(not english)
+
+
+# Picking a preset starts a new game on it (issue #70); the map view owns the restart.
+func _build_difficulty_row(content: VBoxContainer) -> void:
+	_difficulty_label = _label(Strings.text(Strings.DIFFICULTY))
+	content.add_child(_difficulty_label)
+	var row: HBoxContainer = HBoxContainer.new()
+	var group: ButtonGroup = ButtonGroup.new()
+	group.allow_unpress = false
+	for preset_id: StringName in Strings.DIFFICULTY_LABELS:
+		var button: Button = _button(Strings.text(Strings.DIFFICULTY_LABELS[preset_id]),
+			func() -> void: difficulty_selected.emit(preset_id))
+		button.toggle_mode = true
+		button.button_group = group
+		_difficulty_buttons[preset_id] = button
+		row.add_child(button)
+	content.add_child(row)
+	_sync_difficulty_buttons()
+
+
+func _sync_difficulty_buttons() -> void:
+	for preset_id: StringName in _difficulty_buttons:
+		_difficulty_buttons[preset_id].set_pressed_no_signal(preset_id == session.difficulty)
+
+
+# A mods menu fails to apply an order only when the reloaded data does not validate; the game goes on.
+func show_mod_error(message: String) -> void:
+	_mods_menu.show_error(message)
+
+
+func set_mods_folder(folder: String) -> void:
+	_mods_folder = folder
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
+
+
+# The saves in the folder and the outcome of the last save or load (issue #57); the map view owns the files.
+func show_saves(entries: Array[Dictionary], message: String = "") -> void:
+	_saves_menu.show_saves(entries, message)
+
+
 func _build_controls(content: VBoxContainer) -> void:
+	_build_locale_row(content)
+	_saves_menu = SavesMenu.new()
+	_saves_menu.save_requested.connect(func() -> void: save_requested.emit())
+	_saves_menu.load_requested.connect(func(path: String) -> void: load_requested.emit(path))
+	content.add_child(_saves_menu)
+	_build_difficulty_row(content)
+	_mods_menu = ModsMenu.new()
+	_mods_menu.order_changed.connect(func(order: Array[StringName]) -> void: mod_order_requested.emit(order))
+	content.add_child(_mods_menu)
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
 	var tax_row: HBoxContainer = HBoxContainer.new()
-	var tax_label: Label = Label.new()
-	tax_label.text = Strings.TAX_LABEL
-	tax_row.add_child(tax_label)
+	_tax_label = Label.new()
+	_tax_label.text = Strings.text(Strings.TAX_LABEL)
+	tax_row.add_child(_tax_label)
 	_tax = SpinBox.new()
 	_tax.max_value = PERCENT
 	_tax.value_changed.connect(_tax_changed)
+	_step_with_gamepad(_tax)
 	tax_row.add_child(_tax)
 	content.add_child(tax_row)
 	_wheat = CheckButton.new()
-	_wheat.text = Strings.WHEAT_PURCHASES
+	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
 	_wheat.focus_mode = Control.FOCUS_NONE
 	_wheat.toggled.connect(_wheat_toggled)
 	content.add_child(_wheat)
 	_wheat_row = _label("")
 	content.add_child(_wheat_row)
-	_tea = _import_switch(content, Strings.TEA_IMPORTS, func(enabled: bool) -> void:
+	_tea = _import_switch(content, Strings.text(Strings.TEA_IMPORTS), func(enabled: bool) -> void:
 		session.submit_command(SetTeaImportsCommand.new(enabled)))
 	_tea_row = _label("")
 	content.add_child(_tea_row)
-	_flour = _import_switch(content, Strings.FLOUR_IMPORTS, func(enabled: bool) -> void:
+	_flour = _import_switch(content, Strings.text(Strings.FLOUR_IMPORTS), func(enabled: bool) -> void:
 		session.submit_command(SetFlourImportsCommand.new(enabled)))
 	_flour_row = _label("")
 	content.add_child(_flour_row)
-	var accumulate_row: Array[Control] = _price_row(content, Strings.ACCUMULATE_LABEL)
+	_barley_row = _label("")
+	content.add_child(_barley_row)
+	_malt_beer_row = _label("")
+	content.add_child(_malt_beer_row)
+	_unloading_label = _label("")
+	content.add_child(_unloading_label)
+	_unloading = HSlider.new()
+	_unloading.max_value = 100.0
+	_unloading.scrollable = false
+	_unloading.focus_mode = Control.FOCUS_NONE
+	_unloading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_unloading.drag_started.connect(_unloading_grabbed)
+	_unloading.drag_ended.connect(_unloading_released)
+	_unloading.focus_entered.connect(func() -> void: _unloading.step = _unloading_notch)
+	_submit_on_input(_unloading, func() -> void: _unloading_released(true))
+	_unloading.value_changed.connect(func(value: float) -> void: _unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % int(value))
+	content.add_child(_unloading)
+	var accumulate_row: Array[Control] = _price_row(content, Strings.text(Strings.ACCUMULATE_LABEL))
 	_accumulate_on = accumulate_row[0] as CheckBox
 	_accumulate_price = accumulate_row[1] as SpinBox
-	var limit_row: Array[Control] = _price_row(content, Strings.MAX_PRICE_LABEL)
+	var limit_row: Array[Control] = _price_row(content, Strings.text(Strings.MAX_PRICE_LABEL))
 	_limit_on = limit_row[0] as CheckBox
 	_limit_price = limit_row[1] as SpinBox
 	_target_label = _label("")
@@ -137,7 +368,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target.drag_started.connect(func() -> void: _dragging_target = true)
 	_target.drag_ended.connect(_target_released)
-	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.TARGET_LABEL % int(value))
+	_submit_on_input(_target, _submit_policy)
+	_target.value_changed.connect(func(value: float) -> void: _target_label.text = Strings.text(Strings.TARGET_LABEL) % int(value))
 	content.add_child(_target)
 	_reserve_label = _label("")
 	content.add_child(_reserve_label)
@@ -148,10 +380,11 @@ func _build_controls(content: VBoxContainer) -> void:
 	_reserve.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_reserve.drag_started.connect(func() -> void: _dragging_reserve = true)
 	_reserve.drag_ended.connect(_reserve_released)
-	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.RESERVE_LABEL % int(value))
+	_submit_on_input(_reserve, _submit_policy)
+	_reserve.value_changed.connect(func(value: float) -> void: _reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(value))
 	content.add_child(_reserve)
 	var speed_row: HBoxContainer = HBoxContainer.new()
-	_pause = _button(Strings.PAUSE, _toggle_pause)
+	_pause = _button(Strings.text(Strings.PAUSE), toggle_pause)
 	speed_row.add_child(_pause)
 	for speed: int in Strings.SPEED_LABELS:
 		var button: Button = _button(Strings.SPEED_LABELS[speed], _select_speed.bind(speed))
@@ -193,6 +426,7 @@ func _price_row(content: VBoxContainer, title: String) -> Array[Control]:
 	spin.step = 1.0
 	spin.suffix = Strings.PENCE_SUFFIX
 	spin.value_changed.connect(func(_value: float) -> void: _submit_policy())
+	_step_with_gamepad(spin)
 	row.add_child(spin)
 	# Editable right away: while the game is paused no snapshot arrives to do it.
 	check.toggled.connect(func(on: bool) -> void:
@@ -222,12 +456,12 @@ func _update_wheat_policy(market: Dictionary, defeated: bool) -> void:
 	_target.max_value = market["capacity"]
 	if not _dragging_target:
 		_target.value = market["target_stock"]
-		_target_label.text = Strings.TARGET_LABEL % int(market["target_stock"])
+		_target_label.text = Strings.text(Strings.TARGET_LABEL) % int(market["target_stock"])
 	_syncing = false
 	_reserve.max_value = market["max_reserve_minutes"]
 	if not _dragging_reserve:
 		_reserve.value = market["reserve_minutes"]
-		_reserve_label.text = Strings.RESERVE_LABEL % int(market["reserve_minutes"])
+		_reserve_label.text = Strings.text(Strings.RESERVE_LABEL) % int(market["reserve_minutes"])
 	_reserve.editable = not defeated
 	_target.editable = not defeated
 
@@ -236,20 +470,63 @@ func _wheat_text(market: Dictionary) -> String:
 	var price: int = market["price"]
 	var previous: int = market["previous_price"]
 	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
-	var covered: String = Strings.MINUTES_COVERED % market["minutes_covered"] if market["minutes_covered"] >= 0.0 \
+	var covered: String = Strings.text(Strings.MINUTES_COVERED) % market["minutes_covered"] if market["minutes_covered"] >= 0.0 \
 		else Strings.NO_MILL_COVERAGE
-	var text: String = Strings.WHEAT_ROW % [market["stock"], market["capacity"], Strings.money(price), trend, covered]
-	return text + "\n" + Strings.WHEAT_BLOCKED_NOTE if market["blocked_by_price"] else text
+	var text: String = Strings.text(Strings.WHEAT_ROW) % [market["stock"], market["capacity"], Strings.money(price), trend, covered]
+	return text + "\n" + Strings.text(Strings.WHEAT_BLOCKED_NOTE) if market["blocked_by_price"] else text
 
 
 func _tea_text(tea: Dictionary) -> String:
-	return Strings.TEA_ROW % [tea["stock"], float(tea["coverage"]) * PERCENT, Strings.money(tea["price"]),
+	return Strings.text(Strings.TEA_ROW) % [tea["stock"], float(tea["coverage"]) * PERCENT, Strings.money(tea["price"]),
 		tea["satisfaction_bonus"], Strings.reason(tea["reason"])]
 
 
 func _flour_text(flour: Dictionary) -> String:
-	return Strings.FLOUR_ROW % [flour["lot_size"], Strings.money(flour["lot_price"]),
+	return Strings.text(Strings.FLOUR_ROW) % [flour["lot_size"], Strings.money(flour["lot_price"]),
 		_unit_price(flour["unit_price"]), flour["stock"], Strings.reason(flour["reason"])]
+
+
+func _barley_text(barley: Dictionary) -> String:
+	var price: int = barley["price"]
+	var previous: int = barley["previous_price"]
+	var trend: String = Strings.TREND_UP if price > previous else Strings.TREND_DOWN if price < previous else Strings.TREND_FLAT
+	return Strings.text(Strings.BARLEY_ROW) % [barley["stock"], barley["capacity"], Strings.money(price), trend,
+		barley["barley_percent"], barley["wheat_percent"]]
+
+
+# The player's split of the wharf's unloading between barley and wheat (SetUnloadingSplitCommand); without it
+# the barley never arrives and the malthouse has nothing to work with.
+func _update_unloading(barley: Dictionary, defeated: bool) -> void:
+	var percent: int = int(barley["barley_percent"])
+	_unloading_notch = float(barley["step_percent"])
+	if not _dragging_unloading:
+		# A split off the notch (a scenario's 15 %) shows as it is, not rounded, until the player grabs the
+		# slider; the step is set before the value so the value is not snapped.
+		# With the gamepad's focus on it the slider already moves in notches (issue #68).
+		_unloading.step = _unloading_notch if percent % int(_unloading_notch) == 0 or _unloading.has_focus() else 1.0
+		_unloading.value = percent
+		_unloading_label.text = Strings.text(Strings.UNLOADING_LABEL) % percent
+	_unloading_current = percent
+	_unloading.editable = not defeated
+
+
+# From here on the slider moves in notches; setting the step leaves the value where it was, so a release without
+# moving still sends nothing.
+func _unloading_grabbed() -> void:
+	_dragging_unloading = true
+	_unloading.step = _unloading_notch
+
+
+func _unloading_released(_changed: bool) -> void:
+	_dragging_unloading = false
+	var percent: int = int(_unloading.value)
+	if not _unloading.editable or percent == _unloading_current:
+		return
+	session.submit_command(SetUnloadingSplitCommand.new(percent))
+
+
+func _malt_beer_text(malt: Dictionary, beer: Dictionary) -> String:
+	return Strings.text(Strings.MALT_BEER_ROW) % [malt["stock"], malt["capacity"], beer["stock"], beer["capacity"]]
 
 
 # A lot is priced in whole pence, so the unit price can carry a fraction of a penny.
@@ -288,7 +565,7 @@ func _target_released(_changed: bool) -> void:
 
 
 func _update_clock_controls() -> void:
-	_pause.text = Strings.RESUME if clock.speed == 0 else Strings.PAUSE
+	_pause.text = Strings.text(Strings.RESUME) if clock.speed == 0 else Strings.text(Strings.PAUSE)
 	for speed: int in _speed_buttons:
 		_speed_buttons[speed].set_pressed_no_signal(speed == _speed)
 
@@ -297,79 +574,216 @@ func _update_alert(defeat: Dictionary) -> void:
 	var names: Array[String] = []
 	if not defeat["causes"].is_empty():
 		for cause: StringName in defeat["causes"]:
-			names.append(Strings.CONDITION_LABELS[cause])
-		_alert.text = Strings.ALERT_DEFEAT % ", ".join(names)
+			names.append(Strings.label(Strings.CONDITION_LABELS, cause))
+		var template: StringName = Strings.ALERT_DEFEAT_AFTER_VICTORY if _snapshot.get("victory", {}).get("won", false) else Strings.ALERT_DEFEAT
+		_alert.text = Strings.text(template) % ", ".join(names)
 	else:
 		for key: StringName in CONDITIONS:
 			if defeat[key]["status"] == &"warning":
-				names.append(Strings.CONDITION_LABELS[key] + _timer_text(defeat[key]))
-		_alert.text = Strings.ALERT_WARNING % ", ".join(names) if not names.is_empty() else ""
+				names.append(Strings.label(Strings.CONDITION_LABELS, key) + _timer_text(defeat[key]))
+		_alert.text = Strings.text(Strings.ALERT_WARNING) % ", ".join(names) if not names.is_empty() else ""
 	_alert.visible = not _alert.text.is_empty()
 
 
+# Who rose or fell between classes in the last minute; empty when nobody did. The counts cover every class with
+# mobility; the names are those of the first one (the only one in the victorian era).
+func _mobility_text(stats: Dictionary, needs: Dictionary) -> String:
+	var promoted: int = stats["promotions_in_window"]
+	var demoted: int = stats["demotions_in_window"]
+	if promoted == 0 and demoted == 0:
+		return ""
+	var lower: String = ""
+	var upper: String = ""
+	for class_id: StringName in needs["classes"]:
+		var mobility: Dictionary = needs["classes"][class_id]["mobility"]
+		if not mobility.is_empty():
+			lower = Strings.label(Strings.CLASS_LABELS, mobility["from"])
+			upper = Strings.label(Strings.CLASS_LABELS, class_id)
+			break
+	var lines: Array[String] = []
+	if promoted > 0:
+		lines.append(Strings.text(Strings.MOBILITY_PROMOTED) % [promoted, lower, upper])
+	if demoted > 0:
+		lines.append(Strings.text(Strings.MOBILITY_DEMOTED) % [demoted, upper, lower])
+	return "\n".join(lines)
+
+
 func _bread_text(economy: Dictionary, stats: Dictionary, diagnostics: Dictionary) -> String:
-	var lines: Array[String] = [Strings.BREAD_RATE % [stats["bread_produced_per_minute"],
+	var lines: Array[String] = [Strings.text(Strings.BREAD_RATE) % [stats["bread_produced_per_minute"],
 		stats["bread_consumed_per_minute"], stats["bread_demand_per_minute"]]]
 	var stocks: Dictionary = economy["stocks"]
-	lines.append(Strings.STOCKS % [stocks.get(&"wheat", 0), stocks.get(&"flour", 0), stocks.get(&"bread", 0)])
+	lines.append(Strings.text(Strings.STOCKS) % [stocks.get(&"wheat", 0), stocks.get(&"flour", 0), stocks.get(&"bread", 0)])
 	if not diagnostics["bread_short"]:
-		lines.append(Strings.BREAD_OK)
+		lines.append(Strings.text(Strings.BREAD_OK))
 		return "\n".join(lines)
-	lines.append(Strings.BREAD_SHORT)
+	lines.append(Strings.text(Strings.BREAD_SHORT))
 	for cause: Dictionary in diagnostics["bread_causes"]:
 		var label: String = Strings.building_label(String(cause["definition_id"]))
 		# Chain-wide causes have no single building to blame.
 		if label.is_empty():
-			lines.append(Strings.BREAD_CHAIN_CAUSE % Strings.reason(cause["reason"]))
+			lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % Strings.reason(cause["reason"]))
 		else:
-			lines.append(Strings.BREAD_CAUSE % [label, Strings.reason(cause["reason"])])
+			lines.append(Strings.text(Strings.BREAD_CAUSE) % [label, Strings.reason(cause["reason"])])
+	var split: String = _unloading_split_text(diagnostics)
+	if not split.is_empty():
+		lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % split)
 	return "\n".join(lines)
+
+
+# Empty unless the barley share leaves the mill short (issue #106). What arrives is rounded down and what the
+# mill needs up, so the two never read the same while the warning shows.
+func _unloading_split_text(diagnostics: Dictionary) -> String:
+	var split: Dictionary = diagnostics.get("unloading_split", {})
+	if not split.get("active", false):
+		return ""
+	return Strings.text(Strings.UNLOADING_SPLIT_SHORT) % [
+		_tenths(snappedf(split["received_per_minute"], RATE_NOISE), false),
+		_tenths(snappedf(split["needed_per_minute"], RATE_NOISE), true)]
 
 
 func _economy_text(economy: Dictionary, stats: Dictionary) -> String:
 	var breakdown: Dictionary = economy["satisfaction_breakdown"]
 	var lines: Array[String] = [
-		Strings.POPULATION % [economy["population"], economy["employed"], economy["unemployed"]],
-		Strings.SATISFACTION % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
+		Strings.text(Strings.POPULATION) % [economy["population"], economy["employed"], economy["unemployed"]],
+		Strings.text(Strings.SATISFACTION) % [economy["satisfaction"], breakdown.get("bread", 0.0), breakdown.get("tea", 0.0),
 			breakdown.get("tax", 0.0), breakdown.get("overcrowding", 0.0)],
-		Strings.TREASURY % Strings.money(economy["money"]),
-		Strings.OPERATING_BALANCE % _money(stats["operating_balance_per_minute"]),
-		Strings.BALANCE_BREAKDOWN % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
+		Strings.text(Strings.TREASURY) % Strings.money(economy["money"]),
+		Strings.text(Strings.OPERATING_BALANCE) % _money(stats["operating_balance_per_minute"]),
+		Strings.text(Strings.BALANCE_BREAKDOWN) % [_money(stats["taxes_per_minute"]), _money(stats["wages_per_minute"]),
 			_money(stats["upkeep_per_minute"]), _money(stats["wheat_spent_per_minute"]),
-			_money(stats["imports_spent_per_minute"])],
-		Strings.CONSTRUCTION % _money(stats["construction_spent_per_minute"]),
-		Strings.WHEAT_PRICE % Strings.money(economy.get("wheat_price", 0)),
+			_money(stats["barley_spent_per_minute"]), _money(stats["imports_spent_per_minute"])],
+		Strings.text(Strings.CONSTRUCTION) % _money(stats["construction_spent_per_minute"]),
+		Strings.text(Strings.WHEAT_PRICE) % Strings.money(economy.get("wheat_price", 0)),
 	]
 	if not stats["complete"]:
-		lines.append(Strings.WINDOW_PARTIAL % [stats["window_seconds"], stats["window_size"]])
+		lines.append(Strings.text(Strings.WINDOW_PARTIAL) % [stats["window_seconds"], stats["window_size"]])
 	return "\n".join(lines)
 
 
-func _buildings_text(buildings: Array) -> String:
-	var lines: Array[String] = [Strings.BUILDINGS]
+func _needs_text(needs: Dictionary) -> String:
+	var lines: Array[String] = [Strings.text(Strings.NEEDS_TITLE)]
+	for class_id: StringName in needs["classes"]:
+		var class_label: String = Strings.label(Strings.CLASS_LABELS, class_id)
+		var info: Dictionary = needs["classes"][class_id]
+		# Rounded down like the promotion's satisfaction check, so the two never disagree on screen.
+		lines.append(Strings.text(Strings.CLASS_HEADER) % [class_label, info["population"], floorf(info["satisfaction"]["current"])])
+		lines.append(Strings.text(Strings.COVERAGE_ROW) % [class_label, _coverage_text(info["categories"])])
+		for entry: Dictionary in info["categories"]:
+			var category: String = Strings.label(Strings.CATEGORY_LABELS, entry["category"])
+			# Unmet: the score rounds down and the threshold up, so the pair never reads as equal.
+			# A met score may sit a hair under its threshold (float drift): it reads as the threshold.
+			var value: float = _tenths(maxf(entry["value"], entry["threshold"]) if entry["met"] else entry["value"], false)
+			var threshold: float = _tenths(entry["threshold"], not entry["met"])
+			if entry["met"]:
+				lines.append(Strings.text(Strings.NEEDS_MET) % [class_label, category, value, threshold])
+				continue
+			var missing: Array[String] = []
+			for good: StringName in entry["missing_goods"]:
+				missing.append(Strings.label(Strings.GOOD_LABELS, good))
+			# Nothing to cover that would help (the value is too low to ever reach the threshold): the reason says it.
+			if missing.is_empty() or entry["reason"] == &"unreachable_threshold":
+				lines.append(Strings.text(Strings.NEEDS_SHORT_REASON) % [class_label, category, value,
+					threshold, Strings.reason(entry["reason"])])
+				continue
+			lines.append(Strings.text(Strings.NEEDS_SHORT) % [class_label, category, value, threshold,
+				", ".join(missing)])
+		var housing: Dictionary = info["housing"]
+		lines.append(Strings.text(Strings.HOUSING_ROW) % [class_label, housing["base"], housing["bonus"], housing["max_bonus"]])
+		if not info["mobility"].is_empty():
+			lines.append_array(_promotion_lines(class_label, info["mobility"]))
+	if needs["classes"].is_empty():
+		lines.append(Strings.text(Strings.NEEDS_NO_CLASS))
+	return "\n".join(lines)
+
+
+# How much of each good the class wants it gets, in the order its categories list them. Rounded down, so a good
+# that is not fully covered never reads as 100 %.
+func _coverage_text(categories: Array) -> String:
+	var parts: Array[String] = []
+	for entry: Dictionary in categories:
+		for good: Dictionary in entry["goods"]:
+			parts.append(Strings.text(Strings.GOOD_COVERAGE) % [Strings.label(Strings.GOOD_LABELS, good["good"]),
+				floorf(float(good["coverage"]) * PERCENT)])
+	return " · ".join(parts)
+
+
+# Why nobody rises into the class, one line per condition that fails (MobilitySystem.promotion_blockers), or the
+# rate when none does.
+func _promotion_lines(class_label: String, mobility: Dictionary) -> Array[String]:
+	var promotion: Dictionary = mobility["promotion"]
+	if promotion["active"]:
+		return [Strings.text(Strings.PROMOTION_ACTIVE) % [class_label, promotion["per_minute"]]]
+	var lines: Array[String] = [Strings.text(Strings.PROMOTION_BLOCKED) % class_label]
+	var source_label: String = Strings.label(Strings.CLASS_LABELS, mobility["from"])
+	for blocker: Dictionary in promotion["blockers"]:
+		lines.append(Strings.text(Strings.PROMOTION_BLOCKER) % _blocker_text(blocker, source_label))
+	return lines
+
+
+func _blocker_text(blocker: Dictionary, source_label: String) -> String:
+	if blocker["reason"] == MobilitySystem.REASON_CATEGORY_BELOW:
+		return _category_blocker_text(blocker)
+	if blocker["reason"] == MobilitySystem.REASON_SOURCE_SATISFACTION_LOW:
+		# Rounded apart, so a satisfaction just under the minimum never reads as reaching it.
+		return Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [source_label, floorf(blocker["satisfaction"]),
+			ceilf(blocker["minimum"])]
+	return Strings.reason(blocker["reason"])
+
+
+func _category_blocker_text(blocker: Dictionary) -> String:
+	var category: String = Strings.label(Strings.CATEGORY_LABELS, blocker["category"])
+	# Same rounding as the needs rows: a score under its minimum never reads as equal to it.
+	var value: float = _tenths(blocker["value"], false)
+	var minimum: float = _tenths(blocker["minimum"], true)
+	var missing: Array[String] = []
+	for good: StringName in blocker["missing_goods"]:
+		missing.append(Strings.label(Strings.GOOD_LABELS, good))
+	if missing.is_empty():
+		return Strings.text(Strings.PROMOTION_CATEGORY_REASON) % [category, value, minimum, Strings.reason(blocker["reason"])]
+	return Strings.text(Strings.PROMOTION_CATEGORY_BELOW) % [category, value, minimum, ", ".join(missing)]
+
+
+func _tenths(value: float, round_up: bool) -> float:
+	return (ceilf(value * 10.0) if round_up else floorf(value * 10.0)) / 10.0
+
+
+func _buildings_text(diagnostics: Dictionary, distance: Dictionary) -> String:
+	var buildings: Array = diagnostics["buildings"]
+	var lines: Array[String] = [Strings.text(Strings.BUILDINGS)]
+	# Said once, under the first mill: the split is the wharf's, not one mill's.
+	var split: String = _unloading_split_text(diagnostics)
 	for building: Dictionary in buildings:
-		lines.append(Strings.BUILDING_STATUS % [Strings.building_label(String(building["definition_id"])),
+		lines.append(Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label(String(building["definition_id"])),
 			building["cell"][0], building["cell"][1], building["workers"], building["jobs"], Strings.reason(building["reason"])])
+		if building["definition_id"] == &"mill" and not split.is_empty():
+			lines.append(Strings.text(Strings.BREAD_CHAIN_CAUSE) % split)
+			split = ""
 	if buildings.is_empty():
-		lines.append(Strings.NO_BUILDINGS)
+		lines.append(Strings.text(Strings.NO_BUILDINGS))
+	# A leg of transport.expensive_steps or more (issue #168, D-080); the simulation marks it.
+	for leg: Dictionary in distance["legs"]:
+		if leg["expensive"]:
+			lines.append(Strings.text(Strings.TRANSPORT_EXPENSIVE) % [Strings.building_label(String(leg["definition_id"])),
+				leg["cell"][0], leg["cell"][1], Strings.building_label(String(leg["supplier_id"])), leg["supplier_cell"][0],
+				leg["supplier_cell"][1], leg["steps"]])
 	return "\n".join(lines)
 
 
 func _crises_text(defeat: Dictionary) -> String:
-	var lines: Array[String] = [Strings.CRISES]
+	var lines: Array[String] = [Strings.text(Strings.CRISES)]
 	if defeat["grace_active"]:
-		lines.append(Strings.GRACE % defeat["grace_remaining_seconds"])
+		lines.append(Strings.text(Strings.GRACE) % defeat["grace_remaining_seconds"])
 	var bankruptcy: Dictionary = defeat[&"bankruptcy"]
 	var hunger: Dictionary = defeat[&"hunger"]
 	var depopulation: Dictionary = defeat[&"depopulation"]
 	var metrics: Dictionary[StringName, String] = {
-		&"bankruptcy": Strings.METRIC_BANKRUPTCY % [Strings.money(bankruptcy["money"]), Strings.money(bankruptcy["threshold"])],
-		&"hunger": Strings.METRIC_HUNGER % [hunger["coverage"] * PERCENT, hunger["threshold"] * PERCENT],
-		&"depopulation": Strings.METRIC_DEPOPULATION % [depopulation["population"], depopulation["peak"]],
+		&"bankruptcy": Strings.text(Strings.METRIC_BANKRUPTCY) % [Strings.money(bankruptcy["money"]), Strings.money(bankruptcy["threshold"])],
+		&"hunger": Strings.text(Strings.METRIC_HUNGER) % [hunger["coverage"] * PERCENT, hunger["threshold"] * PERCENT],
+		&"depopulation": Strings.text(Strings.METRIC_DEPOPULATION) % [depopulation["population"], depopulation["peak"]],
 	}
 	for key: StringName in CONDITIONS:
 		var condition: Dictionary = defeat[key]
-		lines.append(Strings.CONDITION % [Strings.CONDITION_LABELS[key], Strings.STATUS_LABELS[condition["status"]],
+		lines.append(Strings.text(Strings.CONDITION) % [Strings.label(Strings.CONDITION_LABELS, key), Strings.label(Strings.STATUS_LABELS, condition["status"]),
 			metrics[key]] + _timer_text(condition))
 	return "\n".join(lines)
 
@@ -377,7 +791,7 @@ func _crises_text(defeat: Dictionary) -> String:
 func _timer_text(condition: Dictionary) -> String:
 	if not condition["timer_running"]:
 		return ""
-	return Strings.TIMER % [condition["elapsed_seconds"], condition["duration_seconds"], condition["remaining_seconds"]]
+	return Strings.text(Strings.TIMER) % [condition["elapsed_seconds"], condition["duration_seconds"], condition["remaining_seconds"]]
 
 
 func _tax_changed(value: float) -> void:
@@ -390,7 +804,7 @@ func _wheat_toggled(enabled: bool) -> void:
 		session.submit_command(SetWheatPurchasesCommand.new(enabled))
 
 
-func _toggle_pause() -> void:
+func toggle_pause() -> void:
 	clock.speed = _speed if clock.speed == 0 else 0
 	_update_clock_controls()
 
@@ -414,10 +828,72 @@ func _label(text: String) -> Label:
 	return label
 
 
-# Buttons never keep focus, so map shortcuts (1–5, WASD) keep working after a click.
+# Left and right on the gamepad step a number (issue #68); without this the d-pad only moves the focus away, and the
+# player has no keyboard to type with. The keyboard keeps the line edit as it is.
+func _step_with_gamepad(spin: SpinBox) -> void:
+	spin.get_line_edit().gui_input.connect(func(event: InputEvent) -> void:
+		if not GamepadBindings.is_gamepad(event) or not spin.editable:
+			return
+		if event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"ui_right"):
+			spin.value += spin.step if event.is_action_pressed(&"ui_right") else -spin.step
+			spin.get_line_edit().accept_event())
+
+
+# Left and right step a focused slider and send its command, since there is no drag to end. Done here because the
+# engine's slider ignores the d-pad (Godot 4.7.2).
+func _submit_on_input(slider: Slider, submit: Callable) -> void:
+	slider.gui_input.connect(func(event: InputEvent) -> void:
+		if not slider.editable or not (event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"ui_right")):
+			return
+		slider.value += slider.step if event.is_action_pressed(&"ui_right") else -slider.step
+		slider.accept_event()
+		submit.call())
+
+
+# Buttons never keep focus after a click, so map shortcuts (1–5, WASD) keep working; the gamepad turns focus on
+# while it is in the panel (enter_focus).
 func _button(text: String, action: Callable) -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(action)
 	return button
+
+
+func _update_victory(victory: Dictionary, defeated: bool) -> void:
+	var enabled: bool = victory.get("enabled", false)
+	_objectives.visible = enabled
+	_victory_progress.hide()
+	_victory_why.hide()
+	_victory_message.text = Strings.text(Strings.VICTORY_MESSAGE)
+	_victory_dismiss.text = Strings.text(Strings.VICTORY_DISMISS)
+	if not victory.get("won", false):
+		_victory_announced = false
+		_victory_notice.hide()
+	elif not _victory_announced:
+		_victory_announced = true
+		_victory_notice.show()
+	if defeated:
+		_victory_notice.hide()
+	if not enabled:
+		return
+	var lines: Array[String] = [Strings.text(Strings.OBJECTIVES)]
+	for stage: Dictionary in victory["stages"].values():
+		var status: String = Strings.text(Strings.OBJECTIVE_MET if stage["completed"] else Strings.OBJECTIVE_PENDING)
+		if stage["mode"] == &"consecutive_minutes":
+			lines.append(Strings.text(Strings.OBJECTIVE_REVENUE) % [_money(int(stage["threshold"])),
+				stage["streak_minutes"], int(stage["required_minutes"]), status])
+			_victory_progress.max_value = float(stage["required_minutes"])
+			_victory_progress.value = float(stage["streak_minutes"])
+			_victory_progress.show()
+			var cut: Dictionary = stage["last_break"]
+			_victory_why.text = Strings.text(Strings.VICTORY_NO_BREAK) if cut.is_empty() else Strings.text(Strings.VICTORY_WHY) \
+				% [cut["minute"], _money(int(cut["revenue"])), _money(int(cut["threshold"]))]
+			_victory_why.show()
+		elif stage["metric"] == &"population":
+			lines.append(Strings.text(Strings.OBJECTIVE_POPULATION) % [stage["mean"],
+				int(stage["threshold"]), int(stage["duration_seconds"]), status])
+		else:
+			lines.append(Strings.text(Strings.OBJECTIVE_CLASS) % [Strings.label(Strings.CLASS_LABELS, stage["class_id"]),
+				stage["mean"], int(stage["threshold"]), int(stage["duration_seconds"]), status])
+	_objectives.text = "\n".join(lines)

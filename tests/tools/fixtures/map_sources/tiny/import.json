@@ -1,0 +1,4 @@
+{
+  "id": "tiny", "width": 4, "height": 2, "origin": [534700, 180200], "cell_metres": 50,
+  "samples_per_axis": 5, "priority": ["river", "dock", "marsh", "existing", "land"]
+}

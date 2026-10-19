@@ -16,7 +16,12 @@ var satisfaction: float = 0.0
 var satisfaction_target: float = 0.0
 var satisfaction_breakdown: Dictionary[String, float] = {}
 var housing_capacity: int = 0
+# Per class and category: {value, threshold, met} (issue #86). Derived by NeedsSystem every tick.
+var class_needs: Dictionary[StringName, Dictionary] = {}
 var overcrowding: float = 0.0
+# Every class but the base one (issue #52). The base class keeps its values in the flat fields of this state
+# (satisfaction, overcrowding, growth fractions...); population is the total of every class.
+var class_states: Dictionary[StringName, ClassState] = {}
 var employed: int = 0
 var unemployed: int = 0
 var immigration_fraction: float = 0.0
@@ -35,6 +40,7 @@ var hunger_emigration_active: bool = false
 var satisfaction_departure_age_seconds: int = -1
 var population_peak: float = 0.0
 var depopulation_active: bool = false
+var victory: VictoryState = VictoryState.new()
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
@@ -47,6 +53,20 @@ var wheat_reserve_minutes: int = -1
 var wheat_previous_price: int = -1
 # Wheat lost to damp and rats accumulates here until it makes a whole unit.
 var wheat_decay_fraction: float = 0.0
+# Barley (issue #50): walks like wheat with its own parameters. The price is -1 until the simulation
+# loads it from data, like the wheat one; the stock lives in stocks[&"barley"].
+var barley_price: int = -1
+var barley_previous_price: int = -1
+var barley_decay_fraction: float = 0.0
+# Malt and beer (issue #51) are made, not bought: only their spoilage carries over between ticks.
+var malt_decay_fraction: float = 0.0
+var beer_decay_fraction: float = 0.0
+# Share of the wharf's unloading capacity left after the flour that goes to barley, in whole percent; the
+# rest is wheat. -1 until the simulation loads the default from data (0 = all wheat).
+var unloading_barley_percent: int = -1
+# Imported flour is paid for at once, but the wharf has to unload it: the units still owed take the
+# capacity of the next ticks before wheat and barley get any (issue #50).
+var flour_unloading_debt: float = 0.0
 # Imports (D-025, D-026): both are off until the player switches them on (startup data).
 var tea_imports_enabled: bool = false
 var flour_imports_enabled: bool = false
@@ -55,6 +75,11 @@ var tea_fraction: float = 0.0
 var tea_demand: float = 0.0
 var tea_consumed: float = 0.0
 var tea_coverage: float = 0.0
+# Beer (issue #52) is eaten like tea: the part of a unit already eaten waits in beer_fraction.
+var beer_fraction: float = 0.0
+var beer_demand: float = 0.0
+var beer_consumed: float = 0.0
+var beer_coverage: float = 0.0
 # Per-tick flows feed the stats window; they are transient and never saved.
 var bread_produced_tick: int = 0
 var bread_consumed_tick: float = 0.0
@@ -63,10 +88,52 @@ var taxes_tick: int = 0
 var wages_tick: int = 0
 var upkeep_tick: int = 0
 var wheat_spent_tick: int = 0
+var barley_spent_tick: int = 0
 # Imports in total (flour and tea), and the tea part of it.
 var imports_spent_tick: int = 0
 var tea_spent_tick: int = 0
 var construction_spent_tick: int = 0
+# Head tax each class added to the treasury this tick, before rounding to whole pence (balance probes only).
+var class_tax_tick: Dictionary[StringName, float] = {}
+# People who rose into another class or fell back from one this tick (issue #53), over every class.
+var promotions_tick: int = 0
+var demotions_tick: int = 0
+# Staffed buildings of each type that ran out of input while they still had capacity this tick (a mill that
+# used all its budget on the wheat it had does not count). Transient: never saved.
+var input_starved_tick: Dictionary[StringName, int] = {}
+# Counters for the chapter statistics (issue #130, D-066). The systems only write them and nothing in the
+# simulation reads them. Per good: units a converter made, units taken out of the store (a converter's input,
+# what people ate), units lost to spoilage, units bought at the wharf or imported.
+var goods_produced_tick: Dictionary[StringName, int] = {}
+var goods_consumed_tick: Dictionary[StringName, float] = {}
+var goods_spoiled_tick: Dictionary[StringName, float] = {}
+var goods_bought_tick: Dictionary[StringName, int] = {}
+# Per class id: people who arrived, and who left out of hunger or low satisfaction.
+var immigration_tick: Dictionary[StringName, int] = {}
+var emigration_hunger_tick: Dictionary[StringName, int] = {}
+var emigration_unhappy_tick: Dictionary[StringName, int] = {}
+# Per class id with mobility: people who rose into it, and who fell back out of it.
+var promotions_by_class_tick: Dictionary[StringName, int] = {}
+var demotions_by_class_tick: Dictionary[StringName, int] = {}
+# The share of upkeep_tick that administration added (issue #118), and what demolitions gave back.
+var administration_tick: float = 0.0
+var refunds_tick: int = 0
+# Distance model (issue #67, D-080). The player's streets ({cell, built_at, paid}) and the transport owed below a
+# penny are saved; a save from before the streets loads with none.
+var player_roads: Array[Dictionary] = []
+var transport_fraction: float = 0.0
+# Worked out by RoadSystem and never saved, so a loaded game recomputes its coverage: why a building does not work
+# (by cell), the room of each class's connected and served houses, each class's access to each good (the share of
+# its housed people the good reaches; 1 when missing), the bread access of the whole city, every transport leg and
+# every house with the goods that reach it.
+var road_blocked: Dictionary[Vector2i, StringName] = {}
+var service_rooms: Dictionary[StringName, Dictionary] = {}
+var service_access: Dictionary[StringName, Dictionary] = {}
+var bread_access: float = 1.0
+var transport_legs: Array[Dictionary] = []
+var house_service: Array[Dictionary] = []
+# Units each building took out of the store this tick, by cell, for its transport leg. Transient: never saved.
+var transport_units_tick: Dictionary[Vector2i, int] = {}
 
 
 func reset_flows() -> void:
@@ -77,13 +144,67 @@ func reset_flows() -> void:
 	wages_tick = 0
 	upkeep_tick = 0
 	wheat_spent_tick = 0
+	barley_spent_tick = 0
 	imports_spent_tick = 0
 	tea_spent_tick = 0
 	construction_spent_tick = 0
+	class_tax_tick.clear()
+	promotions_tick = 0
+	demotions_tick = 0
+	input_starved_tick.clear()
+	goods_produced_tick.clear()
+	goods_consumed_tick.clear()
+	goods_spoiled_tick.clear()
+	goods_bought_tick.clear()
+	immigration_tick.clear()
+	emigration_hunger_tick.clear()
+	emigration_unhappy_tick.clear()
+	promotions_by_class_tick.clear()
+	demotions_by_class_tick.clear()
+	administration_tick = 0.0
+	refunds_tick = 0
+	transport_units_tick.clear()
+
+
+# Why the streets stop this building (RoadSystem.NO_ROAD_ACCESS or NO_ROUTE), or &"" when they do not.
+func road_reason(building: Dictionary) -> StringName:
+	if road_blocked.is_empty():
+		return &""
+	return road_blocked.get(Vector2i(int(building["cell"][0]), int(building["cell"][1])), &"")
+
+
+# Share of a class's houses a good reaches (issue #67); 1 off the streets or for a good nobody hands out.
+func access(class_id: StringName, good: StringName) -> float:
+	if service_access.is_empty():
+		return 1.0
+	return float(service_access.get(class_id, {}).get(good, 1.0))
+
+
+# The smoothed bread coverage as the houses get it: of one class, or of the whole city when class_id is empty.
+func hunger_coverage(class_id: StringName = &"") -> float:
+	return hunger_smoothed_coverage * (bread_access if class_id == &"" else access(class_id, &"bread"))
+
+
+# Statistics counters (issue #130): written by the systems, never read by them.
+func count_produced(good: StringName, units: int) -> void:
+	goods_produced_tick[good] = goods_produced_tick.get(good, 0) + units
+
+
+func count_consumed(good: StringName, units: float) -> void:
+	goods_consumed_tick[good] = goods_consumed_tick.get(good, 0.0) + units
+
+
+func count_spoiled(good: StringName, units: float) -> void:
+	goods_spoiled_tick[good] = goods_spoiled_tick.get(good, 0.0) + units
+
+
+func count_bought(good: StringName, units: int) -> void:
+	goods_bought_tick[good] = goods_bought_tick.get(good, 0) + units
 
 
 func to_dict() -> Dictionary:
 	var values: Dictionary = {
+		"victory": victory.to_dict(),
 		"bankruptcy": bankruptcy.to_dict(), "hunger": hunger.to_dict(),
 		"depopulation": depopulation.to_dict(), "defeat_initialized": defeat_initialized,
 		"defeat_elapsed_seconds": defeat_elapsed_seconds,
@@ -97,6 +218,10 @@ func to_dict() -> Dictionary:
 		"wheat_target_stock": wheat_target_stock, "wheat_reserve_minutes": wheat_reserve_minutes,
 		"wheat_previous_price": wheat_previous_price,
 		"wheat_decay_fraction": wheat_decay_fraction,
+		"barley_previous_price": barley_previous_price, "barley_decay_fraction": barley_decay_fraction,
+		"malt_decay_fraction": malt_decay_fraction, "beer_decay_fraction": beer_decay_fraction,
+		"unloading_barley_percent": unloading_barley_percent,
+		"flour_unloading_debt": flour_unloading_debt,
 		"tea_imports_enabled": tea_imports_enabled, "flour_imports_enabled": flour_imports_enabled,
 		"tea_fraction": tea_fraction, "tea_demand": tea_demand, "tea_consumed": tea_consumed,
 		"tea_coverage": tea_coverage,
@@ -112,18 +237,34 @@ func to_dict() -> Dictionary:
 		"employed": employed, "unemployed": unemployed,
 		"immigration_fraction": immigration_fraction, "emigration_fraction": emigration_fraction,
 		"tax_fraction": tax_fraction, "wage_fraction": wage_fraction, "upkeep_fraction": upkeep_fraction,
+		"class_needs": class_needs.duplicate(true),
+		"beer_fraction": beer_fraction, "beer_demand": beer_demand, "beer_consumed": beer_consumed,
+		"beer_coverage": beer_coverage,
+		"class_states": _class_states_dict(),
+		"player_roads": player_roads.duplicate(true),
+		"transport_fraction": transport_fraction,
 	}
 	# Missing price means the market has not been initialized; zero remains explicit.
 	if wheat_price >= 0:
 		values["wheat_price"] = wheat_price
+	if barley_price >= 0:
+		values["barley_price"] = barley_price
 	if tax_rate >= 0.0:
 		values["tax_rate"] = tax_rate
 	return values
 
 
+func _class_states_dict() -> Dictionary:
+	var result: Dictionary = {}
+	for id: StringName in class_states:
+		result[id] = class_states[id].to_dict()
+	return result
+
+
 # Internal conversion: expects the complete value schema produced by to_dict().
 static func from_dict(values: Dictionary) -> EconomyState:
 	var result: EconomyState = EconomyState.new()
+	result.victory = VictoryState.from_dict(values.get("victory", {}))
 	result.bankruptcy = DefeatState.from_dict(values.get("bankruptcy", {}))
 	result.hunger = DefeatState.from_dict(values.get("hunger", {}))
 	result.depopulation = DefeatState.from_dict(values.get("depopulation", {}))
@@ -141,6 +282,13 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.wheat_reserve_minutes = int(values.get("wheat_reserve_minutes", -1))
 	result.wheat_previous_price = int(values.get("wheat_previous_price", -1))
 	result.wheat_decay_fraction = float(values.get("wheat_decay_fraction", 0.0))
+	result.barley_price = int(values.get("barley_price", -1))
+	result.barley_previous_price = int(values.get("barley_previous_price", -1))
+	result.barley_decay_fraction = float(values.get("barley_decay_fraction", 0.0))
+	result.malt_decay_fraction = float(values.get("malt_decay_fraction", 0.0))
+	result.beer_decay_fraction = float(values.get("beer_decay_fraction", 0.0))
+	result.unloading_barley_percent = int(values.get("unloading_barley_percent", -1))
+	result.flour_unloading_debt = float(values.get("flour_unloading_debt", 0.0))
 	result.tea_imports_enabled = bool(values.get("tea_imports_enabled", false))
 	result.flour_imports_enabled = bool(values.get("flour_imports_enabled", false))
 	result.tea_fraction = float(values.get("tea_fraction", 0.0))
@@ -170,5 +318,15 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.tax_fraction = values.get("tax_fraction", 0.0)
 	result.wage_fraction = values.get("wage_fraction", 0.0)
 	result.upkeep_fraction = values.get("upkeep_fraction", 0.0)
+	result.class_needs.assign(values.get("class_needs", {}).duplicate(true))
+	result.beer_fraction = float(values.get("beer_fraction", 0.0))
+	result.beer_demand = float(values.get("beer_demand", 0.0))
+	result.beer_consumed = float(values.get("beer_consumed", 0.0))
+	result.beer_coverage = float(values.get("beer_coverage", 0.0))
+	var saved_classes: Dictionary = values.get("class_states", {})
+	for id: Variant in saved_classes:
+		result.class_states[StringName(id)] = ClassState.from_dict(saved_classes[id])
 	result.buildings.assign(values["buildings"].duplicate(true))
+	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
+	result.transport_fraction = float(values.get("transport_fraction", 0.0))
 	return result

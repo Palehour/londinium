@@ -16,6 +16,18 @@ func _resolved(accepted: bool, reason: StringName) -> void:
 	_results.append({"accepted": accepted, "reason": reason})
 
 
+func test_only_demo_enables_victory_and_restart_resets_its_progress() -> void:
+	assert_true(_session.get_snapshot()["victory"]["enabled"])
+	_session.simulation.tick()
+	assert_eq(_session.get_snapshot()["economy"]["victory"]["elapsed_seconds"], 1)
+	_session.restart()
+	assert_eq(_session.get_snapshot()["economy"]["victory"]["elapsed_seconds"], 0)
+	assert_false(_session.get_snapshot()["victory"]["won"])
+	var no_objectives: GameSession = GameSession.new(_catalog,
+		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
+	assert_false(no_objectives.get_snapshot()["victory"]["enabled"])
+
+
 func _tick() -> void:
 	_session.simulation.tick()
 	_session.publish_tick()
@@ -27,7 +39,10 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	assert_eq(state["money"], params.get_value(&"startup.money"))
 	assert_eq(state["population"], 20)
 	assert_eq(state["stocks"][&"bread"], 40)
-	assert_true(state["buildings"].is_empty())
+	# Only the anchors of the strip with a use: the dense housing of Pier Head (issue #154, D-075) and Oliver's Wharf
+	# (issue #152).
+	assert_eq(state["buildings"], [{"definition_id": &"dense_housing", "cell": [8, 6]},
+		{"definition_id": &"wharf", "cell": [10, 8]}])
 	assert_eq(_session.get_snapshot()["seed"], 42)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1234), Modifier.new(&"startup.population", &"set", 12), Modifier.new(&"population.initial_bread", &"set", 55)])
@@ -50,11 +65,12 @@ func test_commands_wait_for_tick_and_publish_snapshots_without_aliases() -> void
 	_tick()
 	assert_eq(_results, [{"accepted": true, "reason": &""}])
 	assert_signal_emitted(_session, "snapshot_changed")
-	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 1)
-	assert_true(before["economy"]["buildings"].is_empty())
+	# Plus the two anchors with a use the strip starts with (issues #154 and #152).
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 3)
+	assert_eq(before["economy"]["buildings"].size(), 2)
 	var snapshot: Dictionary = _session.get_snapshot()
 	snapshot["economy"]["buildings"].clear()
-	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 1)
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 3)
 	_session.publish_tick()
 	assert_eq(_results.size(), 1)
 
@@ -70,9 +86,9 @@ func test_terrain_reasons_are_results_of_real_commands() -> void:
 	for index: int in range(expected.size()):
 		assert_false(_results[index]["accepted"])
 		assert_eq(_results[index]["reason"], expected[index])
-		assert_eq(Strings.command_result(false, expected[index]), Strings.REASONS[expected[index]])
+		assert_eq(Strings.command_result(false, expected[index]), Strings.reason(expected[index]))
 	assert_eq(Strings.command_result(false, &"future_reason"), "future_reason")
-	assert_eq(Strings.command_result(true, &""), Strings.SUCCESS)
+	assert_eq(Strings.command_result(true, &""), Strings.text(Strings.SUCCESS))
 
 
 func test_occupied_demolition_and_insufficient_money() -> void:
@@ -84,7 +100,8 @@ func test_occupied_demolition_and_insufficient_money() -> void:
 	assert_eq(_results[1]["reason"], &"occupied_cell")
 	assert_true(_results[2]["accepted"])
 	assert_eq(_results[3]["reason"], &"no_building")
-	assert_true(_session.get_snapshot()["economy"]["buildings"].is_empty())
+	# Only the two anchors of the strip with a use are left (issues #154 and #152).
+	assert_eq(_session.get_snapshot()["economy"]["buildings"].size(), 2)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"startup.money", &"set", 0))
 	var poor: GameSession = GameSession.new(_catalog, Params.new(_catalog, role))
@@ -100,3 +117,34 @@ func test_defeat_rejection_is_immediate() -> void:
 	_session.simulation = Simulation.new(Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), state, 42, _session.context)
 	_session.submit_command(DemolishCommand.new(Vector2i.ZERO))
 	assert_eq(_results, [{"accepted": false, "reason": &"simulation_defeated"}])
+
+
+func test_the_demo_is_played_on_the_riverside_strip() -> void:
+	assert_eq(_session.context.map.id, &"riverside_strip")
+	assert_eq(Vector2i(_session.context.map.width, _session.context.map.height), Vector2i(16, 12))
+	var other: GameSession = GameSession.new(_catalog,
+		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
+	assert_eq(other.context.map.id, &"whitechapel_1850s", "A scenario without a map keeps the 8x8 map")
+
+
+# Issue #154 (D-075): the demo starts with its one dense housing, and a restart puts it back. Issue #152 (option A of
+# Cristian, 2026-10-18): Oliver's Wharf stands too, and neither anchor is demolished, so the restart is tested after a
+# street of the player instead of after demolishing the house.
+func test_the_demo_starts_with_its_anchors_and_a_restart_puts_them_back() -> void:
+	var start: Array = _session.get_snapshot()["economy"]["buildings"]
+	assert_eq(start.size(), 2)
+	if start.is_empty():
+		return
+	var ids: Array[StringName] = []
+	for building: Dictionary in start:
+		ids.append(StringName(building["definition_id"]))
+	assert_eq(ids, [&"dense_housing", &"wharf"] as Array[StringName])
+	_session.submit_command(DemolishCommand.new(Vector2i(start[0]["cell"][0], start[0]["cell"][1])))
+	_tick()
+	assert_eq(_results, [{"accepted": false, "reason": &"historic_anchor"}], "The starting house is not demolished")
+	_session.submit_command(BuildRoadCommand.new(_session.context, Vector2i(6, 5)))
+	_tick()
+	assert_false(_session.get_snapshot()["economy"]["player_roads"].is_empty())
+	_session.restart()
+	assert_eq(_session.get_snapshot()["economy"]["buildings"], start)
+	assert_true(_session.get_snapshot()["economy"]["player_roads"].is_empty())

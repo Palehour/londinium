@@ -472,7 +472,7 @@ func test_roles_cannot_make_the_policy_defaults_impossible() -> void:
 
 func _documents() -> Dictionary[String, Dictionary]:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

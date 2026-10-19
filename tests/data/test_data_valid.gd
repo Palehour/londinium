@@ -7,10 +7,11 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	if not result.is_ok():
 		return
 	var catalog: DataCatalog = result.catalog
-	assert_eq(catalog.goods.size(), 4)
-	assert_eq(catalog.buildings.size(), 5)
+	assert_eq(catalog.goods.size(), 7)
+	assert_eq(catalog.buildings.size(), 9)
 	assert_eq(catalog.roles.size(), 1)
-	assert_eq(catalog.maps.size(), 1)
+	# The 8x8 map of the scripted scenarios and the strip the game plays on (D-074).
+	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s"] as Array[StringName])
 	for good: GoodDef in catalog.goods.values():
 		assert_false(good.unit.is_empty())
 	var mill: RecipeDef = catalog.buildings[&"mill"].recipe
@@ -19,6 +20,12 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	var bakery: RecipeDef = catalog.buildings[&"bakery"].recipe
 	assert_eq(bakery.inputs, [&"flour"])
 	assert_eq(bakery.outputs, [&"bread"])
+	var malthouse: RecipeDef = catalog.buildings[&"malthouse"].recipe
+	assert_eq(malthouse.inputs, [&"barley"])
+	assert_eq(malthouse.outputs, [&"malt"])
+	var brewery: RecipeDef = catalog.buildings[&"brewery"].recipe
+	assert_eq(brewery.inputs, [&"malt"])
+	assert_eq(brewery.outputs, [&"beer"])
 	assert_null(catalog.buildings[&"housing"].recipe)
 	for role: RoleDef in catalog.roles.values():
 		for modifier: Modifier in role.modifiers:
@@ -159,3 +166,24 @@ func test_demolish_refund_parameters_exist_with_their_first_values() -> void:
 	assert_eq(params.get_value(&"demolish.refund_ratio"), 0.5)
 	assert_eq(float(params.get_value(&"demolish.refund_grace_seconds")), 15.0)
 	assert_eq(params.get_value(&"demolish.no_jobs_refund_ratio"), 0.5)
+
+
+# Values of D-075 (issue #154): a workers' house of 20 that only the map puts down.
+func test_dense_housing_has_the_values_of_d075() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var catalog: DataCatalog = result.catalog
+	var params: Params = Params.new(catalog, catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"building.dense_housing.capacity"), 20)
+	assert_eq(params.get_value(&"building.dense_housing.cost"), 60)
+	assert_eq(params.get_value(&"building.dense_housing.upkeep_per_minute"), 1)
+	assert_eq(params.get_value(&"building.dense_housing.jobs"), 0)
+	assert_eq(params.get_value(&"startup.dense_housing_occupied"), 1)
+	var dense: BuildingDef = catalog.buildings[&"dense_housing"]
+	assert_false(dense.buildable)
+	assert_true("housing" in dense.tags)
+	var context: EconomyContext = EconomyContext.new(catalog, catalog.maps[&"riverside_strip"])
+	assert_eq(context.class_of_housing(&"dense_housing"), &"", "No class claims it, so the base class lives there")
+	assert_true(catalog.classes[&"worker"].base, "and the base class is the workers")

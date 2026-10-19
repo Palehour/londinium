@@ -9,7 +9,7 @@ func initialize(state: EconomyState, params: Params) -> void:
 	state.hunger_smoothed_coverage = state.bread_coverage
 	_update_population_history(state, params)
 	# Empty cities expose diagnostics immediately only when grace has already ended.
-	if state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
+	if params.get_value(&"defeat.enabled") and state.population == 0 and (float(params.get_value(&"defeat.grace_seconds")) == 0.0 \
 			or state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))):
 		_update(state.depopulation, &"depopulation", true, true, false,
 			float(params.get_value(&"defeat.depopulation.duration_seconds")))
@@ -35,11 +35,14 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 	var stable: bool = is_city_stable(state, params)
 	if stable:
 		_decay_population_peak(state, params)
+	# Defeats off (D-065): coverage and the peak above keep running for growth and stability, but no timer moves.
+	if not params.get_value(&"defeat.enabled"):
+		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
 		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
-	var hungry: bool = state.population > 0 and state.hunger_smoothed_coverage \
+	var hungry: bool = state.population > 0 and state.hunger_coverage() \
 		< float(params.get_value(&"defeat.hunger.threshold"))
 	_update(state.hunger, &"hunger", hungry, hungry, counting,
 		float(params.get_value(&"defeat.hunger.duration_seconds")))
@@ -67,14 +70,17 @@ func _update_population_history(state: EconomyState, params: Params) -> void:
 
 # Nobody is leaving: no hunger emigration, smoothed coverage at or above the emigration threshold
 # and nobody left for low satisfaction within the stability window (measured on actual departures,
-# so a city sitting on the satisfaction edge does not flicker). Public so balance probes use the
-# same rule as the game.
+# so a city sitting on the satisfaction edge does not flicker). Every class counts (issue #52): a city
+# where artisans are leaving is not stable. Public so balance probes use the same rule as the game.
 func is_city_stable(state: EconomyState, params: Params) -> bool:
 	var window: int = int(params.get_value(&"defeat.depopulation.stability_window_seconds"))
-	var age: int = state.satisfaction_departure_age_seconds
-	return not state.hunger_emigration_active and state.hunger_smoothed_coverage \
-		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) \
-		and (age < 0 or age >= window)
+	var ages: Array[int] = [state.satisfaction_departure_age_seconds]
+	var hunger_active: bool = state.hunger_emigration_active
+	for entry: ClassState in state.class_states.values():
+		ages.append(entry.satisfaction_departure_age_seconds)
+		# A class with nobody in it cannot be leaving, whatever its hunger flag says.
+		hunger_active = hunger_active or (entry.hunger_emigration_active and entry.population > 0)
+	return not hunger_active and state.hunger_coverage() 		>= float(params.get_value(&"population.growth.hunger_emigration_threshold")) 		and ages.all(func(age: int) -> bool: return age < 0 or age >= window)
 
 
 func _decay_population_peak(state: EconomyState, params: Params) -> void:

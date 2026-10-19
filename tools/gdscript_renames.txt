@@ -1,0 +1,42 @@
+# group, old API, PCRE pattern, Godot 4 replacement. Tab-separated.
+# Group "-" reports every match on the line. Any other group reports only its first match.
+# The scanner skips blank lines and full-line comments. Patterns are the error-level rows
+# from the Godot 3 to 4 table in haxqer/godot-skill (MIT); this is not a copy of that linter.
+# Short names that are still valid in 4.x (Sprite, Camera, Area, Light, Path, Spatial) are absent.
+-	yield	\byield\b	await
+-	onready var	(?<![@\w])onready\s+var\b	@onready var
+export	export(...) var	(?<![@\w])export\s*\([^)]*,[^)]*\)\s+var\b	@export_range / @export_enum
+export	export var	(?<![@\w])export(\s*\([^)]*\))?\s+var\b	@export var
+-	KinematicBody2D	\bKinematicBody2D\b	CharacterBody2D
+-	connect("signal", obj, "method")	\bconnect\s*\(\s*"[^"]*"\s*,\s*[^,)]+\s*,\s*"	signal.connect(callable)
+-	KinematicBody	\bKinematicBody\b	CharacterBody3D
+-	Position2D	\bPosition2D\b	Marker2D
+-	Particles2D	\bParticles2D\b	GPUParticles2D
+-	AnimatedSprite	\bAnimatedSprite\b	AnimatedSprite2D
+-	TextureProgress	\bTextureProgress\b	TextureProgressBar
+-	VisibilityNotifier2D	\bVisibilityNotifier2D\b	VisibleOnScreenNotifier2D
+-	VisibilityEnabler2D	\bVisibilityEnabler2D\b	VisibleOnScreenEnabler2D
+-	YSort	\bYSort\b	Node2D with y_sort_enabled = true
+-	PoolStringArray	\bPoolStringArray\b	PackedStringArray
+-	PoolIntArray	\bPoolIntArray\b	PackedInt32Array
+-	PoolRealArray	\bPoolRealArray\b	PackedFloat32Array
+-	PoolVector2Array	\bPoolVector2Array\b	PackedVector2Array
+-	PoolVector3Array	\bPoolVector3Array\b	PackedVector3Array
+-	PoolColorArray	\bPoolColorArray\b	PackedColorArray
+-	PoolByteArray	\bPoolByteArray\b	PackedByteArray
+-	extends Reference	\bextends\s+Reference\b	extends RefCounted
+-	rand_range(	\brand_range\s*\(	randf_range(
+-	deg2rad(	\bdeg2rad\s*\(	deg_to_rad(
+-	rad2deg(	\brad2deg\s*\(	rad_to_deg(
+-	stepify(	\bstepify\s*\(	snappedf(
+-	.linear_interpolate(	\.linear_interpolate\s*\(	.lerp(
+-	.empty(	\.empty\s*\(	.is_empty()
+-	.instance(	\.instance\s*\(	.instantiate()
+-	File.new(	\bFile\.new\s*\(	FileAccess.open(
+-	Directory.new(	\bDirectory\.new\s*\(	DirAccess.open(
+-	change_scene(	\bchange_scene\s*\(	change_scene_to_file(
+-	OS.get_ticks_msec(	\bOS\.get_ticks_msec\s*\(	Time.get_ticks_msec(
+-	Engine.editor_hint	\bEngine\.editor_hint\b	Engine.is_editor_hint()
+-	move_and_slide(	\bmove_and_slide\s*\(\s*[^)\s]	set velocity, then move_and_slide()
+-	setget	\bsetget\b	a set/get property
+-	tool	^\s*tool\b	@tool

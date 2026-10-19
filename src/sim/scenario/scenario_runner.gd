@@ -7,16 +7,34 @@ extends RefCounted
 # files only through load_file()/scenario_paths(), never from game code.
 
 const SCENARIO_DIR: String = "res://tests/scenarios"
+# Scenarios that need more than the 15 minutes of the others (the artisans are built after minute 30, issue #52).
+# They are not part of scenario_paths(), whose files all last 15 minutes, but balance_report plays them too.
+const LONG_SCENARIO_DIR: String = "res://tests/scenarios/long"
+# Scenarios on the 16x12 strip with streets (issue #67): only balance_report --strip and their own tests play them, so
+# the scripts on the 8x8 keep their numbers. strip/long/ holds the games too slow for CI (run_long_tests).
+const STRIP_SCENARIO_DIR: String = "res://tests/scenarios/strip"
+const STRIP_LONG_SCENARIO_DIR: String = "res://tests/scenarios/strip/long"
 const TICKS_PER_MINUTE: int = 60
-const COMMAND_NAMES: Array[String] = ["build", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
-	"set_tea_imports", "set_flour_imports"]
+const COMMAND_NAMES: Array[String] = ["build", "build_road", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
+	"set_tea_imports", "set_flour_imports", "set_unloading_split", "set_stock"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
+# The class and the buildings the payback probe of issue #52 follows.
+const ARTISAN_CLASS: StringName = &"artisan"
+const BEER_CHAIN: Array[StringName] = [&"malthouse", &"brewery"]
+const ARTISAN_HOUSING: StringName = &"artisan_housing"
+# The keys a scenario's "measure" may hold; balance_report adds their metrics (issue #55).
+const MEASURES: Array[String] = ["tax_window", "beer_cut", "hourly"]
+const MINUTES_PER_HOUR: int = 60
 
 var _catalog: DataCatalog
 var _params: Params
 var _context: EconomyContext
 var _map_id: StringName = &"whitechapel_1850s"
+# Difficulty modifiers (DataLayers); empty is Normal, the base values as they are.
+var _layers: Array[Modifier] = []
+# Off by default: a long game logs thousands of events and the many-seed checks keep every result.
+var keep_cause_events: bool = false
 
 
 # Returns null (and logs the errors) when data/ does not load.
@@ -27,9 +45,22 @@ static func create() -> ScenarioRunner:
 		return null
 	var runner: ScenarioRunner = ScenarioRunner.new()
 	runner._catalog = loaded.catalog
-	runner._params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+	runner._params = runner._new_params()
 	runner._context = EconomyContext.new(loaded.catalog, loaded.catalog.maps[runner._map_id])
 	return runner
+
+
+# Balance probes (issue #70): every later run uses this difficulty preset. Returns the errors, empty when it applies.
+func use_difficulty(preset_id: StringName) -> Array[String]:
+	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
+	if layers.is_ok():
+		_layers = layers.modifiers
+		_params = _new_params()
+	return layers.errors
+
+
+func _new_params() -> Params:
+	return Params.new(_catalog, _catalog.roles[&"neutral_administrator"], _layers)
 
 
 # Read-only view of a parameter, so tests derive timings from data/ instead of copying them.
@@ -42,14 +73,14 @@ func param(key: StringName) -> Variant:
 func pin_wheat_price(price: int) -> void:
 	for key: StringName in [&"market.wheat.base_price", &"market.wheat.min_price", &"market.wheat.max_price"]:
 		_catalog.base_values[key] = price
-	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_params = _new_params()
 
 
 # Balance probes only (issue #42): the highest price the wheat market can reach. Like pin_wheat_price,
 # it changes this runner's copy of the values, never the files in data/.
 func pin_wheat_max_price(price: int) -> void:
 	_catalog.base_values[&"market.wheat.max_price"] = price
-	_params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	_params = _new_params()
 
 
 # Money plus the wheat in store valued at the base price (issue #42): what the city owns, not only
@@ -60,13 +91,47 @@ func net_worth(row: Dictionary) -> int:
 
 
 static func scenario_paths() -> Array[String]:
+	return _json_files(SCENARIO_DIR)
+
+
+static func long_scenario_paths() -> Array[String]:
+	return _json_files(LONG_SCENARIO_DIR)
+
+
+static func strip_scenario_paths() -> Array[String]:
+	return _json_files(STRIP_SCENARIO_DIR)
+
+
+static func strip_long_scenario_paths() -> Array[String]:
+	return _json_files(STRIP_LONG_SCENARIO_DIR)
+
+
+# The map a scenario is played on (issue #67): the 8x8 unless it names another, like the strip scenarios. validate()
+# reports an unknown one.
+func _use_map(scenario: Dictionary) -> void:
+	var map_id: StringName = StringName(str(scenario.get("map", MapDef.DEFAULT_ID)))
+	if map_id == _map_id or not _catalog.maps.has(map_id):
+		return
+	_map_id = map_id
+	_context = EconomyContext.new(_catalog, _catalog.maps[map_id])
+
+
+# Scripts rewritten for one difficulty preset (issue #128: hard/ buys later, for its 800 d), in
+# tests/scenarios/<preset>/. Only balance_report --preset plays them, so the runs without a preset stay as they were.
+static func preset_scenario_paths(preset_id: StringName) -> Array[String]:
+	if preset_id == &"":
+		return [] as Array[String]
+	return _json_files(SCENARIO_DIR.path_join(String(preset_id)))
+
+
+static func _json_files(directory: String) -> Array[String]:
 	var found: Array[String] = []
-	var dir: DirAccess = DirAccess.open(SCENARIO_DIR)
+	var dir: DirAccess = DirAccess.open(directory)
 	if dir == null:
 		return found
 	for entry: String in dir.get_files():
 		if entry.ends_with(".json"):
-			found.append(SCENARIO_DIR.path_join(entry))
+			found.append(directory.path_join(entry))
 	found.sort()
 	return found
 
@@ -91,9 +156,15 @@ func validate(scenario: Dictionary) -> Array[String]:
 	if scenario.get("commands") is not Array:
 		errors.append("commands must be a list")
 		return errors
+	if scenario.has("map") and (scenario["map"] is not String or not _catalog.maps.has(StringName(scenario["map"]))):
+		errors.append("map must be the id of a map in data/maps")
+	_use_map(scenario)
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
+	if scenario.has("in_all") and scenario["in_all"] is not bool:
+		errors.append("in_all must be true or false")
 	errors.append_array(_validate_price_schedule(scenario.get("price_schedule", []), duration))
+	errors.append_array(_validate_measure(scenario.get("measure", {}), duration))
 	var previous_tick: int = 0
 	var command_before_tick: int = -1
 	var index: int = 0
@@ -110,6 +181,7 @@ func validate(scenario: Dictionary) -> Array[String]:
 func run(scenario: Dictionary) -> ScenarioResult:
 	var errors: Array[String] = validate(scenario)
 	assert(errors.is_empty(), "Invalid scenario: %s" % str(errors))
+	_use_map(scenario)
 	var result: ScenarioResult = ScenarioResult.new()
 	result.id = String(scenario["id"])
 	for condition: StringName in CONDITIONS:
@@ -124,13 +196,15 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	var issued: Array[Dictionary] = []
 	var next_command: int = 0
 	var snapshot: Dictionary = sim.snapshot()
-	result.rows.append(_row(result.id, 0, 0, snapshot))
+	var probe: Dictionary = _new_probe()
+	result.rows.append(_row(result.id, 0, 0, snapshot, probe))
 	for tick_index: int in range(int(scenario["duration_ticks"])):
 		while next_price < schedule.size() and int(schedule[next_price]["tick"]) <= tick_index:
 			sim.apply_command(ForceWheatPriceCommand.new(int(schedule[next_price]["price"])))
 			next_price += 1
 		var queued: Array[Dictionary] = []
-		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued):
+		while next_command < script.size() and _is_due(script[next_command], tick_index, sim, queued, result,
+				issued):
 			var entry: Dictionary = script[next_command]
 			var command: SimulationCommand = _make_command(entry)
 			sim.apply_command(command)
@@ -142,16 +216,32 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		if result.defeat_tick < 0:
 			snapshot = sim.snapshot()
 			_observe(result, snapshot, tick_index + 1)
+			if result.first_artisan_tick < 0 and _artisans(snapshot) > 0:
+				result.first_artisan_tick = tick_index + 1
+			_probe_tick(result, probe, sim.tick_flows(), tick_index + 1)
 		if (tick_index + 1) % TICKS_PER_MINUTE == 0:
-			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot))
+			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot, probe))
+			probe["beer_minute"] = 0.0
+			probe["tax_minute"] = 0.0
 	# A game that does not end on a whole minute gets a last, partial-minute row, so final_row()
 	# is the state final_economy describes and not one up to 59 ticks older.
 	var duration_ticks: int = int(scenario["duration_ticks"])
 	if duration_ticks % TICKS_PER_MINUTE != 0:
 		@warning_ignore("integer_division")
 		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
-		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot))
+		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot, probe))
 	result.final_economy = snapshot["economy"]
+	result.final_distance = snapshot["distance"]
+	result.final_diagnostics = snapshot["diagnostics"]
+	var history: Dictionary = sim.stats_history_to_dict()
+	result.stats_history_bytes = StatsHistory.compressed_size(history)
+	result.save_bytes = StatsHistory.compressed_size({"snapshot": snapshot, "stats_history": history})
+	var events: Array[Dictionary] = sim.stats_events()
+	result.stats_cause_events = events.size()
+	result.stats_intermittent_events = events.filter(
+		func(event: Dictionary) -> bool: return event["cause"] == CauseLog.INTERMITTENT).size()
+	if keep_cause_events:
+		result.cause_events = events
 	for item: Dictionary in issued:
 		var done: SimulationCommand = item["command"]
 		var source: Dictionary = item["entry"]
@@ -175,7 +265,7 @@ func _params_without_repricing(duration_ticks: int) -> Params:
 	var key: StringName = &"market.wheat.price_update_seconds"
 	var saved: Variant = _catalog.base_values[key]
 	_catalog.base_values[key] = duration_ticks + 1
-	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
+	var params: Params = _new_params()
 	_catalog.base_values[key] = saved
 	return params
 
@@ -193,6 +283,35 @@ func _validate_price_schedule(schedule: Variant, duration: int) -> Array[String]
 		previous = int(entry["tick"])
 	return errors
 
+
+# What balance_report measures on top of the usual metrics (issue #55). Every window must fit in the game.
+func _validate_measure(measure: Variant, duration: int) -> Array[String]:
+	if measure is not Dictionary:
+		return ["measure must be an object"]
+	var errors: Array[String] = []
+	@warning_ignore("integer_division")
+	var minutes: int = duration / TICKS_PER_MINUTE
+	for key: Variant in measure:
+		if key not in MEASURES:
+			errors.append("measure: unknown key '%s'" % str(key))
+	if measure.has("tax_window"):
+		var window: Variant = measure["tax_window"]
+		if window is not Array or window.size() != 2 or not _is_whole(window[0]) or not _is_whole(window[1]) 				or int(window[0]) < 0 or int(window[0]) > int(window[1]) or int(window[1]) > minutes:
+			errors.append("measure.tax_window must be [from_minute, to_minute] inside the game")
+	if measure.has("beer_cut"):
+		errors.append_array(_validate_beer_cut(measure["beer_cut"]))
+	if measure.has("hourly") and (measure["hourly"] is not bool or minutes < 2 * MINUTES_PER_HOUR):
+		errors.append("measure.hourly must be true or false, in a game of two hours or more")
+	return errors
+
+
+# The cut and the return are the first accepted demolish and the build after it, wherever the script runs
+# them (issue #55: the cut follows the first artisans, so its minute changes with the seed).
+func _validate_beer_cut(cut: Variant) -> Array[String]:
+	var share: Variant = cut.get("recovered_share") if cut is Dictionary else null
+	if cut is not Dictionary or not _is_whole(cut.get("recovery_minutes")) or int(cut["recovery_minutes"]) < 1 			or typeof(share) not in [TYPE_INT, TYPE_FLOAT] or float(share) <= 0.0 or float(share) > 1.0:
+		return ["measure.beer_cut needs whole recovery_minutes >= 1 and a recovered_share in (0, 1]"]
+	return []
 
 
 # Same predicate the simulation uses for "nobody is leaving", evaluated on the final state.
@@ -222,15 +341,33 @@ static func with_target_stock(scenario: Dictionary, target_stock: int) -> Dictio
 	return copy
 
 
+# Copy of `scenario` with the barley share of every set_unloading_split replaced, for the grain sweep (issue #55).
+static func with_barley_percent(scenario: Dictionary, percent: int) -> Dictionary:
+	var copy: Dictionary = scenario.duplicate(true)
+	for command: Dictionary in copy["commands"]:
+		if command["cmd"] == "set_unloading_split":
+			command["barley_percent"] = percent
+	return copy
+
+
 # Commands run in order. `tick` is the earliest tick; `wait_for_money` holds the command back
 # until the treasury reaches that amount, and `with_previous` runs it in the same tick as the
 # command before it, so a purchase made of several buildings is priced once. `queued` are the
 # commands already sent in this tick: they have not run yet, so a wait is checked against the
-# treasury they would leave (see _money_after).
-func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[Dictionary]) -> bool:
+# treasury they would leave (see _money_after). `after_artisans_ticks` waits that many ticks after
+# the first artisans arrive, and `after_previous_ticks` that many after the command before it ran
+# (issue #55: the beer crisis starts and ends relative to the game, not on a fixed minute).
+func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[Dictionary],
+		result: ScenarioResult, issued: Array[Dictionary]) -> bool:
 	if entry.get("with_previous", false):
 		return not queued.is_empty()
 	if tick_index < int(entry["tick"]):
+		return false
+	if entry.has("after_artisans_ticks") and (result.first_artisan_tick < 0
+			or tick_index < result.first_artisan_tick + int(entry["after_artisans_ticks"])):
+		return false
+	if entry.has("after_previous_ticks") and (issued.is_empty()
+			or tick_index < int(issued[issued.size() - 1]["tick"]) + int(entry["after_previous_ticks"])):
 		return false
 	if entry.has("wait_for_money"):
 		return _money_after(sim, queued) >= int(entry["wait_for_money"])
@@ -243,6 +380,9 @@ func _is_due(entry: Dictionary, tick_index: int, sim: Simulation, queued: Array[
 # game is lost Simulation.apply_command() refuses every command (simulation_defeated) before the
 # command itself runs, so nothing queued spends and the copy is left as it is.
 func _money_after(sim: Simulation, queued: Array[Dictionary]) -> int:
+	# Nothing queued: the treasury as it is. A wait of thousands of ticks (issue #52) must not build a snapshot each one.
+	if queued.is_empty():
+		return sim.treasury()
 	var snapshot: Dictionary = sim.snapshot()
 	var state: EconomyState = EconomyState.from_dict(snapshot["economy"])
 	if not snapshot["defeat"]["causes"].is_empty():
@@ -269,6 +409,9 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 		"build":
 			var cell: Array = entry["cell"]
 			return BuildCommand.new(_context, StringName(entry["building"]), Vector2i(int(cell[0]), int(cell[1])))
+		"build_road":
+			var road: Array = entry["cell"]
+			return BuildRoadCommand.new(_context, Vector2i(int(road[0]), int(road[1])))
 		"demolish":
 			var target: Array = entry["cell"]
 			return DemolishCommand.new(Vector2i(int(target[0]), int(target[1])))
@@ -281,6 +424,10 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 			return SetTeaImportsCommand.new(bool(entry["enabled"]))
 		"set_flour_imports":
 			return SetFlourImportsCommand.new(bool(entry["enabled"]))
+		"set_unloading_split":
+			return SetUnloadingSplitCommand.new(int(entry["barley_percent"]))
+		"set_stock":
+			return ForceStockCommand.new(StringName(entry["good"]), int(entry["amount"]))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -292,6 +439,10 @@ func _observe(result: ScenarioResult, snapshot: Dictionary, tick_count: int) -> 
 		result.max_timer[condition] = maxi(result.max_timer[condition], int(status["elapsed_seconds"]))
 		if status["status"] != &"ok" and not result.first_warning_tick.has(condition):
 			result.first_warning_tick[condition] = tick_count
+	for id: StringName in snapshot["production"]["input_starved"]:
+		var waiting: Array = result.waiting_input_ticks.get(id, [])
+		waiting.append(tick_count)
+		result.waiting_input_ticks[id] = waiting
 	for cause: Dictionary in snapshot["diagnostics"]["bread_causes"]:
 		result.bread_cause_pairs["%s:%s" % [cause["definition_id"], cause["reason"]]] = true
 	if not defeat["causes"].is_empty():
@@ -299,11 +450,63 @@ func _observe(result: ScenarioResult, snapshot: Dictionary, tick_count: int) -> 
 		result.defeat_causes.assign(defeat["causes"])
 
 
-func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionary) -> Dictionary:
+func _new_probe() -> Dictionary:
+	return {"beer_minute": 0.0, "tax_minute": 0.0, "tax_total": 0.0, "cost_without": 0.0, "cost_with": 0.0,
+		"counts": {}}
+
+
+# Follows, tick by tick, what the beer chain costs and what the artisans pay. Wages and upkeep are priced at
+# the rates of the data (not rounded to whole pence), so it is a probe and never feeds back into the game.
+func _probe_tick(result: ScenarioResult, probe: Dictionary, flows: Dictionary, tick_count: int) -> void:
+	var tax: float = float(flows["class_tax"].get(ARTISAN_CLASS, 0.0))
+	probe["tax_total"] += tax
+	probe["tax_minute"] += tax
+	probe["beer_minute"] += float(flows["beer_consumed"])
+	var counts: Dictionary = probe["counts"]
+	var cost: float = float(flows["barley_spent"])
+	var housing_cost: float = 0.0
+	var chain: Array[StringName] = BEER_CHAIN.duplicate()
+	chain.append(ARTISAN_HOUSING)
+	var city_size: int = 0
+	for entry: Dictionary in flows["buildings"].values():
+		city_size += int(entry["count"])
+	var administration: float = BuildingCosts.administration_multiplier(_params, city_size)
+	for id: StringName in chain:
+		var now: Dictionary = flows["buildings"].get(id, {"count": 0, "workers": 0, "paid": 0})
+		# What the new buildings of this tick cost (it grows with each copy, issue #118); a demolition is no refund here.
+		var built: int = maxi(0, int(now["paid"]) - int(counts.get(id, 0)))
+		counts[id] = int(now["paid"])
+		var running: float = int(now["count"]) * administration \
+			* float(_params.get_value(StringName("building.%s.upkeep_per_minute" % id))) \
+			+ int(now["workers"]) * float(_params.get_value(StringName("building.%s.wage_per_worker_per_minute" % id)))
+		var spent: float = built + running / float(TICKS_PER_MINUTE)
+		if id == ARTISAN_HOUSING:
+			housing_cost += spent
+		else:
+			cost += spent
+		if int(now["count"]) > 0 and result.chain_start_tick < 0:
+			result.chain_start_tick = tick_count - 1
+	probe["cost_without"] += cost
+	probe["cost_with"] += cost + housing_cost
+	if result.chain_start_tick < 0 or probe["tax_total"] <= 0.0:
+		return
+	if result.payback_tick_without_housing < 0 and probe["tax_total"] >= probe["cost_without"]:
+		result.payback_tick_without_housing = tick_count
+	if result.payback_tick_with_housing < 0 and probe["tax_total"] >= probe["cost_with"]:
+		result.payback_tick_with_housing = tick_count
+
+
+func _artisans(snapshot: Dictionary) -> int:
+	return int(snapshot["economy"].get("class_states", {}).get(ARTISAN_CLASS, {}).get("population", 0))
+
+
+func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionary, probe: Dictionary = {}) -> Dictionary:
 	var economy: Dictionary = snapshot["economy"]
 	var stats: Dictionary = snapshot["stats"]
 	var defeat: Dictionary = snapshot["defeat"]
-	var counts: Dictionary[StringName, int] = {&"wharf": 0, &"mill": 0, &"bakery": 0, &"housing": 0}
+	var counts: Dictionary[StringName, int] = {&"wharf": 0, &"mill": 0, &"bakery": 0, &"housing": 0,
+		&"malthouse": 0, &"brewery": 0, &"artisan_housing": 0}
+	var artisans: Dictionary = economy.get("class_states", {}).get(ARTISAN_CLASS, {})
 	for building: Dictionary in economy["buildings"]:
 		var id: StringName = StringName(building["definition_id"])
 		if counts.has(id):
@@ -336,6 +539,16 @@ func _row(scenario_id: String, minute: int, tick_count: int, snapshot: Dictionar
 		"imports_spent_pm": stats["imports_spent_per_minute"], "tea_spent_pm": stats["tea_spent_per_minute"],
 		"tea_stock": economy["stocks"].get(&"tea", 0), "tea_coverage": economy["tea_coverage"],
 		"flour_stock": economy["stocks"].get(&"flour", 0),
+		"barley_spent_pm": stats["barley_spent_per_minute"], "barley_stock": economy["stocks"].get(&"barley", 0),
+		"n_malthouse": counts[&"malthouse"], "n_brewery": counts[&"brewery"],
+		"malt_stock": economy["stocks"].get(&"malt", 0), "beer_stock": economy["stocks"].get(&"beer", 0),
+		"artisan_population": artisans.get("population", 0),
+		"artisan_satisfaction": artisans.get("satisfaction", 0.0),
+		"artisan_housing_capacity": artisans.get("housing_capacity", 0),
+		"n_artisan_housing": counts[&"artisan_housing"],
+		"beer_coverage": economy.get("beer_coverage", 0.0),
+		"beer_consumed_pm": float(probe.get("beer_minute", 0.0)),
+		"artisan_taxes_pm": float(probe.get("tax_minute", 0.0)),
 	}
 
 
@@ -352,6 +565,9 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		errors.append("%s: ticks must not go backwards" % where)
 	if entry.has("wait_for_money") and (not _is_whole(entry["wait_for_money"]) or int(entry["wait_for_money"]) < 0):
 		errors.append("%s: wait_for_money must be a whole amount of pence >= 0" % where)
+	for field: String in ["after_artisans_ticks", "after_previous_ticks"]:
+		if entry.has(field) and (not _is_whole(entry[field]) or int(entry[field]) < 0):
+			errors.append("%s: %s must be a whole number of ticks >= 0" % [where, field])
 	errors.append_array(_validate_grouping(entry, where, index, command_before_tick))
 	var name: String = String(entry.get("cmd", ""))
 	if name not in COMMAND_NAMES:
@@ -362,7 +578,7 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 			if not _catalog.buildings.has(StringName(entry.get("building", ""))):
 				errors.append("%s: unknown building" % where)
 			errors.append_array(_validate_cell(entry.get("cell"), where))
-		"demolish":
+		"demolish", "build_road":
 			errors.append_array(_validate_cell(entry.get("cell"), where))
 		"set_tax":
 			if typeof(entry.get("rate")) not in [TYPE_INT, TYPE_FLOAT]:
@@ -373,6 +589,13 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 				var lowest: int = -1 if field in ["accumulate_price", "max_price"] else 0
 				if not _is_whole(entry.get(field)) or int(entry[field]) < lowest:
 					errors.append("%s: %s must be a whole number >= %d" % [where, field, lowest])
+		"set_unloading_split":
+			if not _is_whole(entry.get("barley_percent")) or int(entry["barley_percent"]) < 0 \
+					or int(entry["barley_percent"]) > 100:
+				errors.append("%s: barley_percent must be a whole number from 0 to 100" % where)
+		"set_stock":
+			if not _catalog.goods.has(StringName(str(entry.get("good", "")))) or not _is_whole(entry.get("amount")) 					or int(entry["amount"]) < 0:
+				errors.append("%s: set_stock needs a known good and a whole amount >= 0" % where)
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)
@@ -395,8 +618,9 @@ func _validate_grouping(entry: Dictionary, where: String, index: int,
 	if command_before_tick >= 0 and _is_whole(declared_tick) and int(declared_tick) != command_before_tick:
 		errors.append("%s: with_previous must declare the same tick as the command before it (%d)"
 			% [where, command_before_tick])
-	if entry.has("wait_for_money"):
-		errors.append("%s: with_previous follows the command before it and cannot wait for money" % where)
+	for field: String in ["wait_for_money", "after_artisans_ticks", "after_previous_ticks"]:
+		if entry.has(field):
+			errors.append("%s: with_previous follows the command before it and cannot have %s" % [where, field])
 	return errors
 
 

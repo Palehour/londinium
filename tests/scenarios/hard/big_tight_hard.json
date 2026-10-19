@@ -1,0 +1,18 @@
+{
+  "id": "big_tight_hard",
+  "description": "Issue #128: big_tight adaptado a Difícil. La segunda cadena (540 d) se compra desde el tick 720, como en el original, pero espera a tener su precio; el molino y la panadería van en el mismo tick que el embarcadero.",
+  "notes": "Mismos edificios, celdas y esperas de plata que el original, salvo lo que dice la descripción. En Difícil la ciudad arranca con 800 d y gana menos (el trigo llega a 4 d), así que las compras llegan más tarde. Todos los adaptados duran lo mismo según su tipo (75 min los de 15, 150 min los largos), un horizonte fijo decidido por Cristian en el chat del plan de #128. Solo se juega con balance_report --preset hard.",
+  "seed": 42,
+  "duration_ticks": 4500,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.7},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
+    {"tick": 720, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 540},
+    {"tick": 720, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
+    {"tick": 720, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}
+  ]
+}

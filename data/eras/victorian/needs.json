@@ -1,0 +1,7 @@
+{
+  "housing_bonus_per_category": 2,
+  "categories": {
+    "sustento": { "threshold": 75 },
+    "comunidad": { "threshold": 50 }
+  }
+}

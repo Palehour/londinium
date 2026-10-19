@@ -21,11 +21,11 @@ Clasificá cada hallazgo:
 
 ## `GDD.md` y `DECISIONS.md`
 Aplicá la regla de `decision-diseno`: si el PR los edita sin la autorización de Cristian citada en un comentario
-de la PR, es **bloqueante**. Si hay autorización, confirmala con Cristian antes de aprobar. Si propusieron el texto
+de la PR, es **bloqueante**. Si hay autorización, confirmala con Cristian a través de Chief antes de aprobar. Si propusieron el texto
 en "Decisiones y docs", revisá la propuesta sin esperar que esté aplicada. Verificá también que no se hayan
 implementado P-xxx sin aprobación.
 
-**No mergees** salvo pedido explícito de Cristian (ver `abrir-pr`).
+**No mergees:** el merge lo hace Chief tras tu autorización (ver `AGENTS.md`, "GitHub tracking").
 
 ## Gotchas
 - No marques "listo" sin ver la salida de tests y el CI en verde.

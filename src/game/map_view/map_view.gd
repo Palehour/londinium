@@ -1,20 +1,53 @@
 extends Node2D
 
-const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field"]
+const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
+# The player's street (issue #168, D-080): not a building, so it stays out of TYPES. It is the last entry of the
+# LB/RB cycle and key 9, only on a map with streets.
+const ROAD: StringName = GameSession.ROAD
+const ROAD_KEY: Key = KEY_9
+# Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
+const DEMOLISH_RING_POINTS: int = 32
 
 var session: GameSession
 var clock: SimClock
 var geometry: MapGeometry
 var presentation: MapPresentation = MapPresentation.new()
+# Where the player's mods live; a test points it elsewhere so the machine's own mods never reach it.
+var mods_root: String = ModLayer.DEFAULT_ROOT
+# Where saved games live (issue #57); a test points it elsewhere so the player's saves are never touched.
+var saves_root: String = SaveFile.DEFAULT_ROOT
+var _catalog: DataCatalog
 var _snapshot: Dictionary
 var _building_type: StringName = &""
 var _status: Label
 var _mode: Label
 var _help: Label
+var _legend_caption: Label
+var _terrain_labels: Dictionary[String, Label] = {}
+# Attribution of the historical map sources (issue #60, CREDITS.md).
+var _credits: Label
 var _stats_panel: StatsPanel
+var _autosave: Autosave
+var _status_pending: bool = false
+var _status_has_result: bool = false
+var _status_accepted: bool = false
+var _status_reason: StringName = &""
+# Whether the last input came from a gamepad, so the help shows its buttons (issue #68).
+var _gamepad: bool = false
+# Hold X to demolish (issue #164, D-078). One press submits one command; the ring reads _demolish_progress.
+var _demolish_was_down: bool = false
+var _demolish_holding: bool = false
+var _demolish_fired: bool = false
+var _demolish_elapsed: float = 0.0
+var _demolish_progress: float = 0.0
+var _demolish_cell: Vector2i = Vector2i(-1, -1)
 
 
 func _ready() -> void:
+	Strings.use_default_locale()
+	# Phrases are already translated. Leaving auto-translate on would look the sentence up as a key.
+	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	GamepadBindings.install()
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
 	var loaded: DataLoadResult = _load_catalog()
@@ -27,6 +60,11 @@ func _ready() -> void:
 	if not presentation.errors.is_empty():
 		_show_load_error(layer, presentation.errors)
 		return
+	var save_settings: SaveSettings = SaveSettings.new()
+	save_settings.load_data()
+	if not save_settings.errors.is_empty():
+		_show_load_error(layer, save_settings.errors)
+		return
 	var background: ColorRect = ColorRect.new()
 	background.color = presentation.ui_colors["header"]
 	background.size = Vector2(get_viewport_rect().size.x, presentation.layout["header_height"])
@@ -35,29 +73,41 @@ func _ready() -> void:
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(background)
 	var help: VBoxContainer = VBoxContainer.new()
-	help.position = Vector2(presentation.layout["help_x"], presentation.layout["help_y"])
+	# Stops short of the panel, so at 1280×800 a long line wraps instead of running under it.
+	help.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	help.offset_left = presentation.layout["help_x"]
+	help.offset_top = presentation.layout["help_y"]
+	help.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(help)
-	for text: String in [Strings.LOADING, "", ""]:
+	for text: String in [Strings.text(Strings.LOADING), "", ""]:
 		var label: Label = Label.new()
 		label.text = text
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		help.add_child(label)
 	var legend: HBoxContainer = HBoxContainer.new()
 	legend.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var caption: Label = Label.new()
-	caption.text = Strings.LEGEND
+	caption.text = Strings.text(Strings.LEGEND)
+	_legend_caption = caption
 	legend.add_child(caption)
-	for kind: String in ["land", "river", "cultivable"]:
+	for kind: String in MapPresentation.TERRAIN_KINDS:
 		var sample: ColorRect = ColorRect.new()
 		sample.color = presentation.terrain[kind]
 		sample.custom_minimum_size = Vector2.ONE * presentation.layout["font_size"]
 		sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		legend.add_child(sample)
 		var label: Label = Label.new()
-		label.text = Strings.TERRAIN_LABELS[kind]
+		label.text = Strings.text(Strings.TERRAIN_LABELS[kind])
+		_terrain_labels[kind] = label
 		legend.add_child(label)
 	help.add_child(legend)
 	help.move_child(legend, 1)
+	_credits = Label.new()
+	# The full NLS credit line (issue #152) is long: it wraps instead of widening the header.
+	_credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_credits.text = Strings.text(Strings.MAP_CREDITS)
+	help.add_child(_credits)
 	_mode = help.get_child(2) as Label
 	_status = help.get_child(3) as Label
 	_help = help.get_child(0) as Label
@@ -67,12 +117,18 @@ func _ready() -> void:
 	panel_mount.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(panel_mount)
+	_catalog = loaded.catalog
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
+	session.mods = loaded.mods
+	session.mod_conflicts = loaded.mod_conflicts
+	_autosave = Autosave.new(session, save_settings, saves_root)
 	_update_help()
 	geometry = MapGeometry.new(Vector2i(session.context.map.width, session.context.map.height), presentation.layout["cell_size"], _map_viewport(), presentation.camera["max_zoom_factor"])
 	_snapshot = session.get_snapshot()
 	session.snapshot_changed.connect(_snapshot_received)
 	session.command_resolved.connect(_command_resolved)
+	session.snapshot_changed.connect(_autosave.observe)
+	_autosave.saved.connect(func(_path: String) -> void: _stats_panel.show_saves(SaveFile.list(saves_root)))
 	clock = SimClock.new()
 	clock.simulation = session.simulation
 	clock.tick_advanced.connect(session.publish_tick)
@@ -85,15 +141,37 @@ func _ready() -> void:
 	_stats_panel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
 	_stats_panel.offset_left = -presentation.layout["panel_width"]
 	_stats_panel.restart_requested.connect(_restart_session)
+	_stats_panel.difficulty_selected.connect(_start_on_difficulty)
+	_stats_panel.mod_order_requested.connect(_reorder_mods)
+	_stats_panel.save_requested.connect(_save_game)
+	_stats_panel.load_requested.connect(_load_game)
+	if not mods_root.is_empty():
+		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
 	panel_mount.add_child(_stats_panel)
+	_stats_panel.show_saves(SaveFile.list(saves_root))
 	_stats_panel.update_snapshot(_snapshot)
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
 
 
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or _help == null:
+		return
+	presentation.refresh_labels()
+	_legend_caption.text = Strings.text(Strings.LEGEND)
+	_credits.text = Strings.text(Strings.MAP_CREDITS)
+	for kind: String in _terrain_labels:
+		_terrain_labels[kind].text = Strings.text(Strings.TERRAIN_LABELS[kind])
+	_update_help()
+	if geometry != null:
+		_update_mode()
+	_apply_status()
+	queue_redraw()
+
+
 func _load_catalog() -> DataLoadResult:
-	return DataLoader.new().load_all()
+	return DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, mods_root)
 
 
 func _update_help() -> void:
@@ -101,13 +179,13 @@ func _update_help() -> void:
 	for id: StringName in TYPES:
 		var label: String = presentation.labels[id]
 		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
-		labels.append(label if reason.is_empty() else Strings.DISABLED_BUILDING % [label, reason])
-	_help.text = Strings.HELP % labels
+		labels.append(label if reason.is_empty() else Strings.text(Strings.DISABLED_BUILDING) % [label, reason])
+	_help.text = Strings.text(Strings.HELP_GAMEPAD if _gamepad else Strings.HELP) % labels
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
 	var label: Label = Label.new()
-	label.text = Strings.LOAD_ERROR
+	label.text = Strings.text(Strings.LOAD_ERROR)
 	layer.add_child(label)
 	for diagnostic: String in errors:
 		push_error(diagnostic)
@@ -129,16 +207,38 @@ func _resized() -> void:
 func _process(delta: float) -> void:
 	if geometry == null:
 		return
+	_advance_demolish_hold(delta)
 	var direction: Vector2 = Vector2.ZERO
-	# Poll only camera keys; commands use unhandled events so UI can consume them.
+	var previous_center: Vector2 = geometry.center
+	var previous_zoom: float = geometry.zoom
+	# Poll only camera keys, the stick and the triggers; commands use unhandled events so UI can consume them.
 	if get_viewport().gui_get_focus_owner() == null:
 		direction.x = float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT))
 		direction.y = float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP))
-	var previous_center: Vector2 = geometry.center
-	geometry.center += direction.normalized() * presentation.camera["pan_speed"] * delta / geometry.zoom
+		direction += Input.get_vector(&"map_pan_left", &"map_pan_right", &"map_pan_up", &"map_pan_down")
+		# A trigger zooms one step per pull, like a key press.
+		if Input.is_action_just_pressed(&"map_zoom_in"):
+			geometry.zoom *= presentation.camera["zoom_step"]
+		if Input.is_action_just_pressed(&"map_zoom_out"):
+			geometry.zoom /= presentation.camera["zoom_step"]
+	geometry.center += direction.limit_length(1.0) * presentation.camera["pan_speed"] * delta / geometry.zoom
 	geometry.constrain()
-	if geometry.center != previous_center:
+	if geometry.center != previous_center or geometry.zoom != previous_zoom:
 		queue_redraw()
+
+
+# Sees every event, even those the panel takes, so the help follows whatever the player last touched.
+func _input(event: InputEvent) -> void:
+	if _help == null or session == null:
+		return
+	var gamepad: bool = _gamepad
+	if GamepadBindings.is_gamepad(event):
+		gamepad = true
+	elif (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed():
+		gamepad = false
+	if gamepad != _gamepad:
+		_gamepad = gamepad
+		_update_help()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -150,13 +250,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	var previous_type: StringName = _building_type
 	var header_offset: Vector2 = Vector2(0, presentation.layout["header_height"])
 	var zoom_step: float = presentation.camera["zoom_step"]
+	if GamepadBindings.is_gamepad(event):
+		_gamepad_command(event)
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode >= KEY_1 and event.keycode <= KEY_5:
-			var type: StringName = TYPES[event.keycode - KEY_1]
-			var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(type))
+		if (event.keycode >= KEY_1 and event.keycode <= KEY_1 + TYPES.size() - 1) or event.keycode == ROAD_KEY:
+			var type: StringName = ROAD if event.keycode == ROAD_KEY else TYPES[event.keycode - KEY_1]
+			var reason_id: StringName = session.get_building_unavailable_reason(type)
+			var reason: String = presentation.building_unavailable_reason(reason_id)
 			_building_type = type if reason.is_empty() else &""
 			if not reason.is_empty():
-				_status.text = reason
+				_show_result(false, reason_id)
 		elif event.keycode == KEY_ESCAPE:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
@@ -164,14 +267,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
 	if event is InputEventMouseButton:
-		# Clicking the map takes keyboard focus back from HUD fields such as the tax box.
+		# Clicking the map takes keyboard focus back from HUD fields such as the tax box, and leaves the panel.
 		if event.pressed:
 			get_viewport().gui_release_focus()
+			_stats_panel.leave_focus()
 		if event.pressed and event.position.y >= header_offset.y:
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				geometry.select_cell(event.position - header_offset)
 				if _building_type != &"":
-					_submit(BuildCommand.new(session.context, _building_type, geometry.screen_to_cell(event.position - header_offset)))
+					_submit(_place_command(geometry.screen_to_cell(event.position - header_offset)))
 			elif event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 				geometry.zoom *= zoom_step if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / zoom_step
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
@@ -183,13 +287,149 @@ func _unhandled_input(event: InputEvent) -> void:
 		queue_redraw()
 
 
+# Gamepad presses on the map (issue #68). While the panel has the focus only Menu, View and B reach here: the d-pad
+# and A belong to the panel then.
+func _gamepad_command(event: InputEvent) -> void:
+	# A pressed button that hides itself (restart, the victory notice) drops the focus; the panel takes it back.
+	if _stats_panel.is_focused() and get_viewport().gui_get_focus_owner() == null:
+		_stats_panel.enter_focus()
+	if event.is_action_pressed(&"gamepad_panel"):
+		if _stats_panel.is_focused():
+			_stats_panel.leave_focus()
+		else:
+			_stats_panel.enter_focus()
+	elif event.is_action_pressed(&"gamepad_pause"):
+		_stats_panel.toggle_pause()
+	elif _stats_panel.is_focused():
+		if event.is_action_pressed(&"ui_cancel"):
+			_stats_panel.leave_focus()
+	elif event.is_action_pressed(&"ui_cancel"):
+		_building_type = &""
+	elif event.is_action_pressed(&"map_build_next") or event.is_action_pressed(&"map_build_prev"):
+		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
+	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
+		_submit(_place_command(geometry.selected))
+	else:
+		for action: StringName in GamepadBindings.CURSOR:
+			if event.is_action_pressed(action):
+				geometry.move_selection(GamepadBindings.CURSOR[action])
+				geometry.follow_selection()
+
+
+# X demolishes only after it has been held (issue #164). Frame time, so it works while the sim clock is paused.
+# Releasing, moving the cell cursor, or entering the panel cancels this press; it does not start again until X is
+# released. Finishing the hold submits one command.
+func _advance_demolish_hold(delta: float) -> void:
+	var down: bool = Input.is_action_pressed(&"map_demolish")
+	if not down:
+		_end_demolish_hold(true)
+		return
+	if get_viewport().gui_get_focus_owner() != null or (_stats_panel != null and _stats_panel.is_focused()):
+		_end_demolish_hold(false)
+		_demolish_was_down = true
+		return
+	if not _demolish_was_down:
+		_demolish_was_down = true
+		if geometry.selected == Vector2i(-1, -1):
+			return
+		_demolish_holding = true
+		_demolish_fired = false
+		_demolish_elapsed = 0.0
+		_demolish_cell = geometry.selected
+	if not _demolish_holding or _demolish_fired:
+		return
+	if geometry.selected != _demolish_cell:
+		_end_demolish_hold(false)
+		return
+	var seconds: float = presentation.input["demolish_hold_seconds"]
+	_demolish_elapsed += delta
+	if _demolish_elapsed >= seconds:
+		var cell: Vector2i = _demolish_cell
+		_demolish_fired = true
+		_demolish_holding = false
+		_demolish_elapsed = 0.0
+		_set_demolish_progress(0.0)
+		_submit(DemolishCommand.new(cell))
+		return
+	_set_demolish_progress(_demolish_elapsed / seconds)
+
+
+func _end_demolish_hold(released: bool) -> void:
+	_demolish_holding = false
+	_demolish_fired = false
+	_demolish_elapsed = 0.0
+	if released:
+		_demolish_was_down = false
+	_set_demolish_progress(0.0)
+
+
+func _set_demolish_progress(progress: float) -> void:
+	if is_equal_approx(_demolish_progress, progress):
+		return
+	_demolish_progress = progress
+	queue_redraw()
+
+
+# Half a cell, minus the inset already in data. The 0.5 is the centre of the square, not the hold time.
+func _draw_demolish_ring(cell_size: float) -> void:
+	if _demolish_progress <= 0.0:
+		return
+	var center: Vector2 = (Vector2(_demolish_cell) + Vector2.ONE * 0.5) * cell_size
+	var radius: float = cell_size * 0.5 - presentation.layout["building_inset"]
+	var start: float = -PI * 0.5
+	draw_arc(center, radius, start, start + TAU * _demolish_progress, DEMOLISH_RING_POINTS, presentation.ui_colors["selection"], presentation.layout["selection_width"])
+
+
+# Selecting, then every building that can be built now and the street; the help already says why the others cannot.
+func _cycle_building(step: int) -> void:
+	var choices: Array[StringName] = [&""]
+	for type: StringName in TYPES + [ROAD]:
+		if session.get_building_unavailable_reason(type) == &"":
+			choices.append(type)
+	_building_type = choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())]
+
+
+func _place_command(cell: Vector2i) -> SimulationCommand:
+	if _building_type == ROAD:
+		return BuildRoadCommand.new(session.context, cell)
+	return BuildCommand.new(session.context, _building_type, cell)
+
+
 func _submit(command: SimulationCommand) -> void:
-	_status.text = Strings.PENDING
+	_show_pending()
 	session.submit_command(command)
 
 
 func _command_resolved(accepted: bool, reason: StringName) -> void:
+	_show_result(accepted, reason)
+
+
+func _show_pending() -> void:
+	_status_pending = true
+	_status_has_result = false
+	_status.text = Strings.text(Strings.PENDING)
+
+
+func _show_result(accepted: bool, reason: StringName) -> void:
+	_status_pending = false
+	_status_has_result = true
+	_status_accepted = accepted
+	_status_reason = reason
 	_status.text = Strings.command_result(accepted, reason)
+
+
+func _clear_status() -> void:
+	_status_pending = false
+	_status_has_result = false
+	if _status != null:
+		_status.text = ""
+
+
+func _apply_status() -> void:
+	if _status_pending:
+		_status.text = Strings.text(Strings.PENDING)
+	elif _status_has_result:
+		_status.text = Strings.command_result(_status_accepted, _status_reason)
 
 
 func _snapshot_received(snapshot: Dictionary) -> void:
@@ -202,11 +442,68 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 
 func _restart_session() -> void:
 	session.restart()
+	_reset_view()
+
+
+# The presets were validated when data/ loaded, so resolving one here cannot fail.
+func _start_on_difficulty(preset_id: StringName) -> void:
+	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
+	session.restart_with(Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers), preset_id)
+	_reset_view()
+
+
+# The mods menu's new order (D-065): saved to load_order.json, then data/ and the mods load again and a new game
+# starts on the same difficulty. If the new order does not validate, the old list goes back and the game goes on.
+func _reorder_mods(order: Array[StringName]) -> void:
+	var previous: Array[StringName] = session.mods.duplicate()
+	var saved: Error = ModLayer.save_load_order(mods_root, order)
+	if saved != OK:
+		_stats_panel.show_mod_error(error_string(saved))
+		return
+	var loaded: DataLoadResult = _load_catalog()
+	if not loaded.is_ok():
+		ModLayer.save_load_order(mods_root, previous)
+		_stats_panel.show_mod_error("
+".join(loaded.errors))
+		return
+	_catalog = loaded.catalog
+	session.mods = loaded.mods
+	session.mod_conflicts = loaded.mod_conflicts
+	var layers: DataLayers = DataLayers.resolve(_catalog, session.difficulty)
+	session.restart_with_catalog(_catalog, Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
+	_update_help()
+	_reset_view()
+
+
+# Saves the state at the end of the last tick (issue #57); orders still queued stay in this game, not in the file.
+func _save_game() -> void:
+	var path: String = SaveFile.write_manual(saves_root, SaveFile.build(session))
+	var message: StringName = Strings.SAVED_WITHOUT_QUEUE if session.simulation.has_queued_commands() else Strings.SAVED
+	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_WRITE_ERROR if path.is_empty() else message))
+
+
+# A save loads on the difficulty it was played on; a file from another version or other mods is refused and the
+# current game goes on.
+func _load_game(path: String) -> void:
+	var result: Dictionary = SaveFile.read(path)
+	if result["reason"] == &"":
+		result = SaveFile.check_compatible(result["data"], session, _catalog)
+	if result["reason"] != &"":
+		_stats_panel.show_saves(SaveFile.list(saves_root), Strings.save_refusal(result["reason"], result["args"]))
+		return
+	var layers: DataLayers = DataLayers.resolve(_catalog, StringName(result["data"]["difficulty"]))
+	session.load_save(result["data"], Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
+	_reset_view()
+	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_LOADED))
+
+
+func _reset_view() -> void:
+	_autosave.reset()
 	clock.simulation = session.simulation
 	clock.reset()
 	_building_type = &""
 	geometry.selected = Vector2i(-1, -1)
-	_status.text = ""
+	_clear_status()
 	_snapshot = session.get_snapshot()
 	_stats_panel.update_snapshot(_snapshot)
 	_update_mode()
@@ -214,7 +511,8 @@ func _restart_session() -> void:
 
 
 func _update_mode() -> void:
-	_mode.text = Strings.MODE % [presentation.labels.get(_building_type, Strings.SELECT), geometry.selected]
+	var label: String = Strings.text(Strings.ROAD) if _building_type == ROAD else presentation.labels.get(_building_type, Strings.text(Strings.SELECT))
+	_mode.text = Strings.text(Strings.MODE) % [label, geometry.selected]
 
 
 func _draw() -> void:
@@ -227,6 +525,10 @@ func _draw() -> void:
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
 			draw_rect(Rect2(Vector2(cell) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain[geometry.terrain_at(cell, map)])
+	# The player's streets come from the state, not the map, in their own colour: unlike the historic ones they can be
+	# demolished.
+	for road: Array in _snapshot["distance"]["player_roads"]:
+		draw_rect(Rect2(Vector2(road[0], road[1]) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain["player_road"])
 	var font: Font = ThemeDB.fallback_font
 	for building: Dictionary in _snapshot["economy"]["buildings"]:
 		var cell: Vector2 = Vector2(building["cell"][0], building["cell"][1])
@@ -239,3 +541,4 @@ func _draw() -> void:
 		draw_string(font, rect.get_center() + Vector2(-width / 2.0, presentation.layout["label_offset_y"]), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])
 	if geometry.selected != Vector2i(-1, -1):
 		draw_rect(Rect2(Vector2(geometry.selected) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
+	_draw_demolish_ring(cell_size)
