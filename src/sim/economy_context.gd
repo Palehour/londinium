@@ -13,6 +13,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.id = definition.id
 		copy.tags.assign(definition.tags)
 		copy.buildable = definition.buildable
+		copy.footprint = definition.footprint
 		copy.distributes.assign(definition.distributes)
 		copy.supplies.assign(definition.supplies)
 		if definition.recipe != null:
@@ -59,9 +60,46 @@ func building_unavailable_reason(id: StringName) -> StringName:
 		return &"no_cultivable_cells"
 	for x: int in range(map.width):
 		for y: int in range(map.height):
-			if terrain_placement_reason(id, Vector2i(x, y)) == &"":
+			if placement_reason(id, Vector2i(x, y)) == &"":
 				return &""
 	return &"requires_river" if "river" in buildings[id].tags else &"requires_land"
+
+
+# Whether the map lets the whole footprint stand from this cell (issue #184, D-086): inside the map and every cell it
+# covers fit for the building. Taken cells and streets are the state's, so BuildCommand checks them.
+func placement_reason(id: StringName, origin: Vector2i) -> StringName:
+	var area: Rect2i = Rect2i(origin, buildings[id].footprint)
+	if not Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area):
+		return &"outside_map"
+	for cell: Vector2i in cells_of(area):
+		var reason: StringName = terrain_placement_reason(id, cell)
+		if reason != &"":
+			return reason
+	return &""
+
+
+# The cells a building of the state covers: its cell is the north-west corner of its footprint (D-086). A saved building
+# whose type the data no longer has keeps the one cell it always had.
+func area_of(building: Dictionary) -> Rect2i:
+	var definition: BuildingDef = buildings.get(StringName(building["definition_id"]))
+	return Rect2i(RoadNetwork.cell_of(building), definition.footprint if definition != null else Vector2i.ONE)
+
+
+# The building of the state that covers the cell, or {} when none does.
+func building_at(state: EconomyState, cell: Vector2i) -> Dictionary:
+	for building: Dictionary in state.buildings:
+		if area_of(building).has_point(cell):
+			return building
+	return {}
+
+
+# Row by row from the north-west corner, so every walk over an area goes in the same order.
+static func cells_of(area: Rect2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for y: int in range(area.position.y, area.end.y):
+		for x: int in range(area.position.x, area.end.x):
+			cells.append(Vector2i(x, y))
+	return cells
 
 
 func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:

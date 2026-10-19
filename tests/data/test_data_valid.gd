@@ -35,6 +35,20 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		assert_typeof(catalog.base_values[key], TYPE_INT, str(key))
 
 
+# Task 1 of D-086 (issue #184) changes no scale: every building keeps one cell, written out in the data. Which
+# buildings grow is decided later (#186 and its own decisions).
+func test_every_building_is_one_by_one_for_now() -> void:
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy/buildings.json"))
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	for id: StringName in result.catalog.buildings:
+		# JSON numbers come back as floats.
+		assert_eq(raw[String(id)].get("footprint"), [1.0, 1.0], "%s says its footprint" % id)
+		assert_eq(result.catalog.buildings[id].footprint, Vector2i.ONE, String(id))
+
+
 func test_whitechapel_has_no_cultivation_or_pending_content() -> void:
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), str(result.errors))

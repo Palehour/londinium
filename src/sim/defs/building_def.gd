@@ -10,3 +10,5 @@ var buildable: bool = true
 # to other buildings besides its recipe's output (the wharf's barley and imported flour).
 var distributes: Array[StringName] = []
 var supplies: Array[StringName] = []
+# Cells it covers from its cell, the north-west corner, w x h (issue #184, D-086). 1x1 unless the data says otherwise.
+var footprint: Vector2i = Vector2i.ONE

@@ -1,47 +1,47 @@
 {
   "wharf": {
     "cost": 240, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
-    "jobs": 4, "tags": ["river", "source", "basic_infrastructure"],
+    "jobs": 4, "tags": ["river", "source", "basic_infrastructure"], "footprint": [1, 1],
     "service_radius": 4, "distributes": ["tea"], "supplies": ["barley", "flour"],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
   },
   "mill": {
     "cost": 180, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
+    "jobs": 3, "tags": ["producer"], "footprint": [1, 1],
     "recipe": { "inputs": { "wheat": 10 }, "outputs": { "flour": 10 }, "seconds": 60 }
   },
   "bakery": {
     "cost": 120, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
+    "jobs": 3, "tags": ["producer"], "footprint": [1, 1],
     "recipe": { "inputs": { "flour": 10 }, "outputs": { "bread": 20 }, "seconds": 60 },
     "service_radius": 8, "distributes": ["bread"]
   },
   "malthouse": {
     "cost": 200, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
+    "jobs": 3, "tags": ["producer"], "footprint": [1, 1],
     "recipe": { "inputs": { "barley": 4 }, "outputs": { "malt": 4 }, "seconds": 60 }
   },
   "brewery": {
     "cost": 160, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"],
+    "jobs": 3, "tags": ["producer"], "footprint": [1, 1],
     "recipe": { "inputs": { "malt": 4 }, "outputs": { "beer": 8 }, "seconds": 60 },
     "service_radius": 6, "distributes": ["beer"]
   },
   "wheat_field": {
     "cost": 90, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["source", "cultivable"],
+    "jobs": 3, "tags": ["source", "cultivable"], "footprint": [1, 1],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 120 }
   },
   "housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "tags": ["housing", "basic_infrastructure"]
+    "jobs": 0, "capacity": 20, "tags": ["housing", "basic_infrastructure"], "footprint": [1, 1]
   },
   "artisan_housing": {
     "cost": 120, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 10, "tags": ["housing"]
+    "jobs": 0, "capacity": 10, "tags": ["housing"], "footprint": [1, 1]
   },
   "dense_housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "buildable": false, "tags": ["housing"]
+    "jobs": 0, "capacity": 20, "buildable": false, "tags": ["housing"], "footprint": [1, 1]
   }
 }

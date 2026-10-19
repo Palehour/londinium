@@ -844,6 +844,24 @@ func test_buildable_is_an_optional_boolean() -> void:
 		assert_true(result.catalog.buildings[&"bakery"].buildable, "Buildable unless the data says otherwise")
 
 
+# Issue #184 (D-086): the cells a building covers, w x h, are an optional pair of whole numbers; 1x1 when missing.
+func test_footprint_defaults_to_one_by_one() -> void:
+	_documents["economy/buildings.json"]["bakery"].erase("footprint")
+	_documents["economy/buildings.json"]["mill"]["footprint"] = [2, 3]
+	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(result.is_ok(), str(result.errors))
+	if result.is_ok():
+		assert_eq(result.catalog.buildings[&"bakery"].footprint, Vector2i.ONE)
+		assert_eq(result.catalog.buildings[&"mill"].footprint, Vector2i(2, 3))
+
+
+func test_footprint_must_be_two_whole_numbers() -> void:
+	for footprint: Variant in ["2x2", [2], [2, 2, 2], [0, 1], [1, -1], [1.5, 1], ["1", 1]]:
+		before_each()
+		_documents["economy/buildings.json"]["bakery"]["footprint"] = footprint
+		_assert_invalid("buildings.json.bakery.footprint: expected [w, h] of whole numbers of at least 1")
+
+
 func test_a_scenario_map_must_exist() -> void:
 	_documents["scenarios/victorian_demo.json"] = {"map": "atlantis"}
 	_assert_invalid("scenarios/victorian_demo.json.map: unknown map atlantis")

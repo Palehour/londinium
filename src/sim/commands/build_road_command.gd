@@ -43,9 +43,9 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 		return &"outside_map"
 	if is_street(state, map, _cell):
 		return &"road_cell"
-	for building: Dictionary in state.buildings:
-		if building["cell"] == [_cell.x, _cell.y]:
-			return &"occupied_cell"
+	# Any cell a building covers is taken, not only the one it stands on (issue #184, D-086).
+	if not _context.building_at(state, _cell).is_empty():
+		return &"occupied_cell"
 	# Water and dock basins carry no street (D-020), and the standing buildings stay a block (D-075).
 	if _cell in map.river_cells or _cell in map.dock_cells:
 		return &"requires_land"

@@ -32,7 +32,8 @@ londinium/
 │   ├── economy/
 │   │   ├── goods.json        # wheat, barley, flour, bread, malt, beer, tea, money unit
 │   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field: cost, upkeep, jobs, recipe, tags;
-│   │   │                     #   optional service_radius + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67
+│   │   │                     #   optional service_radius + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67;
+│   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 1x1 for now), #184, D-086
 │   │   ├── roads.json        # the player's streets: cost and upkeep per minute (#67, D-070)
 │   │   ├── transport.json    # cost per unit and street step, and the steps from which a leg is "expensive" (#67, D-070, D-080)
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
@@ -99,7 +100,9 @@ londinium/
 ```
 
 ## Tick order (one place, `simulation.gd`)
-1. Apply queued commands. A build is checked against the map (`EconomyContext.terrain_placement_reason`): the
+1. Apply queued commands. A build is checked against the map over its whole footprint (`EconomyContext.placement_reason`,
+   issue #184, D-086: the building's `cell` is the north-west corner of `footprint` w x h cells, all inside the map and
+   none taken by another footprint or a street; any of its cells demolishes it, and a street cannot go on one): the
    standing buildings (`existing_cells`) block new building (D-075), but a saved building on one of them stays and
    works (D-076). Before tick 0, `Simulation.create_new` puts down the map's starting dense housing
    (`dense_housing_cells`, as many as `startup.dense_housing_occupied`; not buildable by the player) and the other
@@ -109,9 +112,9 @@ londinium/
 1b. Streets (`RoadSystem`, issue #67, D-034, D-070, D-080), only on a map with `roads_enabled` (the strip; the 8x8 of the
    harness has none, so nothing changes there). It runs here because the layout only changes in step 1 and the
    connection decides who works. From the historic streets of the map, the player's streets that join them side by
-   side and the diagonal edges the map lists (`RoadNetwork`): a building with no street of the network on one of its
-   four sides does not work (`no_road_access`), nor one whose inputs have suppliers but none it can reach
-   (`no_route`); step 2 gives neither of them workers and a house without a street holds nobody. Each input comes
+   side and the diagonal edges the map lists (`RoadNetwork`): a building with no street of the network beside any cell
+   on the edge of its footprint (one of its four sides for a 1x1, D-079 with D-086) does not work (`no_road_access`),
+   nor one whose inputs have suppliers but none it can reach (`no_route`); step 2 gives neither of them workers and a house without a street holds nobody. Each input comes
    from the nearest supplier (a building whose recipe makes it, or a good its data `supplies`; the wharf's imported
    flour only while flour imports are on), and its leg is recorded with its street steps. A house gets a good only
    within the `service_radius` (street steps, 0 = the whole network) of a building that `distributes` it; a class's
