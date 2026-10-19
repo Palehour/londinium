@@ -207,6 +207,40 @@ func test_overrides_list_the_anchors_and_named_sites() -> void:
 		assert_false(bad.errors.is_empty(), str(broken))
 
 
+# Issue #176 (D-083): period houses, damaged wharves and lot styles are listed by hand and travel to the map unchanged;
+# a period house stays free land (only data for now) and a damaged wharf stays water.
+func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:
+	var config: Dictionary = _config(3, 2)
+	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 1, 3, 2)]])}
+	var house: Dictionary = {"name": "Period house", "cell": [1, 0], "source": "No sheet",
+		"history": "[INVENTED] A house."}
+	var wharf: Dictionary = {"name": "Damaged wharf", "cell": [1, 1], "repair_cost_ratio": 0.5, "source": "No sheet",
+		"history": "[INVENTED] Damaged."}
+	var styles: Dictionary = {"yard": [[0, 0]], "garden": [[2, 0]]}
+	var importer: MapImporter = MapImporter.new()
+	var map: Dictionary = importer.import_documents(config, layers,
+		{"areas": [], "period_houses": [house], "damaged_wharves": [wharf], "lot_styles": styles})
+	assert_eq(importer.errors, [] as Array[String])
+	assert_eq(map["existing_cells"], [], "The period house is not a standing building yet")
+	assert_true([1, 1] in map["river_cells"], "The damaged wharf stays on the river")
+	var parsed: Dictionary = JSON.parse_string(importer.to_text(map))
+	assert_eq(parsed["period_houses"], JSON.parse_string(JSON.stringify([house])))
+	assert_eq(parsed["damaged_wharves"], JSON.parse_string(JSON.stringify([wharf])))
+	assert_eq(parsed["lot_styles"], JSON.parse_string(JSON.stringify(styles)))
+	var plain: Dictionary = JSON.parse_string(importer.to_text(_import(config, {})))
+	for field: String in ["period_houses", "damaged_wharves", "lot_styles"]:
+		assert_false(plain.has(field), "A map without %s writes no field" % field)
+	for broken: Dictionary in [
+			{"period_houses": [{"name": "Off", "cell": [5, 0], "source": "A", "history": "[INVENTED] A"}]},
+			{"period_houses": [{"name": "Untagged", "cell": [1, 0], "source": "A", "history": "A house"}]},
+			{"damaged_wharves": [{"name": "Unpriced", "cell": [1, 1], "source": "A", "history": "[INVENTED] A"}]},
+			{"lot_styles": {"yard": [[9, 9]]}},
+			{"lot_styles": [[0, 0]]}]:
+		var bad: MapImporter = MapImporter.new()
+		assert_eq(bad.import_documents(config, {}, broken), {}, str(broken))
+		assert_false(bad.errors.is_empty(), str(broken))
+
+
 func test_bad_sources_are_reported_and_give_no_map() -> void:
 	var config: Dictionary = _config(2, 2)
 	var cases: Dictionary = {

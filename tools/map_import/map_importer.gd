@@ -19,7 +19,14 @@ const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vect
 # Historic places read on the sheets by hand (issue #152): anchors carry the building that stands there ("" for none),
 # named sites only a name. Both say which sheet they come from.
 const ANCHORS: String = "anchors"
-const PLACE_FIELDS: Array[String] = [ANCHORS, "named_sites"]
+# Tierra de época (issue #176, D-083): the 1870 houses are listed on free land (placing them in the simulation is a later
+# issue); a damaged wharf carries the share of a new wharf's cost that repairing it takes.
+const PERIOD_HOUSES: String = "period_houses"
+const DAMAGED_WHARVES: String = "damaged_wharves"
+const REPAIR_COST_RATIO: String = "repair_cost_ratio"
+const PLACE_FIELDS: Array[String] = [ANCHORS, "named_sites", PERIOD_HOUSES, DAMAGED_WHARVES]
+# Style of each free lot, only for drawing (#176): style -> cells. The data loader checks that each free cell has one.
+const LOT_STYLES: String = "lot_styles"
 # Liberties of the map as a whole, like water with no date (issue #152), each opening with its tag.
 const HISTORY_NOTES: String = "history_notes"
 
@@ -65,6 +72,7 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	for field: String in PLACE_FIELDS:
 		places[field] = _places(overrides, field, size)
 	var history_notes: Array = _history_notes(overrides)
+	var lot_styles: Dictionary = _lot_styles(overrides, size)
 	# An anchor on land is a standing building (D-075 blocks building there); one on the water, like a wharf, stays water.
 	for anchor: Dictionary in places[ANCHORS]:
 		var cell: Vector2i = Vector2i(anchor["cell"][0], anchor["cell"][1])
@@ -80,6 +88,8 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 			map[field] = places[field]
 	if not history_notes.is_empty():
 		map[HISTORY_NOTES] = history_notes
+	if not lot_styles.is_empty():
+		map[LOT_STYLES] = lot_styles
 	# The distance model (issue #67, D-080): whether the map plays with streets and its diagonal edges (D-058).
 	map["roads_enabled"] = config.get("roads_enabled", false)
 	map["road_diagonals"] = diagonals
@@ -107,6 +117,11 @@ func to_text(map: Dictionary) -> String:
 		for note: String in map[HISTORY_NOTES]:
 			notes.append("    %s" % JSON.stringify(note))
 		lines.append('  "%s": [\n%s\n  ]' % [HISTORY_NOTES, ",\n".join(notes)])
+	if map.has(LOT_STYLES):
+		var styles: Array[String] = []
+		for style: String in map[LOT_STYLES]:
+			styles.append('    "%s": %s' % [style, _cells_text(map[LOT_STYLES][style])])
+		lines.append('  "%s": {\n%s\n  }' % [LOT_STYLES, ",\n".join(styles)])
 	lines.append('  "roads_enabled": %s' % ("true" if map["roads_enabled"] else "false"))
 	var edges: Array[String] = []
 	for edge: Array in map["road_diagonals"]:
@@ -346,28 +361,61 @@ func _places(overrides: Variant, field: String, size: Vector2i) -> Array:
 		errors.append("overrides.json.%s: expected a list" % field)
 		return places
 	for entry: Variant in raw:
-		if not _valid_place(entry, field == ANCHORS, size):
+		if not _valid_place(entry, field, size):
 			errors.append("overrides.json.%s: %s needs a name, a source, a history tag and a cell inside the grid%s"
-				% [field, str(entry), " and a building" if field == ANCHORS else ""])
+				% [field, str(entry), _extra_field_text(field)])
 			continue
 		var cell: Vector2i = _cell(entry["cell"])
 		var place: Dictionary = {"name": str(entry["name"]), "cell": [cell.x, cell.y]}
 		if field == ANCHORS:
 			place["building"] = entry["building"]
+		elif field == DAMAGED_WHARVES:
+			place[REPAIR_COST_RATIO] = entry[REPAIR_COST_RATIO]
 		place["source"] = str(entry["source"])
 		place["history"] = str(entry["history"])
 		places.append(place)
 	return places
 
 
-func _valid_place(entry: Variant, needs_building: bool, size: Vector2i) -> bool:
+func _valid_place(entry: Variant, field: String, size: Vector2i) -> bool:
 	if entry is not Dictionary or not Rect2i(Vector2i.ZERO, size).has_point(_cell(entry.get("cell"))):
 		return false
 	if entry.get("name") is not String or entry.get("source") is not String:
 		return false
 	if entry["name"].is_empty() or entry["source"].is_empty() or not MapDef.is_history_note(entry.get("history")):
 		return false
-	return not needs_building or entry.get("building") is String
+	if field == ANCHORS:
+		return entry.get("building") is String
+	# Only that it is a number: the data loader checks its range.
+	return field != DAMAGED_WHARVES or typeof(entry.get(REPAIR_COST_RATIO)) in [TYPE_INT, TYPE_FLOAT]
+
+
+func _extra_field_text(field: String) -> String:
+	if field == ANCHORS:
+		return " and a building"
+	return " and a %s" % REPAIR_COST_RATIO if field == DAMAGED_WHARVES else ""
+
+
+# The lot styles of overrides.json in the order given, each with its cells; the data loader checks where they stand.
+func _lot_styles(overrides: Variant, size: Vector2i) -> Dictionary:
+	var styles: Dictionary = {}
+	var raw: Variant = overrides.get(LOT_STYLES, {}) if overrides is Dictionary else {}
+	if raw is not Dictionary:
+		errors.append("overrides.json.%s: expected an object of style to cells" % LOT_STYLES)
+		return styles
+	for style: Variant in raw:
+		if style is not String or raw[style] is not Array:
+			errors.append("overrides.json.%s: expected a list of cells for each style" % LOT_STYLES)
+			continue
+		var cells: Array = []
+		for entry: Variant in raw[style]:
+			var cell: Vector2i = _cell(entry)
+			if not Rect2i(Vector2i.ZERO, size).has_point(cell):
+				errors.append("overrides.json.%s.%s: cell %s is outside the grid" % [LOT_STYLES, style, str(entry)])
+				continue
+			cells.append([cell.x, cell.y])
+		styles[style] = cells
+	return styles
 
 
 func _history_notes(overrides: Variant) -> Array:
