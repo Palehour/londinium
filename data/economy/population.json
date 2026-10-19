@@ -14,7 +14,8 @@
     "immigration_per_minute": 4.0, "emigration_per_minute": 4.0,
     "hunger_emigration_threshold": 0.6,
     "hunger_emigration_recovery": 0.75,
-    "hunger_emigration_multiplier": 2.0
+    "hunger_emigration_multiplier": 2.0,
+    "served_capacity_only": true
   },
   "tax": { "rate": 0.25, "base_per_employed_worker_per_minute": 11 },
   "tea": { "per_person_per_minute": 0.2, "satisfaction_bonus": 4.0 }

@@ -757,6 +757,42 @@ func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_sa
 	_assert_invalid("lot_styles: expected an object of style to cells")
 
 
+# Issue #180 (D-085): a period house starts with start_population people, a whole number of at least 0; none when the
+# field is missing.
+func test_a_period_house_starts_with_its_people() -> void:
+	before_each()
+	var map: Dictionary = _period_map()
+	var house: Dictionary = _place("Period house", [2, 0], null, "[INVENTED] A house.")
+	map["period_houses"] = [house]
+	var missing: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_eq(missing.errors, [] as Array[String])
+	if missing.is_ok():
+		assert_eq(missing.catalog.maps[&"whitechapel_1850s"].period_house_population,
+			{Vector2i(2, 0): 0} as Dictionary[Vector2i, int])
+	house["start_population"] = 3
+	var three: DataLoadResult = DataLoader.new().load_documents(_documents)
+	if three.is_ok():
+		assert_eq(three.catalog.maps[&"whitechapel_1850s"].period_house_population[Vector2i(2, 0)], 3)
+	for value: Variant in [-1, 1.5, "none", INF]:
+		house["start_population"] = value
+		_assert_invalid("[2, 0] start_population must be a whole number of at least 0")
+
+
+# Issue #180 (D-085): growth.served_categories is optional and names categories of the class's own needs.
+func test_served_categories_name_categories_of_the_class() -> void:
+	before_each()
+	var loaded: DataLoadResult = DataLoader.new().load_documents(_documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	if loaded.is_ok():
+		assert_eq(loaded.catalog.classes[&"worker"].served_categories, [&"sustento"] as Array[StringName])
+		assert_eq(loaded.catalog.classes[&"artisan"].served_categories, [] as Array[StringName],
+			"Without the field every house counts")
+	var growth: Dictionary = _documents["eras/victorian/classes.json"]["worker"]["growth"]
+	for value: Variant in [["lujo"], [1], "sustento"]:
+		growth["served_categories"] = value
+		_assert_invalid("worker.growth.served_categories:")
+
+
 func test_road_cells_must_be_inside_the_map_and_unique() -> void:
 	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[8, 0]]
 	_assert_invalid("road_cells: out of bounds or duplicate cell")

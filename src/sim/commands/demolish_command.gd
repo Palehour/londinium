@@ -60,9 +60,14 @@ func _demolish_road(state: EconomyState, params: Params) -> void:
 
 
 # A historic anchor of the map is never demolished (issue #152): the building it stands with, or the cell itself when
-# it has no use. Another building on the cell, like one from a saved game (D-076), is demolished as usual.
+# it has no use. The dense housing of an 1870 house is kept the same way (issue #180, D-085). Another building on the
+# cell, like one from a saved game (D-076), is demolished as usual.
 func _is_anchor(definition_id: StringName) -> bool:
-	return _context != null and _context.map.anchors.has(_cell) and _context.map.anchors[_cell] == definition_id
+	if _context == null:
+		return false
+	if definition_id == Simulation.DENSE_HOUSING and _cell in _context.map.period_houses:
+		return true
+	return _context.map.anchors.has(_cell) and _context.map.anchors[_cell] == definition_id
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:

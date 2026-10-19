@@ -29,9 +29,10 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
   `{"name", "cell", "source", "history"}`, solo un nombre en una casilla; no bloquea nada. `history` abre con la
   etiqueta de Chronicler (`[FACT]`, `[FACT ±1]`, `[DEBATED]`, `[LEGEND]` o `[INVENTED]`) y dice qué es cierto y qué
   no. `history_notes` (opcional): las libertades del mapa entero, cada una con su etiqueta.
-  Tierra de época (#176, D-083), todo opcional: `period_houses`, `{"name", "cell", "source", "history"}`, son las casas
-  de 1870 con gente, que van a ser `dense_housing`. Van sobre tierra libre con una calle a un lado (D-079) y no llevan
-  estilo de lote. Por ahora son solo datos: la simulación todavía no las coloca. `damaged_wharves`,
+  Tierra de época (#176, D-083), todo opcional: `period_houses`, `{"name", "cell", "start_population", "source",
+  "history"}`, son las casas de 1870. Van sobre tierra libre con una calle a un lado (D-079) y no llevan estilo de lote.
+  La simulación las coloca como `dense_housing` no demolibles, con `start_population` habitantes (entero ≥ 0, opcional:
+  si falta, 0) (#180, D-085). `damaged_wharves`,
   `{"name", "cell", "repair_cost_ratio", "source", "history"}`, son muelles dañados sobre el río. `repair_cost_ratio`
   es la parte del costo de un `wharf` nuevo que cuesta repararlo: mayor que 0 y como mucho 1 (la reparación es de #177).
   `lot_styles`, `{"<estilo>": [[x, y]]}`, es el estilo de cada lote libre y es solo dibujo (#178): toda casilla de tierra

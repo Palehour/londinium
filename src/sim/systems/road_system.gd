@@ -14,6 +14,8 @@ const NO_ROUTE: StringName = &"no_route"
 const SECONDS_PER_MINUTE: float = 60.0
 # Key of a class's connected houses, beside the goods, in EconomyState.service_rooms.
 const TOTAL: StringName = &"_all"
+# Key of the houses with every good of the class's served categories within reach (issue #180, D-085).
+const SERVED: StringName = &"_served"
 
 # What the last evaluation was made of; the same layout gives the same result.
 var _layout: Array = []
@@ -129,8 +131,8 @@ static func _leg(params: Params, building: Dictionary, good: StringName, supplie
 
 
 # Each house of the class gets each good it needs from the buildings that hand it out within their radius (0 is the
-# whole network). Kept per class: the base capacity and the number of its connected houses, in all and for each good
-# some building hands out (a good nobody hands out stays global).
+# whole network). Kept per class: the base capacity and the number of its connected houses, in all, for each good
+# some building hands out (a good nobody hands out stays global) and served in every served category (D-085).
 static func _add_service(state: EconomyState, params: Params, context: EconomyContext, network: RoadNetwork,
 		def: ClassDef, connected: Array[Dictionary]) -> void:
 	var rooms: Dictionary = {}
@@ -150,12 +152,16 @@ static func _add_service(state: EconomyState, params: Params, context: EconomyCo
 				rooms[need.good] = _add_room(rooms.get(need.good, Vector2.ZERO), capacity)
 		if reachable:
 			rooms[TOTAL] = _add_room(rooms.get(TOTAL, Vector2.ZERO), capacity)
+		if reachable and def.needs.all(func(need: NeedDef) -> bool:
+				return need.category not in def.served_categories or served[need.good]):
+			rooms[SERVED] = _add_room(rooms.get(SERVED, Vector2.ZERO), capacity)
 		state.house_service.append({"cell": building["cell"].duplicate(), "definition_id": id, "class_id": def.id,
 			"connected": reachable, "served": served})
 	if houses == 0:
 		return
-	if not rooms.has(TOTAL):
-		rooms[TOTAL] = Vector2.ZERO
+	for key: StringName in [TOTAL, SERVED]:
+		if not rooms.has(key):
+			rooms[key] = Vector2.ZERO
 	for need: NeedDef in def.needs:
 		if _hands_out(context, need.good) and not rooms.has(need.good):
 			rooms[need.good] = Vector2.ZERO
@@ -180,7 +186,7 @@ static func update_access(state: EconomyState, params: Params, context: EconomyC
 		var housed: float = minf(float(ClassStates.population_of(state, def)), _room(rooms[TOTAL], bonus))
 		var access: Dictionary = {}
 		for good: Variant in rooms:
-			if good == TOTAL:
+			if good in [TOTAL, SERVED]:
 				continue
 			var served: float = _room(rooms[good], bonus)
 			if housed > 0.0:
@@ -189,6 +195,15 @@ static func update_access(state: EconomyState, params: Params, context: EconomyC
 				access[good] = 1.0 if served > 0.0 else 0.0
 		state.service_access[def.id] = access
 	state.bread_access = _city_access(state, context, &"bread")
+
+
+# Room of the class's houses with the goods of its served categories within reach (D-085), housing bonus included.
+# Without streets every house counts, so it is `all_room`, the class's whole housing capacity.
+static func served_room(state: EconomyState, params: Params, def: ClassDef, all_room: int) -> int:
+	if not state.service_rooms.has(def.id):
+		return all_room
+	var bonus: float = float(NeedsSystem.housing_bonus(state, params, def.id))
+	return mini(all_room, floori(_room(state.service_rooms[def.id][SERVED], bonus)))
 
 
 static func _room(room: Vector2, bonus: float) -> float:

@@ -1,8 +1,8 @@
 extends GutTest
 
 # Issue #176 (D-083, task 1 of Mason's breakdown of #171): the free land of the Wapping strip is drawn as 1870 lots,
-# four 1870 houses are listed around the street at (4,4)-(4,5) and one damaged wharf waits on the river. Only data
-# (Cristian, 2026-10-18): placing the houses in the simulation is for Milestone 3, and repairing the wharf #177.
+# four 1870 houses are listed around the street at (4,4)-(4,5) and one damaged wharf waits on the river. Repairing the
+# wharf is #177. The simulation places the houses as empty dense housing since issue #180 (D-085).
 
 const STRIP: StringName = &"riverside_strip"
 const HOUSES: Array[Vector2i] = [Vector2i(4, 3), Vector2i(3, 4), Vector2i(5, 4), Vector2i(5, 5)]
@@ -61,6 +61,15 @@ func test_the_strip_lists_four_invented_period_houses_beside_a_street() -> void:
 		var on_vii_87: bool = cell in HOUSES_ON_VII_87
 		assert_eq(str(entry["source"]).contains("sheet VII.87"), on_vii_87, "Sheet of %s" % cell)
 		assert_eq(str(entry["source"]).contains("VII.77"), not on_vii_87, "Only (4,3) is in the corner of VII.77")
+
+
+# Issue #180 (D-085): the four houses start with nobody, a value of the map's data.
+func test_the_period_houses_start_empty() -> void:
+	var map: MapDef = _catalog.maps[STRIP]
+	for entry: Dictionary in _raw["period_houses"]:
+		assert_eq(entry.get("start_population"), 0.0, "start_population is written in the map (%s)" % str(entry["cell"]))
+	for cell: Vector2i in HOUSES:
+		assert_eq(map.period_house_population.get(cell), 0, str(cell))
 
 
 func test_the_damaged_wharf_is_an_invented_river_cell_with_its_repair_ratio() -> void:

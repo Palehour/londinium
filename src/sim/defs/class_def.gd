@@ -26,6 +26,9 @@ var emigration_per_minute_key: StringName
 var hunger_threshold_key: StringName
 var hunger_recovery_key: StringName
 var hunger_multiplier_key: StringName
+# Need categories whose goods a house must have within reach for immigrants to count its room (issue #180, D-085).
+# Empty: every house counts, as before the rule.
+var served_categories: Array[StringName] = []
 var tax_basis: StringName = TAX_EMPLOYED
 var tax_base_key: StringName
 # Mobility (issue #53): the class people of mobility_from rise into, and fall back from. Empty when the class
@@ -90,6 +93,7 @@ func copy() -> ClassDef:
 	result.hunger_threshold_key = hunger_threshold_key
 	result.hunger_recovery_key = hunger_recovery_key
 	result.hunger_multiplier_key = hunger_multiplier_key
+	result.served_categories = served_categories.duplicate()
 	result.tax_basis = tax_basis
 	result.tax_base_key = tax_base_key
 	result.mobility_from = mobility_from

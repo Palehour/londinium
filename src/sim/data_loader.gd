@@ -26,7 +26,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"growth": {"immigration_threshold": "percent", "emigration_threshold": "percent",
 			"immigration_per_minute": "number", "emigration_per_minute": "number",
 			"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
-			"hunger_emigration_multiplier": "number"},
+			"hunger_emigration_multiplier": "number", "served_capacity_only": "boolean"},
 		"tax": {"rate": "fraction", "base_per_employed_worker_per_minute": "money"},
 		"tea": {"per_person_per_minute": "positive", "satisfaction_bonus": "number"},
 	},
@@ -456,6 +456,8 @@ const CLASS_GROWTH: Dictionary = {"immigration_threshold": "percent", "emigratio
 	"immigration_per_minute": "number", "emigration_per_minute": "number",
 	"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
 	"hunger_emigration_multiplier": "number"}
+# Optional field of a class's growth (issue #180, D-085): the need categories that make a house count for immigrants.
+const CLASS_SERVED_CATEGORIES: String = "served_categories"
 # Optional block of a class (issue #53): how people of another class rise into it and fall back.
 const CLASS_MOBILITY_FIELDS: Array[String] = ["from", "promotion", "demotion"]
 const CLASS_PROMOTION: Dictionary = {"source_satisfaction": "percent", "per_minute": "number"}
@@ -492,6 +494,7 @@ func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 		definition.housing_building = _housing_building(raw[id]["housing_building"], path, claimed, catalog)
 		_load_class_blocks(raw[id], path, definition, catalog)
 		_load_class_needs(raw[id]["needs"], path + ".needs", definition, catalog)
+		_load_served_categories(raw[id]["growth"], path + ".growth", definition)
 		catalog.classes[definition.id] = definition
 	if not raw.is_empty() and bases != 1:
 		_errors.append("%s: exactly one class must be the base class" % _classes_path())
@@ -505,7 +508,12 @@ func _load_classes(raw: Dictionary, catalog: DataCatalog) -> void:
 func _load_class_blocks(raw: Dictionary, path: String, definition: ClassDef, catalog: DataCatalog) -> void:
 	var satisfaction: Dictionary = _class_block(raw["satisfaction"], CLASS_SATISFACTION, path + ".satisfaction",
 		"class.%s.satisfaction" % definition.id, catalog)
-	var growth: Dictionary = _class_block(raw["growth"], CLASS_GROWTH, path + ".growth",
+	# The served categories are names, not numbers: _load_served_categories reads them once the needs are known.
+	var growth_numbers: Variant = raw["growth"]
+	if growth_numbers is Dictionary:
+		growth_numbers = growth_numbers.duplicate()
+		growth_numbers.erase(CLASS_SERVED_CATEGORIES)
+	var growth: Dictionary = _class_block(growth_numbers, CLASS_GROWTH, path + ".growth",
 		"class.%s.growth" % definition.id, catalog)
 	definition.tax_weight_key = satisfaction.get("tax_weight", &"")
 	definition.overcrowding_weight_key = satisfaction.get("overcrowding_weight", &"")
@@ -606,6 +614,25 @@ func _load_class_mobility(raw: Variant, path: String, definition: ClassDef, cata
 	definition.demotion_below_key = demotion["below"]
 	definition.demotion_seconds_key = demotion["seconds"]
 	definition.demotion_per_minute_key = demotion["per_minute"]
+
+
+# A category the class has no need in would never be within reach, so no house of the class would ever count.
+func _load_served_categories(raw: Variant, path: String, definition: ClassDef) -> void:
+	if raw is not Dictionary or not raw.has(CLASS_SERVED_CATEGORIES):
+		return
+	var location: String = "%s.%s" % [path, CLASS_SERVED_CATEGORIES]
+	var categories: Variant = raw[CLASS_SERVED_CATEGORIES]
+	if categories is not Array:
+		_errors.append("%s: expected a list of categories" % location)
+		return
+	var own_categories: Array[StringName] = []
+	for need: NeedDef in definition.needs:
+		own_categories.append(need.category)
+	for category: Variant in categories:
+		if category is not String or StringName(category) not in own_categories:
+			_errors.append("%s: %s is not a category of this class's needs" % [location, str(category)])
+		elif StringName(category) not in definition.served_categories:
+			definition.served_categories.append(StringName(category))
 
 
 # Recovery below the threshold would make the hunger flag flip every tick (same rule as the worker's, per class).
@@ -758,16 +785,21 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 
 
 # The 1870 houses (issue #176, D-083): free land with a street on one side, the access every housing needs (D-079).
-# Only data for now: the simulation does not place them yet.
+# The simulation places them as dense housing (#180, D-085) with start_population people, none when it is missing.
 func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
+		var people: Variant = entry.get("start_population", 0)
 		if not _is_free_land(map, cell):
 			_errors.append("%s: [%d, %d] is not free land" % [location, cell.x, cell.y])
 		elif not map.beside_road(cell):
 			_errors.append("%s: [%d, %d] has no street on any side" % [location, cell.x, cell.y])
+		elif not _is_whole_number(people) or float(people) < 0.0:
+			_errors.append("%s: [%d, %d] start_population must be a whole number of at least 0"
+				% [location, cell.x, cell.y])
 		else:
 			map.period_houses.append(cell)
+			map.period_house_population[cell] = int(people)
 
 
 # Damaged wharves (issue #176, D-083): on the river, where a wharf stands, with the share of a new wharf's cost that
