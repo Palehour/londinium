@@ -1,6 +1,8 @@
 extends GutTest
 
 const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
+# Cells of 25 m on each side of an old cell of 50 m (issue #186, D-086).
+const BLOCK: int = 2
 
 
 func test_defeat_parameters_are_required_and_validate_ranges() -> void:
@@ -268,8 +270,22 @@ func test_fractional_map_cell_is_rejected() -> void:
 	_assert_invalid("river_cells.x: invalid integer")
 
 
+# Since issue #186 (D-086) the 8x8 is 16x16 cells of 25 m: the fixtures of the maps below are written in its old cells,
+# each one its 2x2 block (`_at` for the corner where a building stands, `_blocks` for every cell).
+func _at(old: Array) -> Array:
+	return [old[0] * BLOCK, old[1] * BLOCK]
+
+
+func _blocks(old_cells: Array) -> Array:
+	var cells: Array = []
+	for old: Array in old_cells:
+		for offset: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+			cells.append([old[0] * BLOCK + offset.x, old[1] * BLOCK + offset.y])
+	return cells
+
+
 func test_overlapping_map_cells_are_rejected() -> void:
-	_documents["maps/whitechapel_1850s.json"]["cultivable_cells"] = [[0, 7]]
+	_documents["maps/whitechapel_1850s.json"]["cultivable_cells"] = _blocks([[0, 7]])
 	_assert_invalid("cultivable_cells: out of bounds or duplicate")
 
 
@@ -649,12 +665,12 @@ func test_map_layers_are_optional_and_loaded_when_present() -> void:
 
 
 func test_a_dock_basin_cannot_overlap_the_river() -> void:
-	_documents["maps/whitechapel_1850s.json"]["dock_cells"] = [[0, 7]]
+	_documents["maps/whitechapel_1850s.json"]["dock_cells"] = _blocks([[0, 7]])
 	_assert_invalid("dock_cells: out of bounds or duplicate cell")
 
 
 func test_standing_buildings_cannot_stand_on_water() -> void:
-	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 7]]
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = _blocks([[1, 7]])
 	_assert_invalid("existing_cells: out of bounds or duplicate cell")
 
 
@@ -671,46 +687,49 @@ func _place(name: String, cell: Array, building: Variant = null,
 # standing building otherwise, and dense housing only on a start cell (D-079).
 func test_anchors_must_stand_where_their_building_can() -> void:
 	var cases: Array[Array] = [
-		[_place("Church", [1, 1], ""), "[1, 1] is not a standing building"],
-		[_place("Wharf", [1, 1], "wharf"), "[1, 1] is not on the river"],
-		[_place("House", [1, 1], "dense_housing"), "[1, 1] is not a dense housing start cell"],
-		[_place("Mill", [1, 7], "windmill"), "unknown building windmill"],
-		[_place("", [1, 7], "wharf"), "needs a name, a source and a history tag"],
-		[_place("Wharf", [1, 7], "wharf", "On the sheet"), "needs a name, a source and a history tag"],
+		[_place("Church", _at([1, 1]), ""), "[2, 2] is not a standing building"],
+		[_place("Wharf", _at([1, 1]), "wharf"), "[2, 2] is not on the river"],
+		[_place("House", _at([1, 1]), "dense_housing"), "[2, 2] is not a dense housing start cell"],
+		[_place("Mill", _at([1, 7]), "windmill"), "unknown building windmill"],
+		[_place("", _at([1, 7]), "wharf"), "needs a name, a source and a history tag"],
+		[_place("Wharf", _at([1, 7]), "wharf", "On the sheet"), "needs a name, a source and a history tag"],
+		# The whole footprint counts (D-086): half of the wharf on land.
+		[_place("Wharf", [2, 13], "wharf"), "[2, 13] is not on the river"],
 	]
 	for entry: Array in cases:
 		before_each()
 		if entry[0]["building"] == "dense_housing":
 			# A standing building, so only the missing start cell is wrong.
-			_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1]]
+			_documents["maps/whitechapel_1850s.json"]["existing_cells"] = _blocks([[1, 1]])
 		_documents["maps/whitechapel_1850s.json"]["anchors"] = [entry[0]]
 		_assert_invalid(entry[1])
 	before_each()
-	_documents["maps/whitechapel_1850s.json"]["anchors"] = [_place("Wharf", [1, 7], "wharf")]
-	_documents["maps/whitechapel_1850s.json"]["named_sites"] = [_place("Stairs", [2, 7])]
+	_documents["maps/whitechapel_1850s.json"]["anchors"] = [_place("Wharf", _at([1, 7]), "wharf")]
+	_documents["maps/whitechapel_1850s.json"]["named_sites"] = [_place("Stairs", _at([2, 7]))]
 	_documents["maps/whitechapel_1850s.json"]["history_notes"] = ["[DEBATED] Undated water."]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(result.errors, [] as Array[String])
 	if result.is_ok():
 		var map: MapDef = result.catalog.maps[&"whitechapel_1850s"]
-		assert_eq(map.anchors, {Vector2i(1, 7): &"wharf"} as Dictionary[Vector2i, StringName])
-		assert_eq(map.named_sites, {Vector2i(2, 7): "Stairs"} as Dictionary[Vector2i, String])
+		assert_eq(map.anchors, {Vector2i(2, 14): &"wharf"} as Dictionary[Vector2i, StringName])
+		assert_eq(map.named_sites, {Vector2i(4, 14): "Stairs"} as Dictionary[Vector2i, String])
 	before_each()
 	_documents["maps/whitechapel_1850s.json"]["history_notes"] = ["Undated water"]
 	_assert_invalid("history_notes: expected notes that open with a history tag")
 
 
-# The 8x8 with a standing building at (1,1) and a street at (1,0); every free cell but `house` styled as a yard.
+# The 8x8 with a standing building at (1,1) and a street at (1,0); every free cell but `house` styled as a yard. In old
+# cells, each one its block (D-086).
 func _period_map(house: Array = [2, 0]) -> Dictionary:
 	var map: Dictionary = _documents["maps/whitechapel_1850s.json"]
-	map["existing_cells"] = [[1, 1]]
-	map["road_cells"] = [[1, 0]]
+	map["existing_cells"] = _blocks([[1, 1]])
+	map["road_cells"] = _blocks([[1, 0]])
 	var free: Array = []
 	for y: int in range(7):
 		for x: int in range(8):
 			if [x, y] not in [[1, 1], [1, 0], house]:
 				free.append([x, y])
-	map["lot_styles"] = {"yard": free}
+	map["lot_styles"] = {"yard": _blocks(free)}
 	return map
 
 
@@ -723,45 +742,48 @@ func _damaged_wharf(cell: Array, history: String = "[INVENTED] Damaged.") -> Dic
 func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_says() -> void:
 	before_each()
 	var map: Dictionary = _period_map()
-	map["period_houses"] = [_place("Period house", [2, 0], null, "[INVENTED] A house.")]
-	map["damaged_wharves"] = [_damaged_wharf([2, 7])]
+	map["period_houses"] = [_place("Period house", _at([2, 0]), null, "[INVENTED] A house.")]
+	map["damaged_wharves"] = [_damaged_wharf(_at([2, 7]))]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(result.errors, [] as Array[String])
 	if result.is_ok():
 		var loaded: MapDef = result.catalog.maps[&"whitechapel_1850s"]
-		assert_eq(loaded.period_houses, [Vector2i(2, 0)] as Array[Vector2i])
+		assert_eq(loaded.period_houses, [Vector2i(4, 0)] as Array[Vector2i])
 		assert_true(loaded.anchors.is_empty(), "Only data: a period house is not an anchor yet")
-		assert_eq(loaded.damaged_wharves, [Vector2i(2, 7)] as Array[Vector2i])
-		assert_eq(loaded.lot_styles.size(), 53)
+		assert_eq(loaded.damaged_wharves, [Vector2i(4, 14)] as Array[Vector2i])
+		assert_eq(loaded.lot_styles.size(), 53 * BLOCK * BLOCK)
 		assert_eq(loaded.lot_styles[Vector2i(0, 0)], &"yard")
 	var cases: Array[Array] = [
-		["period_houses", [_place("House", [1, 1], null, "[INVENTED] A house.")], "[1, 1] is not free land"],
-		["period_houses", [_place("House", [2, 0])], ""],
-		["period_houses", [_place("House", [2, 0], null, "A house")], "needs a name, a source and a history tag"],
-		["damaged_wharves", [_damaged_wharf([2, 2])], "[2, 2] is not on the river"],
-		["damaged_wharves", [_damaged_wharf([2, 7], "Damaged")], "needs a name, a source and a history tag"],
+		["period_houses", [_place("House", _at([1, 1]), null, "[INVENTED] A house.")], "[2, 2] is not free land"],
+		["period_houses", [_place("House", _at([2, 0]))], ""],
+		["period_houses", [_place("House", _at([2, 0]), null, "A house")], "needs a name, a source and a history tag"],
+		["damaged_wharves", [_damaged_wharf(_at([2, 2]))], "[4, 4] is not on the river"],
+		["damaged_wharves", [_damaged_wharf(_at([2, 7]), "Damaged")], "needs a name, a source and a history tag"],
+		# The whole footprint counts (D-086): half of the wharf on land.
+		["damaged_wharves", [_damaged_wharf([4, 13])], "[4, 13] is not on the river"],
 	]
 	for entry: Array in cases:
 		before_each()
-		var house: Array = entry[1][0]["cell"] if entry[0] == "period_houses" else [2, 0]
+		var house: Array = [entry[1][0]["cell"][0] / BLOCK, entry[1][0]["cell"][1] / BLOCK] \
+			if entry[0] == "period_houses" else [2, 0]
 		var broken: Dictionary = _period_map(house)
 		if entry[0] == "damaged_wharves":
-			broken["lot_styles"]["yard"].append([2, 0])
+			broken["lot_styles"]["yard"].append_array(_blocks([[2, 0]]))
 		broken[entry[0]] = entry[1]
 		if entry[2].is_empty():
 			assert_true(DataLoader.new().load_documents(_documents).is_ok(), "Any tag will do for a house")
 		else:
 			_assert_invalid(entry[2])
 	before_each()
-	_period_map([3, 3])["period_houses"] = [_place("House", [3, 3])]
-	_assert_invalid("[3, 3] has no street on any side")
+	_period_map([3, 3])["period_houses"] = [_place("House", _at([3, 3]))]
+	_assert_invalid("[6, 6] has no street on any side")
 	before_each()
-	_period_map()["period_houses"] = [_place("House", [2, 0])]
-	_documents["maps/whitechapel_1850s.json"]["lot_styles"]["garden"] = [[2, 0]]
-	_assert_invalid("lot_styles.garden: [2, 0] is not free land")
+	_period_map()["period_houses"] = [_place("House", _at([2, 0]))]
+	_documents["maps/whitechapel_1850s.json"]["lot_styles"]["garden"] = [[5, 1]]
+	_assert_invalid("lot_styles.garden: [5, 1] is not free land")
 	before_each()
-	_period_map([])["lot_styles"]["garden"] = [[2, 7]]
-	_assert_invalid("lot_styles.garden: [2, 7] is not free land")
+	_period_map([])["lot_styles"]["garden"] = [_at([2, 7])]
+	_assert_invalid("lot_styles.garden: [4, 14] is not free land")
 	before_each()
 	_period_map([])["lot_styles"]["garden"] = [[0, 0]]
 	_assert_invalid("lot_styles.garden: out of bounds or duplicate cell")
@@ -778,20 +800,20 @@ func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_sa
 func test_a_period_house_starts_with_its_people() -> void:
 	before_each()
 	var map: Dictionary = _period_map()
-	var house: Dictionary = _place("Period house", [2, 0], null, "[INVENTED] A house.")
+	var house: Dictionary = _place("Period house", _at([2, 0]), null, "[INVENTED] A house.")
 	map["period_houses"] = [house]
 	var missing: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(missing.errors, [] as Array[String])
 	if missing.is_ok():
 		assert_eq(missing.catalog.maps[&"whitechapel_1850s"].period_house_population,
-			{Vector2i(2, 0): 0} as Dictionary[Vector2i, int])
+			{Vector2i(4, 0): 0} as Dictionary[Vector2i, int])
 	house["start_population"] = 3
 	var three: DataLoadResult = DataLoader.new().load_documents(_documents)
 	if three.is_ok():
-		assert_eq(three.catalog.maps[&"whitechapel_1850s"].period_house_population[Vector2i(2, 0)], 3)
+		assert_eq(three.catalog.maps[&"whitechapel_1850s"].period_house_population[Vector2i(4, 0)], 3)
 	for value: Variant in [-1, 1.5, "none", INF]:
 		house["start_population"] = value
-		_assert_invalid("[2, 0] start_population must be a whole number of at least 0")
+		_assert_invalid("[4, 0] start_population must be a whole number of at least 0")
 
 
 # Issue #180 (D-085): growth.served_categories is optional and names categories of the class's own needs.
@@ -810,18 +832,25 @@ func test_served_categories_name_categories_of_the_class() -> void:
 
 
 func test_road_cells_must_be_inside_the_map_and_unique() -> void:
-	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[8, 0]]
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[16, 0]]
 	_assert_invalid("road_cells: out of bounds or duplicate cell")
 	before_each()
 	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 1], [1, 1]]
 	_assert_invalid("road_cells: out of bounds or duplicate cell")
+	# A street is whole pieces of roads.json footprint on the grid of pieces (D-086).
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[2, 2], [3, 2], [2, 3]]
+	_assert_invalid("road_cells: [2, 2] is not part of a whole street piece of 2x2 from [2, 2]")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[3, 2], [4, 2], [3, 3], [4, 3]]
+	_assert_invalid("road_cells: [3, 2] is not part of a whole street piece of 2x2 from [2, 2]")
 
 
 func test_terrain_labels_are_known_on_dry_cells_and_one_per_cell() -> void:
 	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"swamp": [[1, 1]]}
 	_assert_invalid("terrain.swamp: unknown terrain label")
 	before_each()
-	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"riverbank": [[0, 7]]}
+	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"riverbank": [[0, 14]]}
 	_assert_invalid("terrain.riverbank: water or duplicate cell")
 	before_each()
 	_documents["maps/whitechapel_1850s.json"]["terrain"] = {"riverbank": [[1, 6]], "marsh": [[1, 6]]}
@@ -831,23 +860,29 @@ func test_terrain_labels_are_known_on_dry_cells_and_one_per_cell() -> void:
 # Issue #154 (D-079): dense housing starts only on a standing building with a street on one side.
 func test_dense_housing_start_cells_stand_on_existing_cells_beside_a_street() -> void:
 	var small: Dictionary = _documents["maps/whitechapel_1850s.json"]
-	small["existing_cells"] = [[1, 1], [3, 3]]
-	small["road_cells"] = [[1, 2]]
-	small["dense_housing_cells"] = [[1, 1]]
+	small["existing_cells"] = _blocks([[1, 1], [3, 3]])
+	small["road_cells"] = _blocks([[1, 2]])
+	small["dense_housing_cells"] = [_at([1, 1])]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	if result.is_ok():
-		assert_eq(result.catalog.maps[&"whitechapel_1850s"].dense_housing_cells, [Vector2i(1, 1)] as Array[Vector2i])
+		assert_eq(result.catalog.maps[&"whitechapel_1850s"].dense_housing_cells, [Vector2i(2, 2)] as Array[Vector2i])
 	before_each()
-	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1]]
-	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 2]]
-	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [[2, 2]]
-	_assert_invalid("dense_housing_cells: [2, 2] is not a standing building")
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = _blocks([[1, 1]])
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = _blocks([[1, 2]])
+	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [_at([2, 2])]
+	_assert_invalid("dense_housing_cells: [4, 4] is not a standing building")
+	# The whole footprint counts (D-086): half of the house on a standing building.
 	before_each()
-	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = [[1, 1], [3, 3]]
-	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 2]]
-	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [[3, 3]]
-	_assert_invalid("dense_housing_cells: [3, 3] has no street on any side")
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = _blocks([[1, 1]])
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = _blocks([[1, 2]])
+	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [[3, 2]]
+	_assert_invalid("dense_housing_cells: [3, 2] is not a standing building")
+	before_each()
+	_documents["maps/whitechapel_1850s.json"]["existing_cells"] = _blocks([[1, 1], [3, 3]])
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = _blocks([[1, 2]])
+	_documents["maps/whitechapel_1850s.json"]["dense_housing_cells"] = [_at([3, 3])]
+	_assert_invalid("dense_housing_cells: [6, 6] has no street on any side")
 
 
 func test_buildable_is_an_optional_boolean() -> void:
@@ -890,7 +925,8 @@ func test_a_scenario_map_must_exist() -> void:
 
 
 # Issue #67 (D-070, D-080): streets, transport and service radii are data with ranges, and the strip's map says
-# whether it plays with streets and which diagonal edges its historic streets have.
+# whether it plays with streets and which diagonal edges its historic streets have. Since issue #186 (D-086) the
+# radii and the transport are in metres, a cell is map.cell_size_m and a street a piece of roads.json footprint.
 func test_distance_values_load_with_their_numbers() -> void:
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
@@ -899,11 +935,13 @@ func test_distance_values_load_with_their_numbers() -> void:
 	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
 	assert_eq(params.get_value(&"roads.cost"), 10)
 	assert_eq(params.get_value(&"roads.upkeep_per_minute"), 0)
-	assert_eq(params.get_value(&"transport.cost_per_unit_per_step"), 0.1)
-	assert_eq(params.get_value(&"transport.expensive_steps"), 10)
-	assert_eq(params.get_value(&"building.bakery.service_radius"), 8)
-	assert_eq(params.get_value(&"building.brewery.service_radius"), 6)
-	assert_eq(params.get_value(&"building.wharf.service_radius"), 4)
+	assert_eq(params.get_value(&"transport.cost_per_unit_per_m"), 0.002)
+	assert_eq(params.get_value(&"transport.expensive_m"), 500)
+	assert_eq(params.get_value(&"building.bakery.service_radius_m"), 400)
+	assert_eq(params.get_value(&"building.brewery.service_radius_m"), 300)
+	assert_eq(params.get_value(&"building.wharf.service_radius_m"), 200)
+	assert_eq(params.get_value(&"map.cell_size_m"), 25)
+	assert_eq(result.catalog.road_footprint, Vector2i(2, 2))
 	assert_eq(result.catalog.buildings[&"bakery"].distributes, [&"bread"] as Array[StringName])
 	assert_eq(result.catalog.buildings[&"wharf"].distributes, [&"tea"] as Array[StringName])
 	assert_eq(result.catalog.buildings[&"wharf"].supplies, [&"barley", &"flour"] as Array[StringName])
@@ -913,11 +951,17 @@ func test_distance_values_load_with_their_numbers() -> void:
 
 
 func test_distance_values_validate_their_ranges() -> void:
-	_documents["economy/transport.json"]["cost_per_unit_per_step"] = 1.5
-	_assert_invalid("economy/transport.json.cost_per_unit_per_step: invalid number value 1.5")
+	_documents["economy/transport.json"]["cost_per_unit_per_m"] = 0.03
+	_assert_invalid("economy/transport.json.cost_per_unit_per_m: invalid number value 0.03")
 	before_each()
-	_documents["economy/transport.json"]["expensive_steps"] = 0
-	_assert_invalid("economy/transport.json.expensive_steps: invalid positive_integer value 0")
+	_documents["economy/transport.json"]["expensive_m"] = 0
+	_assert_invalid("economy/transport.json.expensive_m: invalid positive_integer value 0")
+	before_each()
+	_documents["economy/map.json"]["cell_size_m"] = 0
+	_assert_invalid("economy/map.json.cell_size_m: invalid positive_integer value 0")
+	before_each()
+	_documents["economy/roads.json"]["footprint"] = [2, 3]
+	_assert_invalid("economy/roads.json.footprint: expected a square piece")
 	before_each()
 	_documents["economy/roads.json"]["cost"] = 1001
 	_assert_invalid("economy/roads.json.cost: invalid money value 1001")
@@ -925,21 +969,21 @@ func test_distance_values_validate_their_ranges() -> void:
 	_documents["economy/roads.json"]["upkeep_per_minute"] = 101
 	_assert_invalid("economy/roads.json.upkeep_per_minute: invalid money value 101")
 	before_each()
-	_documents["economy/buildings.json"]["bakery"]["service_radius"] = 31
-	_assert_invalid("economy/buildings.json.bakery.service_radius: invalid integer value 31")
+	_documents["economy/buildings.json"]["bakery"]["service_radius_m"] = 1501
+	_assert_invalid("economy/buildings.json.bakery.service_radius_m: invalid integer value 1501")
 	before_each()
 	_documents["economy/buildings.json"]["bakery"]["distributes"] = ["cake"]
 	_assert_invalid("economy/buildings.json.bakery.distributes: unknown good cake")
 
 
 func test_a_role_modifies_the_distance_values() -> void:
-	_set_modifier({"key": "transport.cost_per_unit_per_step", "op": "mul", "value": 2})
+	_set_modifier({"key": "transport.cost_per_unit_per_m", "op": "mul", "value": 2})
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	if not result.is_ok():
 		return
 	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
-	assert_almost_eq(float(params.get_value(&"transport.cost_per_unit_per_step")), 0.2, 1e-9)
+	assert_almost_eq(float(params.get_value(&"transport.cost_per_unit_per_m")), 0.004, 1e-9)
 
 
 func test_roads_enabled_is_a_boolean() -> void:
@@ -948,15 +992,15 @@ func test_roads_enabled_is_a_boolean() -> void:
 
 
 func test_diagonal_must_join_historic_roads() -> void:
-	_documents["maps/whitechapel_1850s.json"]["road_cells"] = [[1, 1], [2, 2], [3, 3]]
-	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 2, 2]]
+	_documents["maps/whitechapel_1850s.json"]["road_cells"] = _blocks([[1, 1], [2, 2], [3, 3]])
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[3, 3, 4, 4]]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	if result.is_ok():
-		assert_eq(result.catalog.maps[&"whitechapel_1850s"].road_diagonals, [Vector4i(1, 1, 2, 2)] as Array[Vector4i])
-	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 3, 3]]
-	_assert_invalid("road_diagonals: [1, 1, 3, 3] must join two diagonal street cells")
-	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[3, 3, 4, 4]]
-	_assert_invalid("road_diagonals: [3, 3, 4, 4] must join two diagonal street cells")
+		assert_eq(result.catalog.maps[&"whitechapel_1850s"].road_diagonals, [Vector4i(3, 3, 4, 4)] as Array[Vector4i])
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[3, 3, 6, 6]]
+	_assert_invalid("road_diagonals: [3, 3, 6, 6] must join two diagonal street cells")
+	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[7, 7, 8, 8]]
+	_assert_invalid("road_diagonals: [7, 7, 8, 8] must join two diagonal street cells")
 	_documents["maps/whitechapel_1850s.json"]["road_diagonals"] = [[1, 1, 2]]
 	_assert_invalid("road_diagonals: expected [x1, y1, x2, y2]")

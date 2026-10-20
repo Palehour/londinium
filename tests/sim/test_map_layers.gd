@@ -22,9 +22,10 @@ func _all_cells(map: MapDef) -> Array[Vector2i]:
 	return cells
 
 
-func test_the_strip_is_16_by_12_with_every_layer() -> void:
+# 16x12 cells of 50 m, 32x24 of 25 m since issue #186 (D-086).
+func test_the_strip_is_32_by_24_with_every_layer() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
-	assert_eq(Vector2i(map.width, map.height), Vector2i(16, 12))
+	assert_eq(Vector2i(map.width, map.height), Vector2i(32, 24))
 	for layer: Array[Vector2i] in [map.river_cells, map.dock_cells, map.road_cells, map.existing_cells]:
 		assert_false(layer.is_empty())
 	assert_true(map.terrain.values().has(&"riverbank"))
@@ -34,7 +35,7 @@ func test_the_strip_is_16_by_12_with_every_layer() -> void:
 # the 8x8 that the provisional strip kept (approved by Cristian on 2026-10-18, issue #152 comment 6246250267).
 func test_the_strip_river_comes_from_the_traced_sources() -> void:
 	var strip: MapDef = _catalog.maps[STRIP]
-	for y: int in range(8, strip.height):
+	for y: int in range(16, strip.height):
 		for x: int in range(strip.width):
 			assert_true(Vector2i(x, y) in strip.river_cells, str(Vector2i(x, y)))
 	for cell: Vector2i in _all_cells(strip):
@@ -84,7 +85,7 @@ func test_standing_buildings_block_building() -> void:
 
 func test_the_small_map_has_no_new_layers() -> void:
 	var map: MapDef = _catalog.maps[SMALL]
-	assert_eq(Vector2i(map.width, map.height), Vector2i(8, 8))
+	assert_eq(Vector2i(map.width, map.height), Vector2i(16, 16), "The 8x8 in cells of 25 m (D-086)")
 	assert_true(map.dock_cells.is_empty() and map.road_cells.is_empty() and map.existing_cells.is_empty())
 	assert_true(map.terrain.is_empty())
 

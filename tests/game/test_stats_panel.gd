@@ -162,7 +162,8 @@ func test_the_unloading_slider_sends_the_split_and_follows_the_snapshot() -> voi
 func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_use_game_without_anchors([Modifier.new(&"population.initial_bread", &"set", 0)])
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
-		var cell: Vector2i = Vector2i(0, 7) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size(), 1)
+		# Cells of 25 m, each building on its own 2x2 block (D-086).
+		var cell: Vector2i = Vector2i(0, 14) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
 		_session.submit_command(BuildCommand.new(_session.context, id, cell))
 		_session.simulation.tick()
 	_session.submit_command(SetWheatPurchasesCommand.new(false))
@@ -171,7 +172,7 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	assert_string_contains(bread, Strings.text(Strings.BREAD_SHORT))
 	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")])
 	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("mill"), Strings.reason(&"no_input")])
-	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 7, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
+	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 14, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
 
 
 # Issue #106: one staffed wharf at 30 % barley brings 7 of the 10 wheat a staffed mill grinds.
@@ -179,7 +180,8 @@ func _bread_chain_with_split(barley_percent: int) -> void:
 	_use_game_without_anchors([Modifier.new(&"population.initial_bread", &"set", 0)])
 	_session.submit_command(SetUnloadingSplitCommand.new(barley_percent))
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
-		var cell: Vector2i = Vector2i(0, 7) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size(), 1)
+		# Cells of 25 m, each building on its own 2x2 block (D-086).
+		var cell: Vector2i = Vector2i(0, 14) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
 		_session.submit_command(BuildCommand.new(_session.context, id, cell))
 		_session.simulation.tick()
 	_tick()
@@ -864,19 +866,19 @@ func test_a_split_off_the_notch_shows_as_it_is_until_the_slider_moves() -> void:
 	assert_eq(_session.get_snapshot()["market"]["barley"]["barley_percent"], 40)
 
 
-# Issue #168 (D-080): a leg of 10 steps or more (transport.expensive_steps) is named under the buildings; a short one
-# is not.
+# Issue #168 (D-080): a leg of 10 steps or more (transport.expensive_m, 500 m since issue #186) is named under the
+# buildings with its metres; a short one is not.
 func test_panel_warns_about_an_expensive_transport_leg() -> void:
 	var snapshot: Dictionary = _session.get_snapshot()
 	snapshot["distance"]["legs"] = [
 		{"cell": [3, 4], "definition_id": &"bakery", "good": &"flour", "supplier_cell": [7, 8],
-			"supplier_id": &"mill", "steps": 12, "cost_per_minute": 1.2, "expensive": true},
+			"supplier_id": &"mill", "steps": 12, "cost_per_minute": 1.2, "expensive": true, "metres": 600},
 		{"cell": [5, 5], "definition_id": &"mill", "good": &"wheat", "supplier_cell": [5, 6],
-			"supplier_id": &"wharf", "steps": 2, "cost_per_minute": 0.2, "expensive": false},
+			"supplier_id": &"wharf", "steps": 2, "cost_per_minute": 0.2, "expensive": false, "metres": 100},
 	]
 	_panel.update_snapshot(snapshot)
 	var buildings: String = _text("_buildings")
 	assert_string_contains(buildings, Strings.text(Strings.TRANSPORT_EXPENSIVE)
-		% [Strings.building_label("bakery"), 3, 4, Strings.building_label("mill"), 7, 8, 12])
+		% [Strings.building_label("bakery"), 3, 4, Strings.building_label("mill"), 7, 8, 600])
 	assert_false(buildings.contains(Strings.text(Strings.TRANSPORT_EXPENSIVE)
-		% [Strings.building_label("mill"), 5, 5, Strings.building_label("wharf"), 5, 6, 2]), "A short leg is not named")
+		% [Strings.building_label("mill"), 5, 5, Strings.building_label("wharf"), 5, 6, 100]), "A short leg is not named")

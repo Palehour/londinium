@@ -251,7 +251,7 @@ func test_the_split_can_be_set_from_a_scenario() -> void:
 	var scenario: Dictionary = {
 		"id": "barley_split", "description": "x", "notes": "x", "seed": 42, "duration_ticks": 60,
 		"commands": [
-			{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+			{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
 			{"tick": 0, "cmd": "set_unloading_split", "barley_percent": 50}],
 	}
 	assert_eq(runner.validate(scenario), [])
@@ -515,7 +515,7 @@ func test_the_scenario_csv_exports_the_barley_so_the_columns_reconcile_with_the_
 	var scenario: Dictionary = {
 		"id": "barley_csv", "description": "x", "notes": "x", "seed": 42, "duration_ticks": 180,
 		"commands": [
-			{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
+			{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
 			{"tick": 0, "cmd": "set_unloading_split", "barley_percent": 100}],
 	}
 	assert_eq(runner.validate(scenario), [])

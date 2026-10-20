@@ -5,9 +5,13 @@ generado a mano:** cambiá las fuentes o `overrides.json` y reimportá.
 
 ## Archivos
 - `import.json`: la grilla. `origin` es la esquina noroeste en metros British National Grid (EPSG:27700),
-  `cell_metres` el lado de la casilla (50 m, D-069), `width`/`height` en casillas, `samples_per_axis` cuántas
-  muestras por eje se toman en cada casilla, y `priority` el orden de desempate entre clases. `roads_enabled`
-  (opcional, `false` si falta) dice si el mapa se juega con calles (#67, D-080): `true` en la franja.
+  `cell_metres` el lado de la casilla (25 m desde #186, D-086; era 50 m, D-069), `width`/`height` en casillas,
+  `samples_per_axis` cuántas muestras por eje se toman en cada casilla, y `priority` el orden de desempate entre clases.
+  `roads_enabled` (opcional, `false` si falta) dice si el mapa se juega con calles (#67, D-080): `true` en la franja.
+  `raster_block` (opcional, 1 si falta) lee las capas en casillas de `raster_block` × `cell_metres` y cada una llena
+  su bloque de `raster_block` × `raster_block` casillas: en la franja es 2, así que el cambio a 25 m deja cada casilla
+  de 50 m como su bloque de 2×2, sin leer de nuevo las fuentes (#186, D-086). La orilla también se lee por bloque y un
+  ancla en tierra marca su bloque entero como edificación existente. `overrides.json` va en las casillas del mapa.
 - Capas en GeoJSON, EPSG:27700 (todas opcionales). En la franja salen del export de OpenHistoricalMap (ver abajo):
   - `river.geojson`, `docks.geojson`, `marsh.geojson`, `existing.geojson`: polígonos (se admiten huecos y
     MultiPolygon). Cada casilla toma la clase que cubre la mayoría de sus muestras; lo que no cubre ningún
@@ -60,16 +64,17 @@ queda libre. `sources.json` dice de dónde sale cada cosa:
 - **Calles, río y dársenas:** OpenHistoricalMap, CC0. `ohm_export.json` es la respuesta de Overpass a
   `ohm_1870.overpassql`, bajada el 2026-10-18; se guardan solo las vías en pie en 1870. **Hueco conocido de OHM:** no
   tiene Wapping High Street ni ninguna calle de la ribera, así que la franja no la trae (`sources.json`,
-  `known_gaps`). Agregarla desde la hoja NLS es una decisión aparte: costaría unas 11 casillas libres.
+  `known_gaps`). Agregarla desde la hoja NLS es una decisión aparte: costaría unas 44 casillas libres de 25 m (11 de
+  50 m).
 - **Libertades** (`history_notes`): el Támesis de OHM no tiene fecha [DEBATED], y la esclusa de Wapping no entra a
-  50 m por casilla, así que la Wapping Basin queda cerrada al río [INVENTED].
+  25 m por casilla, así que la Wapping Basin queda cerrada al río [INVENTED].
 - **Anclas y sitios con nombre:** leídos en las hojas OS London 1:1056 VII.78, VII.87 y VII.88 (NLS, CC-BY, por
   IIIF, con la capa moderna apagada). Los recortes a 1/8 están en `nls_sheets/`; `sources.json` (`nls`) da sus
   puntos de control (esquinas de calles de OHM por id de nodo y esquinas de marco compartidas) y dónde está cada
   sitio en su hoja. `tools/map_sources --compare` (#170) escribe `nls_report.md` (el error de cada punto y la casilla
   de cada sitio según la hoja) y `docs/screenshots/riverside_strip_compare.png`; `--check` avisa si quedaron viejos.
   Cómo bajar y unir una hoja: `tools/map_sources/README.md`.
-- **Esquina noroeste** (casillas x 0-5, y 0-3): cae en la hoja VII.77, que no tiene edición de 1862-74; ahí van
+- **Esquina noroeste** (casillas x 0-11, y 0-7): cae en la hoja VII.77, que no tiene edición de 1862-74; ahí van
   solo las calles de OHM y la tierra queda libre.
 
 Para bajar el export otra vez (no lo hace ningún test ni el CI):

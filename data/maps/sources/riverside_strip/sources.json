@@ -7,7 +7,7 @@
     "downloaded": "2026-10-18",
     "licence": "CC0 1.0 (OpenHistoricalMap, https://www.openhistoricalmap.org/copyright)",
     "layers": ["roads.geojson", "river.geojson", "docks.geojson"],
-    "known_gaps": ["OHM has no Wapping High Street (nor any street along the river), so the strip has none; adding it from the NLS sheet is a separate decision, since it would cost about 11 free cells."]
+    "known_gaps": ["OHM has no Wapping High Street (nor any street along the river), so the strip has none; adding it from the NLS sheet is a separate decision, since it would cost about 44 free cells."]
   },
   "nls": {
     "series": "Ordnance Survey, London 1:1056, surveyed 1862-74, single sheets through IIIF (decision of Cristian, 2026-10-18: not the tile bucket)",
@@ -58,7 +58,7 @@
       {"name": "Wapping Old Stairs", "sheet": "VII.88", "pixel": [2413.6, 3946.4]}
     ],
     "gap": {
-      "cells": [0, 0, 6, 4],
+      "cells": [0, 0, 12, 8],
       "note": "The north-west corner falls on sheet VII.77, which has no 1862-74 edition: only the OHM streets there, and the land stays free (option A, decision of Cristian, 2026-10-18)."
     }
   }

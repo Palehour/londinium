@@ -4,8 +4,9 @@ extends RefCounted
 # Step 1b of the tick (issue #67, D-034, D-070, D-080): production still goes to the global store, the streets
 # decide access. A building with no street of the network beside it does not work ("no_road_access"), nor one
 # whose inputs have suppliers but none it can reach ("no_route"). Each input comes from the nearest supplier and
-# its leg costs units x steps x k (MoneySystem pays it). A house gets a good only within the service radius of a
-# building that hands it out, and people move into the served houses first. Everything here is derived from the
+# its leg costs units x metres x k (MoneySystem pays it). A house gets a good only within the service radius of a
+# building that hands it out, and people move into the served houses first. Routes are measured in metres since
+# issue #186 (D-086): the street pieces walked times the side of a piece. Everything here is derived from the
 # layout and the people, worked out again each tick and never saved, so a loaded game gets the same coverage as one
 # that never stopped.
 
@@ -34,7 +35,7 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 
 
 static func evaluate(state: EconomyState, params: Params, context: EconomyContext) -> void:
-	var network: RoadNetwork = RoadNetwork.build(context.map, state.player_roads)
+	var network: RoadNetwork = RoadNetwork.build(context.map, state.player_roads, context.road_footprint)
 	state.road_blocked.clear()
 	state.transport_legs.clear()
 	state.house_service.clear()
@@ -51,14 +52,27 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 		_add_service(state, params, context, network, def, connected)
 
 
-# Transport of this tick: every leg's units taken out of the store times its steps times k, in pence.
-static func transport_cost(state: EconomyState, params: Params) -> float:
-	var rate: float = float(params.get_value(&"transport.cost_per_unit_per_step"))
+# Transport of this tick: every leg's units taken out of the store times its metres times k, in pence. Worked out as
+# units x pieces x (k x metres of a piece), the order of the sums on cells of 50 m, so the pence come out the same.
+static func transport_cost(state: EconomyState, params: Params, context: EconomyContext) -> float:
+	if state.transport_legs.is_empty():
+		return 0.0
+	var rate: float = _piece_rate(params, context)
 	var cost: float = 0.0
 	for leg: Dictionary in state.transport_legs:
 		var cell: Vector2i = Vector2i(int(leg["cell"][0]), int(leg["cell"][1]))
 		cost += float(state.transport_units_tick.get(cell, 0)) * int(leg["steps"]) * rate
 	return cost
+
+
+# Metres along the streets of a route of this many pieces (issue #186, D-086).
+static func metres(params: Params, context: EconomyContext, steps: int) -> int:
+	return steps * context.road_footprint.x * int(params.get_value(&"map.cell_size_m"))
+
+
+# Transport per unit for each piece walked.
+static func _piece_rate(params: Params, context: EconomyContext) -> float:
+	return float(params.get_value(&"transport.cost_per_unit_per_m")) * metres(params, context, 1)
 
 
 # What the views read: the player's streets, the buildings that do not work and why, every leg and every house.
@@ -115,19 +129,20 @@ static func _add_legs(state: EconomyState, params: Params, context: EconomyConte
 		if nearest.is_empty():
 			state.road_blocked[cell] = NO_ROUTE
 			return
-		legs.append(_leg(params, building, good, nearest, nearest_steps))
+		legs.append(_leg(params, context, building, good, nearest, nearest_steps))
 	state.transport_legs.append_array(legs)
 
 
-static func _leg(params: Params, building: Dictionary, good: StringName, supplier: Dictionary,
-		steps: int) -> Dictionary:
+static func _leg(params: Params, context: EconomyContext, building: Dictionary, good: StringName,
+		supplier: Dictionary, steps: int) -> Dictionary:
 	var prefix: String = "building.%s.recipe" % building["definition_id"]
 	var per_minute: float = float(params.get_value(StringName("%s.inputs.%s" % [prefix, good]))) \
 		* SECONDS_PER_MINUTE / float(params.get_value(StringName(prefix + ".seconds")))
+	var length: int = metres(params, context, steps)
 	return {"cell": building["cell"].duplicate(), "definition_id": building["definition_id"], "good": good,
 		"supplier_cell": supplier["cell"].duplicate(), "supplier_id": supplier["definition_id"], "steps": steps,
-		"cost_per_minute": per_minute * steps * float(params.get_value(&"transport.cost_per_unit_per_step")),
-		"expensive": steps >= int(params.get_value(&"transport.expensive_steps"))}
+		"cost_per_minute": per_minute * steps * _piece_rate(params, context),
+		"expensive": length >= int(params.get_value(&"transport.expensive_m")), "metres": length}
 
 
 # Each house of the class gets each good it needs from the buildings that hand it out within their radius (0 is the
@@ -217,11 +232,11 @@ static func _is_served(params: Params, context: EconomyContext, network: RoadNet
 	for building: Dictionary in connected:
 		if good not in context.buildings[building["definition_id"]].distributes:
 			continue
-		var radius: int = int(params.get_value(StringName("building.%s.service_radius" % building["definition_id"])))
+		var radius: int = int(params.get_value(StringName("building.%s.service_radius_m" % building["definition_id"])))
 		if radius == 0:
 			return true
 		var steps: int = network.steps(context.area_of(building), context.area_of(house))
-		if steps != RoadNetwork.NO_ROUTE and steps <= radius:
+		if steps != RoadNetwork.NO_ROUTE and metres(params, context, steps) <= radius:
 			return true
 	return false
 

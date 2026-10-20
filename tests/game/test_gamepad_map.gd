@@ -194,7 +194,8 @@ func test_dpad_moves_cursor_and_camera_follows() -> void:
 	assert_eq(geometry.selected, start + Vector2i(1, 1))
 	geometry.zoom = geometry.minimum_zoom() * geometry.max_zoom_factor
 	geometry.constrain()
-	for press: int in range(16):
+	# As many presses as the map is wide (32 cells of 25 m since issue #186, D-086).
+	for press: int in range(_session(view).context.map.width):
 		_pad(JOY_BUTTON_DPAD_LEFT)
 	assert_eq(geometry.selected.x, 0, "The cursor stops at the edge of the map")
 	var screen: Vector2 = geometry.cell_to_screen(geometry.selected)

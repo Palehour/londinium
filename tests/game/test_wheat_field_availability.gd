@@ -1,5 +1,7 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
+
 
 class FixtureView extends "res://src/game/map_view/map_view.gd":
 	var fixture_catalog: DataLoadResult
@@ -21,7 +23,9 @@ func _fixture(has_cultivable_cells: bool, changed_tags: bool = false) -> Node2D:
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
 				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
-	documents["maps/whitechapel_1850s.json"]["cultivable_cells"] = [[2, 2]] if has_cultivable_cells else []
+	# The whole block, as a field of 2x2 needs (D-086).
+	documents["maps/whitechapel_1850s.json"]["cultivable_cells"] = [[4, 4], [5, 4], [4, 5], [5, 5]] \
+		if has_cultivable_cells else []
 	if changed_tags:
 		documents["economy/buildings.json"]["wheat_field"]["tags"].erase("cultivable")
 		documents["economy/buildings.json"]["bakery"]["tags"].append("cultivable")
@@ -76,7 +80,7 @@ func test_no_cultivable_cells_disables_help_and_shortcut_with_same_reason() -> v
 	var click: InputEventMouseButton = InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
-	click.position = geometry.cell_to_screen(Vector2i(2, 2)) + Vector2(0, presentation.layout["header_height"])
+	click.position = geometry.cell_to_screen(Vector2i(4, 4)) + Vector2(0, presentation.layout["header_height"])
 	view.call("_unhandled_input", click)
 	session.simulation.tick()
 	session.publish_tick()
@@ -92,13 +96,13 @@ func test_cultivable_cells_keep_normal_help_and_construction_mode() -> void:
 	_press(view, KEY_5)
 	assert_eq(view.get("_building_type"), &"wheat_field")
 	assert_ne((view.get("_status") as Label).text, Strings.text(Strings.NO_CULTIVABLE_CELLS))
-	_click(view, Vector2i(2, 2))
+	_click(view, Vector2i(4, 4))
 	var session: GameSession = view.get("session") as GameSession
 	var buildings: Array = session.get_snapshot()["economy"]["buildings"]
 	assert_eq(buildings.size(), 1)
 	if not buildings.is_empty():
 		assert_eq(buildings[0]["definition_id"], &"wheat_field")
-		assert_eq(buildings[0]["cell"], [2, 2])
+		assert_eq(buildings[0]["cell"], [4, 4])
 
 
 func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> void:
@@ -120,7 +124,7 @@ func test_artisan_housing_is_built_from_key_eight() -> void:
 	assert_string_contains(help, "8 %s" % Strings.building_label("artisan_housing"))
 	_press(view, KEY_8)
 	assert_eq(view.get("_building_type"), &"artisan_housing")
-	_click(view, Vector2i(4, 2))
+	_click(view, Vector2i(8, 4))
 	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
 	assert_eq(buildings.size(), 1)
 	assert_eq(buildings[0]["definition_id"], &"artisan_housing")
@@ -134,10 +138,10 @@ func test_malthouse_and_brewery_are_built_from_keys_six_and_seven() -> void:
 	assert_false(help.contains("6 " + _disabled_mark(Strings.building_label("malthouse"))))
 	_press(view, KEY_6)
 	assert_eq(view.get("_building_type"), &"malthouse")
-	_click(view, Vector2i(2, 2))
+	_click(view, Vector2i(4, 4))
 	_press(view, KEY_7)
 	assert_eq(view.get("_building_type"), &"brewery")
-	_click(view, Vector2i(3, 2))
+	_click(view, Vector2i(6, 4))
 	var buildings: Array = (view.get("session") as GameSession).get_snapshot()["economy"]["buildings"]
 	assert_eq(buildings.size(), 2)
 	assert_eq(buildings[0]["definition_id"], &"malthouse")

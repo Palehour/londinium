@@ -1,1 +1,1 @@
-{ "cost": 10, "upkeep_per_minute": 0 }
+{ "cost": 10, "upkeep_per_minute": 0, "footprint": [2, 2] }

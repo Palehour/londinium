@@ -6,11 +6,11 @@
   "duration_ticks": 4500,
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
-    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
-    {"tick": 240, "cmd": "demolish", "cell": [2, 5], "wait_for_money": 180},
-    {"tick": 240, "cmd": "build", "building": "mill", "cell": [2, 5], "after_previous_ticks": 160, "wait_for_money": 180}
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
+    {"tick": 240, "cmd": "demolish", "cell": [4, 10], "wait_for_money": 180},
+    {"tick": 240, "cmd": "build", "building": "mill", "cell": [4, 10], "after_previous_ticks": 160, "wait_for_money": 180}
   ]
 }

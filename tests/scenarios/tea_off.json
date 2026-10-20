@@ -6,11 +6,11 @@
   "duration_ticks": 900,
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.85},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
-    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [7, 3]}
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [12, 6]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [14, 6]}
   ]
 }

@@ -29,7 +29,7 @@ const USAGE: String = """Usage: godot --headless --path . -s tools/balance_repor
                         (easy, normal, hard; issue #70). Not with --wheat-price or --wheat-max-price.
                         It also plays the scripts of tests/scenarios/<id>/, written for that preset
                         (hard/: the *_hard ones of issue #128, which buy later for the 800 d of Hard)
-  --strip               also play the scenarios on the 16x12 strip with streets (tests/scenarios/strip/, issue #67);
+  --strip               also play the scenarios on the 32x24 strip with streets (tests/scenarios/strip/, issue #67);
                         without it the output is the same as before the streets
   --help                show this text
 A run in which a scripted command is refused (or never runs) is left out of the summary, counted in

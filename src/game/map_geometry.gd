@@ -31,6 +31,11 @@ func cell_to_screen(cell: Vector2i) -> Vector2:
 	return ((Vector2(cell) + Vector2(0.5, 0.5)) * cell_size - center) * zoom + viewport_size / 2.0
 
 
+# The cells of a footprint or a street piece in map coordinates, before the camera (issue #186, D-086).
+func area_rect(area: Rect2i) -> Rect2:
+	return Rect2(Vector2(area.position) * cell_size, Vector2(area.size) * cell_size)
+
+
 func screen_to_cell(screen: Vector2) -> Vector2i:
 	return Vector2i((screen_to_world(screen) / cell_size).floor())
 

@@ -2,6 +2,7 @@ extends GutTest
 
 # Issue #51: malthouse (barley -> malt) and brewery (malt -> beer). Nothing eats beer until #52, so a full
 # warehouse stops the producer instead of throwing the output away.
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 
 class StockCommand extends SimulationCommand:
@@ -118,7 +119,7 @@ func test_full_chain_turns_every_barley_into_two_beers_without_rounding_loss() -
 # Issue #51 review: the tick that uses the last of the reserved input is not a starved tick, even though the
 # end-of-tick diagnostics already say there is no input.
 func test_a_mill_that_uses_its_last_wheat_in_a_tick_is_not_counted_as_starved() -> void:
-	_initial.buildings.append({"definition_id": &"mill", "cell": [1, 1]})
+	_initial.buildings.append({"definition_id": &"mill", "cell": [2, 2]})
 	_initial.stocks[&"wheat"] = 10
 	var sim: Simulation = _sim()
 	for index: int in range(60):
@@ -412,5 +413,5 @@ func test_role_modifiers_that_leave_the_range_are_rejected() -> void:
 func test_malthouse_and_brewery_are_buildable_on_land_but_not_on_the_river() -> void:
 	for id: StringName in [&"malthouse", &"brewery"]:
 		assert_eq(_context.building_unavailable_reason(id), &"")
-		assert_eq(_context.terrain_placement_reason(id, Vector2i(2, 2)), &"")
-		assert_eq(_context.terrain_placement_reason(id, Vector2i(2, 7)), &"requires_land")
+		assert_eq(_context.terrain_placement_reason(id, Vector2i(4, 4)), &"")
+		assert_eq(_context.terrain_placement_reason(id, Vector2i(4, 14)), &"requires_land")

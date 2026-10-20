@@ -1,5 +1,7 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
+
 const MINUTES: int = 15
 
 var _runner: ScenarioRunner
@@ -16,9 +18,9 @@ func _scenario(commands: Array, seed_value: int = 42, duration: int = 900) -> Di
 
 func _chain() -> Array:
 	return [
-		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 7]},
-		{"tick": 0, "cmd": "build", "building": "mill", "cell": [2, 5]},
-		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5]},
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+		{"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
+		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
 	]
 
 
@@ -40,8 +42,8 @@ func test_valid_scenario_has_no_errors() -> void:
 func test_validation_rejects_bad_scripts() -> void:
 	var cases: Dictionary[String, Array] = {
 		"unknown cmd": [{"tick": 0, "cmd": "teleport"}],
-		"unknown building": [{"tick": 0, "cmd": "build", "building": "castle", "cell": [1, 1]}],
-		"cell outside the map": [{"tick": 0, "cmd": "demolish", "cell": [8, 0]}],
+		"unknown building": [{"tick": 0, "cmd": "build", "building": "castle", "cell": [2, 2]}],
+		"cell outside the map": [{"tick": 0, "cmd": "demolish", "cell": [16, 0]}],
 		"cell not a pair": [{"tick": 0, "cmd": "demolish", "cell": [1]}],
 		"tick past the end": [{"tick": 900, "cmd": "set_tax", "rate": 0.5}],
 		"negative tick": [{"tick": -1, "cmd": "set_tax", "rate": 0.5}],
@@ -61,7 +63,7 @@ func test_validation_rejects_missing_header_fields() -> void:
 
 func test_rejected_command_is_reported_unless_expected() -> void:
 	# The wharf only goes on river cells (y = 7), so this build is refused.
-	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 5]}]
+	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 10]}]
 	var result: ScenarioResult = _runner.run(_scenario(script, 42, 60))
 	assert_eq(result.unexpected_rejections().size(), 1)
 	assert_eq(result.unexpected_rejections()[0]["reason"], &"requires_river")
@@ -71,14 +73,14 @@ func test_rejected_command_is_reported_unless_expected() -> void:
 
 func test_expected_rejection_that_succeeds_is_reported() -> void:
 	# Housing on a land cell is accepted; the script claims it should be refused.
-	var script: Array = [{"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3], "expect_reject": "insufficient_money"}]
+	var script: Array = [{"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6], "expect_reject": "insufficient_money"}]
 	var result: ScenarioResult = _runner.run(_scenario(script, 42, 60))
 	assert_eq(result.unexpected_rejections().size(), 1)
 	assert_true(result.unexpected_rejections()[0]["accepted"])
 
 
 func test_expected_rejection_with_a_different_reason_is_reported() -> void:
-	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 5], "expect_reject": "insufficient_money"}]
+	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 10], "expect_reject": "insufficient_money"}]
 	assert_eq(_runner.run(_scenario(script, 42, 60)).unexpected_rejections().size(), 1)
 
 
@@ -89,7 +91,7 @@ func test_accepted_commands_are_logged() -> void:
 
 
 func test_command_runs_before_the_tick_it_is_scheduled_on() -> void:
-	var script: Array = [{"tick": 70, "cmd": "build", "building": "housing", "cell": [5, 3]}]
+	var script: Array = [{"tick": 70, "cmd": "build", "building": "housing", "cell": [10, 6]}]
 	var result: ScenarioResult = _runner.run(_scenario(script, 42, 180))
 	assert_eq(result.row(1)["n_housing"], 0, "tick 70 is after minute 1")
 	assert_eq(result.row(2)["n_housing"], 1)
@@ -159,12 +161,12 @@ func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner()
 
 
 func _extra_chain(first_extra: Dictionary) -> Array:
-	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [4, 7]}
+	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 14]}
 	wharf.merge(first_extra)
 	# A high tax so the first chain's profit can pay for the second one.
 	return [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [wharf,
-		{"tick": 60, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
-		{"tick": 60, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}]
+		{"tick": 60, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
+		{"tick": 60, "cmd": "build", "building": "bakery", "cell": [10, 10], "with_previous": true}]
 
 
 func test_wait_for_money_buys_the_group_in_one_tick_once_the_treasury_reaches_it() -> void:
@@ -213,11 +215,11 @@ func test_validation_of_wait_for_money_and_with_previous() -> void:
 
 func _city_with_mill_crisis(demolish_tick: int, rebuild_tick: int) -> Array:
 	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.5}] + _chain() + [
-		{"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]},
-		{"tick": 0, "cmd": "build", "building": "housing", "cell": [6, 3]},
-		{"tick": demolish_tick, "cmd": "demolish", "cell": [2, 5]}]
+		{"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
+		{"tick": 0, "cmd": "build", "building": "housing", "cell": [12, 6]},
+		{"tick": demolish_tick, "cmd": "demolish", "cell": [4, 10]}]
 	if rebuild_tick > 0:
-		commands.append({"tick": rebuild_tick, "cmd": "build", "building": "mill", "cell": [2, 5]})
+		commands.append({"tick": rebuild_tick, "cmd": "build", "building": "mill", "cell": [4, 10]})
 	return commands
 
 
@@ -290,9 +292,9 @@ func test_a_wait_after_commands_of_the_same_tick_sees_what_they_spent() -> void:
 	# The first chain is queued at tick 0 and has not touched the treasury yet. A wait for 540 behind
 	# it must not be released by the 1050 of the starting treasury: after the chain only 510 is left.
 	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [
-		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 7], "wait_for_money": 540},
-		{"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 5], "with_previous": true},
-		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [5, 5], "with_previous": true}]
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [8, 14], "wait_for_money": 540},
+		{"tick": 0, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
+		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [10, 10], "with_previous": true}]
 	var result: ScenarioResult = _runner.run(_scenario(commands))
 	assert_eq(result.unexpected_rejections(), [] as Array[Dictionary], "the group was not released on stale funds")
 	var tick: int = result.second_chain_purchase_tick()
@@ -320,7 +322,7 @@ func test_a_wait_is_not_postponed_by_a_set_wheat_purchases_in_the_same_tick() ->
 
 func test_a_wait_is_not_postponed_by_a_refused_command_in_the_same_tick() -> void:
 	# A wharf on a land cell is refused (requires_river), so it spends nothing.
-	var refused: Dictionary = {"tick": 0, "cmd": "build", "building": "wharf", "cell": [2, 5],
+	var refused: Dictionary = {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 10],
 		"expect_reject": "requires_river"}
 	assert_eq(_wait_executed_tick(refused, 0, 60), 0)
 
@@ -334,7 +336,7 @@ func test_a_wait_on_the_last_tick_still_runs_after_a_non_spending_command() -> v
 
 func test_a_wait_is_postponed_only_when_an_accepted_build_takes_it_below_the_amount() -> void:
 	# Housing costs 60 and leaves 990, still above 100: nothing to wait for.
-	var cheap: Dictionary = {"tick": 0, "cmd": "build", "building": "housing", "cell": [5, 3]}
+	var cheap: Dictionary = {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]}
 	assert_eq(_wait_executed_tick(cheap, 0, 60), 0)
 	# The same housing against a wait for 1050 (the whole starting treasury) does have to wait.
 	var result: ScenarioResult = _runner.run(_scenario([cheap,
@@ -349,7 +351,7 @@ func test_a_wait_after_a_build_in_a_lost_game_ends_as_simulation_defeated_not_ne
 	# treasury. On the last tick the build is refused by the defeat; if the preview counted it as
 	# spending 60, the wait for 1050 would be postponed past the end and show up as never_ran.
 	var commands: Array = [
-		{"tick": 599, "cmd": "build", "building": "housing", "cell": [5, 3], "expect_reject": "simulation_defeated"},
+		{"tick": 599, "cmd": "build", "building": "housing", "cell": [10, 6], "expect_reject": "simulation_defeated"},
 		{"tick": 599, "cmd": "set_tax", "rate": 0.4, "wait_for_money": 1050, "expect_reject": "simulation_defeated"}]
 	var result: ScenarioResult = _runner.run(_scenario(commands, 42, 600))
 	assert_gt(result.defeat_tick, 0, "the game was lost before the last tick")
@@ -402,7 +404,7 @@ func test_preset_scenario_files_are_valid_and_adapt_an_existing_script() -> void
 
 
 func test_validation_rejects_bad_set_stock_relative_waits_measures_and_in_all() -> void:
-	var cut: Array = [{"tick": 0, "cmd": "demolish", "cell": [3, 5]}]
+	var cut: Array = [{"tick": 0, "cmd": "demolish", "cell": [6, 10]}]
 	var cases: Dictionary[String, Dictionary] = {
 		"in_all not a bool": {"in_all": "no"},
 		"unknown good": {"commands": [{"tick": 0, "cmd": "set_stock", "good": "gin", "amount": 0}]},
@@ -424,9 +426,9 @@ func test_validation_rejects_bad_set_stock_relative_waits_measures_and_in_all() 
 		var scenario: Dictionary = _scenario(_chain())
 		scenario.merge(cases[label], true)
 		assert_gt(_runner.validate(scenario).size(), 0, label)
-	var good: Dictionary = _scenario(_chain() + [{"tick": 0, "cmd": "demolish", "cell": [3, 5],
+	var good: Dictionary = _scenario(_chain() + [{"tick": 0, "cmd": "demolish", "cell": [6, 10],
 		"after_artisans_ticks": 60}, {"tick": 0, "cmd": "set_stock", "good": "beer", "amount": 0, "with_previous": true},
-		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [3, 5], "after_previous_ticks": 300,
+		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10], "after_previous_ticks": 300,
 		"wait_for_money": 100}])
 	good.merge({"in_all": false, "measure": {"tax_window": [10, 15],
 		"beer_cut": {"recovery_minutes": 5, "recovered_share": 0.8}}}, true)

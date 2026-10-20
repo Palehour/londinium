@@ -35,9 +35,10 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		assert_typeof(catalog.base_values[key], TYPE_INT, str(key))
 
 
-# Task 1 of D-086 (issue #184) changes no scale: every building keeps one cell, written out in the data. Which
-# buildings grow is decided later (#186 and its own decisions).
-func test_every_building_is_one_by_one_for_now() -> void:
+# Task 1 of D-086 (issue #184) changed no scale and kept every building in one cell. Task 3 (issue #186) makes every
+# building 2x2 cells of 25 m, the cell of 50 m it had, written out in the data. Which buildings change size is decided
+# later, building by building.
+func test_every_building_is_two_by_two() -> void:
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy/buildings.json"))
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), str(result.errors))
@@ -45,8 +46,8 @@ func test_every_building_is_one_by_one_for_now() -> void:
 		return
 	for id: StringName in result.catalog.buildings:
 		# JSON numbers come back as floats.
-		assert_eq(raw[String(id)].get("footprint"), [1.0, 1.0], "%s says its footprint" % id)
-		assert_eq(result.catalog.buildings[id].footprint, Vector2i.ONE, String(id))
+		assert_eq(raw[String(id)].get("footprint"), [2.0, 2.0], "%s says its footprint" % id)
+		assert_eq(result.catalog.buildings[id].footprint, Vector2i(2, 2), String(id))
 
 
 func test_whitechapel_has_no_cultivation_or_pending_content() -> void:

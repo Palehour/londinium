@@ -46,7 +46,7 @@ Every pixel is a full-resolution pixel of the IIIF sheet (`<iiif>/info.json` giv
   one of its pixels. `map_area` is the neatline: outside every neatline there is no sheet.
 - A control point is an OHM street corner (`ohm_node`, a node id of the export) or a neatline corner shared with a
   sheet listed before it (`same_as`), whose position that sheet's fit gives. Two points are the least; with more, the
-  report shows each one's error. A point more than 25 m off (half a cell) gets a `note` in sources.json.
+  report shows each one's error. A point more than 25 m off (half a cell of 50 m, a whole cell of 25 m since #186) gets a `note` in sources.json.
 
 ## Downloading a sheet
 The NLS IIIF server serves at most 270 000 pixels per request, so a crop comes in tiles of 4096 sheet pixels cut at

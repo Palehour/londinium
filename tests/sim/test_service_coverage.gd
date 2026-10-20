@@ -17,7 +17,8 @@ func before_each() -> void:
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
 	_context = RoadTestMap.street(_catalog, WIDTH)
-	_radius = int(_params().get_value(&"building.bakery.service_radius"))
+	# In street steps: the radius is in metres since issue #186 (D-086), a step is one street piece.
+	_radius = int(_params().get_value(&"building.bakery.service_radius_m")) / RoadSystem.metres(_params(), _context, 1)
 	_initial = EconomyState.new()
 	_initial.money = 100000
 	_initial.population = 10
@@ -59,7 +60,7 @@ func test_house_one_step_beyond_radius_is_not() -> void:
 
 func test_radius_zero_is_global() -> void:
 	var role: RoleDef = RoleDef.new()
-	role.modifiers.append(Modifier.new(&"building.bakery.service_radius", &"set", 0))
+	role.modifiers.append(Modifier.new(&"building.bakery.service_radius_m", &"set", 0))
 	var sim: Simulation = _sim([WIDTH] as Array[int], role)
 	assert_true(_served(sim, WIDTH))
 
@@ -95,14 +96,14 @@ func test_unserved_share_lowers_hunger_coverage() -> void:
 
 func test_house_without_street_adds_no_capacity() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads)
 	var one: Simulation = Simulation.new(_params(), _initial, 7, context)
-	one.apply_command(BuildCommand.new(context, &"housing", Vector2i(0, 0)))
+	one.apply_command(BuildCommand.new(context, &"housing", RoadTestMap.cell(Vector2i(0, 0))))
 	one.tick()
 	var two: Simulation = Simulation.new(_params(), _initial, 7, context)
-	two.apply_command(BuildCommand.new(context, &"housing", Vector2i(0, 0)))
-	two.apply_command(BuildCommand.new(context, &"housing", Vector2i(4, 2)))
+	two.apply_command(BuildCommand.new(context, &"housing", RoadTestMap.cell(Vector2i(0, 0))))
+	two.apply_command(BuildCommand.new(context, &"housing", RoadTestMap.cell(Vector2i(4, 2))))
 	two.tick()
 	assert_eq(two.snapshot()["economy"]["buildings"].size(), 2)
 	assert_eq(two.snapshot()["economy"]["housing_capacity"], one.snapshot()["economy"]["housing_capacity"])
-	assert_false(RoadTestMap.entry(two.snapshot(), "houses", Vector2i(4, 2))["connected"])
+	assert_false(RoadTestMap.entry(two.snapshot(), "houses", RoadTestMap.cell(Vector2i(4, 2)))["connected"])

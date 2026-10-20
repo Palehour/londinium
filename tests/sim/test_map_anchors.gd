@@ -4,18 +4,21 @@ extends GutTest
 # anchors are fixed. Pier Head is the starting dense housing (D-079) and Oliver's Wharf a working wharf; St John's,
 # St Peter's and the Town of Ramsgate stand with no use; the Thames Police station and Wapping Old Stairs are named
 # sites with no building. No anchor is ever demolished.
+# Issue #186 (D-086): cells of 25 m. Each old cell (x, y) is its block from (2x, 2y), an anchor with a use covers the
+# footprint of its building and the floor of free land is 176 cells of 25 m (44 of 50 m).
 
 const STRIP: StringName = &"riverside_strip"
-const PIER_HEAD: Vector2i = Vector2i(8, 6)
-# The warehouse is at (8,7), but no street reaches the river there: the wharf stands on the nearest river cell beside
+const PIER_HEAD: Vector2i = Vector2i(16, 12)
+# The warehouse is at (16,14), but no street reaches the river there: the wharf stands on the nearest river cell beside
 # one, Well Alley, the rule Cristian set for Pier Head (2026-10-18).
-const OLIVERS_WHARF: Vector2i = Vector2i(10, 8)
-const ST_JOHNS: Vector2i = Vector2i(9, 5)
-const THAMES_POLICE: Vector2i = Vector2i(12, 7)
+const OLIVERS_WHARF: Vector2i = Vector2i(20, 16)
+const ST_JOHNS: Vector2i = Vector2i(18, 10)
+const THAMES_POLICE: Vector2i = Vector2i(24, 14)
 # The corner of sheet VII.77, which has no 1862-74 edition (option A of 2026-10-18), as Mason counted it.
-const NO_SHEET_CORNER: Rect2i = Rect2i(0, 0, 6, 4)
-# Criterion approved by Cristian (2026-10-18): at least this many free cells, counting the anchors with a use.
-const FREE_FLOOR: int = 44
+const NO_SHEET_CORNER: Rect2i = Rect2i(0, 0, 12, 8)
+# Criterion approved by Cristian (2026-10-18): at least this many free cells, counting the anchors with a use. D-086
+# writes it as a surface: 176 cells of 25 m, the 44 of 50 m.
+const FREE_FLOOR: int = 176
 
 var _catalog: DataCatalog
 var _strip: EconomyContext
@@ -43,13 +46,17 @@ func _building_at(sim: Simulation, cell: Vector2i) -> Dictionary:
 
 
 func _free_cells(map: MapDef, outside: Rect2i = Rect2i()) -> int:
+	var used: Array[Vector2i] = []
+	for anchor: Vector2i in map.anchors:
+		if map.anchors[anchor] != &"":
+			used.append_array(EconomyContext.cells_of(Rect2i(anchor, _catalog.buildings[map.anchors[anchor]].footprint)))
 	var count: int = 0
 	for y: int in range(map.height):
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
 			if outside.has_point(cell):
 				continue
-			if map.anchors.get(cell, &"") != &"":
+			if cell in used:
 				count += 1
 			elif cell not in map.river_cells and cell not in map.dock_cells and cell not in map.road_cells \
 					and cell not in map.existing_cells:

@@ -4,7 +4,9 @@ extends RefCounted
 # Turns layers traced in QGIS (GeoJSON in British National Grid metres, EPSG:27700) into the cell layers of
 # data/maps/<id>.json (issue #60, D-069, D-073, D-074). Deterministic: the same folder always gives the same text.
 # A folder holds import.json (grid), optional <layer>.geojson files and overrides.json (hand fixes applied last,
-# so a new import never loses them).
+# so a new import never loses them). With raster_block (issue #186, D-086) the layers are read on cells of raster_block
+# x cell_metres and each one fills its block of raster_block x raster_block cells, the scale change without a new
+# reading of the sources; the overrides are in the cells of the map.
 
 const CONFIG_FIELDS: Array[String] = ["id", "width", "height", "origin", "cell_metres", "samples_per_axis", "priority"]
 # Polygon layers and the area class each one paints; "land" is what no polygon covers.
@@ -54,18 +56,23 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	if not _valid_config(config):
 		return {}
 	var size: Vector2i = Vector2i(int(config["width"]), int(config["height"]))
+	var block: int = int(config.get("raster_block", 1))
+	var raster: Dictionary = config.duplicate()
+	raster["cell_metres"] = float(config["cell_metres"]) * block
 	var areas: Array[Dictionary] = []
 	var roads: Array[PackedVector2Array] = []
 	for layer: Variant in layers:
 		if layer == ROAD_LAYER:
-			roads = _lines(layers[layer], config)
+			roads = _lines(layers[layer], raster)
 		elif AREA_LAYERS.has(layer):
-			for rings: Array[PackedVector2Array] in _polygons(layers[layer], config):
+			for rings: Array[PackedVector2Array] in _polygons(layers[layer], raster):
 				areas.append({"class": AREA_LAYERS[layer], "rings": rings})
 		else:
 			errors.append("%s: unknown layer" % layer)
-	var classes: Dictionary[Vector2i, String] = _rasterize_areas(areas, size, config)
-	var road_cells: Dictionary[Vector2i, bool] = _rasterize_roads(roads, size)
+	var classes: Dictionary[Vector2i, String] = {}
+	classes.assign(_blocks(_rasterize_areas(areas, size / block, raster), size, block))
+	var road_cells: Dictionary[Vector2i, bool] = {}
+	road_cells.assign(_blocks(_rasterize_roads(roads, size / block), size, block))
 	_apply_overrides(overrides, classes, road_cells, size)
 	var start_cells: Array = _dense_housing_cells(overrides, size)
 	var diagonals: Array = _diagonals(overrides, size)
@@ -74,14 +81,17 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 		places[field] = _places(overrides, field, size)
 	var history_notes: Array = _history_notes(overrides)
 	var lot_styles: Dictionary = _lot_styles(overrides, size)
-	# An anchor on land is a standing building (D-075 blocks building there); one on the water, like a wharf, stays water.
+	# An anchor on land is a standing building (D-075 blocks building there), its whole block; one on the water, like a
+	# wharf, stays water.
 	for anchor: Dictionary in places[ANCHORS]:
-		var cell: Vector2i = Vector2i(anchor["cell"][0], anchor["cell"][1])
-		if classes[cell] not in WATER:
-			classes[cell] = "existing"
+		var area: Rect2i = Rect2i(Vector2i(anchor["cell"][0], anchor["cell"][1]), Vector2i(block, block))
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				if classes.has(Vector2i(x, y)) and classes[Vector2i(x, y)] not in WATER:
+					classes[Vector2i(x, y)] = "existing"
 	if not errors.is_empty():
 		return {}
-	var map: Dictionary = _map(config, classes, road_cells, size)
+	var map: Dictionary = _map(config, classes, road_cells, size, block)
 	if not start_cells.is_empty():
 		map["dense_housing_cells"] = start_cells
 	for field: String in PLACE_FIELDS:
@@ -154,6 +164,11 @@ func _valid_config(config: Variant) -> bool:
 	priority.sort()
 	if typeof(config.get("roads_enabled", false)) != TYPE_BOOL:
 		errors.append("import.json.roads_enabled: expected true or false")
+	var block: Variant = config.get("raster_block", 1)
+	if errors.is_empty() and (typeof(block) not in [TYPE_INT, TYPE_FLOAT] or float(block) < 1
+			or float(block) != floorf(float(block)) or int(config["width"]) % int(block) != 0
+			or int(config["height"]) % int(block) != 0):
+		errors.append("import.json.raster_block: expected a whole number of at least 1 that divides width and height")
 	var classes: Array[String] = AREA_CLASSES.duplicate()
 	classes.sort()
 	if priority != classes:
@@ -258,6 +273,17 @@ func _inside(point: Vector2, rings: Array[PackedVector2Array]) -> bool:
 
 # A street marks every cell its centre line crosses, so a diagonal comes out as a staircase whose steps share a
 # side (#67 joins road cells through their four sides).
+# Each cell read on the coarse grid fills its block of the map.
+func _blocks(coarse: Dictionary, size: Vector2i, block: int) -> Dictionary:
+	var cells: Dictionary = {}
+	for y: int in range(size.y):
+		for x: int in range(size.x):
+			var cell: Vector2i = Vector2i(x, y)
+			if coarse.has(cell / block):
+				cells[cell] = coarse[cell / block]
+	return cells
+
+
 func _rasterize_roads(lines: Array[PackedVector2Array], size: Vector2i) -> Dictionary[Vector2i, bool]:
 	var cells: Dictionary[Vector2i, bool] = {}
 	for line: PackedVector2Array in lines:
@@ -455,7 +481,7 @@ func _rect(raw: Variant) -> Rect2i:
 
 
 func _map(config: Dictionary, classes: Dictionary[Vector2i, String], road_cells: Dictionary[Vector2i, bool],
-		size: Vector2i) -> Dictionary:
+		size: Vector2i, block: int) -> Dictionary:
 	var layers: Dictionary[String, Array] = {"river": [], "dock": [], "existing": [], "marsh": [], "riverbank": []}
 	var roads: Array = []
 	# Row by row, so the output order never depends on dictionary order.
@@ -463,7 +489,7 @@ func _map(config: Dictionary, classes: Dictionary[Vector2i, String], road_cells:
 		for x: int in range(size.x):
 			var cell: Vector2i = Vector2i(x, y)
 			var kind: String = classes[cell]
-			if kind == "land" and _beside_water(cell, classes):
+			if kind == "land" and _beside_water(cell, classes, block):
 				kind = "riverbank"
 			if layers.has(kind):
 				layers[kind].append([x, y])
@@ -474,9 +500,11 @@ func _map(config: Dictionary, classes: Dictionary[Vector2i, String], road_cells:
 		"existing_cells": layers["existing"], "terrain": {"riverbank": layers["riverbank"], "marsh": layers["marsh"]}}
 
 
-func _beside_water(cell: Vector2i, classes: Dictionary[Vector2i, String]) -> bool:
+# Whether the cell's block has water on a side: the riverbank is read on the coarse grid too, a whole block of it.
+func _beside_water(cell: Vector2i, classes: Dictionary[Vector2i, String], block: int) -> bool:
+	var origin: Vector2i = cell - Vector2i(posmod(cell.x, block), posmod(cell.y, block))
 	for side: Vector2i in SIDES:
-		if classes.get(cell + side, "") in WATER:
+		if classes.get(origin + side * block, "") in WATER:
 			return true
 	return false
 

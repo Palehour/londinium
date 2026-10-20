@@ -760,12 +760,12 @@ func _buildings_text(diagnostics: Dictionary, distance: Dictionary) -> String:
 			split = ""
 	if buildings.is_empty():
 		lines.append(Strings.text(Strings.NO_BUILDINGS))
-	# A leg of transport.expensive_steps or more (issue #168, D-080); the simulation marks it.
+	# A leg of transport.expensive_m or more (issue #168, D-080, in metres since #186); the simulation marks it.
 	for leg: Dictionary in distance["legs"]:
 		if leg["expensive"]:
 			lines.append(Strings.text(Strings.TRANSPORT_EXPENSIVE) % [Strings.building_label(String(leg["definition_id"])),
 				leg["cell"][0], leg["cell"][1], Strings.building_label(String(leg["supplier_id"])), leg["supplier_cell"][0],
-				leg["supplier_cell"][1], leg["steps"]])
+				leg["supplier_cell"][1], leg["metres"]])
 	return "\n".join(lines)
 
 

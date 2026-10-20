@@ -1,5 +1,6 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 var _catalog: DataCatalog
 var _params: Params
 var _context: EconomyContext
@@ -86,9 +87,9 @@ func test_bailey_real_chain_without_housing_survives_maximum_tax_and_stabilizes_
 		state.population = 30
 		state.money = 10000
 		var sim: Simulation = Simulation.create_new(_params, state, 42, _context)
-		var wharf: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 7))
+		var wharf: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 14))
 		var mill: BuildCommand = BuildCommand.new(_context, &"mill", Vector2i(0, 0))
-		var bakery: BuildCommand = BuildCommand.new(_context, &"bakery", Vector2i(1, 0))
+		var bakery: BuildCommand = BuildCommand.new(_context, &"bakery", Vector2i(2, 0))
 		sim.apply_command(wharf)
 		sim.apply_command(mill)
 		sim.apply_command(bakery)
@@ -189,10 +190,10 @@ func test_real_chain_with_one_house_and_maximum_tax_finishes_with_26_residents()
 	state.money = 10000
 	var sim: Simulation = Simulation.create_new(_params, state, 42, _context)
 	var commands: Array[BuildCommand] = [
-		BuildCommand.new(_context, &"wharf", Vector2i(0, 7)),
+		BuildCommand.new(_context, &"wharf", Vector2i(0, 14)),
 		BuildCommand.new(_context, &"mill", Vector2i(0, 0)),
-		BuildCommand.new(_context, &"bakery", Vector2i(1, 0)),
-		BuildCommand.new(_context, &"housing", Vector2i(2, 0))]
+		BuildCommand.new(_context, &"bakery", Vector2i(2, 0)),
+		BuildCommand.new(_context, &"housing", Vector2i(4, 0))]
 	for command: BuildCommand in commands:
 		sim.apply_command(command)
 	for index: int in range(300):

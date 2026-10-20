@@ -54,7 +54,7 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 		return terrain_reason
 	# On a map with streets (issue #67) a street cell stays a street.
 	if map.roads_enabled and EconomyContext.cells_of(area).any(func(cell: Vector2i) -> bool:
-			return BuildRoadCommand.is_street(state, map, cell)):
+			return BuildRoadCommand.is_street(state, _context, cell)):
 		return &"road_cell"
 	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"
