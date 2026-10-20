@@ -51,7 +51,8 @@ jobs:
 
       - name: Run tests
         run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
-        timeout-minutes: 8
+        # GUT takes ~5 min on a fast runner and ~8 on a slow one: 8 cut slow runners with no failed test (#192).
+        timeout-minutes: 12
 
       # Per-minute CSV of the scripted scenarios (tests/scenarios/) so Mason can tune data/ without Godot.
       # It never fails on values; the scenario tests above do that.
