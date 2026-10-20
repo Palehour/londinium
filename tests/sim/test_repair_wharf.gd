@@ -120,3 +120,29 @@ func test_a_repaired_wharf_is_not_repaired_twice_until_it_is_demolished() -> voi
 	assert_eq(_run(sim, RepairWharfCommand.new(DAMAGED_WHARF)).reason, &"occupied_cell")
 	assert_true(_run(sim, DemolishCommand.new(DAMAGED_WHARF)).accepted, "Not an anchor: it is demolished as usual")
 	assert_true(_run(sim, RepairWharfCommand.new(DAMAGED_WHARF)).accepted, "The ruin is still there")
+
+
+# Issue #178: the map draws each damaged wharf that can be repaired now and its cost, read from the snapshot, so the
+# screen holds no rule of its own.
+func test_the_snapshot_lists_the_damaged_wharves_that_can_be_repaired_and_their_cost() -> void:
+	var repair: int = floori(int(_params().get_value(&"building.wharf.cost")) * 0.5)
+	var sim: Simulation = _sim(10000)
+	assert_eq(sim.snapshot()["repair"]["wharves"], [{"cell": [DAMAGED_WHARF.x, DAMAGED_WHARF.y], "cost": repair}])
+	assert_true(_run(sim, RepairWharfCommand.new(DAMAGED_WHARF)).accepted)
+	assert_eq(sim.snapshot()["repair"]["wharves"], [], "A repaired wharf is a wharf, not a ruin")
+	assert_true(_run(sim, DemolishCommand.new(DAMAGED_WHARF)).accepted)
+	assert_eq(sim.snapshot()["repair"]["wharves"].size(), 1, "The ruin is back once its wharf is demolished")
+
+
+func test_the_snapshot_cost_follows_the_ratio_and_ignores_the_treasury() -> void:
+	var new_wharf: int = int(_params().get_value(&"building.wharf.cost"))
+	var sim: Simulation = _sim(0, [Modifier.new(RATIO_KEY, &"set", 0.25)])
+	assert_eq(sim.snapshot()["repair"]["wharves"][0]["cost"], floori(new_wharf * 0.25),
+		"Shown even without the money, so the player knows what to save for")
+
+
+func test_a_map_without_damaged_wharves_lists_none() -> void:
+	var role: RoleDef = RoleDef.new()
+	var harness: EconomyContext = EconomyContext.new(_catalog, _catalog.maps[MapDef.DEFAULT_ID])
+	var sim: Simulation = Simulation.new(SimTestParams.isolated_params(_catalog, role), EconomyState.new(), 7, harness)
+	assert_eq(sim.snapshot()["repair"]["wharves"], [])

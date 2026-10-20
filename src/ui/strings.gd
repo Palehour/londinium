@@ -35,6 +35,11 @@ const MODE: StringName = &"ui.mode"
 # The player's street on the build cycle (issue #168), and the panel's warning for a long transport leg (D-080).
 const ROAD: StringName = &"ui.road"
 const TRANSPORT_EXPENSIVE: StringName = &"ui.transport_expensive"
+# Tierra de época (issue #178, D-083): the legend of the lots, the damaged wharf on the map and its repair.
+const LOTS_LEGEND: StringName = &"ui.lots_legend"
+const DAMAGED_WHARF: StringName = &"ui.damaged_wharf"
+const REPAIR_HINT: StringName = &"ui.repair_hint"
+const REPAIR_HINT_GAMEPAD: StringName = &"ui.repair_hint_gamepad"
 const PENDING: StringName = &"ui.pending"
 const SUCCESS: StringName = &"ui.success"
 const LOAD_ERROR: StringName = &"ui.load_error"
@@ -135,6 +140,11 @@ const TERRAIN_LABELS: Dictionary[String, StringName] = {
 	"land": &"ui.terrain.land", "river": &"ui.terrain.river", "cultivable": &"ui.terrain.cultivable",
 	"dock": &"ui.terrain.dock", "road": &"ui.terrain.road", "player_road": &"ui.terrain.player_road",
 	"existing": &"ui.terrain.existing",
+}
+# The lot styles of data/maps (issue #176), in legend order. The simulation never reads them.
+const LOT_STYLE_LABELS: Dictionary[StringName, StringName] = {
+	&"yard": &"ui.lot.yard", &"timber_yard": &"ui.lot.timber_yard", &"garden": &"ui.lot.garden",
+	&"plain": &"ui.lot.plain",
 }
 const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 	&"bankruptcy": &"ui.condition.bankruptcy", &"hunger": &"ui.condition.hunger",
@@ -254,6 +264,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"historic_road": &"ui.reason.historic_road",
 	# Historic anchors of the traced map (issue #152).
 	&"historic_anchor": &"ui.reason.historic_anchor",
+	# Repairing a damaged wharf (issue #177).
+	&"not_damaged_wharf": &"ui.reason.not_damaged_wharf",
 	&"roads_disabled": &"ui.reason.roads_disabled",
 }
 
@@ -338,7 +350,8 @@ static func reason(key: StringName) -> String:
 static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
-		HELP, HELP_GAMEPAD, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, ROAD, TRANSPORT_EXPENSIVE, PENDING, SUCCESS,
+		HELP, HELP_GAMEPAD, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, ROAD, TRANSPORT_EXPENSIVE,
+		LOTS_LEGEND, DAMAGED_WHARF, REPAIR_HINT, REPAIR_HINT_GAMEPAD, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,
@@ -357,6 +370,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
 	for building_id: String in BUILDING_LABELS:
 		_append_unique(keys, BUILDING_LABELS[building_id])
+	for style_id: StringName in LOT_STYLE_LABELS:
+		_append_unique(keys, LOT_STYLE_LABELS[style_id])
 	for class_id: StringName in CLASS_LABELS:
 		_append_unique(keys, CLASS_LABELS[class_id])
 	for category_id: StringName in CATEGORY_LABELS:

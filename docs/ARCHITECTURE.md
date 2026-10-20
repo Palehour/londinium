@@ -277,6 +277,12 @@ marks `expensive` under the buildings. X demolishes only after it is held for `d
 cell cursor, cancels without a command, and finishing the hold submits one demolish even if X stays down. The stick
 does not cancel it. While the panel has the focus, X does not start or finish a hold. B goes back to selecting, the
 stick pans and the triggers zoom one step. Delete still demolishes on press.
+Tierra de época (issue #178, D-083): free land is drawn in the colour of its lot style (`lot_styles` of the map,
+colours in `data/ui/map.json`, a second legend row), and each damaged wharf the snapshot lists as repairable
+(`snapshot()["repair"]["wharves"]`: cell and cost, from `RepairWharfCommand.snapshot`) is drawn over its footprint with
+its price. The mode line names the selected lot and, on any cell of a damaged wharf, the repair and its cost; R (Y on
+the gamepad) sends a `RepairWharfCommand` for that wharf. Elsewhere it goes for the selected cell and the simulation
+answers `not_damaged_wharf`.
 **Panel**: Menu calls `StatsPanel.enter_focus()`, which makes buttons, switches and sliders focusable and focuses the
 first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
 map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys
