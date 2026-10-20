@@ -3,11 +3,12 @@ extends GutTest
 # Issue #177 (D-083): repairing the damaged wharf of the strip turns its cell into a wharf and costs
 # repair.wharf_cost_ratio of a new wharf, rounded down to whole pence. Only a damaged wharf cell with nothing on it can be
 # repaired, and only with the money. A new wharf may still be built there instead (Cristian, 2026-10-19).
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 const STRIP: StringName = &"riverside_strip"
-const DAMAGED_WHARF: Vector2i = Vector2i(14, 7)
-const PLAIN_RIVER: Vector2i = Vector2i(13, 7)
-const LAND: Vector2i = Vector2i(13, 6)
+const DAMAGED_WHARF: Vector2i = Vector2i(28, 14)
+const PLAIN_RIVER: Vector2i = Vector2i(26, 14)
+const LAND: Vector2i = Vector2i(26, 12)
 const RATIO_KEY: StringName = &"repair.wharf_cost_ratio"
 
 var _catalog: DataCatalog
@@ -95,7 +96,7 @@ func test_a_wharf_is_not_repaired_without_the_money() -> void:
 
 
 func test_only_a_damaged_wharf_cell_can_be_repaired() -> void:
-	for cell: Vector2i in [PLAIN_RIVER, LAND, Vector2i(-1, 7), Vector2i(16, 7)]:
+	for cell: Vector2i in [PLAIN_RIVER, LAND, Vector2i(-2, 14), Vector2i(32, 14)]:
 		var sim: Simulation = _sim(10000)
 		var command: SimulationCommand = _run(sim, RepairWharfCommand.new(cell))
 		assert_false(command.accepted, str(cell))

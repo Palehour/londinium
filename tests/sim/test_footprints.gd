@@ -3,6 +3,8 @@ extends GutTest
 # Issue #184 (D-086, task 1 of #183): a building covers footprint w x h cells from its cell, the north-west corner.
 # Placing, occupying, demolishing and street access (D-079) go by the whole footprint; a 1x1 building plays as it
 # always did. The bakery is made 2x2 here because every building in the data is still 1x1.
+# Since issue #186 (D-086) the data has every building in 2x2 and the streets in pieces of 2x2: these rules are checked
+# on the sizes they were written for, every other building 1x1 and streets of one cell (`_one_by_one`).
 
 const BIG: StringName = &"bakery"
 const SIZE: Vector2i = Vector2i(2, 2)
@@ -20,10 +22,18 @@ func before_each() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
+	_one_by_one(_catalog)
 	_catalog.buildings[BIG].footprint = SIZE
 	_initial = EconomyState.new()
 	_initial.money = 100000
 	_initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 0})
+
+
+# The sizes of before issue #186: buildings of one cell and streets of one cell.
+func _one_by_one(catalog: DataCatalog) -> void:
+	for id: StringName in catalog.buildings:
+		catalog.buildings[id].footprint = Vector2i.ONE
+	catalog.road_footprint = Vector2i.ONE
 
 
 # Land on rows 0 to 4, the river on row 5 and the given historic streets.
@@ -146,11 +156,12 @@ func test_steps_start_at_the_nearest_edge() -> void:
 	assert_eq(leg.get("supplier_cell"), [6, 2])
 
 
-# Exact parity of the 1x1 (D-086): on the real strip every building, as the data has it, is placed by the rules of a
-# single cell (taken, terrain, street) and reaches the streets only from its four sides.
+# Exact parity of the 1x1 (D-086): on the real strip every building of one cell is placed by the rules of a single cell
+# (taken, terrain, street) and reaches the streets only from its four sides.
 func test_one_by_one_matches_single_cell_rules() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	var catalog: DataCatalog = loaded.catalog
+	_one_by_one(catalog)
 	var strip: EconomyContext = EconomyContext.new(catalog, catalog.maps[STRIP])
 	var params: Params = SimTestParams.isolated_params(catalog)
 	var state: EconomyState = EconomyState.new()
@@ -181,6 +192,6 @@ func test_one_by_one_matches_single_cell_rules() -> void:
 			lone.buildings.assign([{"definition_id": &"mill", "cell": [x, y]}])
 			RoadSystem.evaluate(lone, params, strip)
 			var blocked: bool = lone.road_blocked.get(cell, &"") == RoadSystem.NO_ROAD_ACCESS
-			if blocked == strip.map.beside_road(cell):
+			if blocked == strip.map.beside_road(Rect2i(cell, Vector2i.ONE)):
 				mismatches.append("mill at %s: access %s" % [cell, not blocked])
 	assert_eq(mismatches, [] as Array[String])

@@ -6,7 +6,11 @@ extends RefCounted
 # Simulation.to_save(). The statistics history keeps its packed arrays as they are.
 
 const FORMAT: String = "londinium-save"
-const VERSION: int = 1
+const VERSION: int = 2
+# Format 1 was played on cells of 50 m, before issue #186 (D-086). It still loads, converted (D-087).
+const CELLS_OF_50_M_VERSION: int = 1
+const CELLS_OF_50_M: int = 50
+const BUILDING_CAUSE: String = "building"
 const DEFAULT_ROOT: String = "user://saves"
 const EXTENSION: String = ".sav"
 const KIND_MANUAL: StringName = &"manual"
@@ -57,7 +61,7 @@ static func read(path: String) -> Dictionary:
 static func validate(raw: Variant) -> Dictionary:
 	if raw is not Dictionary or raw.get("format") != FORMAT or typeof(raw.get("version")) != TYPE_INT:
 		return _refusal(INVALID_FILE)
-	if raw["version"] != VERSION:
+	if raw["version"] not in [VERSION, CELLS_OF_50_M_VERSION]:
 		return _refusal(OTHER_VERSION, [raw["version"], VERSION])
 	for field: String in ENVELOPE_NAMES:
 		if typeof(raw.get(field)) not in [TYPE_STRING, TYPE_STRING_NAME]:
@@ -83,6 +87,53 @@ static func check_compatible(data: Dictionary, session: GameSession, catalog: Da
 	if mods != session.mods:
 		return _refusal(OTHER_MODS, [mods])
 	return {"reason": &"", "args": [], "data": data}
+
+
+# A save in this format: one of format 1 converted to cells of `cell_size_m` (D-087). Every old cell (x, y) becomes its
+# block from (x, y) times the scale, so the buildings, the player's streets and the buildings the causes of the
+# statistics name stand where they stood. The rest of the game is the same.
+static func upgraded(data: Dictionary, cell_size_m: int) -> Dictionary:
+	if data["version"] == VERSION:
+		return data
+	var scale: int = CELLS_OF_50_M / cell_size_m
+	var copy: Dictionary = data.duplicate(true)
+	var economy: Dictionary = copy["simulation"]["economy"]
+	for field: String in ["buildings", "player_roads"]:
+		for entry: Dictionary in economy.get(field, []):
+			entry["cell"] = [int(entry["cell"][0]) * scale, int(entry["cell"][1]) * scale]
+	var causes: Variant = copy["simulation"].get("stats_history", {}).get("causes")
+	if causes is Dictionary:
+		_scale_causes(causes, scale)
+	copy["version"] = VERSION
+	return copy
+
+
+# A building's cause is kept under "<id>@<x>,<y>" (StatsHistory), as the subject of an event and in the keys
+# "building|<subject>" of the causes still being followed.
+static func _scale_causes(causes: Dictionary, scale: int) -> void:
+	var kinds: Variant = causes.get("kinds")
+	var subjects: Variant = causes.get("subjects")
+	if kinds is PackedStringArray and subjects is PackedStringArray and kinds.size() == subjects.size():
+		for index: int in kinds.size():
+			if kinds[index] == BUILDING_CAUSE:
+				subjects[index] = _scaled_subject(subjects[index], scale)
+		causes["subjects"] = subjects
+	var prefix: String = BUILDING_CAUSE + CauseLog.SEPARATOR
+	for field: String in ["current_keys", "pending_keys", "flicker_keys"]:
+		var keys: Variant = causes.get(field)
+		if keys is not PackedStringArray:
+			continue
+		for index: int in keys.size():
+			if keys[index].begins_with(prefix):
+				keys[index] = prefix + _scaled_subject(keys[index].trim_prefix(prefix), scale)
+		causes[field] = keys
+
+
+static func _scaled_subject(subject: String, scale: int) -> String:
+	var cell: PackedStringArray = subject.get_slice("@", 1).split(",")
+	if not subject.contains("@") or cell.size() != 2:
+		return subject
+	return "%s@%d,%d" % [subject.get_slice("@", 0), cell[0].to_int() * scale, cell[1].to_int() * scale]
 
 
 static func write_manual(root: String, data: Dictionary) -> String:

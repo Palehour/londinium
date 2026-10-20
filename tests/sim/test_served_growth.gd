@@ -22,7 +22,8 @@ func before_each() -> void:
 	assert_true(loaded.is_ok(), str(loaded.errors))
 	_catalog = loaded.catalog
 	_context = RoadTestMap.street(_catalog, WIDTH)
-	_radius = int(_params().get_value(&"building.bakery.service_radius"))
+	# In street steps: the radius is in metres since issue #186 (D-086), a step is one street piece.
+	_radius = int(_params().get_value(&"building.bakery.service_radius_m")) / RoadSystem.metres(_params(), _context, 1)
 	_capacity = int(_params().get_value(&"building.housing.capacity"))
 	_initial = EconomyState.new()
 	_initial.money = 100000

@@ -528,12 +528,12 @@ func _draw() -> void:
 	# The player's streets come from the state, not the map, in their own colour: unlike the historic ones they can be
 	# demolished.
 	for road: Array in _snapshot["distance"]["player_roads"]:
-		draw_rect(Rect2(Vector2(road[0], road[1]) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain["player_road"])
+		draw_rect(geometry.area_rect(session.context.road_area({"cell": road})).grow(-presentation.layout["grid_inset"]), presentation.terrain["player_road"])
 	var font: Font = ThemeDB.fallback_font
+	# Each building over its whole footprint (issue #186, D-086).
 	for building: Dictionary in _snapshot["economy"]["buildings"]:
-		var cell: Vector2 = Vector2(building["cell"][0], building["cell"][1])
 		var id: StringName = StringName(building["definition_id"])
-		var rect: Rect2 = Rect2(cell * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["building_inset"])
+		var rect: Rect2 = geometry.area_rect(session.context.area_of(building)).grow(-presentation.layout["building_inset"])
 		draw_rect(rect, presentation.colors[id])
 		var text: String = presentation.labels[id]
 		var font_size: int = int(presentation.layout["font_size"])

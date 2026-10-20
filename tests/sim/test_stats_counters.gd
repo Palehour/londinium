@@ -4,6 +4,7 @@ extends GutTest
 # stock or money they already move, and a series records each one. They are checked against what they explain: a
 # store changes by what was made and bought minus what was used and spoiled, a purchase costs its units times the
 # price, a class changes by who came, left, rose and fell.
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 # Seconds of the city game: the fine level keeps the last 600, one value a second.
 const CITY_SECONDS: int = 900
@@ -40,9 +41,9 @@ func _city() -> Simulation:
 	state.population = 30
 	state.stocks.assign({&"wheat": 20, &"flour": 0, &"bread": 40, &"barley": 0, &"malt": 0, &"beer": 0, &"tea": 0})
 	var sim: Simulation = Simulation.new(_params(), state, 11, _context)
-	var builds: Array[Array] = [[&"wharf", Vector2i(2, 7)], [&"wharf", Vector2i(4, 7)], [&"mill", Vector2i(2, 5)],
-		[&"bakery", Vector2i(3, 5)], [&"bakery", Vector2i(4, 5)], [&"housing", Vector2i(5, 3)], [&"housing", Vector2i(5, 4)],
-		[&"malthouse", Vector2i(2, 3)], [&"brewery", Vector2i(3, 3)], [&"artisan_housing", Vector2i(6, 3)]]
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"wharf", Vector2i(8, 14)], [&"mill", Vector2i(4, 10)],
+		[&"bakery", Vector2i(6, 10)], [&"bakery", Vector2i(8, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
+		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 6)], [&"artisan_housing", Vector2i(12, 6)]]
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(_context, build[0], build[1]))
 	sim.apply_command(SetUnloadingSplitCommand.new(15))
@@ -321,11 +322,11 @@ func test_refund_is_other_income() -> void:
 	var state: EconomyState = EconomyState.new()
 	state.money = 10000
 	var sim: Simulation = Simulation.new(params, state, 3, _context)
-	sim.apply_command(BuildCommand.new(_context, &"bakery", Vector2i(1, 1)))
+	sim.apply_command(BuildCommand.new(_context, &"bakery", Vector2i(2, 2)))
 	sim.tick()
 	var cost: float = _sum(_fine(sim, &"expense:construction"))
 	assert_gt(cost, 0.0)
-	var demolish: DemolishCommand = DemolishCommand.new(Vector2i(1, 1))
+	var demolish: DemolishCommand = DemolishCommand.new(Vector2i(2, 2))
 	sim.apply_command(demolish)
 	sim.tick()
 	assert_true(demolish.accepted)

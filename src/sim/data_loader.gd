@@ -9,9 +9,9 @@ const BUILDING_FIELDS: Dictionary = {
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
 # changing what a building costs or where it goes.
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure"]
-# Distance model (issue #67): a building may hand out goods to the houses within its service radius, and the wharf
-# may supply goods it brings beyond its recipe. All three are optional.
-const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius", "distributes", "supplies"]
+# Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
+# issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
+const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -50,9 +50,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"no_jobs_refund_ratio": "fraction"},
 	# Repairing a damaged wharf of the map (issue #177, D-083): the share of a new wharf's cost it takes.
 	"repair": {"wharf_cost_ratio": "fraction"},
-	# Streets and transport of the distance model (issue #67, D-070, D-080).
+	# Streets and transport of the distance model (issue #67, D-070, D-080), in metres since issue #186 (D-086).
 	"roads": {"cost": "money", "upkeep_per_minute": "money"},
-	"transport": {"cost_per_unit_per_step": "number", "expensive_steps": "positive_integer"},
+	"transport": {"cost_per_unit_per_m": "number", "expensive_m": "positive_integer"},
+	# Side of a map cell (issue #186, D-086).
+	"map": {"cell_size_m": "positive_integer"},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -157,6 +159,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_errors.append("%s: missing file" % path)
 	_load_goods(documents.get("economy/goods.json", {}), catalog)
 	_load_buildings(documents.get("economy/buildings.json", {}), catalog)
+	# Before the maps, whose streets are made of these pieces.
+	_load_road_footprint(documents.get("economy/roads.json", {}), catalog)
 	for path: String in documents:
 		var raw: Dictionary = documents[path]
 		var section: String = path.get_file().get_basename()
@@ -167,7 +171,11 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		elif path.begins_with("scenarios/") or path in [_needs_path(), _classes_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
-			_numbers(raw, ECONOMY_SCHEMAS[section], path, section, catalog)
+			var numeric: Dictionary = raw.duplicate()
+			# The street piece is structure, read above.
+			if section == "roads":
+				numeric.erase("footprint")
+			_numbers(numeric, ECONOMY_SCHEMAS[section], path, section, catalog)
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
@@ -377,8 +385,8 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		numeric.erase("tags")
 		numeric.erase("buildable")
 		numeric.erase("footprint")
-		if numeric.has("service_radius"):
-			schema["service_radius"] = "integer"
+		if numeric.has("service_radius_m"):
+			schema["service_radius_m"] = "integer"
 		for field: String in ["distributes", "supplies"]:
 			numeric.erase(field)
 		if not _goods_list(raw[id].get("distributes", []), path + ".distributes", building.distributes, catalog) \
@@ -395,12 +403,32 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 
 # Cells the building covers, [w, h] (issue #184, D-086): structure like the tags, not a balance number.
 func _footprint(raw: Variant, path: String, building: BuildingDef) -> bool:
+	var footprint: Vector2i = _cells_size(raw, path)
+	if footprint == Vector2i.ZERO:
+		return false
+	building.footprint = footprint
+	return true
+
+
+# [w, h] of whole numbers of at least 1, or (0, 0) with the error noted.
+func _cells_size(raw: Variant, path: String) -> Vector2i:
 	if raw is not Array or raw.size() != 2 \
 			or not raw.all(func(side: Variant) -> bool: return _is_whole_number(side) and float(side) >= 1.0):
 		_errors.append("%s: expected [w, h] of whole numbers of at least 1" % path)
-		return false
-	building.footprint = Vector2i(int(raw[0]), int(raw[1]))
-	return true
+		return Vector2i.ZERO
+	return Vector2i(int(raw[0]), int(raw[1]))
+
+
+# The piece a street is made of (issue #186, D-086): square, so that a route is measured piece by piece. Without it a
+# street is one cell.
+func _load_road_footprint(raw: Dictionary, catalog: DataCatalog) -> void:
+	if not raw.has("footprint"):
+		return
+	var footprint: Vector2i = _cells_size(raw["footprint"], "economy/roads.json.footprint")
+	if footprint != Vector2i.ZERO and footprint.x != footprint.y:
+		_errors.append("economy/roads.json.footprint: expected a square piece")
+	elif footprint != Vector2i.ZERO:
+		catalog.road_footprint = footprint
 
 
 func _goods_list(raw: Variant, path: String, target: Array[StringName], catalog: DataCatalog) -> bool:
@@ -749,10 +777,11 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 			taken = []
 		for position: Vector2i in _map_cells(raw[field], "%s.%s" % [path, field], map, taken):
 			layers[field].append(position)
+	_check_road_pieces(path + ".road_cells", map, catalog.road_footprint)
 	if raw.has("terrain"):
 		_load_terrain(raw["terrain"], path + ".terrain", map)
 	if raw.has("dense_housing_cells"):
-		_load_dense_housing_cells(raw["dense_housing_cells"], path + ".dense_housing_cells", map)
+		_load_dense_housing_cells(raw["dense_housing_cells"], path + ".dense_housing_cells", map, catalog)
 	if raw.has("roads_enabled"):
 		if typeof(raw["roads_enabled"]) != TYPE_BOOL:
 			_errors.append("%s.roads_enabled: expected a boolean" % path)
@@ -766,12 +795,12 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
 			map.named_sites[entry["cell"]] = entry["name"]
 	if raw.has("period_houses"):
-		_load_period_houses(raw["period_houses"], path + ".period_houses", map)
+		_load_period_houses(raw["period_houses"], path + ".period_houses", map, catalog)
 	if raw.has("damaged_wharves"):
-		_load_damaged_wharves(raw["damaged_wharves"], path + ".damaged_wharves", map)
+		_load_damaged_wharves(raw["damaged_wharves"], path + ".damaged_wharves", map, catalog)
 	# After the period houses, whose cells carry no lot style.
 	if raw.has("lot_styles"):
-		_load_lot_styles(raw["lot_styles"], path + ".lot_styles", map)
+		_load_lot_styles(raw["lot_styles"], path + ".lot_styles", map, catalog)
 	# Liberties of the whole map (issue #152): only checked here, the simulation never reads them.
 	if raw.has("history_notes") and (raw["history_notes"] is not Array
 			or not raw["history_notes"].all(MapDef.is_history_note)):
@@ -780,7 +809,8 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 
 
 # Historic anchors (issue #152): each stands where its building can, on the river for a wharf and on a standing
-# building otherwise; dense housing only on a start cell, so the startup knob of D-075 still decides it.
+# building otherwise; dense housing only on a start cell, so the startup knob of D-075 still decides it. The whole
+# footprint counts (issue #186, D-086); an anchor with no use is its one cell.
 func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
@@ -788,9 +818,11 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 		var problem: String = ""
 		if entry.get("building") is not String or (building != &"" and not catalog.buildings.has(building)):
 			problem = "unknown building %s" % building
+		elif not _fits(map, _area(catalog, building, cell)):
+			problem = "does not fit on the map"
 		elif building != &"" and "river" in catalog.buildings[building].tags:
-			problem = "" if cell in map.river_cells else "is not on the river"
-		elif cell not in map.existing_cells:
+			problem = "" if _all_in(_area(catalog, building, cell), map.river_cells) else "is not on the river"
+		elif not _all_in(_area(catalog, building, cell), map.existing_cells):
 			problem = "is not a standing building"
 		elif building == Simulation.DENSE_HOUSING and cell not in map.dense_housing_cells:
 			problem = "is not a dense housing start cell"
@@ -802,13 +834,16 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 
 # The 1870 houses (issue #176, D-083): free land with a street on one side, the access every housing needs (D-079).
 # The simulation places them as dense housing (#180, D-085) with start_population people, none when it is missing.
-func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
+# The whole footprint of the house counts (issue #186, D-086).
+func _load_period_houses(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
+		var area: Rect2i = _area(catalog, Simulation.DENSE_HOUSING, cell)
 		var people: Variant = entry.get("start_population", 0)
-		if not _is_free_land(map, cell):
+		if not _fits(map, area) or not EconomyContext.cells_of(area).all(func(other: Vector2i) -> bool:
+				return _is_free_land(map, other)):
 			_errors.append("%s: [%d, %d] is not free land" % [location, cell.x, cell.y])
-		elif not map.beside_road(cell):
+		elif not map.beside_road(area):
 			_errors.append("%s: [%d, %d] has no street on any side" % [location, cell.x, cell.y])
 		elif not _is_whole_number(people) or float(people) < 0.0:
 			_errors.append("%s: [%d, %d] start_population must be a whole number of at least 0"
@@ -818,35 +853,64 @@ func _load_period_houses(raw: Variant, location: String, map: MapDef) -> void:
 			map.period_house_population[cell] = int(people)
 
 
-# Damaged wharves (issue #176, D-083): on the river, where a wharf stands. What repairing one costs is not the map's:
-# it is repair.wharf_cost_ratio in economy/repair.json (#177).
-func _load_damaged_wharves(raw: Variant, location: String, map: MapDef) -> void:
+# Damaged wharves (issue #176, D-083): on the river, where a wharf stands, all of its footprint (D-086). What repairing
+# one costs is not the map's: it is repair.wharf_cost_ratio in economy/repair.json (#177).
+func _load_damaged_wharves(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
-		if cell not in map.river_cells:
+		var area: Rect2i = _area(catalog, RepairWharfCommand.WHARF, cell)
+		if not _fits(map, area) or not _all_in(area, map.river_cells):
 			_errors.append("%s: [%d, %d] is not on the river" % [location, cell.x, cell.y])
 		else:
 			map.damaged_wharves.append(cell)
 
 
-# Lot styles (issue #176, D-083): only drawing, one for each cell of free land that is not a period house and none
+# Lot styles (issue #176, D-083): only drawing, one for each cell of free land that no period house covers and none
 # anywhere else.
-func _load_lot_styles(raw: Variant, location: String, map: MapDef) -> void:
+func _load_lot_styles(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	if raw is not Dictionary or not raw.keys().all(func(style: Variant) -> bool: return style is String):
 		_errors.append("%s: expected an object of style to cells" % location)
 		return
+	var houses: Array[Vector2i] = []
+	for cell: Vector2i in map.period_houses:
+		houses.append_array(EconomyContext.cells_of(_area(catalog, Simulation.DENSE_HOUSING, cell)))
 	var taken: Array[Vector2i] = []
 	for style: String in raw:
 		for cell: Vector2i in _map_cells(raw[style], "%s.%s" % [location, style], map, taken):
-			if not _is_free_land(map, cell) or cell in map.period_houses:
+			if not _is_free_land(map, cell) or cell in houses:
 				_errors.append("%s.%s: [%d, %d] is not free land" % [location, style, cell.x, cell.y])
 			else:
 				map.lot_styles[cell] = StringName(style)
 	for y: int in range(map.height):
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
-			if _is_free_land(map, cell) and cell not in taken and cell not in map.period_houses:
+			if _is_free_land(map, cell) and cell not in taken and cell not in houses:
 				_errors.append("%s: [%d, %d] has no lot style" % [location, cell.x, cell.y])
+
+
+# The cells a building of the map's lists covers from its cell, the north-west corner (issue #186, D-086). A type the
+# data does not have, or an anchor with no use, is its one cell.
+static func _area(catalog: DataCatalog, id: StringName, cell: Vector2i) -> Rect2i:
+	var definition: BuildingDef = catalog.buildings.get(id)
+	return Rect2i(cell, definition.footprint if definition != null else Vector2i.ONE)
+
+
+static func _fits(map: MapDef, area: Rect2i) -> bool:
+	return Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area)
+
+
+static func _all_in(area: Rect2i, cells: Array[Vector2i]) -> bool:
+	return EconomyContext.cells_of(area).all(func(cell: Vector2i) -> bool: return cell in cells)
+
+
+# The historic streets are whole pieces of economy/roads.json on the grid of pieces (issue #186, D-086), so a route is
+# measured piece by piece like the player's streets.
+func _check_road_pieces(location: String, map: MapDef, piece: Vector2i) -> void:
+	for cell: Vector2i in map.road_cells:
+		var origin: Vector2i = RoadNetwork.piece_origin(cell, piece)
+		if not _all_in(Rect2i(origin, piece), map.road_cells):
+			_errors.append("%s: [%d, %d] is not part of a whole street piece of %dx%d from [%d, %d]"
+				% [location, cell.x, cell.y, piece.x, piece.y, origin.x, origin.y])
 
 
 static func _is_free_land(map: MapDef, cell: Vector2i) -> bool:
@@ -898,12 +962,13 @@ static func _is_whole_number(value: Variant) -> bool:
 
 
 # Where dense housing stands at the start (issue #154): on a standing building with a street on one side, the access
-# every housing needs (D-079).
-func _load_dense_housing_cells(raw: Variant, location: String, map: MapDef) -> void:
+# every housing needs (D-079). The whole footprint of the house counts (issue #186, D-086).
+func _load_dense_housing_cells(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for position: Vector2i in _map_cells(raw, location, map, []):
-		if position not in map.existing_cells:
+		var area: Rect2i = _area(catalog, Simulation.DENSE_HOUSING, position)
+		if not _fits(map, area) or not _all_in(area, map.existing_cells):
 			_errors.append("%s: [%d, %d] is not a standing building" % [location, position.x, position.y])
-		elif not map.beside_road(position):
+		elif not map.beside_road(area):
 			_errors.append("%s: [%d, %d] has no street on any side" % [location, position.x, position.y])
 		else:
 			map.dense_housing_cells.append(position)

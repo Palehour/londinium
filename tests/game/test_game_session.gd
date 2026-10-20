@@ -1,9 +1,11 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
+
 # The four 1870 houses of the strip, empty dense housing from the start (issue #180, D-085).
-const PERIOD_HOUSES: Array[Dictionary] = [{"definition_id": &"dense_housing", "cell": [4, 3]},
-	{"definition_id": &"dense_housing", "cell": [3, 4]}, {"definition_id": &"dense_housing", "cell": [5, 4]},
-	{"definition_id": &"dense_housing", "cell": [5, 5]}]
+const PERIOD_HOUSES: Array[Dictionary] = [{"definition_id": &"dense_housing", "cell": [8, 6]},
+	{"definition_id": &"dense_housing", "cell": [6, 8]}, {"definition_id": &"dense_housing", "cell": [10, 8]},
+	{"definition_id": &"dense_housing", "cell": [10, 10]}]
 
 var _catalog: DataCatalog
 var _session: GameSession
@@ -46,8 +48,8 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	assert_eq(state["stocks"][&"bread"], 40)
 	# Only the anchors of the strip with a use: the dense housing of Pier Head (issue #154, D-075) and Oliver's Wharf
 	# (issue #152), and the 1870 houses (issue #180, D-085).
-	assert_eq(state["buildings"], [{"definition_id": &"dense_housing", "cell": [8, 6]}] + PERIOD_HOUSES
-		+ [{"definition_id": &"wharf", "cell": [10, 8]}])
+	assert_eq(state["buildings"], [{"definition_id": &"dense_housing", "cell": [16, 12]}] + PERIOD_HOUSES
+		+ [{"definition_id": &"wharf", "cell": [20, 16]}])
 	assert_eq(_session.get_snapshot()["seed"], 42)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1234), Modifier.new(&"startup.population", &"set", 12), Modifier.new(&"population.initial_bread", &"set", 55)])
@@ -63,7 +65,7 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 func test_commands_wait_for_tick_and_publish_snapshots_without_aliases() -> void:
 	watch_signals(_session)
 	var before: Dictionary = _session.get_snapshot()
-	var command: BuildCommand = BuildCommand.new(_session.context, &"mill", Vector2i(1, 1))
+	var command: BuildCommand = BuildCommand.new(_session.context, &"mill", Vector2i(2, 2))
 	_session.submit_command(command)
 	assert_eq(command.reason, &"pending")
 	assert_true(_results.is_empty())
@@ -83,10 +85,10 @@ func test_commands_wait_for_tick_and_publish_snapshots_without_aliases() -> void
 
 func test_terrain_reasons_are_results_of_real_commands() -> void:
 	for id: StringName in [&"mill", &"bakery"]:
-		_session.submit_command(BuildCommand.new(_session.context, id, Vector2i(0, 7)))
+		_session.submit_command(BuildCommand.new(_session.context, id, Vector2i(0, 14)))
 	_session.submit_command(BuildCommand.new(_session.context, &"wharf", Vector2i(0, 0)))
-	_session.submit_command(BuildCommand.new(_session.context, &"wheat_field", Vector2i(2, 2)))
-	_session.submit_command(BuildCommand.new(_session.context, &"mill", Vector2i(-1, 0)))
+	_session.submit_command(BuildCommand.new(_session.context, &"wheat_field", Vector2i(4, 4)))
+	_session.submit_command(BuildCommand.new(_session.context, &"mill", Vector2i(-2, 0)))
 	_tick()
 	var expected: Array[StringName] = [&"requires_land", &"requires_land", &"requires_river", &"not_cultivable", &"outside_map"]
 	for index: int in range(expected.size()):
@@ -98,10 +100,10 @@ func test_terrain_reasons_are_results_of_real_commands() -> void:
 
 
 func test_occupied_demolition_and_insufficient_money() -> void:
-	_session.submit_command(BuildCommand.new(_session.context, &"mill", Vector2i(1, 1)))
-	_session.submit_command(BuildCommand.new(_session.context, &"bakery", Vector2i(1, 1)))
-	_session.submit_command(DemolishCommand.new(Vector2i(1, 1)))
-	_session.submit_command(DemolishCommand.new(Vector2i(1, 1)))
+	_session.submit_command(BuildCommand.new(_session.context, &"mill", Vector2i(2, 2)))
+	_session.submit_command(BuildCommand.new(_session.context, &"bakery", Vector2i(2, 2)))
+	_session.submit_command(DemolishCommand.new(Vector2i(2, 2)))
+	_session.submit_command(DemolishCommand.new(Vector2i(2, 2)))
 	_tick()
 	assert_eq(_results[1]["reason"], &"occupied_cell")
 	assert_true(_results[2]["accepted"])
@@ -111,7 +113,7 @@ func test_occupied_demolition_and_insufficient_money() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"startup.money", &"set", 0))
 	var poor: GameSession = GameSession.new(_catalog, Params.new(_catalog, role))
-	var command: BuildCommand = BuildCommand.new(poor.context, &"mill", Vector2i(1, 1))
+	var command: BuildCommand = BuildCommand.new(poor.context, &"mill", Vector2i(2, 2))
 	poor.submit_command(command)
 	poor.simulation.tick()
 	assert_eq(command.reason, &"insufficient_money")
@@ -127,7 +129,7 @@ func test_defeat_rejection_is_immediate() -> void:
 
 func test_the_demo_is_played_on_the_riverside_strip() -> void:
 	assert_eq(_session.context.map.id, &"riverside_strip")
-	assert_eq(Vector2i(_session.context.map.width, _session.context.map.height), Vector2i(16, 12))
+	assert_eq(Vector2i(_session.context.map.width, _session.context.map.height), Vector2i(32, 24))
 	var other: GameSession = GameSession.new(_catalog,
 		Params.new(_catalog, _catalog.roles[&"neutral_administrator"]), &"no_objectives")
 	assert_eq(other.context.map.id, &"whitechapel_1850s", "A scenario without a map keeps the 8x8 map")
@@ -149,7 +151,7 @@ func test_the_demo_starts_with_its_anchors_and_a_restart_puts_them_back() -> voi
 	_session.submit_command(DemolishCommand.new(Vector2i(start[0]["cell"][0], start[0]["cell"][1])))
 	_tick()
 	assert_eq(_results, [{"accepted": false, "reason": &"historic_anchor"}], "The starting house is not demolished")
-	_session.submit_command(BuildRoadCommand.new(_session.context, Vector2i(6, 5)))
+	_session.submit_command(BuildRoadCommand.new(_session.context, Vector2i(12, 10)))
 	_tick()
 	assert_false(_session.get_snapshot()["economy"]["player_roads"].is_empty())
 	_session.restart()

@@ -63,11 +63,13 @@ func _start(params: Params, preset_id: StringName) -> void:
 	simulation = Simulation.create_new(params, _initial_state, _seed, context, _victory_stages)
 
 
-# A saved game (issue #57) on the parameters of its difficulty: a later restart starts a new game on them.
+# A saved game (issue #57) on the parameters of its difficulty: a later restart starts a new game on them. One saved on
+# cells of 50 m is converted first (D-087).
 func load_save(saved: Dictionary, params: Params) -> void:
 	_pending.clear()
 	_start(params, StringName(saved["difficulty"]))
-	simulation = Simulation.from_save(params, context, _victory_stages, saved["simulation"])
+	var upgraded: Dictionary = SaveFile.upgraded(saved, int(params.get_value(&"map.cell_size_m")))
+	simulation = Simulation.from_save(params, context, _victory_stages, upgraded["simulation"])
 
 
 func scenario_id() -> StringName:

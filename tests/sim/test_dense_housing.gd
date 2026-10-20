@@ -4,13 +4,14 @@ extends GutTest
 # existing_cells is a block. D-076: a saved building on a blocked cell stays and works. D-079: the starting house
 # stands beside a historical street. Issue #152 (option A of Cristian, 2026-10-18): on the traced strip the starting
 # house is the Pier Head anchor, which is never demolished.
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 const STRIP: StringName = &"riverside_strip"
 const SMALL: StringName = &"whitechapel_1850s"
 const DENSE: StringName = &"dense_housing"
 # Pier Head (issue #152): its own cell (6,6) has no street on any side, so it stands on the nearest lot beside one,
 # Green Bank.
-const START_CELL: Vector2i = Vector2i(8, 6)
+const START_CELL: Vector2i = Vector2i(16, 12)
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 # Base capacity of a dense housing (D-075). Since issue #180 (D-085) the four empty 1870 houses add theirs too.
 const DENSE_CAPACITY: int = 20
@@ -114,8 +115,11 @@ func test_the_small_map_starts_empty() -> void:
 
 func test_the_rest_of_the_standing_buildings_block_building() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
+	var taken: Array = _new_game(_params()).snapshot()["economy"]["buildings"]
 	for cell: Vector2i in map.existing_cells:
-		if cell in map.dense_housing_cells:
+		# A footprint that would cover a building of the start is refused for that first (D-086).
+		if taken.any(func(building: Dictionary) -> bool:
+				return _strip.area_of(building).intersects(Rect2i(cell, _strip.buildings[&"housing"].footprint))):
 			continue
 		for id: StringName in [&"housing", &"bakery", &"mill"]:
 			var sim: Simulation = _new_game(_params())
@@ -126,7 +130,7 @@ func test_the_rest_of_the_standing_buildings_block_building() -> void:
 
 func test_dense_housing_is_not_built_by_the_player() -> void:
 	var sim: Simulation = _new_game(_params())
-	var command: BuildCommand = _build(sim, _strip, DENSE, Vector2i(1, 1))
+	var command: BuildCommand = _build(sim, _strip, DENSE, Vector2i(2, 2))
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"not_buildable")
 	assert_eq(_strip.building_unavailable_reason(DENSE), &"not_buildable")
@@ -158,8 +162,8 @@ func test_the_dense_housing_of_pier_head_is_not_demolished() -> void:
 func test_a_saved_building_on_a_blocked_cell_stays_and_works() -> void:
 	var params: Params = SimTestParams.isolated_params(_catalog)
 	# St Peter's and St John's (issue #152): the standing buildings beside a street that are not the starting house.
-	var bakery_cell: Vector2i = Vector2i(13, 0)
-	var housing_cell: Vector2i = Vector2i(9, 5)
+	var bakery_cell: Vector2i = Vector2i(26, 0)
+	var housing_cell: Vector2i = Vector2i(18, 10)
 	var saved: Dictionary = _new_game(params).to_save()
 	var state: EconomyState = EconomyState.from_dict(saved["economy"])
 	state.buildings.append({"definition_id": &"bakery", "cell": [bakery_cell.x, bakery_cell.y]})

@@ -2,8 +2,10 @@ extends GutTest
 
 # Issue #67 (D-070, D-080): the player builds orthogonal streets for roads.cost; demolishing one refunds like a
 # building without jobs (D-029); the historic streets of the map cannot be demolished.
+# Since issue #186 (D-086) a street is a piece of 2x2 cells for roads.cost, refunded by the piece, and the map is in
+# blocks of 2x2 (RoadTestMap.blocks).
 
-const LAND: Vector2i = Vector2i(3, RoadTestMap.LAND_ROW)
+const LAND: Vector2i = Vector2i(3, RoadTestMap.LAND_ROW) * RoadTestMap.BLOCK
 
 var _catalog: DataCatalog
 var _context: EconomyContext
@@ -60,11 +62,11 @@ func test_build_road_costs_roads_cost() -> void:
 
 func test_streets_go_only_on_free_land() -> void:
 	var sim: Simulation = _sim()
-	sim.apply_command(BuildCommand.new(_context, &"mill", Vector2i(5, RoadTestMap.LAND_ROW)))
-	assert_eq(_build_road(sim, Vector2i(5, RoadTestMap.LAND_ROW)).reason, &"occupied_cell")
-	assert_eq(_build_road(sim, Vector2i(2, RoadTestMap.ROAD_ROW)).reason, &"road_cell")
-	assert_eq(_build_road(sim, Vector2i(2, RoadTestMap.RIVER_ROW)).reason, &"requires_land")
-	assert_eq(_build_road(sim, Vector2i(9, 0)).reason, &"outside_map")
+	sim.apply_command(BuildCommand.new(_context, &"mill", RoadTestMap.cell(Vector2i(5, RoadTestMap.LAND_ROW))))
+	assert_eq(_build_road(sim, RoadTestMap.cell(Vector2i(5, RoadTestMap.LAND_ROW))).reason, &"occupied_cell")
+	assert_eq(_build_road(sim, RoadTestMap.cell(Vector2i(2, RoadTestMap.ROAD_ROW))).reason, &"road_cell")
+	assert_eq(_build_road(sim, RoadTestMap.cell(Vector2i(2, RoadTestMap.RIVER_ROW))).reason, &"requires_land")
+	assert_eq(_build_road(sim, RoadTestMap.cell(Vector2i(8, 0))).reason, &"outside_map")
 	assert_true(_build_road(sim, LAND).accepted)
 	assert_eq(_build_road(sim, LAND).reason, &"road_cell")
 
@@ -102,7 +104,7 @@ func test_after_grace_refunds_half() -> void:
 
 func test_historic_road_cannot_be_demolished() -> void:
 	var sim: Simulation = _sim()
-	var command: DemolishCommand = _demolish(sim, Vector2i(2, RoadTestMap.ROAD_ROW))
+	var command: DemolishCommand = _demolish(sim, RoadTestMap.cell(Vector2i(2, RoadTestMap.ROAD_ROW)))
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"historic_road")
 	assert_eq(_money(sim), _initial.money)
@@ -114,3 +116,34 @@ func test_streets_do_not_count_as_buildings() -> void:
 	_build_road(sim, LAND)
 	assert_eq(sim.snapshot()["economy"]["buildings"], [])
 	assert_eq(sim.tick_flows()["buildings"], {})
+
+
+# Issue #186 (D-086): a street is one piece of roads.json footprint, 2x2. It costs roads.cost once, takes the four cells
+# (no other street, building or water on any of them) and any of its cells demolishes it with one refund.
+func test_a_street_is_a_two_by_two_piece_for_one_cost() -> void:
+	assert_eq(_context.road_footprint, Vector2i(2, 2))
+	var sim: Simulation = _sim()
+	assert_true(_build_road(sim, LAND).accepted)
+	assert_eq(_money(sim), _initial.money - _cost, "One piece, one roads.cost")
+	for offset: Vector2i in [Vector2i(1, 0), Vector2i(1, 1), Vector2i(-1, 0), Vector2i(-1, 1)]:
+		assert_eq(_build_road(sim, LAND + offset).reason, &"road_cell", "A piece over %s" % (LAND + offset))
+	assert_eq(_build_road(sim, LAND + Vector2i(2, 1)).reason, &"road_cell", "Its lower half reaches the street")
+	assert_true(_build_road(sim, LAND + Vector2i(2, 0)).accepted, "Side by side is not overlapping")
+	assert_eq(sim.snapshot()["distance"]["player_roads"], [[LAND.x, LAND.y], [LAND.x + 2, LAND.y]])
+
+
+func test_any_cell_of_a_piece_demolishes_it_for_one_refund() -> void:
+	var sim: Simulation = _sim()
+	_build_road(sim, LAND)
+	assert_true(_demolish(sim, LAND + Vector2i(1, 1)).accepted)
+	assert_eq(_money(sim), _initial.money, "The whole piece back within the correction window")
+	assert_eq(sim.snapshot()["distance"]["player_roads"], [])
+
+
+func test_a_piece_needs_all_of_its_cells_free() -> void:
+	var sim: Simulation = _sim()
+	sim.apply_command(BuildCommand.new(_context, &"mill", LAND + Vector2i(2, 0)))
+	assert_eq(_build_road(sim, LAND + Vector2i(1, 0)).reason, &"occupied_cell")
+	assert_eq(_build_road(sim, Vector2i(_context.map.width - 1, RoadTestMap.LAND_ROW)).reason, &"outside_map")
+	assert_eq(_money(sim), _initial.money - BuildingCosts.construction_cost(_params, EconomyState.new(),
+		_context.buildings[&"mill"]))

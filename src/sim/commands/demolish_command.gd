@@ -36,11 +36,11 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 
 
 # A street of the player refunds like a building without jobs (D-029, D-080): all of it within the correction window,
-# demolish.no_jobs_refund_ratio after it.
+# demolish.no_jobs_refund_ratio after it. Any cell of the piece picks it, and the refund is for the piece (D-086).
 func _demolish_road(state: EconomyState, params: Params) -> void:
 	for index: int in range(state.player_roads.size()):
 		var road: Dictionary = state.player_roads[index]
-		if road["cell"] != [_cell.x, _cell.y]:
+		if not _covers_road(road):
 			continue
 		var refund: int = int(road["paid"])
 		if not _in_grace(state, params, road):
@@ -64,6 +64,12 @@ func _covers(building: Dictionary) -> bool:
 	if _context == null:
 		return RoadNetwork.cell_of(building) == _cell
 	return _context.area_of(building).has_point(_cell)
+
+
+func _covers_road(road: Dictionary) -> bool:
+	if _context == null:
+		return RoadNetwork.cell_of(road) == _cell
+	return _context.road_area(road).has_point(_cell)
 
 
 # A historic anchor of the map is never demolished (issue #152): the building it stands with, or the cell itself when

@@ -3,6 +3,7 @@ extends GutTest
 # Issue #57 (D-037): a game saved at minute N and loaded again plays on to minute M exactly as if it had never
 # stopped. The save goes through var_to_bytes, the way the file stores it, and covers the Hito 2 chain: barley,
 # malt, beer and artisans who arrive and rise.
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 const SAVE_TICK: int = 600
 const END_TICK: int = 1500
@@ -32,9 +33,9 @@ func _new_game(params: Params) -> Simulation:
 	state.money = 1000000
 	state.population = 30
 	var sim: Simulation = Simulation.create_new(params, state, 7, _context, _stages)
-	var builds: Array[Array] = [[&"wharf", Vector2i(2, 7)], [&"wharf", Vector2i(4, 7)], [&"mill", Vector2i(2, 5)],
-		[&"bakery", Vector2i(3, 5)], [&"housing", Vector2i(5, 3)], [&"housing", Vector2i(5, 4)],
-		[&"malthouse", Vector2i(2, 3)], [&"brewery", Vector2i(3, 3)], [&"artisan_housing", Vector2i(6, 3)]]
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"wharf", Vector2i(8, 14)], [&"mill", Vector2i(4, 10)],
+		[&"bakery", Vector2i(6, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
+		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 6)], [&"artisan_housing", Vector2i(12, 6)]]
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(_context, build[0], build[1]))
 	sim.apply_command(SetUnloadingSplitCommand.new(15))
@@ -119,11 +120,11 @@ func _strip_game() -> Array:
 	state.money = 1000000
 	state.population = 30
 	var sim: Simulation = Simulation.create_new(_params(), state, 7, context, _stages)
-	var builds: Array[Array] = [[&"wharf", Vector2i(2, 7)], [&"mill", Vector2i(3, 5)], [&"bakery", Vector2i(6, 5)],
-		[&"housing", Vector2i(7, 5)], [&"housing", Vector2i(9, 5)]]
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"mill", Vector2i(6, 10)], [&"bakery", Vector2i(12, 10)],
+		[&"housing", Vector2i(14, 10)], [&"housing", Vector2i(18, 10)]]
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(context, build[0], build[1]))
-	sim.apply_command(BuildRoadCommand.new(context, Vector2i(9, 4)))
+	sim.apply_command(BuildRoadCommand.new(context, Vector2i(18, 8)))
 	return [sim, context]
 
 
@@ -131,10 +132,10 @@ func test_player_roads_survive_save() -> void:
 	var game: Array = _strip_game()
 	var sim: Simulation = game[0]
 	_play(sim, 0, SAVE_TICK)
-	assert_eq(sim.snapshot()["distance"]["player_roads"], [[9, 4]])
+	assert_eq(sim.snapshot()["distance"]["player_roads"], [[18, 8]])
 	var loaded: Simulation = Simulation.from_save(_params(), game[1], _stages, _through_bytes(sim.to_save()))
 	assert_eq(loaded.snapshot()["economy"]["player_roads"], sim.snapshot()["economy"]["player_roads"])
-	assert_eq(loaded.snapshot()["distance"]["player_roads"], [[9, 4]])
+	assert_eq(loaded.snapshot()["distance"]["player_roads"], [[18, 8]])
 
 
 func test_coverage_after_load_equals_recomputed() -> void:

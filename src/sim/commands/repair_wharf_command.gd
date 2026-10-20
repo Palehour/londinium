@@ -42,8 +42,10 @@ static func repair_cost(params: Params, state: EconomyState, context: EconomyCon
 func _validate(state: EconomyState, params: Params) -> StringName:
 	if _context == null or _cell not in _context.map.damaged_wharves:
 		return &"not_damaged_wharf"
+	# Any building on a cell of the wharf's footprint takes it (issue #186, D-086).
+	var area: Rect2i = Rect2i(_cell, _context.buildings[WHARF].footprint)
 	for building: Dictionary in state.buildings:
-		if building["cell"] == [_cell.x, _cell.y]:
+		if _context.area_of(building).intersects(area):
 			return &"occupied_cell"
 	if state.money < repair_cost(params, state, _context):
 		return &"insufficient_money"

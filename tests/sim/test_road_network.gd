@@ -2,6 +2,8 @@ extends GutTest
 
 # Issue #67 (D-034, D-058, D-080): a building works only beside a street of the network, which starts at the
 # historic streets; the player's streets join it orthogonally and diagonals exist only as edges the map lists.
+# Since issue #186 (D-086) the layouts are in old cells of 50 m, each one a block of 2x2 (RoadTestMap.blocks): the
+# same streets and buildings give the same access and the same steps.
 
 var _catalog: DataCatalog
 var _initial: EconomyState
@@ -45,94 +47,94 @@ func test_building_next_to_road_is_connected() -> void:
 
 func test_isolated_building_has_no_road_access() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"mill", Vector2i(4, 2))
+	_build(sim, context, &"mill", RoadTestMap.cell(Vector2i(4, 2)))
 	sim.tick()
-	var mill: Dictionary = _diagnostic(sim, Vector2i(4, 2))
+	var mill: Dictionary = _diagnostic(sim, RoadTestMap.cell(Vector2i(4, 2)))
 	assert_eq(mill["workers"], 0, "a building without a street gets no workers")
 	assert_eq(mill["reason"], &"no_road_access")
-	assert_eq(RoadTestMap.entry(sim.snapshot(), "blocked", Vector2i(4, 2))["reason"], &"no_road_access")
+	assert_eq(RoadTestMap.entry(sim.snapshot(), "blocked", RoadTestMap.cell(Vector2i(4, 2)))["reason"], &"no_road_access")
 
 
 # Diagonal neighbours of a street are not access: only the four sides count.
 func test_a_street_on_the_corner_is_not_access() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"mill", Vector2i(2, 2))
+	_build(sim, context, &"mill", RoadTestMap.cell(Vector2i(2, 2)))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(2, 2))["reason"], &"no_road_access")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(2, 2)))["reason"], &"no_road_access")
 
 
 func test_wharf_needs_river_and_road() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 3), Vector2i(1, 3)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"wharf", Vector2i(1, 4))
-	_build(sim, context, &"wharf", Vector2i(4, 4))
+	_build(sim, context, &"wharf", RoadTestMap.cell(Vector2i(1, 4)))
+	_build(sim, context, &"wharf", RoadTestMap.cell(Vector2i(4, 4)))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(1, 4))["reason"], &"ok")
-	assert_gt(_diagnostic(sim, Vector2i(1, 4))["workers"], 0)
-	assert_eq(_diagnostic(sim, Vector2i(4, 4))["reason"], &"no_road_access")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(1, 4)))["reason"], &"ok")
+	assert_gt(_diagnostic(sim, RoadTestMap.cell(Vector2i(1, 4)))["workers"], 0)
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(4, 4)))["reason"], &"no_road_access")
 
 
 # The network starts at the historic streets (#60): a player street that touches none of them connects nothing.
 func test_player_street_away_from_the_network_does_not_connect() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads)
 	var sim: Simulation = _sim(context)
-	sim.apply_command(BuildRoadCommand.new(context, Vector2i(4, 1)))
-	_build(sim, context, &"mill", Vector2i(4, 0))
+	sim.apply_command(BuildRoadCommand.new(context, RoadTestMap.cell(Vector2i(4, 1))))
+	_build(sim, context, &"mill", RoadTestMap.cell(Vector2i(4, 0)))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(4, 0))["reason"], &"no_road_access")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(4, 0)))["reason"], &"no_road_access")
 	for x: int in [1, 2, 3]:
-		sim.apply_command(BuildRoadCommand.new(context, Vector2i(x, 1)))
+		sim.apply_command(BuildRoadCommand.new(context, RoadTestMap.cell(Vector2i(x, 1))))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(4, 0))["reason"], &"ok")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(4, 0)))["reason"], &"ok")
 
 
 func test_no_route_stops_building() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(5, 1), Vector2i(6, 1)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(8, 4), roads)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(8, 4), roads)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"malthouse", Vector2i(1, 0))
-	_build(sim, context, &"brewery", Vector2i(6, 0))
+	_build(sim, context, &"malthouse", RoadTestMap.cell(Vector2i(1, 0)))
+	_build(sim, context, &"brewery", RoadTestMap.cell(Vector2i(6, 0)))
 	sim.tick()
-	var brewery: Dictionary = _diagnostic(sim, Vector2i(6, 0))
+	var brewery: Dictionary = _diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))
 	assert_eq(brewery["reason"], &"no_route")
 	assert_eq(brewery["workers"], 0)
 	for index: int in 60:
 		sim.tick()
 	assert_eq(int(sim.snapshot()["economy"]["stocks"].get(&"beer", 0)), 0, "a brewery without a route brews nothing")
 	for x: int in [3, 4]:
-		sim.apply_command(BuildRoadCommand.new(context, Vector2i(x, 1)))
+		sim.apply_command(BuildRoadCommand.new(context, RoadTestMap.cell(Vector2i(x, 1))))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(6, 0))["reason"], &"ok")
-	sim.apply_command(DemolishCommand.new(Vector2i(3, 1)))
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))["reason"], &"ok")
+	sim.apply_command(DemolishCommand.new(RoadTestMap.cell(Vector2i(3, 1))))
 	sim.tick()
-	assert_eq(_diagnostic(sim, Vector2i(6, 0))["reason"], &"no_route", "cutting the street breaks the chain")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))["reason"], &"no_route", "cutting the street breaks the chain")
 
 
 func test_empty_diagonals_do_not_connect() -> void:
 	var sim: Simulation = _diagonal_sim([] as Array[Vector4i])
-	assert_eq(_diagnostic(sim, Vector2i(3, 3))["reason"], &"no_route")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(3, 3)))["reason"], &"no_route")
 
 
 func test_loaded_diagonal_edge_connects() -> void:
 	var sim: Simulation = _diagonal_sim([Vector4i(1, 1, 2, 2)] as Array[Vector4i])
-	assert_eq(_diagnostic(sim, Vector2i(3, 3))["reason"], &"ok")
-	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", Vector2i(3, 3), &"malt")
+	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(3, 3)))["reason"], &"ok")
+	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", RoadTestMap.cell(Vector2i(3, 3)), &"malt")
 	assert_eq(leg["steps"], 4, "(0,1) → (1,1) → (2,2) → (3,2)")
 
 
 # Two historic streets that only meet corner to corner: the malthouse on one, the brewery on the other.
 func _diagonal_sim(diagonals: Array[Vector4i]) -> Simulation:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 2), Vector2i(3, 2)]
-	var context: EconomyContext = RoadTestMap.custom(_catalog, Vector2i(6, 5), roads, diagonals)
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads, diagonals)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"malthouse", Vector2i(0, 0))
-	_build(sim, context, &"brewery", Vector2i(3, 3))
+	_build(sim, context, &"malthouse", RoadTestMap.cell(Vector2i(0, 0)))
+	_build(sim, context, &"brewery", RoadTestMap.cell(Vector2i(3, 3)))
 	sim.tick()
 	return sim
 
@@ -140,7 +142,7 @@ func _diagonal_sim(diagonals: Array[Vector4i]) -> Simulation:
 func test_buildings_are_not_built_on_a_street() -> void:
 	var context: EconomyContext = RoadTestMap.street(_catalog, 6)
 	var sim: Simulation = _sim(context)
-	var command: BuildCommand = _build(sim, context, &"mill", Vector2i(2, RoadTestMap.ROAD_ROW))
+	var command: BuildCommand = _build(sim, context, &"mill", RoadTestMap.cell(Vector2i(2, RoadTestMap.ROAD_ROW)))
 	sim.tick()
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"road_cell")

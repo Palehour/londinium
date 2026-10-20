@@ -88,7 +88,8 @@ func test_ui_settings_are_validated_and_keep_existing_defaults() -> void:
 	assert_true(presentation.errors.is_empty())
 	assert_eq(presentation.camera["pan_speed"], 500.0)
 	assert_eq(presentation.camera["max_zoom_factor"], 4.0)
-	assert_eq(presentation.layout["cell_size"], 112.0)
+	# Half of the 112 of before: a cell is 25 m since issue #186 (D-086), so the map keeps its size on screen.
+	assert_eq(presentation.layout["cell_size"], 56.0)
 	for section: String in ["layout", "camera"]:
 		for key: String in raw[section]:
 			for value: Variant in [NAN, 0, "invalid"]:

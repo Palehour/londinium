@@ -1,5 +1,6 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 var _catalog: DataCatalog
 var _context: EconomyContext
 
@@ -104,7 +105,7 @@ func test_bread_rates_are_measured_flows_not_stock_differences() -> void:
 	assert_almost_eq(snapshot["stats"]["bread_demand_per_minute"], 20.0, 0.5)
 	var state: EconomyState = _state(20, 10000)
 	state.stocks[&"flour"] = 100
-	state.buildings.append({"definition_id": &"bakery", "cell": [1, 1]})
+	state.buildings.append({"definition_id": &"bakery", "cell": [2, 2]})
 	var bakery: Simulation = _sim(state)
 	for index: int in range(60):
 		bakery.tick()
@@ -114,13 +115,13 @@ func test_bread_rates_are_measured_flows_not_stock_differences() -> void:
 
 func test_money_change_equals_operating_balance_minus_construction() -> void:
 	var state: EconomyState = _state(20, 10000)
-	state.buildings.append({"definition_id": &"wharf", "cell": [0, 7]})
-	state.buildings.append({"definition_id": &"housing", "cell": [1, 1]})
+	state.buildings.append({"definition_id": &"wharf", "cell": [0, 14]})
+	state.buildings.append({"definition_id": &"housing", "cell": [2, 2]})
 	var sim: Simulation = _sim(state)
 	for index: int in range(30):
 		sim.tick()
 	var before: int = sim.snapshot()["economy"]["money"]
-	sim.apply_command(BuildCommand.new(_context, &"mill", Vector2i(2, 2)))
+	sim.apply_command(BuildCommand.new(_context, &"mill", Vector2i(4, 4)))
 	for index: int in range(60):
 		sim.tick()
 	var stats: Dictionary = sim.snapshot()["stats"]
@@ -207,7 +208,7 @@ func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> voi
 	var enabled: Simulation = _sim(_state(20, 10000), fed)
 	var disabled: Simulation = _sim(_state(20, 10000), fed)
 	for sim: Simulation in [enabled, disabled]:
-		sim.apply_command(BuildCommand.new(_context, &"wharf", Vector2i(0, 7)))
+		sim.apply_command(BuildCommand.new(_context, &"wharf", Vector2i(0, 14)))
 	var command: SetWheatPurchasesCommand = SetWheatPurchasesCommand.new(false)
 	disabled.apply_command(command)
 	var prices: Array[int] = []
@@ -276,8 +277,8 @@ func _reason(diagnostics: Dictionary, id: StringName) -> StringName:
 func _chain_state(population: int, money: int) -> EconomyState:
 	var state: EconomyState = _state(population, money)
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
-		state.buildings.append({"definition_id": id, "cell": [0, 7] if id == &"wharf" else [state.buildings.size(), 3]})
-	state.buildings.append({"definition_id": &"housing", "cell": [5, 5]})
+		state.buildings.append({"definition_id": id, "cell": [0, 14] if id == &"wharf" else [state.buildings.size(), 3]})
+	state.buildings.append({"definition_id": &"housing", "cell": [10, 10]})
 	return state
 
 
@@ -323,7 +324,7 @@ func test_no_money_reason_uses_the_market_affordability_rule() -> void:
 	assert_eq(MarketSystem.affordable_wheat(state, 10), 0)
 	state.wheat_price = 0
 	assert_eq(MarketSystem.affordable_wheat(state, 10), 10, "free wheat is never limited by money")
-	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 7], "workers": 1}
+	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 14], "workers": 1}
 	state.wheat_price = 3
 	state.money = 2
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"no_money_for_wheat", "cannot buy one unit")
@@ -419,7 +420,7 @@ func test_restart_creates_a_fresh_game_with_the_same_startup_and_seed() -> void:
 		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
 	var session: GameSession = GameSession.new(_catalog, params)
 	var fresh: Dictionary = session.get_snapshot()
-	session.submit_command(BuildCommand.new(session.context, &"housing", Vector2i(1, 1)))
+	session.submit_command(BuildCommand.new(session.context, &"housing", Vector2i(2, 2)))
 	session.submit_command(SetWheatPurchasesCommand.new(false))
 	var old: Simulation = session.simulation
 	for index: int in range(5):

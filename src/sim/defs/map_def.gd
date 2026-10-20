@@ -51,8 +51,10 @@ static func is_history_note(note: Variant) -> bool:
 	return false
 
 
-func beside_road(cell: Vector2i) -> bool:
-	for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if cell + side in road_cells:
-			return true
+# Whether a historic street touches a side of the area from outside it: of any cell on its edge (D-079, D-086).
+func beside_road(area: Rect2i) -> bool:
+	for cell: Vector2i in EconomyContext.cells_of(area):
+		for side: Vector2i in RoadNetwork.SIDES:
+			if not area.has_point(cell + side) and cell + side in road_cells:
+				return true
 	return false

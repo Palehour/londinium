@@ -1,5 +1,6 @@
 extends GutTest
 
+# Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 class AddMoneyCommand extends SimulationCommand:
 	func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
@@ -57,7 +58,7 @@ func before_each() -> void:
 	_initial.stocks[&"wheat"] = 0
 	_initial.money = 7
 	_initial.population = 12
-	_initial.buildings.append({"definition_id": &"bakery", "cell": [2, 3]})
+	_initial.buildings.append({"definition_id": &"bakery", "cell": [4, 6]})
 
 
 func test_commands_wait_for_tick_run_in_fifo_order_and_only_once() -> void:
@@ -187,7 +188,7 @@ func test_economy_state_round_trip_copies_nested_values() -> void:
 	assert_eq(restored.to_dict(), _initial.to_dict())
 	restored.buildings[0]["cell"][1] = 99
 	restored.stocks[&"wheat"] = 99
-	assert_eq(_initial.buildings[0]["cell"], [2, 3])
+	assert_eq(_initial.buildings[0]["cell"], [4, 6])
 	assert_eq(_initial.stocks[&"wheat"], 0)
 
 
@@ -256,11 +257,11 @@ func test_completed_command_cannot_mutate_simulation_map_or_catalog() -> void:
 	# Corrupt any retained reference; otherwise mutate the caller's available context.
 	var accessible: EconomyContext = command.context if command.context != null else context
 	accessible.map.river_cells.clear()
-	accessible.map.cultivable_cells.append(Vector2i(3, 1))
+	accessible.map.cultivable_cells.append_array(EconomyContext.cells_of(Rect2i(6, 2, 2, 2)))
 	accessible.buildings[&"mill"].tags.append("river")
-	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 7))
-	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(1, 1))
-	var field: BuildCommand = BuildCommand.new(context, &"wheat_field", Vector2i(3, 1))
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 14))
+	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(2, 2))
+	var field: BuildCommand = BuildCommand.new(context, &"wheat_field", Vector2i(6, 2))
 	sim.apply_command(wharf)
 	sim.apply_command(mill)
 	sim.apply_command(field)

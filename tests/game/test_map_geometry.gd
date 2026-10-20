@@ -46,7 +46,7 @@ func test_terrain_from_real_map_and_cultivable_fixture() -> void:
 	var map: MapDef = loaded.catalog.maps[&"whitechapel_1850s"]
 	var geometry: MapGeometry = MapGeometry.new(Vector2i(8, 8), 100, Vector2(800, 600), 4.0)
 	assert_true(map.cultivable_cells.is_empty())
-	assert_eq(geometry.terrain_at(Vector2i(0, 7), map), "river")
+	assert_eq(geometry.terrain_at(Vector2i(0, 14), map), "river", "Cells of 25 m since issue #186 (D-086)")
 	assert_eq(geometry.terrain_at(Vector2i(0, 0), map), "land")
 	var fixture: MapDef = MapDef.new()
 	fixture.cultivable_cells.append(Vector2i(2, 2))
@@ -85,3 +85,10 @@ func test_follow_selection_recenters_only_when_out_of_view() -> void:
 	geometry.selected = Vector2i(0, 0)
 	geometry.follow_selection()
 	assert_true(Rect2(Vector2.ZERO, geometry.viewport_size).has_point(geometry.cell_to_screen(geometry.selected)))
+
+
+# Issue #186 (D-086): map_view draws a building or a street piece over all the cells of its footprint.
+func test_an_area_covers_all_of_its_cells() -> void:
+	var geometry: MapGeometry = MapGeometry.new(Vector2i(8, 8), 100, Vector2(800, 600), 4.0)
+	assert_eq(geometry.area_rect(Rect2i(2, 3, 2, 2)), Rect2(200, 300, 200, 200))
+	assert_eq(geometry.area_rect(Rect2i(0, 0, 1, 1)), Rect2(0, 0, 100, 100))

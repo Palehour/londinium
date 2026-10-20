@@ -9,7 +9,7 @@ ui.disabled_building,%s (desactivado: %s),%s (disabled: %s)
 ui.select,Selección,Selection
 ui.mode,Modo: %s · Casilla: %s,Mode: %s · Cell: %s
 ui.road,Calle,Street
-ui.transport_expensive,"Transporte caro: %s (%d, %d) ← %s (%d, %d) · %d pasos","Expensive transport: %s (%d, %d) ← %s (%d, %d) · %d steps"
+ui.transport_expensive,"Transporte caro: %s (%d, %d) ← %s (%d, %d) · %d m","Expensive transport: %s (%d, %d) ← %s (%d, %d) · %d m"
 ui.pending,Comando pendiente…,Command pending…
 ui.success,Comando realizado.,Command done.
 ui.load_error,No se pudo iniciar la partida. Revisá el registro para ver los detalles.,Could not start the game. Check the log for details.

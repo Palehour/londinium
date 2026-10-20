@@ -1,8 +1,8 @@
 extends GutTest
 
-# Issue #67, criterion of D-080 (decided by Cristian on 2026-10-17): on the 16x12 strip with streets, the long game
-# survives 150 minutes in at least 17 of 20 seeds. If it does not, the radii or k of D-070 change in data/, not the
-# rule. Too slow for CI: run it with tools/run_long_tests.
+# Issue #67, criterion of D-080 (decided by Cristian on 2026-10-17): on the strip with streets (32x24 cells of 25 m
+# since #186, D-086), the long game survives 150 minutes in at least 17 of 20 seeds. If it does not, the radii or k of
+# D-070 change in data/, not the rule. Too slow for CI: run it with tools/run_long_tests.
 # Issue #180 (D-085): the four 1870 houses of D-083 now stand in every game. They held 14 of 20 seeds while
 # immigrants filled them without bread; counting only the served houses brings the criterion back, and switching
 # population.growth.served_capacity_only off must lose it again, so the rule is what fixes it.

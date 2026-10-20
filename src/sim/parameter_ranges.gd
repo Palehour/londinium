@@ -160,14 +160,17 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
 	&"economy.construction_escalation.max_multiplier": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
-	# Distance model (issue #67, D-070): street cost and upkeep, and the transport rate per unit and step.
+	# Distance model (issue #67, D-070): street cost and upkeep, and the transport rate per unit and metre (issue #186,
+	# D-086: the old top of 1 a step of 50 m).
 	&"roads.cost": {
 		"min": 0.0, "max": 1000.0, "min_inclusive": true, "max_inclusive": true},
 	&"roads.upkeep_per_minute": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
-	&"transport.cost_per_unit_per_step": {
-		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
-	&"transport.expensive_steps": {
+	&"transport.cost_per_unit_per_m": {
+		"min": 0.0, "max": 0.02, "min_inclusive": true, "max_inclusive": true},
+	&"transport.expensive_m": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"map.cell_size_m": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
@@ -181,8 +184,9 @@ const PATTERNS: Array[Dictionary] = [
 	{"prefix": "victory.", "suffix": ".duration_seconds", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
 	{"prefix": "victory.", "suffix": ".required_minutes", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
 	{"prefix": "needs.", "suffix": ".threshold", "min": 0.0, "max": 100.0, "integer": false},
-	# Street steps a building serves the houses around it (issue #67); 0 is the whole map.
-	{"prefix": "building.", "suffix": ".service_radius", "min": 0.0, "max": 30.0, "integer": true},
+	# Metres along the streets a building serves the houses around it (issue #67, #186); 0 is the whole map. The top is
+	# the old 30 steps of 50 m.
+	{"prefix": "building.", "suffix": ".service_radius_m", "min": 0.0, "max": 1500.0, "integer": true},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},
@@ -228,7 +232,7 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"needs.housing_bonus_per_category", &"economy.administration.free_buildings",
 				&"economy.construction_escalation.free_copies", &"stats.fine.span_seconds",
 				&"stats.medium.bucket_seconds", &"stats.medium.span_seconds", &"stats.chapter.bucket_seconds",
-				&"stats.causes.max_events", &"stats.causes.min_duration_seconds", &"transport.expensive_steps"] \
+				&"stats.causes.max_events", &"stats.causes.min_duration_seconds", &"transport.expensive_m", &"map.cell_size_m"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

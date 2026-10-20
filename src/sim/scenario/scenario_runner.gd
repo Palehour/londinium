@@ -10,7 +10,7 @@ const SCENARIO_DIR: String = "res://tests/scenarios"
 # Scenarios that need more than the 15 minutes of the others (the artisans are built after minute 30, issue #52).
 # They are not part of scenario_paths(), whose files all last 15 minutes, but balance_report plays them too.
 const LONG_SCENARIO_DIR: String = "res://tests/scenarios/long"
-# Scenarios on the 16x12 strip with streets (issue #67): only balance_report --strip and their own tests play them, so
+# Scenarios on the 32x24 strip with streets (issue #67): only balance_report --strip and their own tests play them, so
 # the scripts on the 8x8 keep their numbers. strip/long/ holds the games too slow for CI (run_long_tests).
 const STRIP_SCENARIO_DIR: String = "res://tests/scenarios/strip"
 const STRIP_LONG_SCENARIO_DIR: String = "res://tests/scenarios/strip/long"

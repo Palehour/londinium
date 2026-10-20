@@ -2,6 +2,8 @@ class_name EconomyContext
 extends RefCounted
 
 var buildings: Dictionary[StringName, BuildingDef] = {}
+# Cells of one street piece (issue #186, D-086).
+var road_footprint: Vector2i = Vector2i.ONE
 var map: MapDef
 var classes: Dictionary[StringName, ClassDef] = {}
 
@@ -21,6 +23,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 			copy.recipe.inputs.assign(definition.recipe.inputs)
 			copy.recipe.outputs.assign(definition.recipe.outputs)
 		buildings[copy.id] = copy
+	road_footprint = catalog.road_footprint
 	for definition: ClassDef in catalog.classes.values():
 		classes[definition.id] = definition.copy()
 	map = MapDef.new()
@@ -47,6 +50,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 func copy() -> EconomyContext:
 	var catalog: DataCatalog = DataCatalog.new()
 	catalog.buildings.assign(buildings)
+	catalog.road_footprint = road_footprint
 	catalog.classes.assign(classes)
 	return EconomyContext.new(catalog, map)
 
@@ -83,6 +87,11 @@ func placement_reason(id: StringName, origin: Vector2i) -> StringName:
 func area_of(building: Dictionary) -> Rect2i:
 	var definition: BuildingDef = buildings.get(StringName(building["definition_id"]))
 	return Rect2i(RoadNetwork.cell_of(building), definition.footprint if definition != null else Vector2i.ONE)
+
+
+# The cells a street of the player covers: a whole piece from its cell, the north-west corner (issue #186, D-086).
+func road_area(road: Dictionary) -> Rect2i:
+	return Rect2i(RoadNetwork.cell_of(road), road_footprint)
 
 
 # The building of the state that covers the cell, or {} when none does.
