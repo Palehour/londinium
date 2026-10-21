@@ -5,6 +5,8 @@ const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wh
 # LB/RB cycle and key 9, only on a map with streets.
 const ROAD: StringName = GameSession.ROAD
 const ROAD_KEY: Key = KEY_9
+# Repairs the damaged wharf under the selection (issue #178, D-083); Y on the gamepad.
+const REPAIR_KEY: Key = KEY_R
 # Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
 const DEMOLISH_RING_POINTS: int = 32
 
@@ -24,6 +26,10 @@ var _mode: Label
 var _help: Label
 var _legend_caption: Label
 var _terrain_labels: Dictionary[String, Label] = {}
+# The second legend row: the 1870 lots and the damaged wharf (issue #178).
+var _lots_caption: Label
+var _lot_labels: Dictionary[StringName, Label] = {}
+var _damaged_wharf_label: Label
 # Attribution of the historical map sources (issue #60, CREDITS.md).
 var _credits: Label
 var _stats_panel: StatsPanel
@@ -103,13 +109,16 @@ func _ready() -> void:
 		legend.add_child(label)
 	help.add_child(legend)
 	help.move_child(legend, 1)
+	var lots: HBoxContainer = _lots_legend()
+	help.add_child(lots)
+	help.move_child(lots, 2)
 	_credits = Label.new()
 	# The full NLS credit line (issue #152) is long: it wraps instead of widening the header.
 	_credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_credits.text = Strings.text(Strings.MAP_CREDITS)
 	help.add_child(_credits)
-	_mode = help.get_child(2) as Label
-	_status = help.get_child(3) as Label
+	_mode = help.get_child(3) as Label
+	_status = help.get_child(4) as Label
 	_help = help.get_child(0) as Label
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
@@ -163,11 +172,40 @@ func _notification(what: int) -> void:
 	_credits.text = Strings.text(Strings.MAP_CREDITS)
 	for kind: String in _terrain_labels:
 		_terrain_labels[kind].text = Strings.text(Strings.TERRAIN_LABELS[kind])
+	_lots_caption.text = Strings.text(Strings.LOTS_LEGEND)
+	for style: StringName in _lot_labels:
+		_lot_labels[style].text = presentation.lot_labels[style]
+	_damaged_wharf_label.text = Strings.text(Strings.DAMAGED_WHARF)
 	_update_help()
 	if geometry != null:
 		_update_mode()
 	_apply_status()
 	queue_redraw()
+
+
+# Same shape as the terrain legend: a sample square and its name for each lot style, then the damaged wharf.
+func _lots_legend() -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lots_caption = Label.new()
+	_lots_caption.text = Strings.text(Strings.LOTS_LEGEND)
+	row.add_child(_lots_caption)
+	for style: StringName in Strings.LOT_STYLE_LABELS:
+		_lot_labels[style] = _legend_entry(row, presentation.lot_colors[style], presentation.lot_labels[style])
+	_damaged_wharf_label = _legend_entry(row, presentation.ui_colors["damaged_wharf"], Strings.text(Strings.DAMAGED_WHARF))
+	return row
+
+
+func _legend_entry(row: HBoxContainer, color: Color, text: String) -> Label:
+	var sample: ColorRect = ColorRect.new()
+	sample.color = color
+	sample.custom_minimum_size = Vector2.ONE * presentation.layout["font_size"]
+	sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(sample)
+	var label: Label = Label.new()
+	label.text = text
+	row.add_child(label)
+	return label
 
 
 func _load_catalog() -> DataLoadResult:
@@ -239,6 +277,7 @@ func _input(event: InputEvent) -> void:
 	if gamepad != _gamepad:
 		_gamepad = gamepad
 		_update_help()
+		_update_mode()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -264,6 +303,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
 			_submit(DemolishCommand.new(geometry.selected))
+		elif event.keycode == REPAIR_KEY and geometry.selected != Vector2i(-1, -1):
+			_submit(_repair_command(geometry.selected))
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
 	if event is InputEventMouseButton:
@@ -309,6 +350,8 @@ func _gamepad_command(event: InputEvent) -> void:
 		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
 	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
 		_submit(_place_command(geometry.selected))
+	elif event.is_action_pressed(&"map_repair") and geometry.selected != Vector2i(-1, -1):
+		_submit(_repair_command(geometry.selected))
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
@@ -395,6 +438,24 @@ func _place_command(cell: Vector2i) -> SimulationCommand:
 	return BuildCommand.new(session.context, _building_type, cell)
 
 
+# Any cell of a damaged wharf repairs it. Elsewhere the command goes as it is and the simulation says why it cannot.
+func _repair_command(cell: Vector2i) -> SimulationCommand:
+	var wharf: Dictionary = _damaged_wharf_at(cell)
+	return RepairWharfCommand.new(RoadNetwork.cell_of(wharf) if not wharf.is_empty() else cell)
+
+
+# The repairable damaged wharf of the snapshot whose footprint covers the cell, or {} when none does.
+func _damaged_wharf_at(cell: Vector2i) -> Dictionary:
+	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
+		if _damaged_wharf_area(wharf).has_point(cell):
+			return wharf
+	return {}
+
+
+func _damaged_wharf_area(wharf: Dictionary) -> Rect2i:
+	return session.context.area_of({"definition_id": RepairWharfCommand.WHARF, "cell": wharf["cell"]})
+
+
 func _submit(command: SimulationCommand) -> void:
 	_show_pending()
 	session.submit_command(command)
@@ -437,6 +498,8 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 		return
 	_snapshot = snapshot
 	_stats_panel.update_snapshot(snapshot)
+	# A repair or a new wharf on the ruin changes what the selected cell offers.
+	_update_mode()
 	queue_redraw()
 
 
@@ -512,7 +575,14 @@ func _reset_view() -> void:
 
 func _update_mode() -> void:
 	var label: String = Strings.text(Strings.ROAD) if _building_type == ROAD else presentation.labels.get(_building_type, Strings.text(Strings.SELECT))
-	_mode.text = Strings.text(Strings.MODE) % [label, geometry.selected]
+	var parts: Array[String] = [Strings.text(Strings.MODE) % [label, geometry.selected]]
+	var style: StringName = session.context.map.lot_styles.get(geometry.selected, &"")
+	if style != &"":
+		parts.append(presentation.lot_labels[style])
+	var wharf: Dictionary = _damaged_wharf_at(geometry.selected)
+	if not wharf.is_empty():
+		parts.append(Strings.text(Strings.REPAIR_HINT_GAMEPAD if _gamepad else Strings.REPAIR_HINT) % Strings.money(wharf["cost"]))
+	_mode.text = " · ".join(parts)
 
 
 func _draw() -> void:
@@ -524,21 +594,35 @@ func _draw() -> void:
 	for y: int in range(map.height):
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
-			draw_rect(Rect2(Vector2(cell) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), presentation.terrain[geometry.terrain_at(cell, map)])
+			var kind: String = geometry.terrain_at(cell, map)
+			# Free land shows its 1870 lot (issue #178); the other kinds keep their terrain colour.
+			var color: Color = presentation.lot_colors[map.lot_styles[cell]] if kind == "land" and map.lot_styles.has(cell) else presentation.terrain[kind]
+			draw_rect(Rect2(Vector2(cell) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["grid_inset"]), color)
 	# The player's streets come from the state, not the map, in their own colour: unlike the historic ones they can be
 	# demolished.
 	for road: Array in _snapshot["distance"]["player_roads"]:
 		draw_rect(geometry.area_rect(session.context.road_area({"cell": road})).grow(-presentation.layout["grid_inset"]), presentation.terrain["player_road"])
-	var font: Font = ThemeDB.fallback_font
 	# Each building over its whole footprint (issue #186, D-086).
 	for building: Dictionary in _snapshot["economy"]["buildings"]:
 		var id: StringName = StringName(building["definition_id"])
 		var rect: Rect2 = geometry.area_rect(session.context.area_of(building)).grow(-presentation.layout["building_inset"])
 		draw_rect(rect, presentation.colors[id])
-		var text: String = presentation.labels[id]
-		var font_size: int = int(presentation.layout["font_size"])
-		var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-		draw_string(font, rect.get_center() + Vector2(-width / 2.0, presentation.layout["label_offset_y"]), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])
+		_draw_label(rect.get_center(), presentation.labels[id])
+	# A damaged wharf that can be repaired, with what repairing costs (issue #178, D-083).
+	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
+		var rect: Rect2 = geometry.area_rect(_damaged_wharf_area(wharf)).grow(-presentation.layout["building_inset"])
+		draw_rect(rect, presentation.ui_colors["damaged_wharf"])
+		var line: Vector2 = Vector2(0.0, presentation.layout["font_size"] / 2.0)
+		_draw_label(rect.get_center() - line, Strings.text(Strings.DAMAGED_WHARF))
+		# Only the price fits the footprint; the mode line says which button repairs.
+		_draw_label(rect.get_center() + line, Strings.money(wharf["cost"]))
 	if geometry.selected != Vector2i(-1, -1):
 		draw_rect(Rect2(Vector2(geometry.selected) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
 	_draw_demolish_ring(cell_size)
+
+
+func _draw_label(center: Vector2, text: String) -> void:
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = int(presentation.layout["font_size"])
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	draw_string(font, center + Vector2(-width / 2.0, presentation.layout["label_offset_y"]), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])

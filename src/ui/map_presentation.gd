@@ -12,6 +12,9 @@ var camera: Dictionary[String, float] = {}
 var input: Dictionary[String, float] = {}
 var colors: Dictionary[StringName, Color] = {}
 var labels: Dictionary[StringName, String] = {}
+# The lot styles of the free land (issue #178, D-083): only how a cell is drawn.
+var lot_colors: Dictionary[StringName, Color] = {}
+var lot_labels: Dictionary[StringName, String] = {}
 var errors: Array[String] = []
 
 
@@ -32,10 +35,12 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	input.clear()
 	colors.clear()
 	labels.clear()
+	lot_colors.clear()
+	lot_labels.clear()
 	if raw is not Dictionary or raw.get("terrain") is not Dictionary or raw.get("buildings") is not Dictionary:
 		errors.append("data/ui/map.json: expected terrain and buildings objects")
 		return
-	for key: String in ["header", "label", "selection", "alert"]:
+	for key: String in ["header", "label", "selection", "alert", "damaged_wharf"]:
 		var color: Variant = raw.get("colors", {}).get(key) if raw.get("colors", {}) is Dictionary else null
 		if _valid_color(color):
 			ui_colors[key] = Color(color)
@@ -50,6 +55,13 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			terrain[kind] = Color(color)
 		else:
 			errors.append("data/ui/map.json.terrain.%s: invalid color" % kind)
+	for style: StringName in Strings.LOT_STYLE_LABELS:
+		var color: Variant = raw.get("lot_styles", {}).get(String(style)) if raw.get("lot_styles", {}) is Dictionary else null
+		if _valid_color(color):
+			lot_colors[style] = Color(color)
+			lot_labels[style] = Strings.text(Strings.LOT_STYLE_LABELS[style])
+		else:
+			errors.append("data/ui/map.json.lot_styles.%s: invalid color" % style)
 	for id: StringName in building_ids:
 		var entry: Variant = raw["buildings"].get(String(id))
 		var label: String = Strings.building_label(String(id))
@@ -69,6 +81,9 @@ func refresh_labels() -> void:
 	ids.assign(labels.keys())
 	for id: StringName in ids:
 		labels[id] = Strings.building_label(String(id))
+	for style: StringName in Strings.LOT_STYLE_LABELS:
+		if lot_labels.has(style):
+			lot_labels[style] = Strings.text(Strings.LOT_STYLE_LABELS[style])
 
 
 func building_unavailable_reason(reason: StringName) -> String:

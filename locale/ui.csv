@@ -95,6 +95,14 @@ ui.terrain.dock,Dársena,Dock basin
 ui.terrain.road,Calle histórica,Historic street
 ui.terrain.player_road,Calle del jugador,Player street
 ui.terrain.existing,Edificación existente,Standing buildings
+ui.lots_legend,Lotes de 1870:,1870 lots:
+ui.lot.yard,Patio,Yard
+ui.lot.timber_yard,Depósito de madera,Timber yard
+ui.lot.garden,Huerta,Market garden
+ui.lot.plain,Baldío,Open lot
+ui.damaged_wharf,Muelle dañado,Damaged wharf
+ui.repair_hint,Muelle dañado · R: reparar por %s,Damaged wharf · R: repair for %s
+ui.repair_hint_gamepad,Muelle dañado · Y: reparar por %s,Damaged wharf · Y: repair for %s
 ui.building.wharf,Embarcadero,Wharf
 ui.building.mill,Molino,Mill
 ui.building.bakery,Panadería,Bakery
@@ -171,6 +179,7 @@ ui.reason.no_route,Sin ruta: ninguna calle lo une con quien le trae el insumo.,N
 ui.reason.road_cell,La casilla es una calle.,The cell is a street.
 ui.reason.historic_road,Las calles históricas no se demuelen.,Historic streets cannot be demolished.
 ui.reason.historic_anchor,Los edificios históricos del mapa no se demuelen.,The historic buildings of the map cannot be demolished.
+ui.reason.not_damaged_wharf,Esa casilla no es un muelle dañado libre.,That cell is not a free damaged wharf.
 ui.reason.roads_disabled,En este mapa no se construyen calles.,Streets cannot be built on this map.
 ui.objectives,Objetivos del capítulo,Chapter objectives
 ui.objective_population,Población: %.1f / %d · media de %d s · %s,Population: %.1f / %d · %d s average · %s

@@ -11,6 +11,8 @@ const BUTTONS: Dictionary[StringName, JoyButton] = {
 	&"map_cursor_right": JOY_BUTTON_DPAD_RIGHT,
 	&"map_place": JOY_BUTTON_A,
 	&"map_demolish": JOY_BUTTON_X,
+	# Repairs the damaged wharf under the cursor (issue #178).
+	&"map_repair": JOY_BUTTON_Y,
 	&"map_build_prev": JOY_BUTTON_LEFT_SHOULDER,
 	&"map_build_next": JOY_BUTTON_RIGHT_SHOULDER,
 	&"gamepad_panel": JOY_BUTTON_START,

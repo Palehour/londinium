@@ -261,6 +261,7 @@ func snapshot() -> Dictionary:
 			"beer": MarketSystem.storage_snapshot(_state, _params, &"beer")},
 		"imports": ImportSystem.snapshot(_state, _params, _context),
 		"distance": RoadSystem.snapshot(_state, _context),
+		"repair": RepairWharfCommand.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,
