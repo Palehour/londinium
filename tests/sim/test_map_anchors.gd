@@ -84,8 +84,12 @@ func test_the_strip_lists_its_anchors_and_named_sites_with_their_source() -> voi
 
 func test_there_are_enough_free_cells_with_and_without_the_corner_with_no_sheet() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
-	assert_gte(_free_cells(map), FREE_FLOOR, "Total")
-	assert_gte(_free_cells(map, NO_SHEET_CORNER), FREE_FLOOR, "Without the north-west corner")
+	var total: int = _free_cells(map)
+	var without_corner: int = _free_cells(map, NO_SHEET_CORNER)
+	# Issue #187: D-086 asks for the counts measured again, so every run prints them.
+	gut.p("Free cells of 25 m: %d in total, %d without the north-west corner" % [total, without_corner])
+	assert_gte(total, FREE_FLOOR, "Total")
+	assert_gte(without_corner, FREE_FLOOR, "Without the north-west corner")
 
 
 func test_olivers_wharf_stands_established_and_working_at_the_start() -> void:
