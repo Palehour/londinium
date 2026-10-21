@@ -1,7 +1,7 @@
 {
   "id": "strip_roads_150",
   "description": "Issue #67, criterio de D-080: la ciudad de drift_4h (pan, cerveza, artesanos, harina importada) armada en la franja 32×24 con calles y jugada 150 minutos. Cada casa queda dentro del radio de una panadería y las de artesanos dentro del de la cervecería. Fuera de balance_report --scenario all (in_all: false); se corre con --strip y por nombre, o con tools/run_long_tests (long_test_strip_roads.gd, 20 semillas).",
-  "notes": "Criterio decidido por Cristian el 2026-10-17 (D-080): con calles activas, al menos 17 de 20 semillas sobreviven 150 minutos; si no llega, se ajustan radios o k en datos (D-070), no la regla.",
+  "notes": "Criterio decidido por Cristian el 2026-10-17 (D-080): con calles activas, al menos 17 de 20 semillas sobreviven 150 minutos; si no llega, se ajustan radios o k en datos (D-070), no la regla. Medido en la grilla de 25 m (#187): 20 de 20; sin D-085, 14 de 20.",
   "map": "riverside_strip",
   "seed": 42,
   "duration_ticks": 9000,
