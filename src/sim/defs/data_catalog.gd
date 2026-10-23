@@ -10,6 +10,7 @@ var roles: Dictionary[StringName, RoleDef] = {}
 var maps: Dictionary[StringName, MapDef] = {}
 var classes: Dictionary[StringName, ClassDef] = {}
 var scenarios: Dictionary[StringName, Dictionary] = {}
+var missions: Dictionary[StringName, MissionDef] = {}
 var difficulties: Dictionary[StringName, DifficultyDef] = {}
 var knobs: Dictionary[StringName, KnobDef] = {}
 var categories: Array[StringName] = []

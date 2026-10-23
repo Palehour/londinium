@@ -6,6 +6,8 @@ var buildings: Dictionary[StringName, BuildingDef] = {}
 var road_footprint: Vector2i = Vector2i.ONE
 var map: MapDef
 var classes: Dictionary[StringName, ClassDef] = {}
+# Never changed after loading, so they are shared, not copied (issue #63).
+var missions: Dictionary[StringName, MissionDef] = {}
 
 
 func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
@@ -26,6 +28,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	road_footprint = catalog.road_footprint
 	for definition: ClassDef in catalog.classes.values():
 		classes[definition.id] = definition.copy()
+	missions.assign(catalog.missions)
 	map = MapDef.new()
 	map.id = selected_map.id
 	map.width = selected_map.width
@@ -52,6 +55,7 @@ func copy() -> EconomyContext:
 	catalog.buildings.assign(buildings)
 	catalog.road_footprint = road_footprint
 	catalog.classes.assign(classes)
+	catalog.missions.assign(missions)
 	return EconomyContext.new(catalog, map)
 
 

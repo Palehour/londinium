@@ -40,14 +40,16 @@ londinium/
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
-│   │   └── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota"); `enabled` is the defeats switch (D-065)
+│   │   ├── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota"); `enabled` is the defeats switch (D-065)
+│   │   └── events.json       # historical events (#63): `cholera.defeat_pause`, the switch a mission names to pause the depopulation timer (D-090)
 │   ├── difficulty/           # optional (D-065): without it the game runs on the base values
 │   │   ├── presets.json      # easy, normal, hard: relative modifiers (mul|add) and `events` (reserved, empty until #63)
 │   │   └── knobs.json        # loose knobs: kind (switch, value, price_volatility), keys, min, max, step
 │   ├── eras/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
-│   │       └── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
+│   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
+│   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric, at_least), the effects of on_completed, on_failed and on_abandoned, and optionally defeat_pause (a boolean Params key); every number becomes mission.<id>.*
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
@@ -149,6 +151,12 @@ londinium/
    leg's metres times `transport.cost_per_unit_per_m` (worked out per piece, the order of the sums on cells of 50 m,
    issue #186), plus `roads.upkeep_per_minute` per player street, added to
    the upkeep in whole pence with the fraction carried, outside the administration multiplier (D-063).
+9b. Missions (`MissionSystem`, issue #63, D-090): `MissionCommand` starts one (once per game) or abandons an active one
+   in step 1; its effects run then. Each active mission counts down `mission.<id>.duration_min`, turned into ticks only
+   by `SimTime.minutes_to_ticks`, the start tick included; on its last tick `goal_met` checks the goal once, on the state
+   this tick left, and the mission is completed or failed for good, with that outcome's effects. It runs before defeat
+   so that a mission whose `defeat_pause` key is true, while active, freezes the depopulation timer of this same tick
+   (not reset: it goes on from there afterwards). With no mission started nothing changes.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
 11. Stats + snapshot emitted. The chapter history (`StatsHistory`, D-066) samples every series and notes the causes
     that changed; step 1 also notes each command's outcome. It only reads the state.
