@@ -148,7 +148,13 @@ func has_queued_commands() -> bool:
 
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
-	return _context.building_unavailable_reason(id) if _context != null else &"unknown_building"
+	if _context == null:
+		return &"unknown_building"
+	if _context.buildings.has(id):
+		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _context.buildings[id])
+		if events_reason != &"":
+			return events_reason
+	return _context.building_unavailable_reason(id)
 
 
 func apply_command(command: SimulationCommand) -> void:

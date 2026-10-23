@@ -31,12 +31,14 @@ londinium/
 ├── data/                     # ALL balance + content, JSON, edited by agents/Mason, approved by Cristian
 │   ├── economy/
 │   │   ├── goods.json        # wheat, barley, flour, bread, malt, beer, tea, money unit
-│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field: cost, upkeep, jobs, recipe, tags;
+│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain (tag `water`, no recipe, #63): cost, upkeep, jobs, recipe, tags;
 │   │   │                     #   optional service_radius_m (metres along the streets) + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67, #186;
 │   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 2x2 since #186), #184, D-086
 │   │   ├── roads.json        # the player's streets: cost and upkeep per minute, per piece of `footprint` cells (2x2, the old 50 m cell) (#67, D-070, #186)
 │   │   ├── transport.json    # cost per unit and metre, and the metres from which a leg is "expensive" (#67, D-070, D-080, #186)
 │   │   ├── map.json          # cell_size_m, the side of a map cell: 25 m (#186, D-086)
+│   │   ├── fountain.json     # radius_m, the houses a public fountain covers, centre to centre in metres (#63, D-089)
+│   │   ├── events.json       # historic events (#63): `enabled` (off: no water building can be built) and the risk of each water source
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
@@ -73,7 +75,8 @@ londinium/
 │   │   ├── data_loader.gd    # JSON → typed defs, with validation errors
 │   │   ├── mod_layer.gd      # mods (D-049, D-065): user://mods/<name>/data/ merged over data/ before validation
 │   │   ├── defs/             # building_def.gd, good_def.gd, recipe_def.gd, class_def.gd, need_def.gd …
-│   │   ├── systems/          # one file per tick step (see order below)
+│   │   ├── systems/          # one file per tick step (see order below); water_system.gd is not one yet: the share
+│   │   │                     #   of houses a fountain covers (water_d, #63, D-089), which the events will read
 │   │   ├── commands/         # command classes / validation
 │   │   ├── stats.gd          # rolling 60-tick windows for "per minute" figures
 │   │   ├── series_def.gd, series_registry.gd  # statistics series: label, unit, aggregation, dimensions (D-066)

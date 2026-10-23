@@ -157,13 +157,16 @@ func test_steps_start_at_the_nearest_edge() -> void:
 
 
 # Exact parity of the 1x1 (D-086): on the real strip every building of one cell is placed by the rules of a single cell
-# (taken, terrain, street) and reaches the streets only from its four sides.
+# (taken, terrain, street) and reaches the streets only from its four sides. The historic events are on so that the
+# public fountain of issue #63 (D-089), which waits for them, is placed by the same rules.
 func test_one_by_one_matches_single_cell_rules() -> void:
 	var loaded: DataLoadResult = DataLoader.new().load_all()
 	var catalog: DataCatalog = loaded.catalog
 	_one_by_one(catalog)
 	var strip: EconomyContext = EconomyContext.new(catalog, catalog.maps[STRIP])
-	var params: Params = SimTestParams.isolated_params(catalog)
+	var events_on: RoleDef = RoleDef.new()
+	events_on.modifiers.append(Modifier.new(&"events.enabled", &"set", 1.0))
+	var params: Params = SimTestParams.isolated_params(catalog, events_on)
 	var state: EconomyState = EconomyState.new()
 	state.money = 100000
 	state.population = int(params.get_value(&"startup.population"))
