@@ -24,7 +24,8 @@ func update_hunger_coverage(state: EconomyState, params: Params) -> void:
 		state.hunger_smoothed_coverage = state.bread_coverage
 
 
-func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> void:
+# `depopulation_paused` (a mission's defeat_pause, issue #63, D-090) freezes the depopulation timer, not resets it.
+func tick(state: EconomyState, params: Params, update_coverage: bool = true, depopulation_paused: bool = false) -> void:
 	if not state.defeat_causes.is_empty():
 		return
 	initialize(state, params)
@@ -55,8 +56,9 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true) -> 
 		< state.population_peak * float(params.get_value(&"defeat.depopulation.defeat_fraction"))))
 	if not counting:
 		warning = false
-	_update(state.depopulation, &"depopulation", warning, critical, counting,
-		float(params.get_value(&"defeat.depopulation.duration_seconds")))
+	if not depopulation_paused:
+		_update(state.depopulation, &"depopulation", warning, critical, counting,
+			float(params.get_value(&"defeat.depopulation.duration_seconds")))
 	for condition: DefeatState in [state.bankruptcy, state.hunger, state.depopulation]:
 		if condition.status == &"defeat":
 			state.defeat_causes.append(condition.cause)

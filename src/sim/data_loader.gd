@@ -59,7 +59,9 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	# Public fountain (issue #63, D-089): the houses it covers, centre to centre, not rounded to cells.
 	"fountain": {"radius_m": "positive"},
 	# Historic events (issue #63): off by default, so the water buildings wait for them. The risk of each water source.
-	"events": {"enabled": "boolean", "source_risk": {"neutral": "fraction", "old_ford": "fraction"}},
+	# The cholera mission's defeat_pause says whether it stops the depopulation timer (D-090).
+	"events": {"enabled": "boolean", "source_risk": {"neutral": "fraction", "old_ford": "fraction"},
+		"cholera": {"defeat_pause": "boolean"}},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -91,6 +93,11 @@ const DIFFICULTY_FOLDER: String = "difficulty"
 const PRESETS_PATH: String = "difficulty/presets.json"
 const KNOBS_PATH: String = "difficulty/knobs.json"
 const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
+# Missions (issue #63, D-090): one file each in the era's missions/ folder, optional.
+const MISSIONS_FOLDER: String = "missions"
+const MISSION_FIELDS: Array[String] = ["duration_min", "goal", "on_completed", "on_failed", "on_abandoned"]
+const MISSION_METRICS: Array[String] = ["population"]
+const MISSION_EFFECTS: Array[String] = ["money"]
 const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain",
 	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes",
 	"period_houses", "damaged_wharves", "lot_styles"]
@@ -109,9 +116,10 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root:
 	_rejected_keys.clear()
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), "scenarios", DIFFICULTY_FOLDER]:
+	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), _missions_folder(), "scenarios",
+			DIFFICULTY_FOLDER]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
-		if directory == null and folder == DIFFICULTY_FOLDER:
+		if directory == null and folder in [DIFFICULTY_FOLDER, _missions_folder()]:
 			continue
 		if directory == null:
 			if folder == "scenarios":
@@ -173,7 +181,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path.begins_with("scenarios/") or path in [_needs_path(), _classes_path(), PRESETS_PATH, KNOBS_PATH]:
+		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
@@ -186,6 +194,10 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
+	# A mission names the boolean key that pauses the defeat, so it loads once the economy keys exist.
+	for path: String in documents:
+		if path.begins_with(_missions_folder() + "/"):
+			_load_mission(documents[path], path, catalog)
 	for path: String in documents:
 		if path.begins_with("scenarios/"):
 			_load_scenario(documents[path], path, catalog)
@@ -481,6 +493,66 @@ func _needs_path() -> String:
 
 func _classes_path() -> String:
 	return "eras".path_join(_era).path_join("classes.json")
+
+
+func _missions_folder() -> String:
+	return "eras".path_join(_era).path_join(MISSIONS_FOLDER)
+
+
+# A mission (issue #63, D-090): its structure goes to MissionDef and its numbers to the Params keys `mission.<id>.*`,
+# the way the victory stages do.
+func _load_mission(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var mission: MissionDef = MissionDef.new()
+	mission.id = StringName(path.get_file().get_basename())
+	var prefix: String = "mission.%s" % mission.id
+	var fields: Array[String] = MISSION_FIELDS.duplicate()
+	if raw.has("defeat_pause"):
+		fields.append("defeat_pause")
+	if not _object(raw, fields, path):
+		return
+	var valid: bool = _number(raw["duration_min"], "positive", path + ".duration_min", prefix + ".duration_min", catalog)
+	if raw.has("defeat_pause"):
+		mission.defeat_pause = StringName(str(raw["defeat_pause"]))
+		if raw["defeat_pause"] is not String or mission.defeat_pause not in catalog.boolean_keys:
+			_errors.append("%s.defeat_pause: expected the key of a boolean parameter" % path)
+			valid = false
+	valid = _mission_goal(raw["goal"], path + ".goal", prefix + ".goal", mission, catalog) and valid
+	for outcome: StringName in [MissionSystem.COMPLETED, MissionSystem.FAILED, MissionSystem.ABANDONED]:
+		var field: String = "on_%s" % outcome
+		valid = _mission_effects(raw[field], "%s.%s" % [path, field], "%s.%s" % [prefix, field], outcome, mission,
+			catalog) and valid
+	if valid:
+		catalog.missions[mission.id] = mission
+
+
+func _mission_goal(raw: Variant, path: String, prefix: String, mission: MissionDef, catalog: DataCatalog) -> bool:
+	if not _object(raw, ["metric", "at_least"], path):
+		return false
+	if str(raw["metric"]) not in MISSION_METRICS:
+		_errors.append("%s.metric: unknown metric %s" % [path, raw["metric"]])
+		return false
+	mission.goal_metric = StringName(raw["metric"])
+	return _number(raw["at_least"], "integer", path + ".at_least", prefix + ".at_least", catalog)
+
+
+func _mission_effects(raw: Variant, path: String, prefix: String, outcome: StringName, mission: MissionDef,
+		catalog: DataCatalog) -> bool:
+	if raw is not Array:
+		_errors.append("%s: expected an array" % path)
+		return false
+	var effects: Array[Dictionary] = []
+	for index: int in range(raw.size()):
+		var where: String = "%s[%d]" % [path, index]
+		var entry: Variant = raw[index]
+		if entry is not Dictionary or str(entry.get("type", "")) not in MISSION_EFFECTS:
+			_errors.append("%s.type: unknown effect" % where)
+			return false
+		var key: String = "%s.%d.pence" % [prefix, index]
+		if not _object(entry, ["type", "pence"], where) 				or not _number(entry["pence"], "money", where + ".pence", key, catalog):
+			return false
+		effects.append({"type": StringName(entry["type"]), "key": StringName(key)})
+	mission.effects[outcome] = effects
+	return true
 
 
 func _load_needs(raw: Dictionary, catalog: DataCatalog) -> void:

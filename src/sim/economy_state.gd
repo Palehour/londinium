@@ -41,6 +41,8 @@ var satisfaction_departure_age_seconds: int = -1
 var population_peak: float = 0.0
 var depopulation_active: bool = false
 var victory: VictoryState = VictoryState.new()
+# Missions started this game, by id (issue #63, D-090); a save from before them has none.
+var missions: Dictionary[StringName, MissionState] = {}
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
@@ -251,7 +253,17 @@ func to_dict() -> Dictionary:
 		values["barley_price"] = barley_price
 	if tax_rate >= 0.0:
 		values["tax_rate"] = tax_rate
+	# Only once a mission started, so a game without them saves exactly as before them (issue #63).
+	if not missions.is_empty():
+		values["missions"] = _missions_dict()
 	return values
+
+
+func _missions_dict() -> Dictionary:
+	var result: Dictionary = {}
+	for id: StringName in missions:
+		result[id] = missions[id].to_dict()
+	return result
 
 
 func _class_states_dict() -> Dictionary:
@@ -326,6 +338,9 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	var saved_classes: Dictionary = values.get("class_states", {})
 	for id: Variant in saved_classes:
 		result.class_states[StringName(id)] = ClassState.from_dict(saved_classes[id])
+	var saved_missions: Dictionary = values.get("missions", {})
+	for id: Variant in saved_missions:
+		result.missions[StringName(id)] = MissionState.from_dict(saved_missions[id])
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))

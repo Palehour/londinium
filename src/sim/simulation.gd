@@ -190,7 +190,8 @@ func tick() -> void:
 		_growth.tick(_state, _params, _context)
 		_mobility.tick(_state, _params, _context)
 		_money.tick(_state, _params, _context)
-		_defeat.tick(_state, _params, false)
+		MissionSystem.tick(_state, _params, _context)
+		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context))
 		if not _state.defeat_causes.is_empty():
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)
