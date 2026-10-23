@@ -7,8 +7,9 @@ const BUILDING_FIELDS: Dictionary = {
 }
 # Every tag a building may carry. Some change rules (housing, river, cultivable, and basic_infrastructure, which keeps
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
-# changing what a building costs or where it goes.
-const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure"]
+# changing what a building costs or where it goes. A water building (issue #63, D-089) makes nothing, so it has no recipe.
+const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure",
+	"water"]
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
@@ -55,6 +56,12 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"transport": {"cost_per_unit_per_m": "number", "expensive_m": "positive_integer"},
 	# Side of a map cell (issue #186, D-086).
 	"map": {"cell_size_m": "positive_integer"},
+	# Public fountain (issue #63, D-089): the houses it covers, centre to centre, not rounded to cells.
+	"fountain": {"radius_m": "positive"},
+	# Historic events (issue #63): off by default, so the water buildings wait for them. The risk of each water source.
+	# The cholera mission's defeat_pause says whether it stops the depopulation timer (D-090).
+	"events": {"enabled": "boolean", "source_risk": {"neutral": "fraction", "old_ford": "fraction"},
+		"cholera": {"defeat_pause": "boolean"}},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -77,8 +84,6 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"peak_decay_per_minute": "fraction", "stability_window_seconds": "positive_integer"},
 		"grace_seconds": "number",
 	},
-	# Historical events (issue #63): whether the cholera mission stops the depopulation timer (D-090).
-	"events": {"cholera": {"defeat_pause": "boolean"}},
 }
 
 # One era's data is loaded: the engine is the same for every era, only these files change.
@@ -380,8 +385,12 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if raw[id].has("footprint") and not _footprint(raw[id]["footprint"], path + ".footprint", building):
 			continue
 		var is_housing: bool = "housing" in building.tags
+		var makes_goods: bool = not is_housing and WaterSystem.WATER_TAG not in building.tags
 		var schema: Dictionary = BUILDING_FIELDS.duplicate()
-		schema["capacity" if is_housing else "recipe"] = "integer"
+		if is_housing:
+			schema["capacity"] = "integer"
+		elif makes_goods:
+			schema["recipe"] = "integer"
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
@@ -404,7 +413,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if not _goods_list(raw[id].get("distributes", []), path + ".distributes", building.distributes, catalog) \
 				or not _goods_list(raw[id].get("supplies", []), path + ".supplies", building.supplies, catalog):
 			continue
-		if not is_housing:
+		if makes_goods:
 			building.recipe = _recipe(numeric["recipe"], path + ".recipe",
 				"building.%s.recipe" % id, catalog)
 			numeric.erase("recipe")

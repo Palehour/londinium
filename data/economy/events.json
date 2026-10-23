@@ -1,3 +1,5 @@
 {
+  "enabled": false,
+  "source_risk": { "neutral": 0.0, "old_ford": 1.0 },
   "cholera": { "defeat_pause": true }
 }
