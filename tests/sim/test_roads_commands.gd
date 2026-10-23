@@ -147,3 +147,17 @@ func test_a_piece_needs_all_of_its_cells_free() -> void:
 	assert_eq(_build_road(sim, Vector2i(_context.map.width - 1, RoadTestMap.LAND_ROW)).reason, &"outside_map")
 	assert_eq(_money(sim), _initial.money - BuildingCosts.construction_cost(_params, EconomyState.new(),
 		_context.buildings[&"mill"]))
+
+
+# D-094: the Thames stairs are fixed ground like the river. No street goes over any cell of the piece, nothing is
+# charged and the stairs stay; free land beside them still takes a street.
+func test_no_street_on_the_stairs() -> void:
+	var stairs: Vector2i = LAND + Vector2i(1, 1)
+	_context.map.stairs_cells.append(stairs)
+	var sim: Simulation = _sim()
+	assert_eq(_build_road(sim, LAND).reason, &"requires_land")
+	assert_eq(_money(sim), _initial.money)
+	assert_eq(sim.snapshot()["distance"]["player_roads"], [])
+	assert_true(stairs in _context.map.stairs_cells)
+	assert_true(_build_road(sim, LAND + Vector2i(2, 0)).accepted)
+	assert_eq(_money(sim), _initial.money - _cost)

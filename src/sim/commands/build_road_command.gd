@@ -50,8 +50,10 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	# Any cell a building covers is taken, not only the one it stands on (issue #184, D-086).
 	if cells.any(func(cell: Vector2i) -> bool: return not _context.building_at(state, cell).is_empty()):
 		return &"occupied_cell"
-	# Water and dock basins carry no street (D-020), and the standing buildings stay a block (D-075).
-	if cells.any(func(cell: Vector2i) -> bool: return cell in map.river_cells or cell in map.dock_cells):
+	# Water and dock basins carry no street (D-020), nor do the Thames stairs, fixed ground like the river (D-094); the
+	# standing buildings stay a block (D-075).
+	if cells.any(func(cell: Vector2i) -> bool:
+			return cell in map.river_cells or cell in map.dock_cells or cell in map.stairs_cells):
 		return &"requires_land"
 	if cells.any(func(cell: Vector2i) -> bool: return cell in map.existing_cells):
 		return &"existing_building"
