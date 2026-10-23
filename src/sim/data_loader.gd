@@ -54,8 +54,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	# Streets and transport of the distance model (issue #67, D-070, D-080), in metres since issue #186 (D-086).
 	"roads": {"cost": "money", "upkeep_per_minute": "money"},
 	"transport": {"cost_per_unit_per_m": "number", "expensive_m": "positive_integer"},
-	# Side of a map cell (issue #186, D-086).
-	"map": {"cell_size_m": "positive_integer"},
+	# Side of a map cell (issue #186, D-086), and the least buildable land beside the river of a map drawn as rows of
+	# text (issue #61, provisional until task 3).
+	"map": {"cell_size_m": "positive_integer", "min_riverside_buildable": "positive_integer"},
+	# Zones of the full map (issue #61, D-091): all open until their unlocking is decided.
+	"zones": {"all_unlocked": "boolean"},
 	# Public fountain (issue #63, D-089): the houses it covers, centre to centre, not rounded to cells.
 	"fountain": {"radius_m": "positive"},
 	# Historic events (issue #63): off by default, so the water buildings wait for them. The risk of each water source.
@@ -101,12 +104,19 @@ const MISSION_EFFECTS: Array[String] = ["money"]
 const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain",
 	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes",
 	"period_houses", "damaged_wharves", "lot_styles"]
+# A map drawn as rows of cell types (issue #61, D-093). The types replace the layers of coordinates, so only the
+# optional fields that need none of them come along.
+const GRID_MAP_FIELDS: Array[String] = ["id", "size", "cell_size_m", "cells", "districts", "district_by_cell", "zones"]
+const GRID_MAP_OPTIONAL_FIELDS: Array[String] = ["roads_enabled", "road_diagonals", "named_sites", "history_notes"]
+const DISTRICT_FIELDS: Array[String] = ["id", "name", "symbol", "water_source"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
 # targets them does not add a second one (a broken mod value would otherwise read as a broken preset).
 var _rejected_keys: Array[StringName] = []
 var _era: String = DEFAULT_ERA
+# The maps drawn as rows of text, checked once the economy values are known: map, path and declared cell_size_m.
+var _grid_maps: Array[Dictionary] = []
 
 
 # `mods_root` is where the player's mods live (ModLayer.DEFAULT_ROOT in the game); empty loads data/ alone, as
@@ -162,6 +172,7 @@ func load_documents(documents: Dictionary[String, Dictionary], era: String = DEF
 
 
 func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
+	_grid_maps.clear()
 	var catalog: DataCatalog = DataCatalog.new()
 	var required: Array[String] = ["economy/goods.json", "economy/buildings.json",
 		"roles/neutral_administrator.json", "maps/whitechapel_1850s.json", _needs_path(), _classes_path()]
@@ -191,6 +202,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_numbers(numeric, ECONOMY_SCHEMAS[section], path, section, catalog)
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
+	_check_grid_maps(catalog)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
@@ -828,6 +840,9 @@ func _load_role(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 
 
 func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	if raw.has("size"):
+		_load_grid_map(raw, path, catalog)
+		return
 	var fields: Array[String] = ["id", "width", "height", "river_cells", "cultivable_cells"]
 	# The imported layers (issue #60) are optional, so the 8x8 map and older fixtures stay valid.
 	for field: String in MAP_IMPORTED_FIELDS:
@@ -863,18 +878,9 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 		_load_terrain(raw["terrain"], path + ".terrain", map)
 	if raw.has("dense_housing_cells"):
 		_load_dense_housing_cells(raw["dense_housing_cells"], path + ".dense_housing_cells", map, catalog)
-	if raw.has("roads_enabled"):
-		if typeof(raw["roads_enabled"]) != TYPE_BOOL:
-			_errors.append("%s.roads_enabled: expected a boolean" % path)
-		else:
-			map.roads_enabled = raw["roads_enabled"]
-	if raw.has("road_diagonals"):
-		_load_diagonals(raw["road_diagonals"], path + ".road_diagonals", map)
+	_load_map_extras(raw, path, map)
 	if raw.has("anchors"):
 		_load_anchors(raw["anchors"], path + ".anchors", map, catalog)
-	if raw.has("named_sites"):
-		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
-			map.named_sites[entry["cell"]] = entry["name"]
 	if raw.has("period_houses"):
 		_load_period_houses(raw["period_houses"], path + ".period_houses", map, catalog)
 	if raw.has("damaged_wharves"):
@@ -882,11 +888,199 @@ func _load_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	# After the period houses, whose cells carry no lot style.
 	if raw.has("lot_styles"):
 		_load_lot_styles(raw["lot_styles"], path + ".lot_styles", map, catalog)
+	catalog.maps[map.id] = map
+
+
+# The optional fields both map formats share, once the streets are known.
+func _load_map_extras(raw: Dictionary, path: String, map: MapDef) -> void:
+	if raw.has("roads_enabled"):
+		if typeof(raw["roads_enabled"]) != TYPE_BOOL:
+			_errors.append("%s.roads_enabled: expected a boolean" % path)
+		else:
+			map.roads_enabled = raw["roads_enabled"]
+	if raw.has("road_diagonals"):
+		_load_diagonals(raw["road_diagonals"], path + ".road_diagonals", map)
+	if raw.has("named_sites"):
+		for entry: Dictionary in _named_places(raw["named_sites"], path + ".named_sites", map):
+			map.named_sites[entry["cell"]] = entry["name"]
 	# Liberties of the whole map (issue #152): only checked here, the simulation never reads them.
 	if raw.has("history_notes") and (raw["history_notes"] is not Array
 			or not raw["history_notes"].all(MapDef.is_history_note)):
 		_errors.append("%s.history_notes: expected notes that open with a history tag" % path)
+
+
+# The full map (issue #61, D-093): rows of cell types and of district symbols, y=0 to the north, at the 25 m of every
+# map (D-086). What needs the economy values is checked later, in _check_grid_maps.
+func _load_grid_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var fields: Array[String] = GRID_MAP_FIELDS.duplicate()
+	for field: String in GRID_MAP_OPTIONAL_FIELDS:
+		if raw.has(field):
+			fields.append(field)
+	if not _object(raw, fields, path):
+		return
+	if raw["id"] != path.get_file().get_basename():
+		_errors.append("%s.id: must match filename" % path)
+		return
+	var size: Variant = raw["size"]
+	if size is not Array or size.size() != 2 or not size.all(func(side: Variant) -> bool:
+			return _is_whole_number(side) and float(side) > 0.0):
+		_errors.append("%s.size: expected [width, height] of positive whole numbers" % path)
+		return
+	var map: MapDef = MapDef.new()
+	map.id = StringName(raw["id"])
+	map.width = int(size[0])
+	map.height = int(size[1])
+	var types: Dictionary[Vector2i, String] = _grid_rows(raw["cells"], path + ".cells", map)
+	var layers: Dictionary[StringName, Array] = {&"river": map.river_cells, &"dock": map.dock_cells,
+		&"stairs": map.stairs_cells, &"street": map.road_cells}
+	for cell: Vector2i in types:
+		var type: StringName = MapDef.CELL_TYPES.get(types[cell], &"")
+		if type == &"":
+			_errors.append("%s.cells: [%d, %d] has unknown cell type %s" % [path, cell.x, cell.y, types[cell]])
+		elif layers.has(type):
+			layers[type].append(cell)
+	_check_road_pieces(path + ".cells", map, catalog.road_footprint)
+	var symbols: Dictionary[String, StringName] = _load_districts(raw["districts"], path + ".districts", map)
+	var districts: Dictionary[Vector2i, String] = _grid_rows(raw["district_by_cell"], path + ".district_by_cell", map)
+	for cell: Vector2i in districts:
+		var symbol: String = districts[cell]
+		if symbol == MapDef.NO_DISTRICT:
+			continue
+		if not symbols.has(symbol):
+			_errors.append("%s.district_by_cell: [%d, %d] has unknown district %s" % [path, cell.x, cell.y, symbol])
+		else:
+			map.district_by_cell[cell] = symbols[symbol]
+	# Every buildable cell belongs to a district; water and streets may lie outside them all.
+	for cell: Vector2i in types:
+		if not districts.is_empty() and _is_free_land(map, cell) and districts[cell] == MapDef.NO_DISTRICT:
+			_errors.append("%s.district_by_cell: buildable cell [%d, %d] has no district" % [path, cell.x, cell.y])
+	_load_zones(raw["zones"], path + ".zones", map)
+	_load_map_extras(raw, path, map)
 	catalog.maps[map.id] = map
+	_grid_maps.append({"map": map, "path": path, "cell_size_m": raw["cell_size_m"]})
+
+
+# One character per cell, one row per y: every cell when the rows fit the map's size, none when they do not.
+func _grid_rows(raw: Variant, location: String, map: MapDef) -> Dictionary[Vector2i, String]:
+	var cells: Dictionary[Vector2i, String] = {}
+	if raw is not Array or raw.size() != map.height or not raw.all(func(row: Variant) -> bool:
+			return row is String and row.length() == map.width):
+		_errors.append("%s: expected %d rows of %d cells" % [location, map.height, map.width])
+		return cells
+	for y: int in range(map.height):
+		for x: int in range(map.width):
+			cells[Vector2i(x, y)] = raw[y][x]
+	return cells
+
+
+# The parishes of the map (D-093), each with the one character that marks it in district_by_cell. The water source is
+# read by the district's id, never by its name (D-089); without one it is the neutral water (D-088).
+func _load_districts(raw: Variant, location: String, map: MapDef) -> Dictionary[String, StringName]:
+	var symbols: Dictionary[String, StringName] = {}
+	if raw is not Array:
+		_errors.append("%s: expected an array" % location)
+		return symbols
+	for entry: Variant in raw:
+		if entry is not Dictionary or not entry.keys().all(func(field: Variant) -> bool: return field in DISTRICT_FIELDS) \
+				or entry.get("id") is not String or entry.get("name") is not String \
+				or entry.get("symbol") is not String or entry.get("water_source", "") is not String \
+				or entry["id"].is_empty() or entry["name"].is_empty() or entry["symbol"].length() != 1 \
+				or entry["symbol"] == MapDef.NO_DISTRICT:
+			_errors.append("%s: expected id, name and a one-character symbol, and a water_source or none" % location)
+			continue
+		var id: StringName = StringName(entry["id"])
+		if map.district_names.has(id) or symbols.has(entry["symbol"]):
+			_errors.append("%s: duplicate district %s or symbol %s" % [location, id, entry["symbol"]])
+			continue
+		symbols[entry["symbol"]] = id
+		map.district_names[id] = entry["name"]
+		map.district_water_sources[id] = StringName(entry.get("water_source", MapDef.DEFAULT_WATER_SOURCE))
+	return symbols
+
+
+# Zones of the map (D-091): an id and its cells, none in two zones. Whether they open is zones.all_unlocked.
+func _load_zones(raw: Variant, location: String, map: MapDef) -> void:
+	if raw is not Array:
+		_errors.append("%s: expected an array" % location)
+		return
+	var taken: Array[Vector2i] = []
+	for entry: Variant in raw:
+		if entry is not Dictionary or entry.keys().size() != 2 or entry.get("id") is not String \
+				or entry["id"].is_empty() or not entry.has("cells") or map.zones.has(StringName(entry["id"])):
+			_errors.append("%s: expected zones with a unique id and cells" % location)
+			continue
+		map.zones[StringName(entry["id"])] = _map_cells(entry["cells"], "%s.%s" % [location, entry["id"]], map, taken)
+
+
+# What a map drawn as rows of text owes the economy values (issue #61): the 25 m of every map (D-086), water sources
+# that events.source_risk knows, a street beside all of its buildable land (D-079) and enough of it by the river.
+func _check_grid_maps(catalog: DataCatalog) -> void:
+	for grid: Dictionary in _grid_maps:
+		var map: MapDef = grid["map"]
+		var path: String = grid["path"]
+		var cell_size: Variant = catalog.base_values.get(&"map.cell_size_m")
+		if not _is_whole_number(grid["cell_size_m"]) or cell_size == null \
+				or int(grid["cell_size_m"]) != int(cell_size):
+			_errors.append("%s.cell_size_m: must be map.cell_size_m (%s)" % [path, cell_size])
+		for district: StringName in map.district_water_sources:
+			var source: StringName = map.district_water_sources[district]
+			if not catalog.base_values.has(StringName("events.source_risk.%s" % source)):
+				_errors.append("%s.districts: %s has an unknown water_source %s" % [path, district, source])
+		var land: Dictionary[Vector2i, bool] = _free_land(map)
+		_check_street_access(map, land, path + ".cells")
+		var floor_key: StringName = &"map.min_riverside_buildable"
+		if catalog.base_values.has(floor_key):
+			_check_riverside_land(map, land, int(catalog.base_values[floor_key]), path + ".cells")
+
+
+static func _free_land(map: MapDef) -> Dictionary[Vector2i, bool]:
+	var land: Dictionary[Vector2i, bool] = {}
+	for y: int in range(map.height):
+		for x: int in range(map.width):
+			if _is_free_land(map, Vector2i(x, y)):
+				land[Vector2i(x, y)] = true
+	return land
+
+
+static func _cell_set(cells: Array[Vector2i]) -> Dictionary[Vector2i, bool]:
+	var found: Dictionary[Vector2i, bool] = {}
+	for cell: Vector2i in cells:
+		found[cell] = true
+	return found
+
+
+# No buildable land cut off from the streets (D-079): each patch of it, joined side to side, has a street on a side.
+# Stairs are no street.
+func _check_street_access(map: MapDef, land: Dictionary[Vector2i, bool], location: String) -> void:
+	var streets: Dictionary[Vector2i, bool] = _cell_set(map.road_cells)
+	var seen: Dictionary[Vector2i, bool] = {}
+	for y: int in range(map.height):
+		for x: int in range(map.width):
+			var start: Vector2i = Vector2i(x, y)
+			if not land.has(start) or seen.has(start):
+				continue
+			seen[start] = true
+			var pending: Array[Vector2i] = [start]
+			var reached: bool = false
+			while not pending.is_empty():
+				var cell: Vector2i = pending.pop_back()
+				for side: Vector2i in RoadNetwork.SIDES:
+					reached = reached or streets.has(cell + side)
+					if land.has(cell + side) and not seen.has(cell + side):
+						seen[cell + side] = true
+						pending.append(cell + side)
+			if not reached:
+				_errors.append("%s: buildable land at [%d, %d] has no street on any side" % [location, x, y])
+
+
+# Buildable cells with a side on a river cell; dock basins and stairs are not the river (issue #61).
+func _check_riverside_land(map: MapDef, land: Dictionary[Vector2i, bool], least: int, location: String) -> void:
+	var river: Dictionary[Vector2i, bool] = _cell_set(map.river_cells)
+	var riverside: int = land.keys().filter(func(cell: Vector2i) -> bool:
+		return RoadNetwork.SIDES.any(func(side: Vector2i) -> bool: return river.has(cell + side))).size()
+	if riverside < least:
+		_errors.append("%s: %d buildable cells beside the river, map.min_riverside_buildable is %d"
+			% [location, riverside, least])
 
 
 # Historic anchors (issue #152): each stands where its building can, on the river for a wharf and on a standing
@@ -995,7 +1189,7 @@ func _check_road_pieces(location: String, map: MapDef, piece: Vector2i) -> void:
 
 
 static func _is_free_land(map: MapDef, cell: Vector2i) -> bool:
-	return cell not in map.river_cells and cell not in map.dock_cells and cell not in map.road_cells 		and cell not in map.existing_cells
+	return cell not in map.river_cells and cell not in map.dock_cells and cell not in map.road_cells 		and cell not in map.existing_cells and cell not in map.stairs_cells
 
 
 # Entries with a name, a source and a cell of the map, each with its cell as a Vector2i.

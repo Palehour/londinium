@@ -203,3 +203,15 @@ func test_dense_housing_has_the_values_of_d075() -> void:
 	var context: EconomyContext = EconomyContext.new(catalog, catalog.maps[&"riverside_strip"])
 	assert_eq(context.class_of_housing(&"dense_housing"), &"", "No class claims it, so the base class lives there")
 	assert_true(catalog.classes[&"worker"].base, "and the base class is the workers")
+
+
+# Issue #61, task 2 (D-091): a provisional floor of riverside land, the strip's own 28, and every zone open until
+# their unlocking is decided.
+func test_the_full_map_floor_and_zones_have_their_first_values() -> void:
+	var result: DataLoadResult = DataLoader.new().load_all()
+	assert_true(result.is_ok(), str(result.errors))
+	if not result.is_ok():
+		return
+	var params: Params = Params.new(result.catalog, result.catalog.roles[&"neutral_administrator"])
+	assert_eq(params.get_value(&"map.min_riverside_buildable"), 28)
+	assert_true(params.get_value(&"zones.all_unlocked"))
