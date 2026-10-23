@@ -77,13 +77,17 @@ Sin filas en el CSV.
 | La Torre | Su mitad oeste | [FACT] | |
 
 ## 6. water_source por distrito (1866)
-Fuente: Farr, *Report on the Cholera Epidemic of 1866* (1868), pp. xix–xx, archive.org/stream/b28067423/b28067423_djvu.txt.
-| Distrito | water_source | Etiqueta | Por qué |
+Fuente: Farr, *Report on the Cholera Epidemic of 1866* (1868), https://archive.org/stream/b28067423/b28067423_djvu.txt. Uso el texto principal (pp. xix–xx), la nota al pie de p. xxix y las respuestas de los médicos oficiales de salud del apéndice "The Health Officers on the Water Supply" (p. ~171).
+- **La nota de Farr ya está resuelta.** Su asterisco no habla del agua: va pegado a "were not supplied with gas by the Commercial Company". Lo que dice es que St George, Shadwell y Wapping no recibían *gas* de la Commercial Gas Company (p. xxix). El [DEBATED] que nacía de esa nota queda sin efecto.
+
+| Distrito | water_source | Etiqueta | Evidencia |
 |---|---|---|---|
-| whitechapel | old_ford | [FACT] | Farr la incluye entre los distritos "supplied by the Old Ford pumps" |
-| st_george_east | old_ford | [DEBATED] | El texto principal de Farr dice Old Ford. Una nota al pie (carta del secretario, 14/9/1867) dice que St George, Shadwell y Wapping "are not supplied by this company" |
-| wapping | neutral | [DEBATED] | La misma nota la excluye y la lista principal no la nombra. Falta el informe MOH de 1866 (Wellcome) |
-Pozos: no pongo ninguno fijo. El pozo de D-090 lo construye el jugador.
+| whitechapel | old_ford | [FACT] (mixto) | Farr la nombra entre los distritos de "the Old Ford pumps". John Liddle (MOH, 30/8/1866): la East London da agua a ~7914 casas y la New River a ~750 (≈ 1/12), estas en partes de los subdistritos Aldgate, Whitechapel North y Artillery, con caños por Upper East Smithfield y Petticoat Lane |
+| st_george_east | old_ford | [FACT] | Farr (p. xix) la nombra entre los distritos abastecidos "by the Old Ford pumps", y en p. xx cita al capitán Tyler: Old Ford casi todos los días de semana y Lea Bridge de noche y los domingos. El MOH de St George no contestó la encuesta ("No replies were received") |
+| wapping | old_ford | [FACT] para la compañía; [DEBATED] para las bombas | El MOH de Limehouse (cuyo distrito incluía Wapping) dice que está "wholly supplied by the East London Waterworks", salvo 15 casas en Green-yard y 4 en Brown Bear-alley, Wapping, que recibían de la New River. Ninguna fuente nombra a Wapping como Old Ford o Lea Bridge. Lo pongo en Old Ford por estar entre St George y Limehouse, que Farr sí pone en Old Ford |
+
+Con la New River como excepción menor, para el juego los tres distritos son `old_ford`. Las casas de la New River (~9 % de Whitechapel, 19 en Wapping) quedan abstraídas [INVENTED].
+Pozos: no pongo ninguno fijo. El MOH de Limehouse dice: "There are no public pumps or wells in the district in use". En Whitechapel, Liddle cuenta que la Junta de Obras cerró dos bombas por agua sucia y que los vecinos de Norton Folgate pidieron reabrirlas (p. ~171). Norton Folgate queda fuera del recorte, así que no se agrega ningún pozo.
 
 ## 7. Libertades
 1. [INVENTED] **Ventana.** E 533500–534700 × N 181850–179850. Es la propuesta de Mason corrida 100 m al este para que entren Cannon Street Road (E 534580–534695) y el borde este del Western Dock (E 534681). El costo es perder Tower Stairs. El norte (N 181850) deja entera Whitechapel Road hasta E 534700, donde llega a N ≈ 181800. El sur (N 179850) deja como mínimo 4 filas de río.
