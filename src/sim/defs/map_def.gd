@@ -6,6 +6,13 @@ const DEFAULT_ID: StringName = &"whitechapel_1850s"
 const TERRAIN_LABELS: Array[StringName] = [&"riverbank", &"marsh"]
 # Chronicler's tags (issue #152): every historic place and liberty of a traced map opens with one of them.
 const HISTORY_TAGS: Array[String] = ["[FACT", "[DEBATED]", "[LEGEND]", "[INVENTED]"]
+# A map drawn as rows of text (issue #61, D-093): one character per cell, y=0 to the north.
+const CELL_TYPES: Dictionary[String, StringName] = {"~": &"river", "D": &"dock", "s": &"stairs", "#": &"street",
+	".": &"buildable"}
+# A cell of district_by_cell outside every district; only land that cannot be built may be left so.
+const NO_DISTRICT: String = "."
+# The water of a district that names no source (D-088): it adds no risk.
+const DEFAULT_WATER_SOURCE: StringName = &"neutral"
 
 var id: StringName
 var width: int
@@ -39,6 +46,14 @@ var period_houses: Array[Vector2i] = []
 var period_house_population: Dictionary[Vector2i, int] = {}
 var damaged_wharves: Array[Vector2i] = []
 var lot_styles: Dictionary[Vector2i, StringName] = {}
+# Only on a map drawn as rows of text (issue #61, D-093). The Thames stairs are no land to build on, no street for the
+# access and no river. Each district is a parish, read by its id, never by its name (D-089); every buildable cell has
+# one. The zones open together while zones.all_unlocked holds (D-091).
+var stairs_cells: Array[Vector2i] = []
+var district_by_cell: Dictionary[Vector2i, StringName] = {}
+var district_names: Dictionary[StringName, String] = {}
+var district_water_sources: Dictionary[StringName, StringName] = {}
+var zones: Dictionary[StringName, Array] = {}
 
 
 # A tag and some words after it; "[FACT" also covers a FACT with a margin, like "[FACT ±1]".

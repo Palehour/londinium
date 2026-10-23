@@ -48,6 +48,11 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.lot_styles.assign(selected_map.lot_styles)
 	map.roads_enabled = selected_map.roads_enabled
 	map.road_diagonals.assign(selected_map.road_diagonals)
+	map.stairs_cells.assign(selected_map.stairs_cells)
+	map.district_by_cell.assign(selected_map.district_by_cell)
+	map.district_names.assign(selected_map.district_names)
+	map.district_water_sources.assign(selected_map.district_water_sources)
+	map.zones.assign(selected_map.zones)
 
 
 func copy() -> EconomyContext:
@@ -121,8 +126,8 @@ func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
 		return &"not_cultivable"
 	if "river" in tags and cell not in map.river_cells:
 		return &"requires_river"
-	# A dock basin is water but not a grain source (D-020): nothing is built on it.
-	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells):
+	# A dock basin is water but not a grain source (D-020): nothing is built on it, nor on the Thames stairs (#61).
+	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells or cell in map.stairs_cells):
 		return &"requires_land"
 	# Standing buildings, the anchors of the traced map (#152), stay a block (D-075). Only new building is stopped: a
 	# saved building on one of these cells stays and works (D-076).
