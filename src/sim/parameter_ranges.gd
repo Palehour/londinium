@@ -172,6 +172,13 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"map.cell_size_m": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# Public fountain (issue #63, D-089): its radius and the cost and upkeep ranges of the spec.
+	&"fountain.radius_m": {
+		"min": 50.0, "max": 400.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.public_fountain.cost": {
+		"min": 100.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.public_fountain.upkeep_per_minute": {
+		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},

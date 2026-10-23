@@ -112,6 +112,7 @@ ui.building.malthouse,Maltería,Malthouse
 ui.building.brewery,Cervecería,Brewery
 ui.building.artisan_housing,Vivienda de artesanos,Artisan housing
 ui.building.dense_housing,Vivienda densa,Dense housing
+ui.building.public_fountain,Fuente pública,Public fountain
 ui.class.worker,Trabajadores,Workers
 ui.class.artisan,Artesanos,Artisans
 ui.category.sustento,Sustento,Sustenance
@@ -151,6 +152,7 @@ ui.reason.requires_river,El edificio requiere una casilla de río.,The building 
 ui.reason.requires_land,El edificio requiere una casilla de tierra.,The building requires a land cell.
 ui.reason.existing_building,En la casilla hay edificación existente.,There is a standing building on the cell.
 ui.reason.not_buildable,Este edificio no se construye: solo viene del mapa.,This building cannot be built: it only comes with the map.
+ui.reason.events_disabled,Disponible con los eventos históricos.,Available with the historic events.
 ui.reason.insufficient_money,No hay dinero suficiente.,There is not enough money.
 ui.reason.no_money_for_wheat,Sin dinero para comprar trigo.,No money to buy wheat.
 ui.reason.no_building,No hay edificio para demoler.,There is no building to demolish.

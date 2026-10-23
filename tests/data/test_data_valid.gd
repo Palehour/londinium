@@ -8,7 +8,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		return
 	var catalog: DataCatalog = result.catalog
 	assert_eq(catalog.goods.size(), 7)
-	assert_eq(catalog.buildings.size(), 9)
+	# The public fountain of issue #63 (D-089) is the tenth.
+	assert_eq(catalog.buildings.size(), 10)
 	assert_eq(catalog.roles.size(), 1)
 	# The 8x8 map of the scripted scenarios and the strip the game plays on (D-074).
 	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s"] as Array[StringName])

@@ -43,5 +43,9 @@
   "dense_housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
     "jobs": 0, "capacity": 20, "buildable": false, "tags": ["housing"], "footprint": [2, 2]
+  },
+  "public_fountain": {
+    "cost": 400, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
+    "jobs": 0, "tags": ["water"], "footprint": [2, 2]
   }
 }
