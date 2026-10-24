@@ -7,9 +7,10 @@ const BUILDING_FIELDS: Dictionary = {
 }
 # Every tag a building may carry. Some change rules (housing, river, cultivable, and basic_infrastructure, which keeps
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
-# changing what a building costs or where it goes. A water building (issue #63, D-089) makes nothing, so it has no recipe.
+# changing what a building costs or where it goes. A water building (issue #63, D-089) and the health post (issue #222,
+# D-106) make nothing, so they have no recipe.
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure",
-	"water"]
+	"water", "health"]
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
@@ -77,6 +78,12 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"cholera": {"fail_mortality": "fraction", "vacancy_min": "number", "recovery_mult": "positive",
 		"recovery_min": "positive"},
 	"mission": {"min_water_d": "fraction"},
+	# What each crisis asks of a house (issue #222, D-105): only health so far. Its response (the disinfection of
+	# D-104), the preventive quarantine of the exposed houses, shorter within the health post's radius (D-106, D-107),
+	# and who is exposed: the houses within exposure_tiles of a sick one, in a square or, with exposure_diamond, a diamond.
+	"crisis": {"health": {"response_cost": "money", "response_min": "positive", "quarantine_min": "positive",
+		"quarantine_post_min": "positive", "post_radius_m": "positive", "exposure_tiles": "positive_integer",
+		"exposure_diamond": "boolean"}},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -113,6 +120,10 @@ const MISSIONS_FOLDER: String = "missions"
 const MISSION_FIELDS: Array[String] = ["duration_min", "goal", "on_completed", "on_failed", "on_abandoned"]
 const MISSION_OPTIONAL_FIELDS: Array[String] = ["defeat_pause", "trigger", "on_started", "card"]
 const MISSION_METRICS: Array[String] = ["population", "water"]
+# Chronicler's texts of each crisis (issue #222), optional: the note of the house's tooltip and the card.
+const CRISIS_TEXTS_FILE: String = "crisis.json"
+const CRISIS_TEXT_FIELDS: Array[String] = ["tooltip", "card"]
+const CRISIS_CARD_FIELDS: Array[String] = ["year", "title", "text", "sources"]
 # Each effect and the kind of its one number: money pays pence, source_risk sets the risk of the districts that drink
 # from its source (Old Ford, issue #202; by district, issue #209), cholera kills in the districts that fail and
 # empties their houses for a while.
@@ -216,7 +227,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), PRESETS_PATH, KNOBS_PATH]:
+		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), _crisis_texts_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
@@ -229,6 +240,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	_check_grid_maps(catalog)
 	_check_water_buildings(catalog)
 	_check_prep_weights(catalog)
+	_check_quarantine(catalog)
+	if documents.has(_crisis_texts_path()):
+		_load_crisis_texts(documents[_crisis_texts_path()], catalog)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
@@ -424,7 +438,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			continue
 		var is_housing: bool = "housing" in building.tags
 		var is_water: bool = WaterSystem.WATER_TAG in building.tags
-		var makes_goods: bool = not is_housing and not is_water
+		var makes_goods: bool = not is_housing and not is_water and CrisisSystem.POST_TAG not in building.tags
 		# A building priced as another reads that one's keys (issue #202): it has none of its own to copy.
 		var schema: Dictionary = {} if raw[id].has("priced_as") else BUILDING_FIELDS.duplicate()
 		if is_water and not _water_fields(raw[id], path, building):
@@ -571,6 +585,40 @@ func _needs_path() -> String:
 
 func _classes_path() -> String:
 	return "eras".path_join(_era).path_join("classes.json")
+
+
+func _crisis_texts_path() -> String:
+	return "eras".path_join(_era).path_join(CRISIS_TEXTS_FILE)
+
+
+# The quarantine within the post's radius is the shorter one (D-107).
+func _check_quarantine(catalog: DataCatalog) -> void:
+	var full: Variant = catalog.base_values.get(&"crisis.health.quarantine_min")
+	var short: Variant = catalog.base_values.get(&"crisis.health.quarantine_post_min")
+	if full != null and short != null and float(short) >= float(full):
+		_errors.append("economy/crisis.json: crisis.health.quarantine_post_min must be < crisis.health.quarantine_min")
+
+
+# Text, not rules: a known crisis, its tooltip note and a card with its year and sources.
+func _load_crisis_texts(raw: Dictionary, catalog: DataCatalog) -> void:
+	var path: String = _crisis_texts_path()
+	for crisis: String in raw:
+		var location: String = "%s.%s" % [path, crisis]
+		if StringName(crisis) not in CrisisSystem.TYPES:
+			_errors.append("%s: unknown crisis" % location)
+			continue
+		if not _object(raw[crisis], CRISIS_TEXT_FIELDS, location) \
+				or not _object(raw[crisis]["card"], CRISIS_CARD_FIELDS, location + ".card"):
+			continue
+		var card: Dictionary = raw[crisis]["card"]
+		var sources: Array[String] = []
+		var texts: Array = [raw[crisis]["tooltip"], card["title"], card["text"]]
+		if texts.any(func(text: Variant) -> bool: return text is not String or text.is_empty()) \
+				or not _is_whole_number(card["year"]) or card["sources"] is not Array \
+				or not _strings(card["sources"], location + ".card.sources", sources) or sources.is_empty():
+			_errors.append("%s: expected a tooltip and a card with a year, a title, a text and sources" % location)
+			continue
+		catalog.crisis_texts[StringName(crisis)] = raw[crisis].duplicate(true)
 
 
 func _missions_folder() -> String:

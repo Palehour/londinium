@@ -22,6 +22,10 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 			if _is_anchor(state.buildings[index]["definition_id"], RoadNetwork.cell_of(state.buildings[index])):
 				reason = &"historic_anchor"
 				return
+			# A house in a crisis waits for it (issue #222, D-106, D-107).
+			reason = CrisisSystem.lock_reason(state.buildings[index])
+			if reason != &"":
+				return
 			var refund: int = _refund(state, params, state.buildings[index])
 			state.money += refund
 			# Net spending keeps the panel's construction line honest.

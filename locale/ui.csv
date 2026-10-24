@@ -103,6 +103,10 @@ ui.lot.plain,Baldío,Open lot
 ui.damaged_wharf,Muelle dañado,Damaged wharf
 ui.repair_hint,Muelle dañado · R: reparar por %s,Damaged wharf · R: repair for %s
 ui.repair_hint_gamepad,Muelle dañado · Y: reparar por %s,Damaged wharf · Y: repair for %s
+ui.crisis.disinfection,Desinfección: %s · %d s,Disinfection: %s · %d s
+ui.crisis.seconds_left,Faltan %d s,%d s left
+ui.crisis.disinfect,Desinfectar (R),Disinfect (R)
+ui.crisis.disinfect_gamepad,Desinfectar (Y),Disinfect (Y)
 ui.building.wharf,Embarcadero,Wharf
 ui.building.mill,Molino,Mill
 ui.building.bakery,Panadería,Bakery
@@ -114,6 +118,7 @@ ui.building.artisan_housing,Vivienda de artesanos,Artisan housing
 ui.building.dense_housing,Vivienda densa,Dense housing
 ui.building.public_fountain,Fuente pública,Public fountain
 ui.building.lea_bridge_fountain,Fuente de Lea Bridge,Lea Bridge fountain
+ui.building.health_post,Puesto sanitario,Health post
 ui.building.well,Pozo,Well
 ui.class.worker,Trabajadores,Workers
 ui.class.artisan,Artesanos,Artisans
@@ -185,6 +190,11 @@ ui.reason.road_cell,La casilla es una calle.,The cell is a street.
 ui.reason.historic_road,Las calles históricas no se demuelen.,Historic streets cannot be demolished.
 ui.reason.historic_anchor,Los edificios históricos del mapa no se demuelen.,The historic buildings of the map cannot be demolished.
 ui.reason.not_damaged_wharf,Esa casilla no es un muelle dañado libre.,That cell is not a free damaged wharf.
+ui.reason.house_sick,"Casa con enfermos: no se demuele mientras dure la crisis.","House with sick people: it cannot be demolished while the crisis lasts."
+ui.reason.house_quarantine,"Casa expuesta en cuarentena: espera a que termine su plazo.","Exposed house in quarantine: it waits for its term to end."
+ui.reason.house_not_sick,Solo se desinfecta una casa con enfermos.,Only a house with sick people can be disinfected.
+ui.reason.outside_health_post,La casa está fuera del radio de un puesto sanitario.,The house is outside the radius of a health post.
+ui.reason.disinfection_running,La casa ya se está desinfectando.,The house is already being disinfected.
 ui.reason.roads_disabled,En este mapa no se construyen calles.,Streets cannot be built on this map.
 ui.objectives,Objetivos del capítulo,Chapter objectives
 ui.objective_population,Población: %.1f / %d · media de %d s · %s,Population: %.1f / %d · %d s average · %s
