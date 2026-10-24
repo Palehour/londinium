@@ -21,6 +21,8 @@
     "brewery": {"color": "#9c6b3f"},
     "artisan_housing": {"color": "#8f9fd1"},
     "dense_housing": {"color": "#6f9da1"},
-    "public_fountain": {"color": "#5fb3d9"}
+    "public_fountain": {"color": "#5fb3d9"},
+    "lea_bridge_fountain": {"color": "#3f8fd9"},
+    "well": {"color": "#7fa3b3"}
   }
 }

@@ -151,7 +151,8 @@ func get_building_unavailable_reason(id: StringName) -> StringName:
 	if _context == null:
 		return &"unknown_building"
 	if _context.buildings.has(id):
-		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _context.buildings[id])
+		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _state, _context,
+			_context.buildings[id])
 		if events_reason != &"":
 			return events_reason
 	return _context.building_unavailable_reason(id)

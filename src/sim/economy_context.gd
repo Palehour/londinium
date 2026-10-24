@@ -20,6 +20,9 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.footprint = definition.footprint
 		copy.distributes.assign(definition.distributes)
 		copy.supplies.assign(definition.supplies)
+		copy.coverage = definition.coverage
+		copy.water_source = definition.water_source
+		copy.priced_as = definition.priced_as
 		if definition.recipe != null:
 			copy.recipe = RecipeDef.new()
 			copy.recipe.inputs.assign(definition.recipe.inputs)
