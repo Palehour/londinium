@@ -21,6 +21,12 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   "Decisiones y docs" in your PR and implement the most conservative reading.
 - Mason (design bot) may commit `docs/DECISIONS.md` on a branch only when the PR quotes Cristian's approvals; Cristian, or Chief on his behalf, merges (approved by Cristian 2026-10-17, relayed by Chief).
 - Design proposals (P-xxx and decision options) first compare how other games solved the same problem (mechanics only, never copied names, numbers or text), then offer options that include sensible new mechanics, not only the simplest one (Cristian, 2026-10-24, relayed by Chief).
+- Every proposal or decision question about an issue cites its D-xxx row or says "sin fila". An open issue is not
+  necessarily pending (Cristian, 2026-10-24, relayed by Chief).
+- When a DECISIONS row merges, its issue gets the `decidida` label and a comment "Decidida en D-xxx, espera #N",
+  or it is closed (Cristian, 2026-10-24, relayed by Chief).
+- In the Londinium group, bots use @ to ask another bot for something. A bot that wasn't mentioned and has nothing
+  new stays silent, and nobody replies to reactions (Cristian, 2026-10-24, relayed by Chief).
 - Implement only **Decided** items (D-xxx). **Proposals (P-xxx) are not implemented** unless the issue
   says the proposal was approved.
 - All balance numbers live in `data/`. Never hardcode a cost, rate, threshold or weight in code.
