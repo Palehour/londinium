@@ -20,6 +20,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
   them only as the `decision-diseno` skill says. If you think a doc is wrong or ambiguous, write it under
   "Decisiones y docs" in your PR and implement the most conservative reading.
 - Mason (design bot) may commit `docs/DECISIONS.md` on a branch only when the PR quotes Cristian's approvals; Cristian, or Chief on his behalf, merges (approved by Cristian 2026-10-17, relayed by Chief).
+- Design proposals (P-xxx and decision options) first compare how other games solved the same problem (mechanics only, never copied names, numbers or text), then offer options that include sensible new mechanics, not only the simplest one (Cristian, 2026-10-24, relayed by Chief).
 - Implement only **Decided** items (D-xxx). **Proposals (P-xxx) are not implemented** unless the issue
   says the proposal was approved.
 - All balance numbers live in `data/`. Never hardcode a cost, rate, threshold or weight in code.
