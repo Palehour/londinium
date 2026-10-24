@@ -8,6 +8,8 @@ signal save_requested
 signal load_requested(path: String)
 # The Archive button (issue #64, D-110): the map view opens the panel.
 signal archive_requested
+# The player asked for the statistics screen (issue #83).
+signal stats_requested
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -72,6 +74,7 @@ var _victory_why: Label
 var _victory_progress: ProgressBar
 var _victory_message: Label
 var _victory_dismiss: Button
+var _stats_button: Button
 var _victory_notice: VBoxContainer
 var _victory_announced: bool = false
 # The player moves through the panel with a gamepad (issue #68); with the mouse nothing keeps the focus.
@@ -213,6 +216,7 @@ func _notification(what: int) -> void:
 
 func _apply_static_texts() -> void:
 	_title.text = Strings.text(Strings.PANEL_TITLE)
+	_stats_button.text = Strings.text(Strings.STATS_SCREEN_OPEN)
 	_restart.text = Strings.text(Strings.RESTART)
 	_archive.text = Strings.text(Strings.ARCHIVE_BUTTON)
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)
@@ -308,6 +312,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	# After the language row, so a gamepad still starts on the language (issue #68).
 	_archive = _button(Strings.text(Strings.ARCHIVE_BUTTON), func() -> void: archive_requested.emit())
 	content.add_child(_archive)
+	_stats_button = _button(Strings.text(Strings.STATS_SCREEN_OPEN), func() -> void: stats_requested.emit())
+	content.add_child(_stats_button)
 	_saves_menu = SavesMenu.new()
 	_saves_menu.save_requested.connect(func() -> void: save_requested.emit())
 	_saves_menu.load_requested.connect(func(path: String) -> void: load_requested.emit(path))
