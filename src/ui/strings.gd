@@ -235,6 +235,19 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"defeat_timer": &"ui.stats.defeat_timer",
 	&"victory_progress": &"ui.stats.victory_progress",
 }
+# The statistics screen (issue #83): the panel's button that opens it, its hint, back button and summary tab.
+const STATS_SCREEN_OPEN: StringName = &"ui.stats_screen.open"
+const STATS_SCREEN_HINT: StringName = &"ui.stats_screen.hint"
+const STATS_SCREEN_BACK: StringName = &"ui.stats_screen.back"
+const STATS_SCREEN_SUMMARY: StringName = &"ui.stats_screen.summary"
+const STATS_SCREEN_NO_DATA: StringName = &"ui.stats_screen.no_data"
+const STATS_SCREEN_CLASS_VALUE: StringName = &"ui.stats_screen.class_value"
+# Titles of the summary cards, by StatsSummary.CARDS id.
+const STATS_SCREEN_CARDS: Dictionary[StringName, StringName] = {
+	&"population": &"ui.stats.population", &"balance": &"ui.stats_screen.card.balance",
+	&"satisfaction": &"ui.stats_screen.card.satisfaction", &"coverage": &"ui.stats_screen.card.coverage",
+	&"fear": &"ui.stats_screen.card.fear", &"debt": &"ui.stats_screen.card.debt",
+}
 # Saved games (issue #57): the kind of each file and why one does not load.
 const SAVE_KIND_LABELS: Dictionary[StringName, StringName] = {
 	&"manual": &"ui.save.kind.manual", &"autosave": &"ui.save.kind.autosave", &"stage": &"ui.save.kind.stage",
@@ -411,6 +424,8 @@ static func all_keys() -> Array[StringName]:
 		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS,
 		ARCHIVE_BUTTON, ARCHIVE_TITLE, ARCHIVE_CLOSE, ARCHIVE_LOCKED, ARCHIVE_SOURCES, ARCHIVE_NO_IMAGE,
 		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
+		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
+		STATS_SCREEN_CLASS_VALUE,
 	]
 	for kind_id: StringName in ARCHIVE_KIND_LABELS:
 		_append_unique(keys, ARCHIVE_KIND_LABELS[kind_id])
@@ -445,6 +460,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, SAVE_REFUSALS[refusal_id])
 	for metric_id: StringName in STATS_SERIES_LABELS:
 		_append_unique(keys, STATS_SERIES_LABELS[metric_id])
+	for card_id: StringName in STATS_SCREEN_CARDS:
+		_append_unique(keys, STATS_SCREEN_CARDS[card_id])
 	return keys
 
 
