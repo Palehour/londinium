@@ -108,6 +108,8 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 - **`ci.yml`** — en cada PR y push a `develop` o `main`: `chickensoft-games/setup-godot` v2.4.3 (fijado por SHA) instala Godot 4.7.2 (sin .NET),
   el chequeo de APIs de Godot 3, `--import`, el chequeo de parseo y GUT headless. Solo Linux: es el runner más barato. Con el repo público los minutos de Actions son gratis
   (si pasa a privado: 2.000 min/mes en Free); una corrida debería rondar 2–4 min.
+  En una PR que solo toca `docs/` (#226) el job corre igual y reporta el check, pero en vez de GUT entero y el balance
+  report corre solo los `test_*.gd` que leen `res://docs/`. Si toca cualquier otra cosa, corre todo.
 - **`export.yml`** — solo con tag `v*` o a mano: el mismo action con `include-templates: true` exporta
   **Windows, macOS y Linux desde un único runner Linux** (Godot exporta cruzado con las plantillas oficiales;
   no hace falta runner de macOS, que en repos privados consume ~10× más). Sube 3 artifacts por 14 días (límite Free: 500 MB).
