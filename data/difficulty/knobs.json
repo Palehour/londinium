@@ -1,5 +1,6 @@
 {
   "defeats_enabled": { "kind": "switch", "keys": ["defeat.enabled"] },
+  "events_enabled": { "kind": "switch", "keys": ["events.enabled"] },
   "reaction_seconds": { "kind": "value", "keys": ["defeat.bankruptcy.duration_seconds",
     "defeat.hunger.duration_seconds", "defeat.depopulation.duration_seconds"], "min": 60, "max": 600, "step": 30 },
   "grace_seconds": { "kind": "value", "keys": ["defeat.grace_seconds"], "min": 0, "max": 900, "step": 60 },

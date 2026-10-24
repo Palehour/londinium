@@ -69,8 +69,14 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"lea_bridge": {"max_fountains": "positive_integer", "source_risk": "fraction"},
 	# Historic events (issue #63): off by default, so the water buildings wait for them. The risk of each water source.
 	# The cholera mission's defeat_pause says whether it stops the depopulation timer (D-090).
+	# Old Ford (issue #202): the minute of the outbreak and the weights of a district's preparation (D-088).
 	"events": {"enabled": "boolean", "source_risk": {"neutral": "fraction", "old_ford": "fraction"},
-		"cholera": {"defeat_pause": "boolean"}},
+		"cholera": {"defeat_pause": "boolean", "trigger_min": "positive"},
+		"prep": {"w_water": "fraction", "w_sewer": "fraction", "w_health": "fraction"}},
+	# What a failed district of the Old Ford mission suffers, and the water it needs (issue #202, D-090).
+	"cholera": {"fail_mortality": "fraction", "vacancy_min": "number", "recovery_mult": "positive",
+		"recovery_min": "positive"},
+	"mission": {"min_water_d": "fraction"},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -105,8 +111,17 @@ const KNOB_KINDS: Array[String] = ["switch", "value", "price_volatility"]
 # Missions (issue #63, D-090): one file each in the era's missions/ folder, optional.
 const MISSIONS_FOLDER: String = "missions"
 const MISSION_FIELDS: Array[String] = ["duration_min", "goal", "on_completed", "on_failed", "on_abandoned"]
-const MISSION_METRICS: Array[String] = ["population"]
-const MISSION_EFFECTS: Array[String] = ["money"]
+const MISSION_OPTIONAL_FIELDS: Array[String] = ["defeat_pause", "trigger", "on_started", "card"]
+const MISSION_METRICS: Array[String] = ["population", "water"]
+# Each effect and the kind of its one number: money pays pence, source_risk sets the district's source (Old Ford,
+# issue #202), cholera kills in the districts that fail and empties their houses for a while.
+const MISSION_EFFECTS: Dictionary[String, Dictionary] = {
+	"money": {"pence": "money"}, "source_risk": {"risk": "fraction"}, "cholera": {},
+}
+# Chronicler's tag for a fact still to check: no card may ship with it (D-088).
+const UNVERIFIED_TAG: String = "[A VERIFICAR]"
+const PREP_WEIGHTS: Array[String] = ["w_water", "w_sewer", "w_health"]
+const PREP_TOLERANCE: float = 0.001
 const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existing_cells", "terrain",
 	"dense_housing_cells", "roads_enabled", "road_diagonals", "anchors", "named_sites", "history_notes",
 	"period_houses", "damaged_wharves", "lot_styles"]
@@ -210,6 +225,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_errors.append("%s: unsupported data file" % path)
 	_check_grid_maps(catalog)
 	_check_water_buildings(catalog)
+	_check_prep_weights(catalog)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
@@ -559,14 +575,15 @@ func _missions_folder() -> String:
 
 
 # A mission (issue #63, D-090): its structure goes to MissionDef and its numbers to the Params keys `mission.<id>.*`,
-# the way the victory stages do.
+# the way the victory stages do. Old Ford (issue #202) adds a trigger, effects at the start and Chronicler's card.
 func _load_mission(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	var mission: MissionDef = MissionDef.new()
 	mission.id = StringName(path.get_file().get_basename())
 	var prefix: String = "mission.%s" % mission.id
 	var fields: Array[String] = MISSION_FIELDS.duplicate()
-	if raw.has("defeat_pause"):
-		fields.append("defeat_pause")
+	for field: String in MISSION_OPTIONAL_FIELDS:
+		if raw.has(field):
+			fields.append(field)
 	if not _object(raw, fields, path):
 		return
 	var valid: bool = _number(raw["duration_min"], "positive", path + ".duration_min", prefix + ".duration_min", catalog)
@@ -575,15 +592,53 @@ func _load_mission(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 		if raw["defeat_pause"] is not String or mission.defeat_pause not in catalog.boolean_keys:
 			_errors.append("%s.defeat_pause: expected the key of a boolean parameter" % path)
 			valid = false
+	if raw.has("trigger"):
+		valid = _mission_trigger(raw["trigger"], path + ".trigger", mission, catalog) and valid
+	if raw.has("card"):
+		valid = _mission_card(raw["card"], path + ".card", mission) and valid
 	valid = _mission_goal(raw["goal"], path + ".goal", prefix + ".goal", mission, catalog) and valid
-	for outcome: StringName in [MissionSystem.COMPLETED, MissionSystem.FAILED, MissionSystem.ABANDONED]:
+	for outcome: StringName in [MissionSystem.STARTED, MissionSystem.COMPLETED, MissionSystem.FAILED,
+			MissionSystem.ABANDONED]:
 		var field: String = "on_%s" % outcome
-		valid = _mission_effects(raw[field], "%s.%s" % [path, field], "%s.%s" % [prefix, field], outcome, mission,
-			catalog) and valid
+		valid = _mission_effects(raw.get(field, []), "%s.%s" % [path, field], "%s.%s" % [prefix, field], outcome,
+			mission, catalog) and valid
 	if valid:
 		catalog.missions[mission.id] = mission
 
 
+# The event that starts it and the minute key it closes at, so it starts duration_min before that minute.
+func _mission_trigger(raw: Variant, path: String, mission: MissionDef, catalog: DataCatalog) -> bool:
+	if not _object(raw, ["id", "closes_at_min"], path):
+		return false
+	if raw["id"] is not String or raw["id"].is_empty():
+		_errors.append("%s.id: expected a trigger id" % path)
+		return false
+	if raw["closes_at_min"] is not String or not catalog.base_values.has(StringName(raw["closes_at_min"])):
+		_errors.append("%s.closes_at_min: unknown parameter %s" % [path, raw["closes_at_min"]])
+		return false
+	mission.trigger_id = StringName(raw["id"])
+	mission.closes_at_key = StringName(raw["closes_at_min"])
+	return true
+
+
+# Chronicler's fields (D-088): text, not rules, but never unverified and always with sources.
+func _mission_card(raw: Variant, path: String, mission: MissionDef) -> bool:
+	if not _object(raw, ["year", "location", "tag", "sources", "liberties"], path):
+		return false
+	if raw["tag"] is not String or raw["tag"] == UNVERIFIED_TAG:
+		_errors.append("%s.tag: %s is not allowed" % [path, raw["tag"]])
+		return false
+	for field: String in ["sources", "liberties"]:
+		var texts: Array[String] = []
+		if not _strings(raw[field], "%s.%s" % [path, field], texts) or (field == "sources" and texts.is_empty()) \
+				or texts.any(func(text: String) -> bool: return text.contains(UNVERIFIED_TAG)):
+			_errors.append("%s.%s: expected a nonempty list of texts" % [path, field])
+			return false
+	mission.card = raw.duplicate(true)
+	return true
+
+
+# `at_least` is a number of the mission (`mission.<id>.goal.at_least`) or the name of a shared key.
 func _mission_goal(raw: Variant, path: String, prefix: String, mission: MissionDef, catalog: DataCatalog) -> bool:
 	if not _object(raw, ["metric", "at_least"], path):
 		return false
@@ -591,6 +646,13 @@ func _mission_goal(raw: Variant, path: String, prefix: String, mission: MissionD
 		_errors.append("%s.metric: unknown metric %s" % [path, raw["metric"]])
 		return false
 	mission.goal_metric = StringName(raw["metric"])
+	if raw["at_least"] is String:
+		mission.goal_key = StringName(raw["at_least"])
+		if not catalog.base_values.has(mission.goal_key):
+			_errors.append("%s.at_least: unknown parameter %s" % [path, raw["at_least"]])
+			return false
+		return true
+	mission.goal_key = StringName(prefix + ".at_least")
 	return _number(raw["at_least"], "integer", path + ".at_least", prefix + ".at_least", catalog)
 
 
@@ -606,12 +668,30 @@ func _mission_effects(raw: Variant, path: String, prefix: String, outcome: Strin
 		if entry is not Dictionary or str(entry.get("type", "")) not in MISSION_EFFECTS:
 			_errors.append("%s.type: unknown effect" % where)
 			return false
-		var key: String = "%s.%d.pence" % [prefix, index]
-		if not _object(entry, ["type", "pence"], where) 				or not _number(entry["pence"], "money", where + ".pence", key, catalog):
+		# The effect's number, if it has one, becomes `mission.<id>.on_<outcome>.<index>.<field>`.
+		var number: Dictionary = MISSION_EFFECTS[str(entry["type"])]
+		var fields: Array[String] = ["type"]
+		fields.append_array(number.keys())
+		if not _object(entry, fields, where):
 			return false
-		effects.append({"type": StringName(entry["type"]), "key": StringName(key)})
+		var effect: Dictionary = {"type": StringName(entry["type"])}
+		for field: String in number:
+			var key: String = "%s.%d.%s" % [prefix, index, field]
+			if not _number(entry[field], number[field], "%s.%s" % [where, field], key, catalog):
+				return false
+			effect["key"] = StringName(key)
+		effects.append(effect)
 	mission.effects[outcome] = effects
 	return true
+
+
+# The three weights of prep (D-088) add up to 1, within 0.001.
+func _check_prep_weights(catalog: DataCatalog) -> void:
+	var total: float = 0.0
+	for weight: String in PREP_WEIGHTS:
+		total += float(catalog.base_values.get(StringName("events.prep.%s" % weight), 0.0))
+	if absf(total - 1.0) > PREP_TOLERANCE:
+		_errors.append("economy/events.json.prep: the weights must add up to 1")
 
 
 func _load_needs(raw: Dictionary, catalog: DataCatalog) -> void:

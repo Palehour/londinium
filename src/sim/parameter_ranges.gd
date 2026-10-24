@@ -188,6 +188,19 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 5.0, "min_inclusive": true, "max_inclusive": true},
 	&"lea_bridge.max_fountains": {
 		"min": 1.0, "max": 6.0, "min_inclusive": true, "max_inclusive": true},
+	# Old Ford mission (issue #202, D-090, and the outbreak minute of D-088): the ranges of the issue.
+	&"events.cholera.trigger_min": {
+		"min": 25.0, "max": 60.0, "min_inclusive": true, "max_inclusive": true},
+	&"mission.min_water_d": {
+		"min": 0.3, "max": 0.9, "min_inclusive": true, "max_inclusive": true},
+	&"cholera.fail_mortality": {
+		"min": 0.0, "max": 0.5, "min_inclusive": true, "max_inclusive": true},
+	&"cholera.vacancy_min": {
+		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
+	&"cholera.recovery_mult": {
+		"min": 1.0, "max": 3.0, "min_inclusive": true, "max_inclusive": true},
+	&"cholera.recovery_min": {
+		"min": 1.0, "max": 15.0, "min_inclusive": true, "max_inclusive": true},
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},

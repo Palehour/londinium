@@ -42,7 +42,9 @@ londinium/
 │   │   ├── fountain.json     # radius_m, the houses a public fountain covers, centre to centre in metres (#63, D-089)
 │   │   ├── well.json         # radius_m and source_risk of the well, 1x1 (#202, D-090)
 │   │   ├── lea_bridge.json   # source_risk of the Lea Bridge water and max_fountains, the cap on its fountains (#202, D-090)
-│   │   ├── events.json       # historic events (#63): `enabled` (off: no water building can be built) and the risk of each water source
+│   │   ├── events.json       # historic events (#63): `enabled` (off: no water building can be built), the risk of each water source, `cholera.trigger_min` (the outbreak) and `prep.w_*`, the weights of a district's preparation, which add up to 1 (D-088, #202)
+│   │   ├── cholera.json      # what a district that fails the Old Ford mission suffers: fail_mortality, vacancy_min, recovery_mult, recovery_min (#202, D-090)
+│   │   ├── mission.json      # min_water_d, the water a district needs at the close of the Old Ford mission (#202, D-090)
 │   │   ├── population.json   # consumption, satisfaction weights, growth thresholds, tax rules
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
@@ -55,7 +57,7 @@ londinium/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
-│   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric, at_least), the effects of on_completed, on_failed and on_abandoned, and optionally defeat_pause (a boolean Params key); every number becomes mission.<id>.*
+│   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` of the district's source, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
@@ -160,7 +162,9 @@ londinium/
 5. Consumption: each class eats the goods it lists as needs at its own rate (bread by everyone, tea by the workers, beer by the artisans, D-025, D-033); tea and beer are drawn from the global store like a single balance; stale bread decays.
 6. Hunger coverage: smooth bread coverage once, shared by hunger emigration and hunger riot defeat.
 7. Satisfaction 0–100 with breakdown (one term per need good: bread, tea; tax burden, overcrowding). Inside this step `NeedsSystem` first scores every class's need categories (`Σ coverage × value`, met at the threshold) and sets the housing capacity (base + `min(bonus per met category, class maximum)`, issue #86), so the order of the tick does not change.
-8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008). With `population.growth.served_capacity_only`, the room immigrants count is only that of the served houses: those with every good of the class's `growth.served_categories` within reach (step 1b), minus the people, who fill the served houses first (D-081). No served room means no arrivals and no backlog; losing the bread evicts nobody (#180, D-085). Without streets every house counts.
+8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008). With `population.growth.served_capacity_only`, the room immigrants count is only that of the served houses: those with every good of the class's `growth.served_categories` within reach (step 1b), minus the people, who fill the served houses first (D-081). No served room means no arrivals and no backlog; losing the bread evicts nobody (#180, D-085). Without streets every house counts. After a cholera failure (#202, D-090) the immigration of every class waits for
+   `cholera.vacancy_min` and then goes `cholera.recovery_mult` times as fast for `cholera.recovery_min`
+   (`MissionSystem.immigration_multiplier`, which reads the timers step 9b left the tick before).
    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
    Then the streets (issue #67): the units each building took out of the store this tick (counted in step 4) times its
@@ -173,6 +177,15 @@ londinium/
    this tick left, and the mission is completed or failed for good, with that outcome's effects. It runs before defeat
    so that a mission whose `defeat_pause` key is true, while active, freezes the depopulation timer of this same tick
    (not reset: it goes on from there afterwards). With no mission started nothing changes.
+   Old Ford (#202, D-090): with `events.enabled`, a mission with a `trigger` starts by itself after the countdown of
+   the tick on which `closes_at_min` minus its duration falls (minute 40 − 6.5), so its single check is the tick of
+   the outbreak. Its `source_risk` effects set the risk of the district's source (`EconomyState.district_source_risk`:
+   1 while it is cut and after a failure or an abandon, 0 once it is met). Its goal `water` compares each district's
+   `WaterSystem.district_water` with `mission.min_water_d`; until districts exist (#61) the map is the one district
+   `default`, drinking from the neutral source. The `cholera` effect of a failure kills `pop × cholera.fail_mortality
+   × (1 − prep)` (prep = `events.prep.w_water` × water_d, sewer and health 0 until they exist), rounded and spread over
+   the classes by the largest remainders, not as emigration, and starts the vacancy and then the recovery. The
+   `defeat_pause` lasts from the start to the end of the recovery. Nothing here draws a random number.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
 11. Stats + snapshot emitted. The chapter history (`StatsHistory`, D-066) samples every series and notes the causes
     that changed; step 1 also notes each command's outcome. It only reads the state.

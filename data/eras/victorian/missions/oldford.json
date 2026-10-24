@@ -1,0 +1,22 @@
+{
+  "duration_min": 6.5,
+  "defeat_pause": "events.cholera.defeat_pause",
+  "trigger": {"id": "cholera_1866_warning", "closes_at_min": "events.cholera.trigger_min"},
+  "goal": {"metric": "water", "at_least": "mission.min_water_d"},
+  "on_started": [{"type": "source_risk", "risk": 1.0}],
+  "on_completed": [{"type": "source_risk", "risk": 0.0}],
+  "on_failed": [{"type": "source_risk", "risk": 1.0}, {"type": "cholera"}],
+  "on_abandoned": [{"type": "source_risk", "risk": 1.0}],
+  "card": {
+    "year": 1866,
+    "location": "Old Ford",
+    "tag": "[DEBATED]",
+    "sources": [
+      "docs/DECISIONS.md D-090: la causa se presenta como sospecha de Farr y Radcliffe, no como certeza",
+      "Farr: 92,7 muertes por 10.000 en St George in the East (issue #63, spec de Mason)"
+    ],
+    "liberties": [
+      "mortalidad exagerada para el juego (la real fue 92,7 por 10.000 en St George in the East, según Farr)"
+    ]
+  }
+}
