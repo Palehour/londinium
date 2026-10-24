@@ -1,6 +1,6 @@
 # #64 — Fichas del Archivo (victorianas, solo lectura)
 Borrador de Chronicler. Solo texto: sin efectos de juego (D-096). El formato de datos (`data/eras/victorian/archive/...`, `strings.gd`) lo define Mason.
-Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED]. Máximo ~120 palabras por ficha. Idiomas: EN + ES (D-100 pendiente de número; decisión #64 P1 = B). Las citas quedan traducidas y marcadas igual que en EN.
+Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED]. Máximo ~120 palabras por ficha. Idiomas: EN + ES (D-100). Las citas quedan traducidas y marcadas igual que en EN.
 
 ## ARC-1858-STINK — "The Great Stink"
 - Fecha: junio-agosto de 1858. Tipo: momento.
