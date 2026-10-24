@@ -23,6 +23,7 @@ var _roofs: MultiMeshInstance3D
 # The graphics quality now (CityFog.HIGH or LOW): volumetric or depth fog.
 var quality: StringName = CityFog.HIGH
 var _environment: Environment
+var _sun: DirectionalLight3D
 # Crisis marks and damaged wharves, rebuilt with the state.
 var _marks: Node3D
 # The labels are drawn in 2D over the city, so neither the fog nor the ink ever hides them: {point: Vector3, text}.
@@ -106,6 +107,8 @@ func _process(delta: float) -> void:
 	if view != _laid_out_for:
 		_laid_out_for = view
 		CityFog.apply(_environment, style.fog, style.fog_color, camera, quality)
+		# Shadows reach past the point in view at any zoom, so the hatching has its deep shadows to draw in.
+		_sun.directional_shadow_max_distance = camera.distance * style.world["shadow_distance_ratio"]
 		queue_redraw()
 
 
@@ -240,6 +243,7 @@ func _build_world() -> void:
 	world_environment.environment = environment
 	_viewport_3d.add_child(world_environment)
 	var sun: DirectionalLight3D = DirectionalLight3D.new()
+	_sun = sun
 	sun.light_color = style.world_colors["sun"]
 	sun.light_energy = style.world["sun_energy"]
 	sun.shadow_enabled = true
@@ -262,6 +266,7 @@ func _build_world() -> void:
 	_viewport_3d.add_child(_marks)
 	_selection = _frame(style.selection_color)
 	_viewport_3d.add_child(_selection)
+	_viewport_3d.add_child(CityInk.quad(style.ink, style.ink_color, camera.cell_size))
 
 
 func _layout_container() -> void:
@@ -518,5 +523,7 @@ func _flat_material(color: Color) -> StandardMaterial3D:
 	material.no_depth_test = true
 	# Game information: never under the fog.
 	material.disable_fog = true
+	# And drawn after the ink pass, so no contour, hatching or grain lands on it.
+	material.render_priority = CityInk.ABOVE_INK
 	material.albedo_color = color
 	return material
