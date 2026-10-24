@@ -106,7 +106,7 @@ londinium/
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
 │   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68)
-│   └── ui/                   # stats_panel/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd
+│   └── ui/                   # stats_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
 ├── tests/
@@ -348,6 +348,10 @@ map call `leave_focus()`. View pauses in either mode. With the mouse, buttons ne
 keep working after a click. The saves and mods menus give the focus back to the same button after rebuilding. The
 help in the header switches to the gamepad's buttons (`ui.help_gamepad`) while a gamepad is in use. The window opens
 at 1280×800, the Steam Deck's resolution.
+**Statistics screen** (`src/ui/stats_screen/`, issue #83, D-052): the panel's Statistics button opens a full-window
+`StatsScreen` over the map and the panel. It only reads the history of #82 (`Simulation.stats_series`, medium level) and
+sends no command. While it shows, the map view passes it every event and polls nothing: LB/RB change tab and B or Esc
+go back. Its look (palette, dash of each stroke, 16 px text, summary window) is in `data/ui/stats.json`.
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

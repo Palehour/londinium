@@ -229,6 +229,17 @@ ui.stats.demotions,Descensos,Demotions
 ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
 ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
 ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.stats_screen.open,Estadísticas,Statistics
+ui.stats_screen.hint,"LB/RB: cambiar de vista · B o Esc: volver","LB/RB: switch view · B or Esc: back"
+ui.stats_screen.back,Volver,Back
+ui.stats_screen.summary,Resumen,Summary
+ui.stats_screen.no_data,Sin datos,No data
+ui.stats_screen.class_value,"%s %.0f","%s %.0f"
+ui.stats_screen.card.balance,Balance por minuto,Balance per minute
+ui.stats_screen.card.satisfaction,Satisfacción por clase,Satisfaction by class
+ui.stats_screen.card.coverage,Cobertura de pan y cerveza,Bread and beer coverage
+ui.stats_screen.card.fear,Miedo,Fear
+ui.stats_screen.card.debt,Deuda,Debt
 ui.save.title,Partidas guardadas:,Saved games:
 ui.save.none,Todavía no hay partidas guardadas.,No saved games yet.
 ui.save.save,Guardar partida,Save game

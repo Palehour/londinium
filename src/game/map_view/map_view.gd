@@ -35,6 +35,8 @@ var _damaged_wharf_label: Label
 var _credits: Label
 var _stats_panel: StatsPanel
 var _archive_panel: ArchivePanel
+# The statistics screen (issue #83): while it shows, the map's input goes to it.
+var _stats_screen: StatsScreen
 var _autosave: Autosave
 var _status_pending: bool = false
 var _status_has_result: bool = false
@@ -69,8 +71,10 @@ func _ready() -> void:
 	var ids: Array[StringName] = []
 	ids.assign(loaded.catalog.buildings.keys())
 	presentation.load_data(ids)
-	if not presentation.errors.is_empty():
-		_show_load_error(layer, presentation.errors)
+	var stats_look: StatsPresentation = StatsPresentation.new()
+	stats_look.load_data()
+	if not presentation.errors.is_empty() or not stats_look.errors.is_empty():
+		_show_load_error(layer, presentation.errors + stats_look.errors)
 		return
 	var save_settings: SaveSettings = SaveSettings.new()
 	save_settings.load_data()
@@ -162,12 +166,18 @@ func _ready() -> void:
 	_stats_panel.mod_order_requested.connect(_reorder_mods)
 	_stats_panel.save_requested.connect(_save_game)
 	_stats_panel.load_requested.connect(_load_game)
+	_stats_panel.stats_requested.connect(_open_stats)
 	if not mods_root.is_empty():
 		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
 	panel_mount.add_child(_stats_panel)
 	_stats_panel.show_saves(SaveFile.list(saves_root))
 	_stats_panel.update_snapshot(_snapshot)
 	_mount_archive(panel_mount)
+	_stats_screen = StatsScreen.new()
+	_stats_screen.name = "StatsScreen"
+	_stats_screen.setup(session, stats_look)
+	_stats_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel_mount.add_child(_stats_screen)
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
@@ -272,7 +282,7 @@ func _resized() -> void:
 
 
 func _process(delta: float) -> void:
-	if geometry == null:
+	if geometry == null or _stats_screen.visible:
 		return
 	_advance_demolish_hold(delta)
 	var direction: Vector2 = Vector2.ZERO
@@ -311,6 +321,10 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if geometry == null:
+		return
+	if _stats_screen.visible:
+		_stats_screen.handle(event)
+		get_viewport().set_input_as_handled()
 		return
 	var previous_center: Vector2 = geometry.center
 	var previous_zoom: float = geometry.zoom
@@ -582,6 +596,13 @@ func _apply_status() -> void:
 		_status.text = Strings.text(Strings.PENDING)
 	elif _status_has_result:
 		_status.text = Strings.command_result(_status_accepted, _status_reason)
+
+
+# The panel gives up the gamepad focus: the screen takes the shoulders and B until it closes.
+func _open_stats() -> void:
+	get_viewport().gui_release_focus()
+	_stats_panel.leave_focus()
+	_stats_screen.open()
 
 
 func _snapshot_received(snapshot: Dictionary) -> void:
