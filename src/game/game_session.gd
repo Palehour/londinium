@@ -76,6 +76,11 @@ func scenario_id() -> StringName:
 	return _scenario_id
 
 
+# The side of a map cell in metres (D-086, D-093), so the 3D city draws the map at its real size (issue #65).
+func cell_size_m() -> int:
+	return int(_params.get_value(&"map.cell_size_m"))
+
+
 func get_snapshot() -> Dictionary:
 	return simulation.snapshot()
 

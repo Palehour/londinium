@@ -28,6 +28,9 @@ const AXES: Dictionary[StringName, Array] = {
 	&"map_pan_down": [JOY_AXIS_LEFT_Y, 1.0],
 	&"map_zoom_out": [JOY_AXIS_TRIGGER_LEFT, 1.0],
 	&"map_zoom_in": [JOY_AXIS_TRIGGER_RIGHT, 1.0],
+	# Only the 3D city turns (issue #65); the 2D map ignores them.
+	&"map_rotate_left": [JOY_AXIS_RIGHT_X, -1.0],
+	&"map_rotate_right": [JOY_AXIS_RIGHT_X, 1.0],
 }
 const CURSOR: Dictionary[StringName, Vector2i] = {
 	&"map_cursor_up": Vector2i.UP,

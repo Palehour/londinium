@@ -106,11 +106,12 @@ londinium/
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
 │   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68);
-│   │                         #   city_camera.gd and city_layout.gd for the 3D greybox (#65)
+│   │                         #   city_view/ (the 3D greybox, #65) with city_camera.gd and city_layout.gd
 │   └── ui/                   # stats_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
 │                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
-│   └── main.tscn             # composes map view + UI; no logic
+│   ├── main.tscn             # composes the 2D map view + UI; no logic. The tests of tests/game drive it
+│   └── city.tscn             # the same with the 3D city on the full map (#65); the splash opens it
 ├── tests/
 │   ├── sim/                  # unit tests per system (test_production.gd, test_needs.gd, test_defeat.gd …)
 │   ├── data/                 # test_data_valid.gd: every JSON loads, keys exist, no orphan params
@@ -338,6 +339,14 @@ marks `expensive` under the buildings. X demolishes only after it is held for `d
 cell cursor, cancels without a command, and finishing the hold submits one demolish even if X stays down. The stick
 does not cancel it. While the panel has the focus, X does not start or finish a hold. B goes back to selecting, the
 stick pans and the triggers zoom one step. Delete still demolishes on press.
+The 3D city (issue #65, D-028) does the same with the 2D map's code: it extends the map view (`MapView`) and changes
+only how a cell is found and drawn. `CityView` plays `whitechapel_full` (48x80, `map.cell_size_m` = 25 m, D-093) in a
+`SubViewport` under the header and beside the panel, and a click casts a ray from the camera: the box of a building first,
+then the ground (`CityCamera.ground_cell`). The camera (`CityCamera`) orbits a point on the ground, tilted at
+`pitch_deg`, turns freely (Q/E, the right button, the right stick) and zooms continuously between `min_distance_m` and
+`max_distance_m`; the d-pad moves the cursor in screen directions whatever the rotation. Each building is a block of
+`CityLayout` boxes from `data/ui/city.json` (leading block, gable or flat roof, chimney and filler houses). The legend
+takes the city's palette (`CityPresentation.apply_palette`).
 Tierra de época (issue #178, D-083): free land is drawn in the colour of its lot style (`lot_styles` of the map,
 colours in `data/ui/map.json`, a second legend row), and each damaged wharf the snapshot lists as repairable
 (`snapshot()["repair"]["wharves"]`: cell and cost, from `RepairWharfCommand.snapshot`) is drawn over its footprint with
