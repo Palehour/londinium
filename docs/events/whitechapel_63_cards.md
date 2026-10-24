@@ -24,7 +24,7 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 
 ### EV-1858-STINK — "The Summer the River Turned"
 
-> **Propuesta, no decidida: no implementar.**
+> **Solo texto en el Archivo (D-096).** Sin efectos ni opciones jugables.
 - Era/año: Victoriana, junio-julio de 1858.
 - Lugar: costa de Wapping (Wapping High Street, sobre las escaleras del río).
 - Trigger: verano caluroso + ciudad con poca o ninguna red cloacal + celdas sobre el río.
@@ -41,7 +41,7 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 
 ### EV-1858-BAZALGETTE — "Lines on a Map" (cadena)
 
-> **Propuesta, no decidida: no implementar.**
+> **Solo texto en el Archivo (D-096).** Sin efectos ni opciones jugables.
 - Era/año: 1858-1865.
 - Lugar: tasadores en Whitechapel Road.
 - Trigger: haber elegido A en STINK.
@@ -78,7 +78,7 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 
 ### EV-1866-INQUIRY — "The Engineer's Admission"
 
-> **Propuesta, no decidida: no implementar.**
+> **Solo texto en el Archivo (D-096).** Sin efectos ni opciones jugables.
 - Era/año: otoño de 1866-1867.
 - Lugar: audiencia de la investigación; Old Ford.
 - Trigger: haber pasado por OLDFORD.
