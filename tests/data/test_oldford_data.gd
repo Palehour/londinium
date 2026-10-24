@@ -103,3 +103,13 @@ func test_the_manual_check_mod_turns_the_events_on() -> void:
 	var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
 	assert_true(params.get_value(&"events.enabled"))
 	assert_eq(params.get_value(&"events.cholera.trigger_min"), 25.0)
+
+
+# Issue #209: the cut names the district source it falls on, one a map district can drink from.
+func test_the_cut_names_a_known_water_source() -> void:
+	var loaded: DataLoadResult = _loaded()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	if loaded.is_ok():
+		assert_eq(loaded.catalog.missions[&"oldford"].effects[&"started"][0]["source"], &"old_ford")
+	_documents[MISSION]["on_started"][0]["source"] = "nowhere"
+	_assert_invalid("%s.on_started[0].source: expected one of %s" % [MISSION, MapDef.WATER_SOURCES])

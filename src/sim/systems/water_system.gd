@@ -2,15 +2,16 @@ class_name WaterSystem
 extends RefCounted
 
 # Water buildings (issue #63, D-089; issue #202, D-090): water_d, how safely a district's houses drink. The public
-# fountain draws from the district's source, the Lea Bridge fountain and the well from their own. Only the Old Ford
-# mission (issue #202) reads it, and only with the historic events on, so with them off the game plays as before.
+# fountain draws from the source of the house's district (issue #209), the Lea Bridge fountain and the well from their
+# own. Only the Old Ford mission (issue #202) reads it, and only with the historic events on, so with them off the game plays as before.
 
 const WATER_TAG: String = "water"
 const HOUSING_TAG: String = "housing"
-# Until districts exist (#61, task 4) the whole map is this one district, and its water comes from the neutral source
-# (D-088) unless a mission set its risk (EconomyState.district_source_risk).
+# A map without districts is this one district, and a house outside every district belongs to it (issue #209). A
+# district drinks from the water_source the map gives it, the neutral one (D-088) if none, unless a mission set its
+# risk (EconomyState.district_source_risk).
 const DEFAULT_DISTRICT: StringName = &"default"
-const DEFAULT_SOURCE: StringName = &"neutral"
+const DEFAULT_SOURCE: StringName = MapDef.DEFAULT_WATER_SOURCE
 
 
 # Each house drinks the safest water that reaches it (issue #202, D-090): the best 1 - risk among the water buildings
@@ -31,27 +32,77 @@ static func coverage(params: Params, context: EconomyContext, houses: Array[Dict
 	return minf(1.0, total / float(houses.size()))
 
 
-# Until districts exist (#60) the city is the one district: every house and every water building of the state.
+# The whole city as one district of the source: every house and every water building of the state.
 static func city_coverage(state: EconomyState, params: Params, context: EconomyContext, source: StringName) -> float:
 	return coverage(params, context, _tagged(state, context, HOUSING_TAG), _tagged(state, context, WATER_TAG), source)
 
 
-# water_d of each district (D-090), with the risk a mission left on its source.
+# water_d of each district of the map (D-090), each house with the source of its own district (issue #209) and the
+# risk a mission left on it. Every water building counts for every house it reaches, whatever its district.
 static func district_water(state: EconomyState, params: Params,
 		context: EconomyContext) -> Dictionary[StringName, float]:
-	var houses: Array[Dictionary] = _tagged(state, context, HOUSING_TAG)
 	var water: Array[Dictionary] = _tagged(state, context, WATER_TAG)
+	var houses: Dictionary[StringName, Array] = district_houses(state, context)
 	var result: Dictionary[StringName, float] = {}
-	result[DEFAULT_DISTRICT] = coverage(params, context, houses, water, DEFAULT_SOURCE,
-		state.district_source_risk.get(DEFAULT_DISTRICT, -1.0))
+	for district: StringName in houses:
+		var in_district: Array[Dictionary] = []
+		in_district.assign(houses[district])
+		result[district] = coverage(params, context, in_district, water, source_of(context, district),
+			state.district_source_risk.get(district, -1.0))
 	return result
 
 
+# The houses of each district, every district of the map listed even without houses. A house belongs to the district
+# of the cell it is placed at (its top-left one).
+static func district_houses(state: EconomyState, context: EconomyContext) -> Dictionary[StringName, Array]:
+	var result: Dictionary[StringName, Array] = {}
+	for district: StringName in districts(context):
+		result[district] = []
+	for house: Dictionary in _tagged(state, context, HOUSING_TAG):
+		var cell: Vector2i = Vector2i(int(house["cell"][0]), int(house["cell"][1]))
+		var district: StringName = context.map.district_by_cell.get(cell, DEFAULT_DISTRICT)
+		if not result.has(district):
+			result[district] = []
+		result[district].append(house)
+	return result
+
+
+static func districts(context: EconomyContext) -> Array[StringName]:
+	var found: Array[StringName] = []
+	found.assign(context.map.district_names.keys())
+	if found.is_empty():
+		found.append(DEFAULT_DISTRICT)
+	return found
+
+
+# The districts a source runs to: those the map gives it. A map without districts is the one district, and the cut of
+# Old Ford falls on it as it did before districts (issue #202).
+static func districts_drinking(context: EconomyContext, source: StringName) -> Array[StringName]:
+	if context.map.district_names.is_empty():
+		return [DEFAULT_DISTRICT]
+	return districts(context).filter(func(district: StringName) -> bool:
+		return source_of(context, district) == source)
+
+
+static func source_of(context: EconomyContext, district: StringName) -> StringName:
+	return context.map.district_water_sources.get(district, DEFAULT_SOURCE)
+
+
 # The risk of the district's own source: what a mission set, or the data's for its source.
-static func district_risk(state: EconomyState, params: Params) -> float:
-	if state.district_source_risk.has(DEFAULT_DISTRICT):
-		return state.district_source_risk[DEFAULT_DISTRICT]
-	return float(params.get_value(StringName("events.source_risk.%s" % DEFAULT_SOURCE)))
+static func district_risk(state: EconomyState, params: Params, district: StringName = DEFAULT_DISTRICT,
+		source: StringName = DEFAULT_SOURCE) -> float:
+	if state.district_source_risk.has(district):
+		return state.district_source_risk[district]
+	return source_risk(params, source)
+
+
+# A source of the events data (events.source_risk.<source>: neutral, Old Ford) or one with a section of its own
+# (<source>.source_risk: Lea Bridge, the well).
+static func source_risk(params: Params, source: StringName) -> float:
+	var key: StringName = StringName("events.source_risk.%s" % source)
+	if not params.has_value(key):
+		key = StringName("%s.source_risk" % source)
+	return float(params.get_value(key))
 
 
 # `<coverage>.radius_m` of the building's data: the fountain's for both fountains, the well's own for the well.
@@ -69,7 +120,7 @@ static func risk(params: Params, context: EconomyContext, building: Dictionary, 
 		return float(params.get_value(StringName("%s.source_risk" % definition.water_source)))
 	if district_risk >= 0.0:
 		return district_risk
-	return float(params.get_value(StringName("events.source_risk.%s" % source)))
+	return source_risk(params, source)
 
 
 # Euclidean, centre to centre of the footprints, in metres (D-086): cells times map.cell_size_m, never rounded.

@@ -83,6 +83,15 @@ func test_a_water_source_must_be_a_source_of_the_events_data() -> void:
 	_assert_invalid("maps/grid_test.json.districts: whitechapel has an unknown water_source nowhere")
 
 
+# Issue #209: a district drinks from neutral, old_ford or lea_bridge; another section with a source_risk, like the
+# well's, is no district source.
+func test_a_district_may_drink_from_lea_bridge_but_not_from_a_well() -> void:
+	_documents[GRID]["districts"][0]["water_source"] = "lea_bridge"
+	assert_eq(_map().district_water_sources[&"whitechapel"], &"lea_bridge")
+	_documents[GRID]["districts"][0]["water_source"] = "well"
+	_assert_invalid("maps/grid_test.json.districts: whitechapel has an unknown water_source well")
+
+
 func test_buildable_land_touching_a_street_loads() -> void:
 	assert_true(_load().is_ok(), str(_load().errors))
 

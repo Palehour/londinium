@@ -113,11 +113,14 @@ const MISSIONS_FOLDER: String = "missions"
 const MISSION_FIELDS: Array[String] = ["duration_min", "goal", "on_completed", "on_failed", "on_abandoned"]
 const MISSION_OPTIONAL_FIELDS: Array[String] = ["defeat_pause", "trigger", "on_started", "card"]
 const MISSION_METRICS: Array[String] = ["population", "water"]
-# Each effect and the kind of its one number: money pays pence, source_risk sets the district's source (Old Ford,
-# issue #202), cholera kills in the districts that fail and empties their houses for a while.
+# Each effect and the kind of its one number: money pays pence, source_risk sets the risk of the districts that drink
+# from its source (Old Ford, issue #202; by district, issue #209), cholera kills in the districts that fail and
+# empties their houses for a while.
 const MISSION_EFFECTS: Dictionary[String, Dictionary] = {
 	"money": {"pence": "money"}, "source_risk": {"risk": "fraction"}, "cholera": {},
 }
+# The effects that also name a district water source (MapDef.WATER_SOURCES), and the field that names it.
+const MISSION_EFFECT_SOURCES: Dictionary[String, String] = {"source_risk": "source"}
 # Chronicler's tag for a fact still to check: no card may ship with it (D-088).
 const UNVERIFIED_TAG: String = "[A VERIFICAR]"
 const PREP_WEIGHTS: Array[String] = ["w_water", "w_sewer", "w_health"]
@@ -670,11 +673,19 @@ func _mission_effects(raw: Variant, path: String, prefix: String, outcome: Strin
 			return false
 		# The effect's number, if it has one, becomes `mission.<id>.on_<outcome>.<index>.<field>`.
 		var number: Dictionary = MISSION_EFFECTS[str(entry["type"])]
+		var source_field: String = MISSION_EFFECT_SOURCES.get(str(entry["type"]), "")
 		var fields: Array[String] = ["type"]
 		fields.append_array(number.keys())
+		if source_field != "":
+			fields.append(source_field)
 		if not _object(entry, fields, where):
 			return false
 		var effect: Dictionary = {"type": StringName(entry["type"])}
+		if source_field != "":
+			if entry[source_field] is not String or StringName(entry[source_field]) not in MapDef.WATER_SOURCES:
+				_errors.append("%s.%s: expected one of %s" % [where, source_field, MapDef.WATER_SOURCES])
+				return false
+			effect[source_field] = StringName(entry[source_field])
 		for field: String in number:
 			var key: String = "%s.%d.%s" % [prefix, index, field]
 			if not _number(entry[field], number[field], "%s.%s" % [where, field], key, catalog):
@@ -1140,7 +1151,8 @@ func _load_zones(raw: Variant, location: String, map: MapDef) -> void:
 
 
 # What a map drawn as rows of text owes the economy values (issue #61): the 25 m of every map (D-086), water sources
-# that events.source_risk knows, a street beside all of its buildable land (D-079) and enough of it by the river.
+# of MapDef.WATER_SOURCES that have a source_risk in the data (issue #209), a street beside all of its buildable land
+# (D-079) and enough of it by the river.
 func _check_grid_maps(catalog: DataCatalog) -> void:
 	for grid: Dictionary in _grid_maps:
 		var map: MapDef = grid["map"]
@@ -1151,7 +1163,8 @@ func _check_grid_maps(catalog: DataCatalog) -> void:
 			_errors.append("%s.cell_size_m: must be map.cell_size_m (%s)" % [path, cell_size])
 		for district: StringName in map.district_water_sources:
 			var source: StringName = map.district_water_sources[district]
-			if not catalog.base_values.has(StringName("events.source_risk.%s" % source)):
+			if source not in MapDef.WATER_SOURCES 					or not (catalog.base_values.has(StringName("events.source_risk.%s" % source))
+						or catalog.base_values.has(StringName("%s.source_risk" % source))):
 				_errors.append("%s.districts: %s has an unknown water_source %s" % [path, district, source])
 		var land: Dictionary[Vector2i, bool] = _free_land(map)
 		_check_street_access(map, land, path + ".cells")

@@ -57,7 +57,7 @@ londinium/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
-│   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` of the district's source, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
+│   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` with the `source` whose districts it sets, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
@@ -72,7 +72,8 @@ londinium/
 │       ├── <map>.json with `size`        # a map drawn as rows of text (#61, D-093), y=0 to the north: `size` [w, h],
 │       │                                #   `cell_size_m` (must be map.cell_size_m), `cells` (one character per cell:
 │       │                                #   `~` river, `D` dock, `s` stairs, `#` street, `.` buildable), `districts`
-│       │                                #   (id, name, one-character symbol, optional water_source, neutral by default),
+│       │                                #   (id, name, one-character symbol, optional water_source: neutral by
+│       │                                #   default, old_ford or lea_bridge, #209),
 │       │                                #   `district_by_cell` (rows of symbols, `.` none), `zones` (id + cells); optional
 │       │                                #   roads_enabled, road_diagonals, named_sites, history_notes. On load: whole street
 │       │                                #   pieces, every buildable cell in a district, every patch of buildable land with a
@@ -181,11 +182,15 @@ londinium/
    (not reset: it goes on from there afterwards). With no mission started nothing changes.
    Old Ford (#202, D-090): with `events.enabled`, a mission with a `trigger` starts by itself after the countdown of
    the tick on which `closes_at_min` minus its duration falls (minute 40 − 6.5), so its single check is the tick of
-   the outbreak. Its `source_risk` effects set the risk of the district's source (`EconomyState.district_source_risk`:
-   1 while it is cut and after a failure or an abandon, 0 once it is met). Its goal `water` compares each district's
-   `WaterSystem.district_water` with `mission.min_water_d`; until districts exist (#61) the map is the one district
-   `default`, drinking from the neutral source. The `cholera` effect of a failure kills `pop × cholera.fail_mortality
-   × (1 − prep)` (prep = `events.prep.w_water` × water_d, sewer and health 0 until they exist), rounded and spread over
+   the outbreak. Its `source_risk` effects name a source (`old_ford`) and set the risk of the districts that drink
+   from it (`EconomyState.district_source_risk`: 1 while it is cut and after a failure or an abandon, 0 once it is
+   met). Its goal `water` compares the `WaterSystem.district_water` of each district with houses with
+   `mission.min_water_d`; empty districts are skipped (D-098), and with no house in any district it fails (D-102).
+   Each house belongs to the district of its placed cell (`district_by_cell`) and drinks from that district's `water_source`
+   (`neutral`, `old_ford` or `lea_bridge`, #209); a map without districts is the one district `default`, drinking from
+   the neutral source, and the cut falls on it. The `cholera` effect of a failure kills, in each failing district,
+   `pop_d × cholera.fail_mortality × (1 − prep_d)` (pop_d = the district's share of the houses of the population; prep
+   = `events.prep.w_water` × water_d, sewer and health 0 until they exist), rounded and spread over
    the classes by the largest remainders, not as emigration, and starts the vacancy and then the recovery. The
    `defeat_pause` lasts from the start to the end of the recovery. Nothing here draws a random number.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.

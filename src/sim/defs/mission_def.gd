@@ -15,5 +15,5 @@ var card: Dictionary = {}
 # A boolean Params key: while it is true and the mission is active, the depopulation timer stands still. Empty: none.
 var defeat_pause: StringName = &""
 # Per outcome (started, completed, failed, abandoned), its effects in order: {"type": StringName, "key": StringName},
-# without the key when the effect has no number.
+# without the key when the effect has no number; source_risk also names its "source" (issue #209).
 var effects: Dictionary[StringName, Array] = {}
