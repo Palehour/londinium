@@ -56,11 +56,11 @@ func _at(id: StringName, cell: Vector2i) -> Dictionary:
 	return {"definition_id": id, "cell": [cell.x, cell.y]}
 
 
-func _city(population: int) -> EconomyState:
+func _city(population: int, houses: Array[Vector2i] = [WEST_HOUSE, EAST_HOUSE]) -> EconomyState:
 	var state: EconomyState = EconomyState.new()
 	state.money = 100000
 	state.population = population
-	for cell: Vector2i in [WEST_HOUSE, EAST_HOUSE]:
+	for cell: Vector2i in houses:
 		state.buildings.append(_at(HOUSE, cell))
 	for cell: Vector2i in [WEST_FOUNTAIN, EAST_FOUNTAIN]:
 		state.buildings.append(_at(FOUNTAIN, cell))
@@ -80,6 +80,14 @@ func _start(sim: Simulation) -> void:
 	sim.apply_command(command)
 	sim.tick()
 	assert_true(command.accepted, str(command.reason))
+
+
+# Starts the mission and runs it to its single check.
+func _run_mission(params: Params, state: EconomyState) -> Dictionary:
+	var sim: Simulation = Simulation.new(params, state, SEED, _context)
+	_start(sim)
+	_ticks(sim, SimTime.minutes_to_ticks(_value(params, "mission.oldford.duration_min")) - 1)
+	return sim.snapshot()["economy"]
 
 
 static func _ticks(sim: Simulation, count: int) -> void:
@@ -159,3 +167,26 @@ func test_a_map_without_districts_is_still_the_one_neutral_district() -> void:
 	var water: Dictionary[StringName, float] = WaterSystem.district_water(_city(0), params, context)
 	assert_eq(water, {WaterSystem.DEFAULT_DISTRICT: 1.0 - _value(params, "events.source_risk.neutral")}
 		as Dictionary[StringName, float])
+
+
+# D-098: the check skips a district without houses. West (Old Ford, 0 water by D-089) is empty, and East's house has
+# its fountain, so the mission is met and nobody dies.
+func test_an_empty_district_is_ignored_and_the_mission_is_met() -> void:
+	var params: Params = _params()
+	var houses: Array[Vector2i] = [EAST_HOUSE]
+	var state: EconomyState = _city(40, houses)
+	assert_eq(_water(state, params)[WEST], 0.0, "D-089: the empty district still has no water")
+	var economy: Dictionary = _run_mission(params, state)
+	assert_eq(StringName(economy["missions"][OLDFORD]["status"]), MissionSystem.COMPLETED)
+	assert_eq(economy["population"], 40, "Nobody dies")
+
+
+# D-102: with no house in any district there is nothing that meets the goal, so the mission fails, and with nobody
+# living there nobody dies.
+func test_with_no_house_in_any_district_the_mission_fails_and_nobody_dies() -> void:
+	var params: Params = _params()
+	var houses: Array[Vector2i] = []
+	var economy: Dictionary = _run_mission(params, _city(0, houses))
+	assert_eq(StringName(economy["missions"][OLDFORD]["status"]), MissionSystem.FAILED)
+	assert_eq(economy["missions"][OLDFORD]["deaths"], 0)
+	assert_eq(economy["population"], 0)

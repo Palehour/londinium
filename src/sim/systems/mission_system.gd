@@ -43,14 +43,15 @@ static func close(state: EconomyState, params: Params, mission: MissionDef, outc
 	_apply_effects(state, params, mission, outcome, context)
 
 
-# The only place a goal is checked, once, when the mission's time is over. Water: every district has at least the
-# threshold (D-090).
+# The only place a goal is checked, once, when the mission's time is over. Water: every district with houses has at
+# least the threshold (D-090, D-098); with no house in any district the mission fails (D-102), so demolishing the city
+# cannot meet it.
 static func goal_met(state: EconomyState, params: Params, context: EconomyContext, mission: MissionDef) -> bool:
 	match mission.goal_metric:
 		&"population":
 			return state.population >= int(params.get_value(mission.goal_key))
 		&"water":
-			return _failing_districts(state, params, context, mission).is_empty()
+			return _housed(state, context) and _failing_districts(state, params, context, mission).is_empty()
 	return false
 
 
@@ -157,15 +158,23 @@ static func _kill(state: EconomyState, context: EconomyContext, deaths: int) -> 
 	return deaths
 
 
+# The districts with houses under the threshold. An empty district has 0 water (D-089) but nobody to protect, so it
+# never fails (D-098).
 static func _failing_districts(state: EconomyState, params: Params, context: EconomyContext,
 		mission: MissionDef) -> Dictionary[StringName, float]:
 	var threshold: float = float(params.get_value(mission.goal_key))
 	var failing: Dictionary[StringName, float] = {}
+	var houses: Dictionary[StringName, Array] = WaterSystem.district_houses(state, context)
 	var water: Dictionary[StringName, float] = WaterSystem.district_water(state, params, context)
 	for district: StringName in water:
-		if water[district] < threshold:
+		if not houses[district].is_empty() and water[district] < threshold:
 			failing[district] = water[district]
 	return failing
+
+
+static func _housed(state: EconomyState, context: EconomyContext) -> bool:
+	return WaterSystem.district_houses(state, context).values().any(func(list: Array) -> bool:
+		return not list.is_empty())
 
 
 # The vacancy runs first and the recovery after it, one growth step each.

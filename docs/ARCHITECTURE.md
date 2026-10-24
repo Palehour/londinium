@@ -184,8 +184,9 @@ londinium/
    the tick on which `closes_at_min` minus its duration falls (minute 40 − 6.5), so its single check is the tick of
    the outbreak. Its `source_risk` effects name a source (`old_ford`) and set the risk of the districts that drink
    from it (`EconomyState.district_source_risk`: 1 while it is cut and after a failure or an abandon, 0 once it is
-   met). Its goal `water` compares each district's `WaterSystem.district_water` with `mission.min_water_d`. Each house
-   belongs to the district of its placed cell (`district_by_cell`) and drinks from that district's `water_source`
+   met). Its goal `water` compares the `WaterSystem.district_water` of each district with houses with
+   `mission.min_water_d`; empty districts are skipped (D-098), and with no house in any district it fails (D-102).
+   Each house belongs to the district of its placed cell (`district_by_cell`) and drinks from that district's `water_source`
    (`neutral`, `old_ford` or `lea_bridge`, #209); a map without districts is the one district `default`, drinking from
    the neutral source, and the cut falls on it. The `cholera` effect of a failure kills, in each failing district,
    `pop_d × cholera.fail_mortality × (1 − prep_d)` (pop_d = the district's share of the houses of the population; prep
