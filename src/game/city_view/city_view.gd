@@ -16,12 +16,21 @@ var _container: SubViewportContainer
 var _viewport_3d: SubViewport
 var _camera_3d: Camera3D
 var _terrain: MultiMeshInstance3D
+var _joints: MultiMeshInstance3D
 var _roads: MultiMeshInstance3D
 var _boxes: MultiMeshInstance3D
 var _roofs: MultiMeshInstance3D
-# Crisis marks and damaged wharves, rebuilt with the state; the labels apart, so they hide when zoomed out.
+# The graphics quality now (CityFog.HIGH or LOW): volumetric or depth fog.
+var quality: StringName = CityFog.HIGH
+var _environment: Environment
+# Crisis marks and damaged wharves, rebuilt with the state.
 var _marks: Node3D
-var _labels: Node3D
+# The labels are drawn in 2D over the city, so neither the fog nor the ink ever hides them: {point: Vector3, text}.
+var _label_items: Array[Dictionary] = []
+# The camera the labels and the fog were last laid out for.
+var _laid_out_for: Array = []
+var _quality_caption: Label
+var _quality_buttons: Dictionary[StringName, Button] = {}
 var _selection: Node3D
 var _selection_cell: Vector2i = NONE
 # What the world shows now, to rebuild it only when the buildings, streets, crises or ruins change.
@@ -50,8 +59,20 @@ func _view_ready() -> void:
 	var map: MapDef = session.context.map
 	camera = CityCamera.new(Vector2i(map.width, map.height), session.cell_size_m(), style.camera)
 	_build_world()
+	_build_quality_switch()
+	# Volumetric fog needs Forward+; anywhere else the game starts on the low quality.
+	set_quality(style.quality if RenderingServer.get_current_rendering_method() == "forward_plus" else CityFog.LOW)
 	_build_terrain()
 	_sync_world(true)
+
+
+# High: volumetric fog and smoothed edges. Low, for weaker machines like the Steam Deck: a depth fog and no MSAA.
+func set_quality(level: StringName) -> void:
+	quality = level
+	_viewport_3d.msaa_3d = Viewport.MSAA_2X if level == CityFog.HIGH else Viewport.MSAA_DISABLED
+	for option: StringName in _quality_buttons:
+		_quality_buttons[option].set_pressed_no_signal(option == level)
+	_laid_out_for = []
 
 
 func _update_help() -> void:
@@ -63,6 +84,9 @@ func _notification(what: int) -> void:
 	super(what)
 	if what == NOTIFICATION_TRANSLATION_CHANGED and camera != null:
 		_sync_world(true)
+		_quality_caption.text = Strings.text(Strings.GRAPHICS)
+		_quality_buttons[CityFog.HIGH].text = Strings.text(Strings.GRAPHICS_HIGH)
+		_quality_buttons[CityFog.LOW].text = Strings.text(Strings.GRAPHICS_LOW)
 
 
 func _process(delta: float) -> void:
@@ -78,7 +102,11 @@ func _process(delta: float) -> void:
 	_camera_3d.transform = camera.camera_transform()
 	_sync_world(false)
 	_place_selection()
-	_labels.visible = camera.distance <= style.marks["label_max_distance_m"]
+	var view: Array = [_camera_3d.transform, quality, _container.size]
+	if view != _laid_out_for:
+		_laid_out_for = view
+		CityFog.apply(_environment, style.fog, style.fog_color, camera, quality)
+		queue_redraw()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -170,9 +198,12 @@ func _reset_view() -> void:
 	_sync_world(true)
 
 
-# Only the demolish ring stays in 2D, drawn over the cell where it is on screen.
+# The labels and the demolish ring are drawn in 2D, over the place they belong to on screen.
 func _draw() -> void:
-	if _demolish_progress <= 0.0 or camera == null:
+	if camera == null:
+		return
+	_draw_labels()
+	if _demolish_progress <= 0.0:
 		return
 	var center_3d: Vector3 = camera.cell_center(_demolish_cell)
 	var center: Vector2 = _container.position + _camera_3d.unproject_position(center_3d)
@@ -199,6 +230,7 @@ func _build_world() -> void:
 	move_child(_container, 0)
 	_layout_container()
 	var environment: Environment = Environment.new()
+	_environment = environment
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = style.world_colors["background"]
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -221,15 +253,13 @@ func _build_world() -> void:
 	_camera_3d.transform = camera.camera_transform()
 	_viewport_3d.add_child(_camera_3d)
 	_terrain = _multimesh(BoxMesh.new(), "Terrain")
+	_joints = _multimesh(BoxMesh.new(), "Joints")
 	_roads = _multimesh(BoxMesh.new(), "Roads")
 	_boxes = _multimesh(BoxMesh.new(), "Buildings")
 	_roofs = _multimesh(PrismMesh.new(), "Roofs")
 	_marks = Node3D.new()
 	_marks.name = "Marks"
 	_viewport_3d.add_child(_marks)
-	_labels = Node3D.new()
-	_labels.name = "Labels"
-	_viewport_3d.add_child(_labels)
 	_selection = _frame(style.selection_color)
 	_viewport_3d.add_child(_selection)
 
@@ -243,6 +273,8 @@ func _layout_container() -> void:
 func _multimesh(mesh: PrimitiveMesh, node_name: String) -> MultiMeshInstance3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
+	# The palette is written in sRGB, like every colour of data/; Forward+ would read it as linear and wash it out.
+	material.vertex_color_is_srgb = true
 	mesh.material = material
 	var multimesh: MultiMesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
@@ -267,6 +299,9 @@ func _build_terrain() -> void:
 			var color: Color = style.lot_colors[map.lot_styles[cell]] if kind == "land" and map.lot_styles.has(cell) else style.terrain[kind]
 			slabs.append(_slab(Rect2(Vector2(cell) * camera.cell_size, Vector2.ONE * camera.cell_size), style.elevation[kind], color))
 	_fill(_terrain, slabs)
+	# One dark slab under the whole map, so the joints between cells show it and not the background through them.
+	var under: float = style.elevation.values().min() - style.ground["depth_m"]
+	_fill(_joints, [_slab(Rect2(Vector2.ZERO, camera.map_size), under, style.joint_color)] as Array[Dictionary])
 
 
 func _slab(area: Rect2, top: float, color: Color) -> Dictionary:
@@ -318,8 +353,10 @@ func _sync_world(force: bool) -> void:
 	if not force and signature == _drawn:
 		return
 	_drawn = signature
-	for node: Node in _marks.get_children() + _labels.get_children():
+	for node: Node in _marks.get_children():
 		node.free()
+	_label_items.clear()
+	queue_redraw()
 	_picks.clear()
 	var land: float = style.elevation["land"]
 	var roads: Array[Dictionary] = []
@@ -364,16 +401,56 @@ func _metres(area: Rect2i) -> Rect2:
 
 
 func _add_label(ground: Vector2, top: float, text: String) -> void:
-	var label: Label3D = Label3D.new()
-	label.text = text
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.fixed_size = true
-	label.pixel_size = style.marks["label_pixel_size"]
-	label.font_size = int(style.marks["label_font_size"])
-	label.modulate = presentation.ui_colors["label"]
-	label.outline_modulate = style.selection_color
-	label.position = Vector3(ground.x, top + style.marks["mark_size_m"], ground.y)
-	_labels.add_child(label)
+	_label_items.append({"point": Vector3(ground.x, top + style.marks["mark_size_m"], ground.y), "text": text})
+
+
+# Only when close enough to read them, and only those in front of the camera and inside the view.
+func _draw_labels() -> void:
+	if camera.distance > style.marks["label_max_distance_m"]:
+		return
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = int(presentation.layout["font_size"])
+	var outline: int = int(style.marks["label_outline_px"])
+	var view: Rect2 = Rect2(_container.position, _container.size)
+	for item: Dictionary in _label_items:
+		var point: Vector3 = item["point"]
+		if _camera_3d.is_position_behind(point):
+			continue
+		var at: Vector2 = _container.position + _camera_3d.unproject_position(point)
+		if not view.has_point(at):
+			continue
+		for line: String in String(item["text"]).split("\n"):
+			var width: float = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+			var origin: Vector2 = at - Vector2(width / 2.0, 0.0)
+			draw_string_outline(font, origin, line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, outline, style.selection_color)
+			draw_string(font, origin, line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, presentation.ui_colors["label"])
+			at.y += font_size
+
+
+# Bottom right of the map, beside the panel. Its buttons never take the focus, so the gamepad keeps the map.
+func _build_quality_switch() -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "QualitySwitch"
+	row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	row.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	row.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	row.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
+	row.offset_bottom = -presentation.layout["help_x"]
+	_quality_caption = Label.new()
+	_quality_caption.text = Strings.text(Strings.GRAPHICS)
+	row.add_child(_quality_caption)
+	var group: ButtonGroup = ButtonGroup.new()
+	group.allow_unpress = false
+	for option: StringName in CityFog.QUALITIES:
+		var button: Button = Button.new()
+		button.text = Strings.text(Strings.GRAPHICS_HIGH if option == CityFog.HIGH else Strings.GRAPHICS_LOW)
+		button.toggle_mode = true
+		button.button_group = group
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(set_quality.bind(option))
+		_quality_buttons[option] = button
+		row.add_child(button)
+	_crisis_tip.get_parent().add_child(row)
 
 
 # Above the house (D-108): a solid block while it has sick people, a frame in quarantine. Not a red cross: the
@@ -439,5 +516,7 @@ func _flat_material(color: Color) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.no_depth_test = true
+	# Game information: never under the fog.
+	material.disable_fog = true
 	material.albedo_color = color
 	return material

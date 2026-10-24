@@ -12,14 +12,17 @@ const WORLD_COLORS: Array[String] = ["background", "ambient", "sun"]
 const WORLD_NUMBERS: Array[String] = ["ambient_energy", "sun_energy", "sun_pitch_deg", "sun_yaw_deg"]
 const GROUND_KEYS: Array[String] = ["depth_m", "gap_m"]
 const FILLER_KEYS: Array[String] = ["height_m", "height_step_m", "width_m", "depth_m", "gap_m"]
-const MARK_KEYS: Array[String] = ["selection_width_m", "mark_size_m", "damaged_wharf_height_m", "label_font_size",
-	"label_pixel_size", "label_max_distance_m"]
+const MARK_KEYS: Array[String] = ["selection_width_m", "mark_size_m", "damaged_wharf_height_m", "label_outline_px",
+	"label_max_distance_m"]
+const FOG_KEYS: Array[String] = ["focus_visibility_near", "focus_visibility_far", "volumetric_length_ratio", "volumetric_glow",
+	"depth_opacity_near", "depth_opacity_far", "depth_end_ratio"]
 const SHAPE_KEYS: Array[String] = ["height_m", "width_ratio", "depth_ratio", "roof_m", "chimney_m"]
 
 var camera: Dictionary[String, float] = {}
 var world_colors: Dictionary[String, Color] = {}
 var world: Dictionary[String, float] = {}
 var ground: Dictionary[String, float] = {}
+var joint_color: Color
 var terrain: Dictionary[String, Color] = {}
 var elevation: Dictionary[String, float] = {}
 var lot_colors: Dictionary[StringName, Color] = {}
@@ -29,6 +32,10 @@ var chimney_color: Color
 var chimney_side: float
 var selection_color: Color
 var marks: Dictionary[String, float] = {}
+var fog: Dictionary[String, float] = {}
+var fog_color: Color
+# The graphics quality the game starts on (CityFog.HIGH or LOW); the player can change it on screen.
+var quality: StringName = CityFog.HIGH
 var colors: Dictionary[StringName, Color] = {}
 # Per building: height_m, width_ratio, depth_ratio, roof_m, chimney_m, plus roof ("flat" or "gable") and fillers.
 var shapes: Dictionary[StringName, Dictionary] = {}
@@ -65,6 +72,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 		else:
 			errors.append("data/ui/city.json.world.%s: invalid color" % key)
 	_numbers(raw, "ground", GROUND_KEYS, ground, true)
+	joint_color = _color(raw, "ground", "joint")
 	for kind: String in MapPresentation.TERRAIN_KINDS:
 		var entry: Variant = _section(raw, "terrain").get(kind)
 		if entry is not Dictionary or not _valid_color(entry.get("color")) or not _is_number(entry.get("elevation_m")):
@@ -86,8 +94,31 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	chimney_side = side.get("side_m", 0.0)
 	_numbers(raw, "marks", MARK_KEYS, marks, true)
 	selection_color = _color(raw, "marks", "selection")
+	_fog(raw)
+	var start: Variant = _section(raw, "graphics").get("quality")
+	if start is String and StringName(start) in CityFog.QUALITIES:
+		quality = StringName(start)
+	else:
+		errors.append("data/ui/city.json.graphics.quality: expected high or low")
 	for id: StringName in building_ids:
 		_shape(_section(raw, "buildings").get(String(id)), id)
+
+
+# The fog never takes more than CityFog.MIN_FOCUS_VISIBILITY from the point in view, and it opens as the camera comes
+# close: more light near than far, less depth fog near than far.
+func _fog(raw: Dictionary) -> void:
+	_numbers(raw, "fog", FOG_KEYS, fog, true)
+	fog_color = _color(raw, "fog", "color")
+	if fog.size() != FOG_KEYS.size():
+		return
+	for key: String in ["focus_visibility_near", "focus_visibility_far"]:
+		if fog[key] < CityFog.MIN_FOCUS_VISIBILITY or fog[key] > 1.0:
+			errors.append("data/ui/city.json.fog.%s: must be between %s and 1, so the fog never hides the game" % [key, CityFog.MIN_FOCUS_VISIBILITY])
+	for key: String in ["depth_opacity_near", "depth_opacity_far"]:
+		if fog[key] > 1.0 - CityFog.MIN_FOCUS_VISIBILITY:
+			errors.append("data/ui/city.json.fog.%s: must be at most %s, so the fog never hides the game" % [key, 1.0 - CityFog.MIN_FOCUS_VISIBILITY])
+	if fog["focus_visibility_near"] < fog["focus_visibility_far"] or fog["depth_opacity_near"] > fog["depth_opacity_far"]:
+		errors.append("data/ui/city.json.fog: the fog must open as the camera comes close")
 
 
 # Gives the 2D presentation the city's palette, so the legend in the header shows the colours on screen.
