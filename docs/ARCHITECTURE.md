@@ -105,8 +105,10 @@ londinium/
 │   │   ├── series_def.gd, series_registry.gd  # statistics series: label, unit, aggregation, dimensions (D-066)
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
-│   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68)
-│   └── ui/                   # stats_panel/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd
+│   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68);
+│   │                         #   city_camera.gd and city_layout.gd for the 3D greybox (#65)
+│   └── ui/                   # stats_panel/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
+│                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
 │   └── main.tscn             # composes map view + UI; no logic
 ├── tests/
