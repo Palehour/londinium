@@ -46,6 +46,14 @@
   },
   "public_fountain": {
     "cost": 400, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "tags": ["water"], "footprint": [2, 2]
+    "jobs": 0, "tags": ["water"], "footprint": [2, 2], "coverage": "fountain"
+  },
+  "lea_bridge_fountain": {
+    "priced_as": "public_fountain", "tags": ["water"], "footprint": [2, 2], "coverage": "fountain",
+    "water_source": "lea_bridge"
+  },
+  "well": {
+    "cost": 150, "upkeep_per_minute": 0, "wage_per_worker_per_minute": 0,
+    "jobs": 0, "tags": ["water"], "footprint": [1, 1], "coverage": "well", "water_source": "well"
   }
 }

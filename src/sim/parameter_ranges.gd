@@ -179,6 +179,15 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 100.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},
 	&"building.public_fountain.upkeep_per_minute": {
 		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
+	# Well and Lea Bridge (issue #202, D-090): the ranges of the issue.
+	&"well.radius_m": {
+		"min": 25.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.well.cost": {
+		"min": 50.0, "max": 500.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.well.upkeep_per_minute": {
+		"min": 0.0, "max": 5.0, "min_inclusive": true, "max_inclusive": true},
+	&"lea_bridge.max_fountains": {
+		"min": 1.0, "max": 6.0, "min_inclusive": true, "max_inclusive": true},
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},

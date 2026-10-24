@@ -15,6 +15,8 @@ var difficulties: Dictionary[StringName, DifficultyDef] = {}
 var knobs: Dictionary[StringName, KnobDef] = {}
 var categories: Array[StringName] = []
 var base_values: Dictionary[StringName, Variant] = {}
+# Keys read through another key (issue #202): a building priced as another has no numbers of its own.
+var key_aliases: Dictionary[StringName, StringName] = {}
 var money_keys: Array[StringName] = []
 var integer_keys: Array[StringName] = []
 var boolean_keys: Array[StringName] = []

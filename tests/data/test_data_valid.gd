@@ -8,8 +8,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		return
 	var catalog: DataCatalog = result.catalog
 	assert_eq(catalog.goods.size(), 7)
-	# The public fountain of issue #63 (D-089) is the tenth.
-	assert_eq(catalog.buildings.size(), 10)
+	# The public fountain of issue #63 (D-089) is the tenth; the Lea Bridge fountain and the well (#202, D-090) follow.
+	assert_eq(catalog.buildings.size(), 12)
 	assert_eq(catalog.roles.size(), 1)
 	# The 8x8 map of the scripted scenarios and the strip the game plays on (D-074).
 	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s"] as Array[StringName])
@@ -38,7 +38,10 @@ func test_every_json_loads_into_typed_definitions() -> void:
 
 # Task 1 of D-086 (issue #184) changed no scale and kept every building in one cell. Task 3 (issue #186) makes every
 # building 2x2 cells of 25 m, the cell of 50 m it had, written out in the data. Which buildings change size is decided
-# later, building by building.
+# later, building by building: the well is 1x1 (D-090, issue #202), and only it.
+const DECIDED_FOOTPRINTS: Dictionary[StringName, Vector2i] = {&"well": Vector2i.ONE}
+
+
 func test_every_building_is_two_by_two() -> void:
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy/buildings.json"))
 	var result: DataLoadResult = DataLoader.new().load_all()
@@ -47,8 +50,9 @@ func test_every_building_is_two_by_two() -> void:
 		return
 	for id: StringName in result.catalog.buildings:
 		# JSON numbers come back as floats.
-		assert_eq(raw[String(id)].get("footprint"), [2.0, 2.0], "%s says its footprint" % id)
-		assert_eq(result.catalog.buildings[id].footprint, Vector2i(2, 2), String(id))
+		var expected: Vector2i = DECIDED_FOOTPRINTS.get(id, Vector2i(2, 2))
+		assert_eq(raw[String(id)].get("footprint"), [float(expected.x), float(expected.y)], "%s says its footprint" % id)
+		assert_eq(result.catalog.buildings[id].footprint, expected, String(id))
 
 
 func test_whitechapel_has_no_cultivation_or_pending_content() -> void:

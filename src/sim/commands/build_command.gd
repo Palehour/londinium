@@ -41,7 +41,8 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 		return &"unknown_building"
 	if not _context.buildings[_definition_id].buildable:
 		return &"not_buildable"
-	var events_reason: StringName = WaterSystem.unavailable_reason(params, _context.buildings[_definition_id])
+	var events_reason: StringName = WaterSystem.unavailable_reason(params, state, _context,
+		_context.buildings[_definition_id])
 	if events_reason != &"":
 		return events_reason
 	var map: MapDef = _context.map

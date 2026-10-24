@@ -13,6 +13,9 @@ const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", 
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
+# Water buildings (issue #202, D-090): the Params section of their radius (`coverage`, required) and of their own
+# source (`water_source`, optional: without it they drink from the district's source).
+const WATER_FIELDS: Array[String] = ["coverage", "water_source"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -61,6 +64,9 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"zones": {"all_unlocked": "boolean"},
 	# Public fountain (issue #63, D-089): the houses it covers, centre to centre, not rounded to cells.
 	"fountain": {"radius_m": "positive"},
+	# Well and Lea Bridge (issue #202, D-090): the sections a water building names in `coverage` and `water_source`.
+	"well": {"radius_m": "positive", "source_risk": "fraction"},
+	"lea_bridge": {"max_fountains": "positive_integer", "source_risk": "fraction"},
 	# Historic events (issue #63): off by default, so the water buildings wait for them. The risk of each water source.
 	# The cholera mission's defeat_pause says whether it stops the depopulation timer (D-090).
 	"events": {"enabled": "boolean", "source_risk": {"neutral": "fraction", "old_ford": "fraction"},
@@ -203,6 +209,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
 	_check_grid_maps(catalog)
+	_check_water_buildings(catalog)
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
@@ -397,8 +404,19 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if raw[id].has("footprint") and not _footprint(raw[id]["footprint"], path + ".footprint", building):
 			continue
 		var is_housing: bool = "housing" in building.tags
-		var makes_goods: bool = not is_housing and WaterSystem.WATER_TAG not in building.tags
-		var schema: Dictionary = BUILDING_FIELDS.duplicate()
+		var is_water: bool = WaterSystem.WATER_TAG in building.tags
+		var makes_goods: bool = not is_housing and not is_water
+		# A building priced as another reads that one's keys (issue #202): it has none of its own to copy.
+		var schema: Dictionary = {} if raw[id].has("priced_as") else BUILDING_FIELDS.duplicate()
+		if is_water and not _water_fields(raw[id], path, building):
+			continue
+		if raw[id].has("priced_as"):
+			if raw[id]["priced_as"] is not String:
+				_errors.append("%s.priced_as: expected a building id" % path)
+				continue
+			building.priced_as = StringName(raw[id]["priced_as"])
+			for field: String in BUILDING_FIELDS:
+				catalog.key_aliases[StringName("building.%s.%s" % [id, field])] = 					StringName("building.%s.%s" % [building.priced_as, field])
 		if is_housing:
 			schema["capacity"] = "integer"
 		elif makes_goods:
@@ -406,8 +424,11 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
-		for field: String in ["buildable", "footprint"]:
+		for field: String in ["buildable", "footprint", "priced_as"]:
 			if raw[id].has(field):
+				fields.append(field)
+		for field: String in WATER_FIELDS:
+			if is_water and raw[id].has(field):
 				fields.append(field)
 		for field: String in BUILDING_SERVICE_FIELDS:
 			if raw[id].has(field):
@@ -415,9 +436,8 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
-		numeric.erase("tags")
-		numeric.erase("buildable")
-		numeric.erase("footprint")
+		for field: String in ["tags", "buildable", "footprint", "priced_as"] + WATER_FIELDS:
+			numeric.erase(field)
 		if numeric.has("service_radius_m"):
 			schema["service_radius_m"] = "integer"
 		for field: String in ["distributes", "supplies"]:
@@ -432,6 +452,33 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			schema.erase("recipe")
 		_numbers(numeric, schema, path, "building.%s" % id, catalog)
 		catalog.buildings[building.id] = building
+
+
+func _water_fields(raw: Dictionary, path: String, building: BuildingDef) -> bool:
+	if not raw.has("coverage"):
+		_errors.append("%s.coverage: missing field" % path)
+		return false
+	for field: String in WATER_FIELDS:
+		if raw.has(field) and (raw[field] is not String or raw[field].is_empty()):
+			_errors.append("%s.%s: expected a section name" % [path, field])
+			return false
+	building.coverage = StringName(raw["coverage"])
+	building.water_source = StringName(raw.get("water_source", ""))
+	return true
+
+
+# Once every economy section is loaded: a water building's sections have its radius and its risk, and a building
+# priced as another names a building that has prices of its own (issue #202).
+func _check_water_buildings(catalog: DataCatalog) -> void:
+	for building: BuildingDef in catalog.buildings.values():
+		var path: String = "economy/buildings.json.%s" % building.id
+		if building.coverage != &"" and not catalog.base_values.has(StringName("%s.radius_m" % building.coverage)):
+			_errors.append("%s.coverage: expected a section with radius_m" % path)
+		if building.water_source != &"" 				and not catalog.base_values.has(StringName("%s.source_risk" % building.water_source)):
+			_errors.append("%s.water_source: expected a section with source_risk" % path)
+		var target: BuildingDef = catalog.buildings.get(building.priced_as)
+		if building.priced_as != &"" and (target == null or target.priced_as != &""):
+			_errors.append("%s.priced_as: unknown building %s" % [path, building.priced_as])
 
 
 # Cells the building covers, [w, h] (issue #184, D-086): structure like the tags, not a balance number.

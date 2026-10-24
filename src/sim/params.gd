@@ -7,6 +7,7 @@ const WHEAT_POLICY_KEYS: Array[StringName] = [&"policy.wheat.default_accumulate_
 	&"policy.wheat.default_reserve_minutes"]
 
 var _base_values: Dictionary[StringName, Variant] = {}
+var _aliases: Dictionary[StringName, StringName] = {}
 var _money_keys: Array[StringName] = []
 var _boolean_keys: Array[StringName] = []
 var _modifiers: Array[Modifier] = []
@@ -20,6 +21,7 @@ var _validated: Dictionary[StringName, Variant] = {}
 # `layers` are the difficulty's `set` modifiers (DataLayers). They go first so the role still applies last (D-065).
 func _init(catalog: DataCatalog, role: RoleDef, layers: Array[Modifier] = []) -> void:
 	_base_values.assign(catalog.base_values)
+	_aliases.assign(catalog.key_aliases)
 	_money_keys.assign(catalog.money_keys)
 	_boolean_keys.assign(catalog.boolean_keys)
 	for modifier: Modifier in layers + role.modifiers:
@@ -27,6 +29,7 @@ func _init(catalog: DataCatalog, role: RoleDef, layers: Array[Modifier] = []) ->
 
 
 func get_value(key: StringName) -> Variant:
+	key = _aliases.get(key, key)
 	if _validated.has(key):
 		return _validated[key]
 	var errors: Array[String] = []
@@ -40,7 +43,7 @@ func get_value(key: StringName) -> Variant:
 
 # True when the data defines the key, so callers can ask about an optional parameter without an error.
 func has_value(key: StringName) -> bool:
-	return _base_values.has(key)
+	return _base_values.has(_aliases.get(key, key))
 
 
 func validation_errors() -> Array[String]:
