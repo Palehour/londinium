@@ -23,6 +23,8 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 ## 2. Cartas
 
 ### EV-1858-STINK — "The Summer the River Turned"
+
+> **Propuesta, no decidida: no implementar.**
 - Era/año: Victoriana, junio-julio de 1858.
 - Lugar: costa de Wapping (Wapping High Street, sobre las escaleras del río).
 - Trigger: verano caluroso + ciudad con poca o ninguna red cloacal + celdas sobre el río.
@@ -38,6 +40,8 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 - Substack: "El olor que hizo actuar al Parlamento".
 
 ### EV-1858-BAZALGETTE — "Lines on a Map" (cadena)
+
+> **Propuesta, no decidida: no implementar.**
 - Era/año: 1858-1865.
 - Lugar: tasadores en Whitechapel Road.
 - Trigger: haber elegido A en STINK.
@@ -52,6 +56,8 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 - Libertades: los tasadores y el viejo son [INVENTED]. Lo de "el doble de ancho" es una anécdota muy repetida [LEGEND/DEBATED].
 
 ### EV-1866-OLDFORD — "The Company's Water" (misión, D-090)
+
+> **Aprobada (D-090).**
 - Era/año: 27/6 al 14/7/1866 como aviso, después el brote.
 - Lugar: Whitechapel y St George in the East.
 - Trigger: aviso de Bromley, id `cholera_1866_warning` (D-090). El nombre "Old Ford" no aparece hasta el cierre.
@@ -71,6 +77,8 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 - Substack: "La pareja de Priory Street y el río que volvió".
 
 ### EV-1866-INQUIRY — "The Engineer's Admission"
+
+> **Propuesta, no decidida: no implementar.**
 - Era/año: otoño de 1866-1867.
 - Lugar: audiencia de la investigación; Old Ford.
 - Trigger: haber pasado por OLDFORD.
@@ -84,6 +92,8 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED] · [A VERI
 - Libertades: la viuda es [INVENTED]. Las posturas de Greaves, Radcliffe, Farr y Letheby son [FACT].
 
 ## 3. Decisiones para Cristian (una a la vez)
+
+> **Propuesta, no decidida: no implementar.**
 D1. ¿El cólera de 1866 depende de lo que se eligió en 1858?
 - A) Cadena con guion: STINK → BAZALGETTE → OLDFORD.
 - B) Cadena sistémica: el cólera llega igual, pero el golpe depende de cuántas celdas tienen cloaca.
