@@ -1,0 +1,6 @@
+{
+  "order": 2,
+  "kind": "character",
+  "unlock": {"mission_closed": "oldford"},
+  "image": null
+}

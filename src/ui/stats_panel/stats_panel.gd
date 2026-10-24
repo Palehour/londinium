@@ -6,6 +6,8 @@ signal difficulty_selected(preset_id: StringName)
 signal mod_order_requested(order: Array[StringName])
 signal save_requested
 signal load_requested(path: String)
+# The Archive button (issue #64, D-110): the map view opens the panel.
+signal archive_requested
 
 const PERCENT: float = 100.0
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
@@ -19,6 +21,7 @@ var _syncing: bool = false
 var _alert: Label
 var _notice: Label
 var _restart: Button
+var _archive: Button
 var _tax: SpinBox
 var _wheat: CheckButton
 var _accumulate_on: CheckBox
@@ -211,6 +214,7 @@ func _notification(what: int) -> void:
 func _apply_static_texts() -> void:
 	_title.text = Strings.text(Strings.PANEL_TITLE)
 	_restart.text = Strings.text(Strings.RESTART)
+	_archive.text = Strings.text(Strings.ARCHIVE_BUTTON)
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)
 	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
 	_tea.text = Strings.text(Strings.TEA_IMPORTS)
@@ -301,6 +305,9 @@ func show_saves(entries: Array[Dictionary], message: String = "") -> void:
 
 func _build_controls(content: VBoxContainer) -> void:
 	_build_locale_row(content)
+	# After the language row, so a gamepad still starts on the language (issue #68).
+	_archive = _button(Strings.text(Strings.ARCHIVE_BUTTON), func() -> void: archive_requested.emit())
+	content.add_child(_archive)
 	_saves_menu = SavesMenu.new()
 	_saves_menu.save_requested.connect(func() -> void: save_requested.emit())
 	_saves_menu.load_requested.connect(func(path: String) -> void: load_requested.emit(path))

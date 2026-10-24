@@ -59,6 +59,7 @@ londinium/
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
 │   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` with the `source` whose districts it sets, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
+│   │       ├── archive/      # the Archive's read-only cards (#64, D-096/D-097/D-099/D-103), one per file, never loaded by the sim: order, kind (moment, character, finding), unlock.mission_closed (the mission whose close, met or not, opens it) and image (null, or its full credit: title, author, publication, date, held_at, license, url, and context; a context image needs archive.<id>.image_context in locale/ui.csv). Words in locale/ui.csv as archive.<id>.title/date/body/sources (D-100)
 │   │       └── crisis.json   # optional: Chronicler's texts per crisis type, the tooltip note and a card (year, title, text, sources); placeholders until Chronicler writes them (#222)
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
@@ -316,6 +317,11 @@ disk), plus one file per chapter stage the moment it is met (`stage_<id>.sav`), 
 does not save its met stages again. Manual saves (`manual_<unix time>.sav`) are unlimited and never overwritten. The
 saves menu (`src/ui/saves_menu/`, inside the stats panel) saves and lists every file newest first; the map view
 writes and reads them and loads a save on the parameters of its difficulty (`GameSession.load_save`).
+
+The Archive (issue #64, D-110) is a panel in the game, opened by the stats panel's Archive button. `ArchiveCatalog`
+(`src/ui/archive_catalog.gd`) loads `data/eras/victorian/archive/` and `ArchivePanel` (`src/ui/archive_panel/`) only
+reads `snapshot()["economy"]["missions"]`: a card opens once its mission is completed, failed or abandoned
+(`ArchiveCatalog.is_unlocked`), and until then shows only its kind. It sends no command.
 
 ## Input: mouse, keyboard and gamepad (D-048, issue #68)
 `GamepadBindings.install()` (called by the map view) adds the gamepad actions to the `InputMap` in code, and A and B
