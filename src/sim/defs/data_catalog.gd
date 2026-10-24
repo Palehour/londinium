@@ -13,6 +13,8 @@ var scenarios: Dictionary[StringName, Dictionary] = {}
 var missions: Dictionary[StringName, MissionDef] = {}
 var difficulties: Dictionary[StringName, DifficultyDef] = {}
 var knobs: Dictionary[StringName, KnobDef] = {}
+# Chronicler's texts of each crisis (issue #222): the tooltip note and the card, text and never a rule.
+var crisis_texts: Dictionary[StringName, Dictionary] = {}
 var categories: Array[StringName] = []
 var base_values: Dictionary[StringName, Variant] = {}
 # Keys read through another key (issue #202): a building priced as another has no numbers of its own.

@@ -40,7 +40,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	if raw is not Dictionary or raw.get("terrain") is not Dictionary or raw.get("buildings") is not Dictionary:
 		errors.append("data/ui/map.json: expected terrain and buildings objects")
 		return
-	for key: String in ["header", "label", "selection", "alert", "damaged_wharf"]:
+	for key: String in ["header", "label", "selection", "alert", "damaged_wharf", "inspection"]:
 		var color: Variant = raw.get("colors", {}).get(key) if raw.get("colors", {}) is Dictionary else null
 		if _valid_color(color):
 			ui_colors[key] = Color(color)

@@ -40,6 +40,7 @@ londinium/
 │   │   ├── map.json          # cell_size_m, the side of a map cell: 25 m (#186, D-086); min_riverside_buildable, the least buildable cells beside the river of a map drawn as rows (#61, provisional)
 │   │   ├── zones.json        # all_unlocked: every zone of the full map is open until their unlocking is decided (#61, D-091)
 │   │   ├── fountain.json     # radius_m, the houses a public fountain covers, centre to centre in metres (#63, D-089)
+│   │   ├── crisis.json       # per crisis type (only `health`, D-105): response_cost and response_min of the disinfection (D-104), quarantine_min and the shorter quarantine_post_min within post_radius_m of a health post (D-106, D-107), exposure_tiles and exposure_diamond (square by default) for who is exposed (#222); provisional values
 │   │   ├── well.json         # radius_m and source_risk of the well, 1x1 (#202, D-090)
 │   │   ├── lea_bridge.json   # source_risk of the Lea Bridge water and max_fountains, the cap on its fountains (#202, D-090)
 │   │   ├── events.json       # historic events (#63): `enabled` (off: no water building can be built), the risk of each water source, `cholera.trigger_min` (the outbreak) and `prep.w_*`, the weights of a district's preparation, which add up to 1 (D-088, #202)
@@ -58,6 +59,7 @@ londinium/
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
 │   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` with the `source` whose districts it sets, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
+│   │       └── crisis.json   # optional: Chronicler's texts per crisis type, the tooltip note and a card (year, title, text, sources); placeholders until Chronicler writes them (#222)
 │   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
@@ -135,6 +137,13 @@ londinium/
    and a demolish never removes them either (`historic_anchor`, #180, D-085). A `RepairWharfCommand` turns a damaged
    wharf of the map (`damaged_wharves`) with nothing on it into a wharf for `repair.wharf_cost_ratio`
    (`economy/repair.json`) of a new wharf, rounded down (#177, D-083). A new wharf may still be built there instead.
+   A demolish never removes a house in a crisis either (`CrisisSystem.lock_reason`, #222): sick (`house_sick`, D-106)
+   or exposed and in quarantine (`house_quarantine`, D-107). A `DisinfectCommand` pays the disinfection of a sick house
+   within a health post's radius (D-104).
+1a. Houses in a crisis (`CrisisSystem`, #222): quarantines and disinfections count down; a finished disinfection
+   leaves the house clean, and once no house is sick every quarantine ends. Nothing makes a house sick yet: the D-054
+   outbreaks (#87) will call `Simulation.mark_house_sick()` / `cure_house()`, which the tests use. A cure while a
+   disinfection runs pays it back.
 1b. Streets (`RoadSystem`, issue #67, D-034, D-070, D-080), only on a map with `roads_enabled` (the strip; the 8x8 of the
    harness has none, so nothing changes there). It runs here because the layout only changes in step 1 and the
    connection decides who works. From the historic streets of the map, the player's streets that join them side by

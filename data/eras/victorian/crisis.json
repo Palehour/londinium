@@ -1,0 +1,11 @@
+{
+  "health": {
+    "tooltip": "PENDIENTE (Chronicler). Texto provisorio: la casa se desinfecta antes de poder demolerla.",
+    "card": {
+      "year": 1866,
+      "title": "PENDIENTE (Chronicler)",
+      "text": "PENDIENTE (Chronicler). Texto provisorio: las casas con enfermos quedan en inspección hasta desinfectarlas.",
+      "sources": ["PENDIENTE (Chronicler)"]
+    }
+  }
+}
