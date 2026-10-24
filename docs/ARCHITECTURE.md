@@ -23,7 +23,7 @@ Changes to this file go through a normal PR reviewed by Cristian.
 ```
 londinium/
 ├── AGENTS.md                 # rules for coding agents (CLAUDE.md just imports it)
-├── project.godot             # Godot 4.7.2, Compatibility renderer, untyped_declaration = error,
+├── project.godot             # Godot 4.7.2, Forward+ renderer (Compatibility on mobile; #65), untyped_declaration = error,
 │                             #   keep debug/gdscript/warnings/exclude_addons=true (vendored GUT)
 ├── export_presets.cfg        # Windows Desktop / macOS / Linux (committed, no secrets)
 ├── .gutconfig.json
@@ -346,7 +346,11 @@ then the ground (`CityCamera.ground_cell`). The camera (`CityCamera`) orbits a p
 `pitch_deg`, turns freely (Q/E, the right button, the right stick) and zooms continuously between `min_distance_m` and
 `max_distance_m`; the d-pad moves the cursor in screen directions whatever the rotation. Each building is a block of
 `CityLayout` boxes from `data/ui/city.json` (leading block, gable or flat roof, chimney and filler houses). The legend
-takes the city's palette (`CityPresentation.apply_palette`).
+takes the city's palette (`CityPresentation.apply_palette`). The fog (`CityFog`) opens as the camera comes close: high
+quality is volumetric (Forward+ only), low quality a depth fog that starts at the point in view, chosen on screen
+(Gráficos: Alta / Baja; low also turns MSAA off) and low from the start on any renderer but Forward+. It never hides game
+information: the point in view keeps at least `CityFog.MIN_FOCUS_VISIBILITY` of its light (the data cannot go under it),
+the marks and the selection are drawn without fog, and the labels are drawn in 2D over the city.
 Tierra de época (issue #178, D-083): free land is drawn in the colour of its lot style (`lot_styles` of the map,
 colours in `data/ui/map.json`, a second legend row), and each damaged wharf the snapshot lists as repairable
 (`snapshot()["repair"]["wharves"]`: cell and cost, from `RepairWharfCommand.snapshot`) is drawn over its footprint with
