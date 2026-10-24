@@ -9,7 +9,7 @@ const ROOFS: Array[String] = ["flat", "gable"]
 const CAMERA_KEYS: Array[String] = ["pitch_deg", "fov_deg", "min_distance_m", "max_distance_m", "start_distance_m",
 	"zoom_step", "zoom_smoothing", "pan_speed", "rotate_speed_deg", "drag_rotate_deg_per_px"]
 const WORLD_COLORS: Array[String] = ["background", "ambient", "sun"]
-const WORLD_NUMBERS: Array[String] = ["ambient_energy", "sun_energy", "sun_pitch_deg", "sun_yaw_deg"]
+const WORLD_NUMBERS: Array[String] = ["ambient_energy", "sun_energy", "sun_pitch_deg", "sun_yaw_deg", "shadow_distance_ratio"]
 const GROUND_KEYS: Array[String] = ["depth_m", "gap_m"]
 const FILLER_KEYS: Array[String] = ["height_m", "height_step_m", "width_m", "depth_m", "gap_m"]
 const MARK_KEYS: Array[String] = ["selection_width_m", "mark_size_m", "damaged_wharf_height_m", "label_outline_px",
@@ -36,6 +36,8 @@ var fog: Dictionary[String, float] = {}
 var fog_color: Color
 # The graphics quality the game starts on (CityFog.HIGH or LOW); the player can change it on screen.
 var quality: StringName = CityFog.HIGH
+var ink: Dictionary[String, float] = {}
+var ink_color: Color
 var colors: Dictionary[StringName, Color] = {}
 # Per building: height_m, width_ratio, depth_ratio, roof_m, chimney_m, plus roof ("flat" or "gable") and fillers.
 var shapes: Dictionary[StringName, Dictionary] = {}
@@ -71,7 +73,10 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			world_colors[key] = Color(color)
 		else:
 			errors.append("data/ui/city.json.world.%s: invalid color" % key)
-	_numbers(raw, "ground", GROUND_KEYS, ground, true)
+	# The gap between ground slabs may be 0: the ink draws the cell grid.
+	_numbers(raw, "ground", GROUND_KEYS, ground, false)
+	if ground.get("depth_m", 1.0) <= 0.0 or ground.get("gap_m", 0.0) < 0.0:
+		errors.append("data/ui/city.json.ground: depth_m must be positive and gap_m not negative")
 	joint_color = _color(raw, "ground", "joint")
 	for kind: String in MapPresentation.TERRAIN_KINDS:
 		var entry: Variant = _section(raw, "terrain").get(kind)
@@ -95,6 +100,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	_numbers(raw, "marks", MARK_KEYS, marks, true)
 	selection_color = _color(raw, "marks", "selection")
 	_fog(raw)
+	_ink(raw)
 	var start: Variant = _section(raw, "graphics").get("quality")
 	if start is String and StringName(start) in CityFog.QUALITIES:
 		quality = StringName(start)
@@ -119,6 +125,19 @@ func _fog(raw: Dictionary) -> void:
 			errors.append("data/ui/city.json.fog.%s: must be at most %s, so the fog never hides the game" % [key, 1.0 - CityFog.MIN_FOCUS_VISIBILITY])
 	if fog["focus_visibility_near"] < fog["focus_visibility_far"] or fog["depth_opacity_near"] > fog["depth_opacity_far"]:
 		errors.append("data/ui/city.json.fog: the fog must open as the camera comes close")
+
+
+# Subtle and never over the game: the grain and the shadows that get hatching have a ceiling in CityInk.
+func _ink(raw: Dictionary) -> void:
+	_numbers(raw, "ink", CityInk.KEYS, ink, true)
+	ink_color = _color(raw, "ink", "color")
+	if ink.get("grain_strength", 0.0) > CityInk.MAX_GRAIN:
+		errors.append("data/ui/city.json.ink.grain_strength: must be at most %s, so the grain never hides the game" % CityInk.MAX_GRAIN)
+	if ink.get("hatch_luminance", 0.0) > CityInk.MAX_HATCH_LUMINANCE:
+		errors.append("data/ui/city.json.ink.hatch_luminance: must be at most %s, so only deep shadows get hatching" % CityInk.MAX_HATCH_LUMINANCE)
+	for key: String in ["line_strength", "hatch_strength"]:
+		if ink.get(key, 0.0) > 1.0:
+			errors.append("data/ui/city.json.ink.%s: must be at most 1" % key)
 
 
 # Gives the 2D presentation the city's palette, so the legend in the header shows the colours on screen.

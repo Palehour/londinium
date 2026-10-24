@@ -106,7 +106,8 @@ londinium/
 │   │   └── stats_history.gd, cause_log.gd     # chapter history in three levels and the cause events (D-066)
 │   ├── game/                 # Node side: sim_clock.gd, game.gd (autoload), map_view (colored squares), camera,
 │   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68);
-│   │                         #   city_view/ (the 3D greybox, #65) with city_camera.gd and city_layout.gd
+│   │                         #   city_view/ (the 3D greybox, #65, and its ink.gdshader) with city_camera.gd, city_layout.gd,
+│   │                         #   city_fog.gd and city_ink.gd
 │   └── ui/                   # stats_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
 │                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
@@ -350,7 +351,11 @@ takes the city's palette (`CityPresentation.apply_palette`). The fog (`CityFog`)
 quality is volumetric (Forward+ only), low quality a depth fog that starts at the point in view, chosen on screen
 (Gráficos: Alta / Baja; low also turns MSAA off) and low from the start on any renderer but Forward+. It never hides game
 information: the point in view keeps at least `CityFog.MIN_FOCUS_VISIBILITY` of its light (the data cannot go under it),
-the marks and the selection are drawn without fog, and the labels are drawn in 2D over the city.
+the marks and the selection are drawn without fog, and the labels are drawn in 2D over the city. Over it all, a subtle
+ink pass (`CityInk`, `src/game/city_view/ink.gdshader`, a screen quad): fine contours where depth bends or facing turns,
+hatching only below `ink.hatch_luminance` (at most `CityInk.MAX_HATCH_LUMINANCE`), paper grain (at most
+`CityInk.MAX_GRAIN`) and the 25 m cell grid inked on the ground. The marks and the selection draw after it
+(`CityInk.ABOVE_INK`), so it never covers game information.
 Tierra de época (issue #178, D-083): free land is drawn in the colour of its lot style (`lot_styles` of the map,
 colours in `data/ui/map.json`, a second legend row), and each damaged wharf the snapshot lists as repairable
 (`snapshot()["repair"]["wharves"]`: cell and cost, from `RepairWharfCommand.snapshot`) is drawn over its footprint with
