@@ -73,6 +73,8 @@ londinium/
 │       │                                #   pieces, every buildable cell in a district, every patch of buildable land with a
 │       │                                #   street on a side (stairs are none) and at least map.min_riverside_buildable
 │       │                                #   buildable cells with a side on the river. Stairs block building.
+│       ├── whitechapel_full.json        # the full map in that format (#204, D-093): 48x80, three parishes on old_ford,
+│       │                                #   drawn from sources/whitechapel_full_sources.csv; played by scenarios/whitechapel_full
 │       └── sources/<map>/               # traced layers (GeoJSON, EPSG:27700) + import.json + overrides.json (README.md)
 ├── locale/
 │   └── ui.csv                # player-facing strings (keys, es, en); read only through src/ui/strings.gd

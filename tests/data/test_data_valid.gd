@@ -11,8 +11,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	# The public fountain of issue #63 (D-089) is the tenth.
 	assert_eq(catalog.buildings.size(), 10)
 	assert_eq(catalog.roles.size(), 1)
-	# The 8x8 map of the scripted scenarios and the strip the game plays on (D-074).
-	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s"] as Array[StringName])
+	# The 8x8 map of the scripted scenarios, the strip the game plays on (D-074) and the full map (#204, D-093).
+	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s", &"whitechapel_full"] as Array[StringName])
 	for good: GoodDef in catalog.goods.values():
 		assert_false(good.unit.is_empty())
 	var mill: RecipeDef = catalog.buildings[&"mill"].recipe
