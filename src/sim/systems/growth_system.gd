@@ -13,15 +13,18 @@ const REASON_STABLE: StringName = &"stable"
 # Every class grows or shrinks by its own rules (its housing, satisfaction and rates); the people of one
 # never move the others. Without a context the only class is the legacy one.
 func tick(state: EconomyState, params: Params, context: EconomyContext = null) -> void:
+	# A cholera failure (issue #202, D-090) stops the immigration for a while and then speeds it up.
+	var immigration_multiplier: float = MissionSystem.immigration_multiplier(state, params)
 	for def: ClassDef in ClassStates.defs(context):
 		var entry: ClassState = ClassStates.checkout(state, def)
-		_tick_class(state, params, def, entry)
+		_tick_class(state, params, def, entry, immigration_multiplier)
 		ClassStates.commit(state, def, entry)
 	# Keep existing jobs; arrivals wait for step 2 of the following tick.
 	WorkersSystem.trim_to_population(state)
 
 
-func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: ClassState) -> void:
+func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: ClassState,
+		immigration_multiplier: float = 1.0) -> void:
 	# Ages first so the tick of a departure reads 0 and the window counts whole seconds since it.
 	if entry.satisfaction_departure_age_seconds >= 0:
 		entry.satisfaction_departure_age_seconds += 1
@@ -35,9 +38,9 @@ func _tick_class(state: EconomyState, params: Params, def: ClassDef, entry: Clas
 			< float(params.get_value(def.hunger_threshold_key))
 	var hungry: bool = entry.hunger_emigration_active
 	if not hungry and entry.satisfaction >= float(params.get_value(def.immigration_threshold_key)) \
-			and free_housing > 0 and (residents > 0 or state.bread_coverage > 0.0):
+			and free_housing > 0 and (residents > 0 or state.bread_coverage > 0.0) and immigration_multiplier > 0.0:
 		entry.emigration_fraction = 0.0
-		entry.immigration_fraction += float(params.get_value(def.immigration_per_minute_key)) / 60.0
+		entry.immigration_fraction += float(params.get_value(def.immigration_per_minute_key)) * immigration_multiplier / 60.0
 		var arrivals: int = mini(free_housing, ProductionSystem.whole_units(entry.immigration_fraction))
 		ClassStates.grow(state, def, entry, arrivals)
 		state.immigration_tick[def.id] = arrivals

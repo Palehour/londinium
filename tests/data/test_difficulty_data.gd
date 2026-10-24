@@ -29,8 +29,10 @@ func test_real_data_has_the_three_presets_and_every_knob() -> void:
 	assert_true(result.is_ok(), str(result.errors))
 	assert_eq(result.catalog.difficulties.keys(), [&"easy", &"normal", &"hard"])
 	assert_true(result.catalog.difficulties[&"normal"].modifiers.is_empty(), "Normal is data/ as it is")
-	assert_eq(result.catalog.knobs.keys(), [&"defeats_enabled", &"reaction_seconds", &"grace_seconds",
+	# events_enabled: the switch of the historic events (issue #202).
+	assert_eq(result.catalog.knobs.keys(), [&"defeats_enabled", &"events_enabled", &"reaction_seconds", &"grace_seconds",
 		&"starting_money", &"price_volatility", &"refund_ratio"])
+	assert_eq(result.catalog.knobs[&"events_enabled"].keys, [&"events.enabled"])
 	assert_eq(result.catalog.knobs[&"reaction_seconds"].keys, [&"defeat.bankruptcy.duration_seconds",
 		&"defeat.hunger.duration_seconds", &"defeat.depopulation.duration_seconds"])
 	assert_true(result.catalog.base_values[&"defeat.enabled"])

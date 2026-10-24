@@ -1,0 +1,27 @@
+{
+  "id": "cholera_recovery",
+  "description": "Issue #202 (D-090): la ciudad de bread_vs_beer_0 con los eventos históricos prendidos y sin agua. La misión de Old Ford arranca sola en el minuto 33,5, falla en el 40 (muere la cuarta parte con prep 0), las casas quedan vacías 3 minutos y la inmigración va ×1,5 otros 5.",
+  "notes": "Criterio del #202: a los 10 minutos del cierre (minuto 50) hay al menos el 80 % de la población de antes de las muertes en al menos 17 de 20 semillas. Lo mide tests/scenarios/long/long_test_cholera_recovery.gd con tools/run_long_tests; esta carpeta no entra en los 22 CSV de balance_report.",
+  "seed": 42,
+  "duration_ticks": 3000,
+  "commands": [
+    {"tick": 0, "cmd": "set_tax", "rate": 0.6},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [8, 14], "wait_for_money": 430},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [4, 8], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [6, 8], "wait_for_money": 150},
+    {"tick": 30, "cmd": "build", "building": "housing", "cell": [10, 8], "wait_for_money": 537},
+    {"tick": 30, "cmd": "build", "building": "wharf", "cell": [12, 14], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "bakery", "cell": [8, 8], "wait_for_money": 198},
+    {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [4, 6], "wait_for_money": 620},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [6, 6], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [12, 6], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [14, 6], "with_previous": true},
+    {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 0, "with_previous": true},
+    {"tick": 30, "cmd": "set_tax", "rate": 0.4, "with_previous": true}
+  ]
+}

@@ -43,6 +43,8 @@ var depopulation_active: bool = false
 var victory: VictoryState = VictoryState.new()
 # Missions started this game, by id (issue #63, D-090); a save from before them has none.
 var missions: Dictionary[StringName, MissionState] = {}
+# The risk a mission left on a district's own source (issue #202, D-090: the Old Ford cut, then 0 or 1), by district.
+var district_source_risk: Dictionary[StringName, float] = {}
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
@@ -256,6 +258,8 @@ func to_dict() -> Dictionary:
 	# Only once a mission started, so a game without them saves exactly as before them (issue #63).
 	if not missions.is_empty():
 		values["missions"] = _missions_dict()
+	if not district_source_risk.is_empty():
+		values["district_source_risk"] = district_source_risk.duplicate()
 	return values
 
 
@@ -341,6 +345,9 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	var saved_missions: Dictionary = values.get("missions", {})
 	for id: Variant in saved_missions:
 		result.missions[StringName(id)] = MissionState.from_dict(saved_missions[id])
+	var saved_risk: Dictionary = values.get("district_source_risk", {})
+	for district: Variant in saved_risk:
+		result.district_source_risk[StringName(district)] = float(saved_risk[district])
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))

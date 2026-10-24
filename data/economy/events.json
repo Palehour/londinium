@@ -1,5 +1,6 @@
 {
   "enabled": false,
   "source_risk": { "neutral": 0.0, "old_ford": 1.0 },
-  "cholera": { "defeat_pause": true }
+  "cholera": { "defeat_pause": true, "trigger_min": 40 },
+  "prep": { "w_water": 0.5, "w_sewer": 0.3, "w_health": 0.2 }
 }
