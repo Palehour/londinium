@@ -12,11 +12,11 @@ const FAILED: StringName = &"failed"
 const ABANDONED: StringName = &"abandoned"
 
 
-static func start(state: EconomyState, params: Params, mission: MissionDef) -> void:
+static func start(state: EconomyState, params: Params, mission: MissionDef, context: EconomyContext) -> void:
 	var entry: MissionState = MissionState.new()
 	entry.remaining_ticks = SimTime.minutes_to_ticks(float(params.get_value(_key(mission, "duration_min"))))
 	state.missions[mission.id] = entry
-	_apply_effects(state, params, mission, STARTED)
+	_apply_effects(state, params, mission, STARTED, context)
 
 
 static func tick(state: EconomyState, params: Params, context: EconomyContext, tick_count: int = 0) -> void:
@@ -36,7 +36,7 @@ static func tick(state: EconomyState, params: Params, context: EconomyContext, t
 
 
 static func close(state: EconomyState, params: Params, mission: MissionDef, outcome: StringName,
-		context: EconomyContext = null) -> void:
+		context: EconomyContext) -> void:
 	var entry: MissionState = state.missions[mission.id]
 	entry.status = outcome
 	entry.remaining_ticks = 0
@@ -87,31 +87,38 @@ static func _trigger(state: EconomyState, params: Params, context: EconomyContex
 		var closes_at: int = SimTime.minutes_to_ticks(float(params.get_value(mission.closes_at_key)))
 		var duration: int = SimTime.minutes_to_ticks(float(params.get_value(_key(mission, "duration_min"))))
 		if tick_count >= closes_at - duration:
-			start(state, params, mission)
+			start(state, params, mission, context)
 
 
 static func _apply_effects(state: EconomyState, params: Params, mission: MissionDef, outcome: StringName,
-		context: EconomyContext = null) -> void:
+		context: EconomyContext) -> void:
 	for effect: Dictionary in mission.effects.get(outcome, []):
 		match effect["type"]:
 			&"money":
 				state.money += int(params.get_value(effect["key"]))
 			&"source_risk":
-				state.district_source_risk[WaterSystem.DEFAULT_DISTRICT] = float(params.get_value(effect["key"]))
+				for district: StringName in WaterSystem.districts_drinking(context, effect["source"]):
+					state.district_source_risk[district] = float(params.get_value(effect["key"]))
 			&"cholera":
 				_cholera(state, params, context, mission)
 
 
 # Each failing district loses pop x cholera.fail_mortality x (1 - prep), rounded; its houses then stay empty for
-# cholera.vacancy_min and fill cholera.recovery_mult as fast for cholera.recovery_min. Until districts exist the
-# district is the city, so every class loses its share.
+# cholera.vacancy_min and fill cholera.recovery_mult as fast for cholera.recovery_min. The city keeps no people per
+# house, so a district's pop is its share of the houses (issue #209); on a map without districts it is the city, and
+# every class loses its share.
 static func _cholera(state: EconomyState, params: Params, context: EconomyContext, mission: MissionDef) -> void:
 	var failing: Dictionary[StringName, float] = _failing_districts(state, params, context, mission)
 	if failing.is_empty():
 		return
 	var entry: MissionState = state.missions[mission.id]
-	var prep: float = preparation(params, failing[WaterSystem.DEFAULT_DISTRICT])
-	var deaths: int = roundi(state.population * float(params.get_value(&"cholera.fail_mortality")) * (1.0 - prep))
+	var houses: Dictionary[StringName, Array] = WaterSystem.district_houses(state, context)
+	var all_houses: int = houses.values().reduce(func(total: int, list: Array) -> int: return total + list.size(), 0)
+	var deaths: int = 0
+	for district: StringName in failing:
+		var share: float = 1.0 if houses.size() == 1 else float(houses[district].size()) / maxi(1, all_houses)
+		var prep: float = preparation(params, failing[district])
+		deaths += roundi(state.population * share * float(params.get_value(&"cholera.fail_mortality")) * (1.0 - prep))
 	entry.deaths = _kill(state, context, deaths)
 	entry.vacancy_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.vacancy_min")))
 	entry.recovery_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.recovery_min")))

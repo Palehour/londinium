@@ -24,9 +24,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 		return
 	var mission: MissionDef = _context.missions[_id]
 	if _action == &"start":
-		MissionSystem.start(state, params, mission)
+		MissionSystem.start(state, params, mission, _context)
 	else:
-		MissionSystem.close(state, params, mission, MissionSystem.ABANDONED)
+		MissionSystem.close(state, params, mission, MissionSystem.ABANDONED, _context)
 
 
 func _refusal(state: EconomyState) -> StringName:

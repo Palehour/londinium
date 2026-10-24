@@ -13,6 +13,8 @@ const CELL_TYPES: Dictionary[String, StringName] = {"~": &"river", "D": &"dock",
 const NO_DISTRICT: String = "."
 # The water of a district that names no source (D-088): it adds no risk.
 const DEFAULT_WATER_SOURCE: StringName = &"neutral"
+# The sources a district may drink from (issue #209); each one's risk is a source_risk of the data.
+const WATER_SOURCES: Array[StringName] = [&"neutral", &"old_ford", &"lea_bridge"]
 
 var id: StringName
 var width: int
