@@ -5,7 +5,8 @@ signal finished
 
 const VIDEO_PATH: String = "res://assets/branding/palehour-intro/palehour-intro.ogv"
 const FALLBACK_IMAGE_PATH: String = "res://assets/branding/palehour-intro/palehour-intro-final.png"
-const MAIN_SCENE_PATH: String = "res://scenes/main.tscn"
+# The game opens on the 3D city of the full map (issue #65); scenes/main.tscn keeps the 2D map the tests drive.
+const MAIN_SCENE_PATH: String = "res://scenes/city.tscn"
 const VIDEO_ASPECT: float = 16.0 / 9.0
 const FULL_DB: float = 0.0
 const SILENT_DB: float = -60.0

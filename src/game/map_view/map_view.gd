@@ -1,4 +1,8 @@
+class_name MapView
 extends Node2D
+
+# The 2D map of colored squares. The 3D greybox (CityView, issue #65) extends it and replaces only how the map is drawn
+# and how the camera picks a cell, so placing, demolishing, the panel and the gamepad stay one piece of code.
 
 const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wheat_field", &"malthouse", &"brewery", &"artisan_housing"]
 # The player's street (issue #168, D-080): not a building, so it stays out of TYPES. It is the last entry of the
@@ -19,6 +23,8 @@ var presentation: MapPresentation = MapPresentation.new()
 var mods_root: String = ModLayer.DEFAULT_ROOT
 # Where saved games live (issue #57); a test points it elsewhere so the player's saves are never touched.
 var saves_root: String = SaveFile.DEFAULT_ROOT
+# The scenario this view plays; the 3D city plays the full map (issue #65).
+var scenario_id: StringName = &"victorian_demo"
 var _catalog: DataCatalog
 var _snapshot: Dictionary
 var _building_type: StringName = &""
@@ -70,7 +76,7 @@ func _ready() -> void:
 		return
 	var ids: Array[StringName] = []
 	ids.assign(loaded.catalog.buildings.keys())
-	presentation.load_data(ids)
+	_load_presentation(ids)
 	var stats_look: StatsPresentation = StatsPresentation.new()
 	stats_look.load_data()
 	if not presentation.errors.is_empty() or not stats_look.errors.is_empty():
@@ -139,7 +145,7 @@ func _ready() -> void:
 	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(panel_mount)
 	_catalog = loaded.catalog
-	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]))
+	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]), scenario_id)
 	session.mods = loaded.mods
 	session.mod_conflicts = loaded.mod_conflicts
 	_autosave = Autosave.new(session, save_settings, saves_root)
@@ -179,8 +185,18 @@ func _ready() -> void:
 	_stats_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel_mount.add_child(_stats_screen)
 	get_viewport().size_changed.connect(_resized)
+	_view_ready()
 	_update_mode()
 	queue_redraw()
+
+
+func _load_presentation(building_ids: Array[StringName]) -> void:
+	presentation.load_data(building_ids)
+
+
+# Called once the session, the geometry and the panel exist; the 3D city builds its world here.
+func _view_ready() -> void:
+	pass
 
 
 func _notification(what: int) -> void:
@@ -286,8 +302,7 @@ func _process(delta: float) -> void:
 		return
 	_advance_demolish_hold(delta)
 	var direction: Vector2 = Vector2.ZERO
-	var previous_center: Vector2 = geometry.center
-	var previous_zoom: float = geometry.zoom
+	var zoom_factor: float = 1.0
 	# Poll only camera keys, the stick and the triggers; commands use unhandled events so UI can consume them.
 	if get_viewport().gui_get_focus_owner() == null:
 		direction.x = float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT))
@@ -295,10 +310,18 @@ func _process(delta: float) -> void:
 		direction += Input.get_vector(&"map_pan_left", &"map_pan_right", &"map_pan_up", &"map_pan_down")
 		# A trigger zooms one step per pull, like a key press.
 		if Input.is_action_just_pressed(&"map_zoom_in"):
-			geometry.zoom *= presentation.camera["zoom_step"]
+			zoom_factor *= presentation.camera["zoom_step"]
 		if Input.is_action_just_pressed(&"map_zoom_out"):
-			geometry.zoom /= presentation.camera["zoom_step"]
-	geometry.center += direction.limit_length(1.0) * presentation.camera["pan_speed"] * delta / geometry.zoom
+			zoom_factor /= presentation.camera["zoom_step"]
+	_move_camera(direction.limit_length(1.0), zoom_factor, delta)
+
+
+# Pans by a direction of length up to 1 and multiplies the zoom by a factor (above 1 zooms in).
+func _move_camera(direction: Vector2, zoom_factor: float, delta: float) -> void:
+	var previous_center: Vector2 = geometry.center
+	var previous_zoom: float = geometry.zoom
+	geometry.zoom *= zoom_factor
+	geometry.center += direction * presentation.camera["pan_speed"] * delta / geometry.zoom
 	geometry.constrain()
 	if geometry.center != previous_center or geometry.zoom != previous_zoom:
 		queue_redraw()
@@ -349,7 +372,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == REPAIR_KEY and geometry.selected != Vector2i(-1, -1):
 			_submit(_action_command(geometry.selected))
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
-			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
+			_zoom_by(1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step)
 	if event is InputEventMouseButton:
 		# Clicking the map takes keyboard focus back from HUD fields such as the tax box, and leaves the panel.
 		if event.pressed:
@@ -357,18 +380,43 @@ func _unhandled_input(event: InputEvent) -> void:
 			_stats_panel.leave_focus()
 		if event.pressed and event.position.y >= header_offset.y:
 			if event.button_index == MOUSE_BUTTON_LEFT:
-				geometry.select_cell(event.position - header_offset)
+				_select_at(event.position)
 				if _building_type != &"":
-					_submit(_place_command(geometry.screen_to_cell(event.position - header_offset)))
+					_submit(_place_command(_cell_at(event.position)))
 			elif event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-				geometry.zoom *= zoom_step if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / zoom_step
+				_zoom_by(zoom_step if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / zoom_step)
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
-		geometry.center -= event.relative / geometry.zoom
+		_drag_camera(event.relative)
 	geometry.constrain()
 	if geometry.selected != previous_selection or _building_type != previous_type:
 		_update_mode()
 	if geometry.center != previous_center or geometry.zoom != previous_zoom or geometry.selected != previous_selection or _building_type != previous_type:
 		queue_redraw()
+
+
+# The cell under a point of the viewport, inside the map or not: the simulation says why a build there fails.
+func _cell_at(screen: Vector2) -> Vector2i:
+	return geometry.screen_to_cell(screen - Vector2(0, presentation.layout["header_height"]))
+
+
+# Selects the cell under a point of the viewport, or nothing outside the map.
+func _select_at(screen: Vector2) -> void:
+	geometry.select_cell(screen - Vector2(0, presentation.layout["header_height"]))
+
+
+func _zoom_by(factor: float) -> void:
+	geometry.zoom *= factor
+
+
+# Dragging with the middle button moves the map under the mouse.
+func _drag_camera(relative: Vector2) -> void:
+	geometry.center -= relative / geometry.zoom
+
+
+# The gamepad cursor moves one cell and the camera follows it out of view.
+func _move_cursor(offset: Vector2i) -> void:
+	geometry.move_selection(offset)
+	geometry.follow_selection()
 
 
 # Gamepad presses on the map (issue #68). While the panel has the focus only Menu, View and B reach here: the d-pad
@@ -398,8 +446,7 @@ func _gamepad_command(event: InputEvent) -> void:
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
-				geometry.move_selection(GamepadBindings.CURSOR[action])
-				geometry.follow_selection()
+				_move_cursor(GamepadBindings.CURSOR[action])
 
 
 # X demolishes only after it has been held (issue #164). Frame time, so it works while the sim clock is paused.
