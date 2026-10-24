@@ -78,6 +78,28 @@ const SAVED_WITHOUT_QUEUE: StringName = &"ui.save.saved_without_queue"
 const SAVE_WRITE_ERROR: StringName = &"ui.save.write_error"
 const SAVE_LOADED: StringName = &"ui.save.loaded"
 const SAVE_NO_MODS: StringName = &"ui.save.no_mods"
+# The Archive (issue #64, D-110): its button, its panel and the frame of every card. The cards' own words are keys
+# archive.<card id>.<field>, written by Chronicler in both languages (D-100).
+const ARCHIVE_BUTTON: StringName = &"ui.archive.button"
+const ARCHIVE_TITLE: StringName = &"ui.archive.title"
+const ARCHIVE_CLOSE: StringName = &"ui.archive.close"
+const ARCHIVE_LOCKED: StringName = &"ui.archive.locked"
+const ARCHIVE_SOURCES: StringName = &"ui.archive.sources"
+const ARCHIVE_NO_IMAGE: StringName = &"ui.archive.no_image"
+const ARCHIVE_IMAGE_CREDIT: StringName = &"ui.archive.image_credit"
+const ARCHIVE_IMAGE_NOTE: StringName = &"ui.archive.image_note"
+const ARCHIVE_TITLE_FIELD: StringName = &"title"
+const ARCHIVE_DATE_FIELD: StringName = &"date"
+const ARCHIVE_BODY_FIELD: StringName = &"body"
+const ARCHIVE_SOURCES_FIELD: StringName = &"sources"
+const ARCHIVE_CARD_FIELDS: Array[StringName] = [ARCHIVE_TITLE_FIELD, ARCHIVE_DATE_FIELD, ARCHIVE_BODY_FIELD,
+	ARCHIVE_SOURCES_FIELD]
+# Only a card whose print is "de contexto" has it (D-103).
+const ARCHIVE_IMAGE_CONTEXT: StringName = &"image_context"
+const ARCHIVE_KIND_LABELS: Dictionary[StringName, StringName] = {
+	&"moment": &"ui.archive.kind.moment", &"character": &"ui.archive.kind.character",
+	&"finding": &"ui.archive.kind.finding",
+}
 const POPULATION: StringName = &"ui.population"
 const SATISFACTION: StringName = &"ui.satisfaction"
 const BREAD_RATE: StringName = &"ui.bread_rate"
@@ -333,6 +355,10 @@ static func save_entry(entry: Dictionary) -> String:
 	return text(SAVE_ENTRY) % [kind, int(entry["tick"]) / 60, entry["saved_at"]]
 
 
+static func archive_key(card_id: StringName, field: StringName) -> StringName:
+	return StringName("archive.%s.%s" % [card_id, field])
+
+
 static func building_label(key: String) -> String:
 	if not BUILDING_LABELS.has(key):
 		return ""
@@ -370,7 +396,16 @@ static func all_keys() -> Array[StringName]:
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
 		SAVES_TITLE, SAVES_NONE, SAVE_GAME, LOAD_GAME, SAVE_ENTRY, SAVE_UNREADABLE, SAVED, SAVED_WITHOUT_QUEUE,
 		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS,
+		ARCHIVE_BUTTON, ARCHIVE_TITLE, ARCHIVE_CLOSE, ARCHIVE_LOCKED, ARCHIVE_SOURCES, ARCHIVE_NO_IMAGE,
+		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
 	]
+	for kind_id: StringName in ARCHIVE_KIND_LABELS:
+		_append_unique(keys, ARCHIVE_KIND_LABELS[kind_id])
+	var archive: ArchiveCatalog = ArchiveCatalog.new()
+	archive.load_data()
+	for card: ArchiveCard in archive.cards:
+		for key: StringName in ArchiveCatalog.text_keys(card):
+			_append_unique(keys, key)
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
 	for building_id: String in BUILDING_LABELS:

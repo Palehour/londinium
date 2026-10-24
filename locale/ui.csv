@@ -236,3 +236,31 @@ ui.save.kind.stage,Etapa cumplida,Stage met
 ui.save.invalid_file,"No se pudo cargar: el archivo no es una partida guardada de Londinium o está dañado.","Could not load: the file is not a Londinium saved game or it is damaged."
 ui.save.other_version,"No se pudo cargar: la partida está guardada en el formato %d y este juego lee el %d.","Could not load: the game is saved in format %d and this game reads format %d."
 ui.save.other_mods,"No se pudo cargar: la partida se jugó con otros mods (%s). Ponelos en ese orden para cargarla.","Could not load: the game was played with other mods (%s). Put them in that order to load it."
+ui.archive.button,Archivo,Archive
+ui.archive.title,Archivo histórico,Historic archive
+ui.archive.close,Cerrar,Close
+ui.archive.locked,Ficha bloqueada: se abre cuando su historia pase en la partida.,Locked card: it opens once its story has happened in your game.
+ui.archive.sources,Fuentes: %s,Sources: %s
+ui.archive.no_image,Sin imagen: su crédito todavía se está verificando.,No image: its credit is still being checked.
+ui.archive.image_credit,"Imagen (todavía no incluida): «%s». %s. %s, %s. Se conserva en: %s. Licencia: %s. %s","Image (not included yet): ‘%s’. %s. %s, %s. Held at: %s. Licence: %s. %s"
+ui.archive.image_note,De contexto: %s,Context image: %s
+ui.archive.kind.moment,Momento,Moment
+ui.archive.kind.character,Personaje,Character
+ui.archive.kind.finding,Hallazgo,Finding
+archive.stink.title,[Pendiente de Chronicler] ARC STINK: título,[Pending from Chronicler] ARC STINK: title
+archive.stink.date,[Pendiente de Chronicler] ARC STINK: fecha,[Pending from Chronicler] ARC STINK: date
+archive.stink.body,[Pendiente de Chronicler] ARC STINK: texto,[Pending from Chronicler] ARC STINK: text
+archive.stink.sources,[Pendiente de Chronicler] ARC STINK: fuentes,[Pending from Chronicler] ARC STINK: sources
+archive.bazalgette.title,[Pendiente de Chronicler] ARC BAZALGETTE: título,[Pending from Chronicler] ARC BAZALGETTE: title
+archive.bazalgette.date,[Pendiente de Chronicler] ARC BAZALGETTE: fecha,[Pending from Chronicler] ARC BAZALGETTE: date
+archive.bazalgette.body,[Pendiente de Chronicler] ARC BAZALGETTE: texto,[Pending from Chronicler] ARC BAZALGETTE: text
+archive.bazalgette.sources,[Pendiente de Chronicler] ARC BAZALGETTE: fuentes,[Pending from Chronicler] ARC BAZALGETTE: sources
+archive.oldford.title,[Pendiente de Chronicler] ARC OLDFORD: título,[Pending from Chronicler] ARC OLDFORD: title
+archive.oldford.date,[Pendiente de Chronicler] ARC OLDFORD: fecha,[Pending from Chronicler] ARC OLDFORD: date
+archive.oldford.body,[Pendiente de Chronicler] ARC OLDFORD: texto,[Pending from Chronicler] ARC OLDFORD: text
+archive.oldford.sources,[Pendiente de Chronicler] ARC OLDFORD: fuentes,[Pending from Chronicler] ARC OLDFORD: sources
+archive.inquiry.title,[Pendiente de Chronicler] ARC INQUIRY: título,[Pending from Chronicler] ARC INQUIRY: title
+archive.inquiry.date,[Pendiente de Chronicler] ARC INQUIRY: fecha,[Pending from Chronicler] ARC INQUIRY: date
+archive.inquiry.body,[Pendiente de Chronicler] ARC INQUIRY: texto,[Pending from Chronicler] ARC INQUIRY: text
+archive.inquiry.sources,[Pendiente de Chronicler] ARC INQUIRY: fuentes,[Pending from Chronicler] ARC INQUIRY: sources
+archive.oldford.image_context,[Pendiente de Chronicler] ARC OLDFORD: por qué la imagen es de contexto,[Pending from Chronicler] ARC OLDFORD: why the image is a context one
