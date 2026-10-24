@@ -5,7 +5,8 @@ const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wh
 # LB/RB cycle and key 9, only on a map with streets.
 const ROAD: StringName = GameSession.ROAD
 const ROAD_KEY: Key = KEY_9
-# Repairs the damaged wharf under the selection (issue #178, D-083); Y on the gamepad.
+# Repairs the damaged wharf under the selection (issue #178, D-083), or disinfects the house in a crisis (issue #222);
+# Y on the gamepad.
 const REPAIR_KEY: Key = KEY_R
 # Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
 const DEMOLISH_RING_POINTS: int = 32
@@ -47,6 +48,10 @@ var _demolish_fired: bool = false
 var _demolish_elapsed: float = 0.0
 var _demolish_progress: float = 0.0
 var _demolish_cell: Vector2i = Vector2i(-1, -1)
+# The tooltip of the selected house in a crisis (issue #222, D-108), with its Disinfect button.
+var _crisis_tip: PanelContainer
+var _crisis_text: Label
+var _crisis_button: Button
 
 
 func _ready() -> void:
@@ -120,6 +125,8 @@ func _ready() -> void:
 	_mode = help.get_child(3) as Label
 	_status = help.get_child(4) as Label
 	_help = help.get_child(0) as Label
+	_crisis_tip = _crisis_tooltip()
+	layer.add_child(_crisis_tip)
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
 	panel_mount.name = "PanelMount"
@@ -304,7 +311,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
 			_submit(DemolishCommand.new(geometry.selected))
 		elif event.keycode == REPAIR_KEY and geometry.selected != Vector2i(-1, -1):
-			_submit(_repair_command(geometry.selected))
+			_submit(_action_command(geometry.selected))
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			geometry.zoom *= 1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step
 	if event is InputEventMouseButton:
@@ -351,7 +358,7 @@ func _gamepad_command(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
 		_submit(_place_command(geometry.selected))
 	elif event.is_action_pressed(&"map_repair") and geometry.selected != Vector2i(-1, -1):
-		_submit(_repair_command(geometry.selected))
+		_submit(_action_command(geometry.selected))
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
@@ -436,6 +443,68 @@ func _place_command(cell: Vector2i) -> SimulationCommand:
 	if _building_type == ROAD:
 		return BuildRoadCommand.new(session.context, cell)
 	return BuildCommand.new(session.context, _building_type, cell)
+
+
+# R / Y disinfect a house in a crisis (issue #222) and repair a damaged wharf anywhere else.
+func _action_command(cell: Vector2i) -> SimulationCommand:
+	if not _crisis_house_at(cell).is_empty():
+		return DisinfectCommand.new(cell)
+	return _repair_command(cell)
+
+
+# The locked house of the snapshot whose footprint covers the cell, or {} when none does.
+func _crisis_house_at(cell: Vector2i) -> Dictionary:
+	for house: Dictionary in _snapshot["crisis"]["houses"]:
+		if session.context.area_of(house).has_point(cell):
+			return house
+	return {}
+
+
+# Bottom left of the map, as wide as the panel. Its button never takes the focus, so the gamepad keeps the map.
+func _crisis_tooltip() -> PanelContainer:
+	var tip: PanelContainer = PanelContainer.new()
+	tip.name = "CrisisTooltip"
+	tip.visible = false
+	tip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	tip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	tip.offset_left = presentation.layout["help_x"]
+	tip.offset_bottom = -presentation.layout["help_x"]
+	tip.custom_minimum_size.x = presentation.layout["panel_width"]
+	var rows: VBoxContainer = VBoxContainer.new()
+	tip.add_child(rows)
+	_crisis_text = Label.new()
+	_crisis_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rows.add_child(_crisis_text)
+	_crisis_button = Button.new()
+	_crisis_button.focus_mode = Control.FOCUS_NONE
+	_crisis_button.pressed.connect(func() -> void: _submit(DisinfectCommand.new(geometry.selected)))
+	rows.add_child(_crisis_button)
+	return tip
+
+
+# Why the house is locked and the time left; for a sick one also the price and length of a disinfection, why it
+# cannot start if it cannot, and the button (D-108). Chronicler's note closes it.
+func _update_crisis_tip() -> void:
+	var house: Dictionary = _crisis_house_at(geometry.selected)
+	_crisis_tip.visible = not house.is_empty()
+	if house.is_empty():
+		return
+	var sick: bool = house["lock"] == CrisisSystem.HOUSE_SICK
+	var lines: Array[String] = [Strings.reason(house["lock"])]
+	if sick:
+		var crisis: Dictionary = _snapshot["crisis"]
+		lines.append(Strings.text(Strings.CRISIS_DISINFECTION) % [Strings.money(crisis["cost"]), crisis["duration_seconds"]])
+	if int(house["seconds_left"]) > 0:
+		lines.append(Strings.text(Strings.CRISIS_SECONDS_LEFT) % house["seconds_left"])
+	if sick and house["disinfect"] != &"":
+		lines.append(Strings.reason(house["disinfect"]))
+	var note: String = _catalog.crisis_texts.get(CrisisSystem.HEALTH, {}).get("tooltip", "")
+	if not note.is_empty():
+		lines.append(note)
+	_crisis_text.text = "\n".join(lines)
+	_crisis_button.visible = sick
+	_crisis_button.disabled = house["disinfect"] != &""
+	_crisis_button.text = Strings.text(Strings.CRISIS_DISINFECT_GAMEPAD if _gamepad else Strings.CRISIS_DISINFECT)
 
 
 # Any cell of a damaged wharf repairs it. Elsewhere the command goes as it is and the simulation says why it cannot.
@@ -583,6 +652,7 @@ func _update_mode() -> void:
 	if not wharf.is_empty():
 		parts.append(Strings.text(Strings.REPAIR_HINT_GAMEPAD if _gamepad else Strings.REPAIR_HINT) % Strings.money(wharf["cost"]))
 	_mode.text = " · ".join(parts)
+	_update_crisis_tip()
 
 
 func _draw() -> void:
@@ -608,6 +678,16 @@ func _draw() -> void:
 		var rect: Rect2 = geometry.area_rect(session.context.area_of(building)).grow(-presentation.layout["building_inset"])
 		draw_rect(rect, presentation.colors[id])
 		_draw_label(rect.get_center(), presentation.labels[id])
+	# A house in a crisis carries a mark in its corner (issue #222, D-108): filled while it has sick people, an outline in
+	# quarantine. Not a red cross: the building is locked, not the people (D-104).
+	for house: Dictionary in _snapshot["crisis"]["houses"]:
+		var rect: Rect2 = geometry.area_rect(session.context.area_of(house)).grow(-presentation.layout["building_inset"])
+		var side: float = presentation.layout["font_size"]
+		var mark: Rect2 = Rect2(rect.end.x - side, rect.position.y, side, side)
+		if house["lock"] == CrisisSystem.HOUSE_SICK:
+			draw_rect(mark, presentation.ui_colors["inspection"])
+		else:
+			draw_rect(mark, presentation.ui_colors["inspection"], false, presentation.layout["selection_width"])
 	# A damaged wharf that can be repaired, with what repairing costs (issue #178, D-083).
 	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
 		var rect: Rect2 = geometry.area_rect(_damaged_wharf_area(wharf)).grow(-presentation.layout["building_inset"])

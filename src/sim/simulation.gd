@@ -180,6 +180,7 @@ func tick() -> void:
 			_history.note_command(command)
 	_tick_count += 1
 	if _context != null:
+		CrisisSystem.tick(_state)
 		_roads.tick(_state, _params, _context)
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
@@ -200,6 +201,27 @@ func tick() -> void:
 		_victory.tick(_state, _params)
 		_stats.record(_state)
 		_history.record(_state)
+
+
+# The hooks of the D-054 outbreaks (#87) for the houses in a crisis (issue #222): any cell of the house's footprint.
+# Nothing in the game calls them yet; the tests do. False when there is no house there to change.
+func mark_house_sick(cell: Vector2i) -> bool:
+	var house: Dictionary = _building_at(cell)
+	return not house.is_empty() and CrisisSystem.mark_sick(_state, _params, _context, house)
+
+
+func cure_house(cell: Vector2i) -> bool:
+	var house: Dictionary = _building_at(cell)
+	return not house.is_empty() and CrisisSystem.cure(_state, house)
+
+
+func _building_at(cell: Vector2i) -> Dictionary:
+	if _context == null:
+		return {}
+	for building: Dictionary in _state.buildings:
+		if _context.area_of(building).has_point(cell):
+			return building
+	return {}
 
 
 # The treasury, without building a snapshot.
@@ -270,6 +292,7 @@ func snapshot() -> Dictionary:
 		"imports": ImportSystem.snapshot(_state, _params, _context),
 		"distance": RoadSystem.snapshot(_state, _context),
 		"repair": RepairWharfCommand.snapshot(_state, _params, _context),
+		"crisis": CrisisSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,
