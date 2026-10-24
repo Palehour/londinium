@@ -36,7 +36,9 @@ func test_missing_victory_disables_objectives_and_scenarios_are_optional() -> vo
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	assert_eq(result.catalog.scenarios[&"victorian_demo"]["stages"], [])
-	_documents.erase(DEMO)
+	# Without any scenario file (the full map's one too, issue #204) there are no scenarios.
+	for path: String in _documents.keys().filter(func(key: String) -> bool: return key.begins_with("scenarios/")):
+		_documents.erase(path)
 	result = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok(), str(result.errors))
 	assert_true(result.catalog.scenarios.is_empty())
