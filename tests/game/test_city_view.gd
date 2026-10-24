@@ -182,6 +182,21 @@ func test_dragging_with_the_right_button_turns_the_city_freely() -> void:
 	assert_almost_eq(rad_to_deg(view.camera.yaw), 10.0 * view.style.camera["drag_rotate_deg_per_px"], 0.001)
 
 
+# The statistics screen (issue #83) covers the map: while it is open the city stays still, as the 2D map does.
+func test_the_city_does_not_turn_behind_the_statistics_screen() -> void:
+	var view: CityView = await _view()
+	(view.get("_stats_screen") as StatsScreen).open()
+	var drag: InputEventMouseMotion = InputEventMouseMotion.new()
+	drag.button_mask = MOUSE_BUTTON_MASK_RIGHT
+	drag.relative = Vector2(-10, 0)
+	view._unhandled_input(drag)
+	Input.action_press(&"map_rotate_right")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	Input.action_release(&"map_rotate_right")
+	assert_eq(view.camera.yaw, 0.0)
+
+
 func test_the_wheel_zooms_toward_a_street() -> void:
 	var view: CityView = await _view()
 	var start: float = view.camera.target_distance

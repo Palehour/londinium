@@ -69,7 +69,8 @@ func _process(delta: float) -> void:
 	super(delta)
 	if camera == null:
 		return
-	if get_viewport().gui_get_focus_owner() == null:
+	# Like the 2D map, the city stays still behind the statistics screen.
+	if get_viewport().gui_get_focus_owner() == null and not _stats_screen.visible:
 		var turn: float = float(Input.is_physical_key_pressed(ROTATE_RIGHT_KEY)) - float(Input.is_physical_key_pressed(ROTATE_LEFT_KEY))
 		turn += Input.get_axis(&"map_rotate_left", &"map_rotate_right")
 		camera.rotate(clampf(turn, -1.0, 1.0) * deg_to_rad(style.camera["rotate_speed_deg"]) * delta)
@@ -82,7 +83,7 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	super(event)
-	if camera == null:
+	if camera == null or _stats_screen.visible:
 		return
 	# Dragging with the right button turns the city, like Anno.
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT) != 0:
