@@ -1,0 +1,15 @@
+{
+  "order": 3,
+  "kind": "finding",
+  "unlock": {"mission_closed": "oldford"},
+  "image": {
+    "title": "Longitudinal section of the Boulton & Watt engine erected at the East London Water Works, Old Ford",
+    "author": "Thomas Wicksteed; G. Gladwin",
+    "publication": "London: John Weale, Architectural Library",
+    "date": "1842",
+    "held_at": "Wellcome Collection (46136i)",
+    "license": "Public Domain Mark",
+    "url": "https://wellcomecollection.org/works/y5k3gduv",
+    "context": true
+  }
+}

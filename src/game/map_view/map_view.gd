@@ -34,6 +34,7 @@ var _damaged_wharf_label: Label
 # Attribution of the historical map sources (issue #60, CREDITS.md).
 var _credits: Label
 var _stats_panel: StatsPanel
+var _archive_panel: ArchivePanel
 var _autosave: Autosave
 var _status_pending: bool = false
 var _status_has_result: bool = false
@@ -166,6 +167,7 @@ func _ready() -> void:
 	panel_mount.add_child(_stats_panel)
 	_stats_panel.show_saves(SaveFile.list(saves_root))
 	_stats_panel.update_snapshot(_snapshot)
+	_mount_archive(panel_mount)
 	get_viewport().size_changed.connect(_resized)
 	_update_mode()
 	queue_redraw()
@@ -226,6 +228,26 @@ func _update_help() -> void:
 		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
 		labels.append(label if reason.is_empty() else Strings.text(Strings.DISABLED_BUILDING) % [label, reason])
 	_help.text = Strings.text(Strings.HELP_GAMEPAD if _gamepad else Strings.HELP) % labels
+
+
+# The Archive (issue #64, D-110): over the map, left of the side panel, hidden until its button is pressed. It only
+# reads the snapshot. A card whose mission this game's data lacks just stays locked, so missions are not checked here.
+func _mount_archive(panel_mount: Control) -> void:
+	var archive: ArchiveCatalog = ArchiveCatalog.new()
+	archive.load_data()
+	for error: String in archive.errors:
+		push_error(error)
+	_archive_panel = ArchivePanel.new()
+	_archive_panel.name = "ArchivePanel"
+	_archive_panel.setup(archive)
+	_archive_panel.apply_style(presentation.ui_colors["header"], presentation.layout["panel_margin"])
+	_archive_panel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	_archive_panel.offset_left = -2.0 * presentation.layout["panel_width"]
+	_archive_panel.offset_right = -presentation.layout["panel_width"]
+	_archive_panel.visible = false
+	_stats_panel.archive_requested.connect(func() -> void: _archive_panel.visible = not _archive_panel.visible)
+	panel_mount.add_child(_archive_panel)
+	_archive_panel.update_snapshot(_snapshot)
 
 
 func _show_load_error(layer: CanvasLayer, errors: Array[String]) -> void:
@@ -567,6 +589,7 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 		return
 	_snapshot = snapshot
 	_stats_panel.update_snapshot(snapshot)
+	_archive_panel.update_snapshot(snapshot)
 	# A repair or a new wharf on the ruin changes what the selected cell offers.
 	_update_mode()
 	queue_redraw()
@@ -638,6 +661,7 @@ func _reset_view() -> void:
 	_clear_status()
 	_snapshot = session.get_snapshot()
 	_stats_panel.update_snapshot(_snapshot)
+	_archive_panel.update_snapshot(_snapshot)
 	_update_mode()
 	queue_redraw()
 
