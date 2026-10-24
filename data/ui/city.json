@@ -1,0 +1,42 @@
+{
+  "camera": {
+    "pitch_deg": 50, "fov_deg": 40, "min_distance_m": 90, "max_distance_m": 2800, "start_distance_m": 1600,
+    "zoom_step": 1.15, "zoom_smoothing": 10, "pan_speed": 0.9, "rotate_speed_deg": 90, "drag_rotate_deg_per_px": 0.3
+  },
+  "world": {
+    "background": "#8e979f", "ambient": "#7d8894", "ambient_energy": 0.7,
+    "sun": "#e8e4dc", "sun_energy": 1.1, "sun_pitch_deg": -50, "sun_yaw_deg": 35
+  },
+  "ground": {"depth_m": 2, "gap_m": 0.4},
+  "terrain": {
+    "land": {"color": "#5d6268", "elevation_m": 0},
+    "river": {"color": "#3b4f5c", "elevation_m": -1.5},
+    "cultivable": {"color": "#5f6b58", "elevation_m": 0},
+    "dock": {"color": "#34454f", "elevation_m": -1.2},
+    "road": {"color": "#7b7a76", "elevation_m": -0.15},
+    "player_road": {"color": "#8f8a80", "elevation_m": -0.1},
+    "existing": {"color": "#5e5654", "elevation_m": 0}
+  },
+  "lot_styles": {"yard": "#64625e", "timber_yard": "#6b645a", "garden": "#58625a", "plain": "#60656b"},
+  "filler": {"color": "#767c82", "height_m": 8, "height_step_m": 1.5, "width_m": 7, "depth_m": 8, "gap_m": 1},
+  "chimney": {"color": "#5a5652", "side_m": 2.5},
+  "marks": {
+    "selection": "#ffffff", "selection_width_m": 1.5, "mark_size_m": 6, "damaged_wharf_height_m": 3,
+    "label_font_size": 28, "label_pixel_size": 0.0016, "label_max_distance_m": 900
+  },
+  "buildings": {
+    "wharf": {"color": "#8a8478", "height_m": 16, "width_ratio": 0.7, "depth_ratio": 0.45, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": true},
+    "mill": {"color": "#7d7570", "height_m": 22, "width_ratio": 0.5, "depth_ratio": 0.45, "roof": "flat", "roof_m": 0, "chimney_m": 34, "fillers": true},
+    "bakery": {"color": "#c8925a", "height_m": 10, "width_ratio": 0.4, "depth_ratio": 0.35, "roof": "gable", "roof_m": 4, "chimney_m": 17, "fillers": true},
+    "malthouse": {"color": "#867a6c", "height_m": 12, "width_ratio": 0.6, "depth_ratio": 0.35, "roof": "gable", "roof_m": 5, "chimney_m": 18, "fillers": true},
+    "brewery": {"color": "#b07a4a", "height_m": 18, "width_ratio": 0.55, "depth_ratio": 0.45, "roof": "flat", "roof_m": 0, "chimney_m": 30, "fillers": true},
+    "wheat_field": {"color": "#9c9a6a", "height_m": 0.4, "width_ratio": 0.9, "depth_ratio": 0.9, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
+    "housing": {"color": "#7f8a90", "height_m": 9, "width_ratio": 0.8, "depth_ratio": 0.3, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true},
+    "artisan_housing": {"color": "#868ca0", "height_m": 11, "width_ratio": 0.7, "depth_ratio": 0.35, "roof": "gable", "roof_m": 3.5, "chimney_m": 0, "fillers": true},
+    "dense_housing": {"color": "#707a80", "height_m": 13, "width_ratio": 0.75, "depth_ratio": 0.4, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true},
+    "public_fountain": {"color": "#6f8fa0", "height_m": 3, "width_ratio": 0.15, "depth_ratio": 0.15, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
+    "lea_bridge_fountain": {"color": "#5d7f9c", "height_m": 3.5, "width_ratio": 0.15, "depth_ratio": 0.15, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
+    "well": {"color": "#7b8c94", "height_m": 2, "width_ratio": 0.25, "depth_ratio": 0.25, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
+    "health_post": {"color": "#b9b5a2", "height_m": 8, "width_ratio": 0.45, "depth_ratio": 0.35, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true}
+  }
+}
