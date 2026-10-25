@@ -90,6 +90,10 @@ const SAVED_WITHOUT_QUEUE: StringName = &"ui.save.saved_without_queue"
 const SAVE_WRITE_ERROR: StringName = &"ui.save.write_error"
 const SAVE_LOADED: StringName = &"ui.save.loaded"
 const SAVE_NO_MODS: StringName = &"ui.save.no_mods"
+# Issue #136 (D-117): a save played with other mods, and the option to load it with its own for that session.
+const SAVE_MODS_DIFFER: StringName = &"ui.save.mods_differ"
+const LOAD_WITH_SAVE_MODS: StringName = &"ui.save.load_with_save_mods"
+const MODS_FROM_SAVE: StringName = &"ui.mods.from_save"
 # The Archive (issue #64, D-110): its button, its panel and the frame of every card. The cards' own words are keys
 # archive.<card id>.<field>, written by Chronicler in both languages (D-100).
 const ARCHIVE_BUTTON: StringName = &"ui.archive.button"
@@ -261,7 +265,8 @@ const SAVE_KIND_LABELS: Dictionary[StringName, StringName] = {
 }
 const SAVE_REFUSALS: Dictionary[StringName, StringName] = {
 	&"invalid_file": &"ui.save.invalid_file", &"other_version": &"ui.save.other_version",
-	&"other_mods": &"ui.save.other_mods",
+	&"other_mods": &"ui.save.other_mods", &"missing_mod": &"ui.save.missing_mod",
+	&"other_mod_version": &"ui.save.other_mod_version",
 }
 const REASONS: Dictionary[StringName, StringName] = {
 	&"arriving": &"ui.reason.arriving",
@@ -364,16 +369,26 @@ static func command_result(accepted: bool, reason_id: StringName) -> String:
 	return text(SUCCESS) if accepted else reason(reason_id)
 
 
-# args come from SaveFile: the file's version and the one this game reads, or the mods the save was played with.
+# args come from SaveFile: the file's version and the one this game reads, the mods the save was played with, or the
+# mod that is missing or changed and its versions.
 static func save_refusal(reason_id: StringName, args: Array) -> String:
 	if reason_id == &"other_mods":
-		var mods: PackedStringArray = []
-		for mod: Variant in args[0]:
-			mods.append(String(mod))
-		return text(SAVE_REFUSALS[reason_id]) % (text(SAVE_NO_MODS) if mods.is_empty() else ", ".join(mods))
-	if reason_id == &"other_version":
+		return text(SAVE_REFUSALS[reason_id]) % _mod_list(args[0])
+	if reason_id in [&"other_version", &"missing_mod", &"other_mod_version"]:
 		return text(SAVE_REFUSALS[reason_id]) % args
 	return text(SAVE_REFUSALS.get(reason_id, SAVE_REFUSALS[&"invalid_file"]))
+
+
+# The save's mods next to the player's, above the option to load it with its own (issue #136).
+static func save_mods_differ(saved: Array, current: Array) -> String:
+	return text(SAVE_MODS_DIFFER) % [_mod_list(saved), _mod_list(current)]
+
+
+static func _mod_list(mods: Array) -> String:
+	var names: PackedStringArray = []
+	for mod: Variant in mods:
+		names.append(String(mod))
+	return text(SAVE_NO_MODS) if names.is_empty() else ", ".join(names)
 
 
 # One line of the saves list: its kind (with the slot of an autosave), the game minute and when it was saved.
@@ -428,7 +443,7 @@ static func all_keys() -> Array[StringName]:
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
 		SAVES_TITLE, SAVES_NONE, SAVE_GAME, LOAD_GAME, SAVE_ENTRY, SAVE_UNREADABLE, SAVED, SAVED_WITHOUT_QUEUE,
-		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS,
+		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS, SAVE_MODS_DIFFER, LOAD_WITH_SAVE_MODS, MODS_FROM_SAVE,
 		ARCHIVE_BUTTON, ARCHIVE_TITLE, ARCHIVE_CLOSE, ARCHIVE_LOCKED, ARCHIVE_SOURCES, ARCHIVE_NO_IMAGE,
 		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,

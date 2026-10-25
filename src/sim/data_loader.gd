@@ -155,8 +155,10 @@ var _grid_maps: Array[Dictionary] = []
 
 
 # `mods_root` is where the player's mods live (ModLayer.DEFAULT_ROOT in the game); empty loads data/ alone, as
-# tests and balance tools do so that nothing on the machine changes their results.
-func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root: String = "") -> DataLoadResult:
+# tests and balance tools do so that nothing on the machine changes their results. `save_mods`, a list of mod names,
+# loads exactly those in that order instead of the player's load_order.json (a saved game's mods, issue #136).
+func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root: String = "",
+		save_mods: Variant = null) -> DataLoadResult:
 	_errors.clear()
 	_rejected_keys.clear()
 	_era = era
@@ -189,12 +191,13 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root:
 			else:
 				documents[path] = json.data
 	var mods: ModLayer = ModLayer.new()
-	mods.apply(documents, mods_root, era)
+	mods.apply(documents, mods_root, era, save_mods)
 	_errors.append_array(mods.errors)
 	var result: DataLoadResult = _build(documents)
 	result.errors.assign(result.errors.map(mods.blame))
 	result.mods = mods.mods
 	result.mod_conflicts = mods.conflicts
+	result.mod_fingerprints = mods.fingerprints
 	return result
 
 

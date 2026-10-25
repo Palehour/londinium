@@ -244,3 +244,59 @@ func test_a_symbolic_load_order_is_rejected() -> void:
 	if not _link("order.json", ModLayer.LOAD_ORDER_FILE):
 		return
 	assert_eq(_load().errors, ["mods/load_order.json: symbolic links are not allowed"])
+
+
+func _load_only(mods: Array[StringName]) -> DataLoadResult:
+	return DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, ROOT, mods)
+
+
+# Issue #136 (D-117): each active mod is recorded with its name, the version in its optional mod.json and a hash of
+# its data/ files, so a save can tell whether a mod changed.
+func test_each_mod_has_a_version_and_a_hash_of_its_data() -> void:
+	_write("a/data/economy/startup.json", {"money": 2000})
+	_write("a/mod.json", {"version": "1.2"})
+	_write("b/data/economy/startup.json", {"money": 600})
+	var loaded: DataLoadResult = _load()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	assert_eq(loaded.mod_fingerprints.map(func(mod: Dictionary) -> String: return mod["name"]), ["a", "b"])
+	assert_eq(loaded.mod_fingerprints[0]["version"], "1.2")
+	assert_eq(loaded.mod_fingerprints[1]["version"], "", "Without mod.json a mod has no version")
+	assert_ne(loaded.mod_fingerprints[0]["hash"], loaded.mod_fingerprints[1]["hash"])
+	assert_eq(ModLayer.installed(ROOT), {&"a": loaded.mod_fingerprints[0], &"b": loaded.mod_fingerprints[1]})
+
+
+func test_the_hash_follows_the_data_not_the_version() -> void:
+	_write("a/data/economy/startup.json", {"money": 2000})
+	var before: String = _load().mod_fingerprints[0]["hash"]
+	_write("a/mod.json", {"version": "2.0"})
+	assert_eq(_load().mod_fingerprints[0]["hash"], before, "mod.json is outside data/")
+	_write("a/data/economy/startup.json", {"money": 2001})
+	assert_ne(_load().mod_fingerprints[0]["hash"], before)
+	_write("a/data/economy/startup.json", {"money": 2000})
+	assert_eq(_load().mod_fingerprints[0]["hash"], before)
+
+
+func test_a_bad_mod_json_is_rejected_naming_the_mod() -> void:
+	_write("a/data/economy/startup.json", {"money": 2000})
+	_write("a/mod.json", {"version": 2})
+	assert_eq(_load().errors, ["mod 'a': mod.json.version: expected text"])
+	_write("a/mod.json", "[]")
+	assert_eq(_load().errors, ["mod 'a': mod.json: expected an object"])
+
+
+# A save's mods load on their own, in the save's order, whatever load_order.json says; the list is not touched.
+func test_a_list_of_mods_loads_exactly_those_in_that_order() -> void:
+	_write("a/data/economy/startup.json", {"money": 2000})
+	_write("b/data/economy/startup.json", {"money": 600})
+	_write("c/data/economy/startup.json", {"money": 999})
+	_write("load_order.json", ["c", "b", "a"])
+	var loaded: DataLoadResult = _load_only([&"a", &"b"] as Array[StringName])
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	assert_eq(loaded.mods, [&"a", &"b"] as Array[StringName])
+	assert_eq(loaded.catalog.base_values[&"startup.money"], 600)
+	assert_eq(loaded.mod_conflicts[0]["winner"], "b")
+	assert_eq(FileAccess.get_file_as_string(ROOT.path_join(ModLayer.LOAD_ORDER_FILE)), "[\"c\",\"b\",\"a\"]")
+	var none: DataLoadResult = _load_only([] as Array[StringName])
+	assert_true(none.mods.is_empty())
+	assert_eq(none.catalog.base_values, _base.base_values)
+	assert_eq(_load_only([&"gone"] as Array[StringName]).errors, ["mod 'gone': not installed"])
