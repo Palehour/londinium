@@ -273,10 +273,10 @@ ui.archive.image_note,De contexto: %s,Context image: %s
 ui.archive.kind.moment,Momento,Moment
 ui.archive.kind.character,Personaje,Character
 ui.archive.kind.finding,Hallazgo,Finding
-archive.stink.title,[Pendiente de Chronicler] ARC STINK: título,[Pending from Chronicler] ARC STINK: title
-archive.stink.date,[Pendiente de Chronicler] ARC STINK: fecha,[Pending from Chronicler] ARC STINK: date
-archive.stink.body,[Pendiente de Chronicler] ARC STINK: texto,[Pending from Chronicler] ARC STINK: text
-archive.stink.sources,[Pendiente de Chronicler] ARC STINK: fuentes,[Pending from Chronicler] ARC STINK: sources
+archive.stink.title,El Gran Hedor,The Great Stink
+archive.stink.date,Junio–agosto de 1858,June–August 1858
+archive.stink.body,"En el verano caluroso de 1858, el Támesis, cargado con las aguas negras de la propia ciudad, largó un hedor que llegó hasta el Parlamento, a orillas del río. El 15 de julio, Disraeli lo llamó «una laguna estigia». En pocas semanas se aprobó una ley que le dio a la Metropolitan Board of Works el poder y el dinero para drenar Londres lejos del río. Así arrancó el plan de cloacas de Joseph Bazalgette. En calles como las de Whitechapel no hubo una solución inmediata: había que cerrar las ventanas y aguantar.","In the hot summer of 1858 the Thames, loaded with the city's own sewage, gave off a stench that reached Parliament on its bank. On 15 July Disraeli called the river ‘a Stygian pool’. Within weeks an Act gave the Metropolitan Board of Works the power and the money to drain London away from the river. It set Joseph Bazalgette's sewer plan in motion. In streets like Whitechapel's there was no quick fix: people shut their windows and endured."
+archive.stink.sources,"Hansard, Cámara de los Comunes, 15/7/1858 · Metropolis Management Amendment Act 1858 (21 & 22 Vict. c.104) · London Museum","Hansard, House of Commons, 15 July 1858 · Metropolis Management Amendment Act 1858 (21 & 22 Vict. c.104) · London Museum"
 archive.bazalgette.title,[Pendiente de Chronicler] ARC BAZALGETTE: título,[Pending from Chronicler] ARC BAZALGETTE: title
 archive.bazalgette.date,[Pendiente de Chronicler] ARC BAZALGETTE: fecha,[Pending from Chronicler] ARC BAZALGETTE: date
 archive.bazalgette.body,[Pendiente de Chronicler] ARC BAZALGETTE: texto,[Pending from Chronicler] ARC BAZALGETTE: text
