@@ -9,6 +9,9 @@ var _mods: Array[StringName] = []
 var _conflicts: Array[Dictionary] = []
 var _error: String = ""
 var _folder: String = ""
+# On while the game runs on a save's mods (issue #136): they are listed but not reordered, since a new order would
+# be written to the player's own load_order.json.
+var _from_save: bool = false
 # On while the player is in the panel with a gamepad (issue #68); then its buttons take the focus.
 var focusable: bool = false:
 	set(value):
@@ -18,12 +21,13 @@ var focusable: bool = false:
 
 
 # `folder` is where the player puts mods, shown when there are none so they know where to look.
-func show_mods(mods: Array[StringName], conflicts: Array[Dictionary], folder: String) -> void:
-	if mods == _mods and conflicts == _conflicts and folder == _folder:
+func show_mods(mods: Array[StringName], conflicts: Array[Dictionary], folder: String, from_save: bool = false) -> void:
+	if mods == _mods and conflicts == _conflicts and folder == _folder and from_save == _from_save:
 		return
 	_mods = mods.duplicate()
 	_conflicts = conflicts.duplicate(true)
 	_folder = folder
+	_from_save = from_save
 	_error = ""
 	_rebuild()
 
@@ -63,6 +67,8 @@ func _restore_focus(index: int) -> void:
 
 
 func _build() -> void:
+	if _from_save:
+		add_child(_label(Strings.text(Strings.MODS_FROM_SAVE)))
 	if _mods.is_empty():
 		add_child(_label(Strings.text(Strings.MODS_NONE) % _folder))
 		return
@@ -86,10 +92,10 @@ func _mod_row(index: int) -> HBoxContainer:
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name_label)
 	var up: Button = _button(Strings.text(Strings.MODS_UP), _move.bind(index, -1))
-	up.disabled = index == 0
+	up.disabled = index == 0 or _from_save
 	row.add_child(up)
 	var down: Button = _button(Strings.text(Strings.MODS_DOWN), _move.bind(index, 1))
-	down.disabled = index == _mods.size() - 1
+	down.disabled = index == _mods.size() - 1 or _from_save
 	row.add_child(down)
 	return row
 

@@ -5,6 +5,9 @@ extends RefCounted
 # They merge before validation, so a mod passes the same schemas and ParameterRanges as data/ itself.
 const DEFAULT_ROOT: String = "user://mods"
 const LOAD_ORDER_FILE: String = "load_order.json"
+# Optional file beside a mod's data/ with its version (issue #136): {"version": "1.2"}. It is not data, so the hash
+# leaves it out.
+const MANIFEST_FILE: String = "mod.json"
 # Reading limits for files the player drops in, so a huge or absurdly nested one is an error, not a stall.
 # data/ files are a few KB and five levels deep; these leave ample room for any real mod.
 const MAX_FILE_BYTES: int = 65536
@@ -15,18 +18,28 @@ var errors: Array[String] = []
 var mods: Array[StringName] = []
 # {key, mods, winner} for every value more than one mod sets; the last one wins.
 var conflicts: Array[Dictionary] = []
+# {name, version, hash} of every active mod in load order (issue #136), so a save knows the exact mods it ran on.
+# The hash is SHA-256 over the paths and bytes of the mod's data/ files.
+var fingerprints: Array[Dictionary] = []
 # Location of every value a mod set ("economy/startup.json.money") → the mods that set it, in order.
 var _sources: Dictionary[String, Array] = {}
 var _files: Dictionary[String, Array] = {}
 
 
-# Merges every active mod into `documents` in place. An empty or missing root means no mods.
-func apply(documents: Dictionary[String, Dictionary], root: String, era: String) -> void:
-	if root.is_empty() or not DirAccess.dir_exists_absolute(root):
-		return
-	for mod_name: String in _load_order(root):
-		mods.append(StringName(mod_name))
-		_apply_mod(documents, root, mod_name, era)
+# Merges every active mod into `documents` in place. An empty or missing root means no mods. `save_mods`, when it is
+# a list, replaces load_order.json: exactly those mods in that order, for a saved game's session (issue #136).
+func apply(documents: Dictionary[String, Dictionary], root: String, era: String, save_mods: Variant = null) -> void:
+	if save_mods is Array:
+		for mod_name: Variant in save_mods:
+			if root.is_empty() or not DirAccess.dir_exists_absolute(root.path_join(mod_name)):
+				errors.append("mod '%s': not installed" % mod_name)
+				continue
+			mods.append(StringName(mod_name))
+			_apply_mod(documents, root, String(mod_name), era)
+	elif not root.is_empty() and DirAccess.dir_exists_absolute(root):
+		for mod_name: String in _load_order(root):
+			mods.append(StringName(mod_name))
+			_apply_mod(documents, root, mod_name, era)
 	for location: String in _sources:
 		var setters: Array = _sources[location]
 		if setters.size() > 1:
@@ -46,6 +59,25 @@ func blame(message: String) -> String:
 		if message.begins_with(path):
 			return "mod '%s': %s" % ["', '".join(_files[path]), message]
 	return message
+
+
+# Every mod folder under `root` with its {name, version, hash}, whatever the load order, to check a save against.
+static func installed(root: String) -> Dictionary[StringName, Dictionary]:
+	var found: Dictionary[StringName, Dictionary] = {}
+	if root.is_empty() or not DirAccess.dir_exists_absolute(root):
+		return found
+	var folders: PackedStringArray = DirAccess.get_directories_at(root)
+	folders.sort()
+	for mod_name: String in folders:
+		var layer: ModLayer = ModLayer.new()
+		var data_dir: String = root.path_join(mod_name).path_join("data")
+		var files: Array[String] = []
+		# Same rules as loading: a link is never followed; such a mod does not load anyway.
+		var linked: bool = layer._is_link(root, mod_name) or layer._is_link(root.path_join(mod_name), "data")
+		if DirAccess.dir_exists_absolute(data_dir) and not linked:
+			files = layer._json_files(data_dir, "", mod_name)
+		found[StringName(mod_name)] = layer._fingerprint(root, mod_name, files)
+	return found
 
 
 # Writes the order the mods menu chose (D-065: load_order.json is editable there).
@@ -98,7 +130,9 @@ func _apply_mod(documents: Dictionary[String, Dictionary], root: String, mod_nam
 	if not DirAccess.dir_exists_absolute(data_dir):
 		errors.append("mod '%s': missing data/ folder" % mod_name)
 		return
-	for path: String in _json_files(data_dir, "", mod_name):
+	var files: Array[String] = _json_files(data_dir, "", mod_name)
+	fingerprints.append(_fingerprint(root, mod_name, files))
+	for path: String in files:
 		# Another era's files are not loaded this game, so a mod may carry them without error.
 		if path.begins_with("eras/") and not path.begins_with("eras/%s/" % era):
 			continue
@@ -113,6 +147,45 @@ func _apply_mod(documents: Dictionary[String, Dictionary], root: String, mod_nam
 			continue
 		_files.get_or_add(path, []).append(mod_name)
 		_merge(documents[path], raw, path, mod_name)
+
+
+func _fingerprint(root: String, mod_name: String, files: Array[String]) -> Dictionary:
+	var hashing: HashingContext = HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	for path: String in files:
+		# The path goes in too, so moving a file to another place changes the mod.
+		hashing.update(path.to_utf8_buffer())
+		hashing.update(PackedByteArray([0]))
+		var file: FileAccess = FileAccess.open(root.path_join(mod_name).path_join("data").path_join(path), FileAccess.READ)
+		# A file over the limit is refused when it loads; its size stands in for it, so it is never read whole.
+		if file != null and file.get_length() <= MAX_FILE_BYTES:
+			hashing.update(file.get_buffer(file.get_length()))
+		elif file != null:
+			hashing.update(str(file.get_length()).to_utf8_buffer())
+		hashing.update(PackedByteArray([0]))
+	return {"name": mod_name, "version": _version(root, mod_name), "hash": hashing.finish().hex_encode()}
+
+
+# The version in the mod's optional mod.json; "" without one.
+func _version(root: String, mod_name: String) -> String:
+	var folder: String = root.path_join(mod_name)
+	if not FileAccess.file_exists(folder.path_join(MANIFEST_FILE)):
+		return ""
+	var label: String = "mod '%s': %s" % [mod_name, MANIFEST_FILE]
+	if _is_link(folder, MANIFEST_FILE):
+		errors.append("%s: symbolic links are not allowed" % label)
+		return ""
+	var raw: Variant = _read_json(folder.path_join(MANIFEST_FILE), label)
+	if raw == null:
+		return ""
+	if raw is not Dictionary:
+		errors.append("%s: expected an object" % label)
+		return ""
+	var version: Variant = raw.get("version", "")
+	if typeof(version) != TYPE_STRING:
+		errors.append("%s.version: expected text" % label)
+		return ""
+	return version
 
 
 # Objects merge field by field; numbers, switches and lists replace what was there.

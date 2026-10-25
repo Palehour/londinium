@@ -20,6 +20,12 @@ const KIND_STAGE: StringName = &"stage"
 const INVALID_FILE: StringName = &"invalid_file"
 const OTHER_VERSION: StringName = &"other_version"
 const OTHER_MODS: StringName = &"other_mods"
+# Issue #136 (D-117): a save's mod that is not installed, or installed with other data.
+const MISSING_MOD: StringName = &"missing_mod"
+const OTHER_MOD_VERSION: StringName = &"other_mod_version"
+# Characters of a mod's hash shown when its version does not tell two of them apart.
+const SHORT_HASH: int = 8
+const MOD_FIELDS: Array[String] = ["name", "version", "hash"]
 const SIMULATION_INTS: Array[String] = ["tick_count", "seed", "rng_state", "barley_rng_state"]
 const ENVELOPE_NAMES: Array[String] = ["scenario", "difficulty"]
 # Economy fields a save from before them may lack: the streets of issue #67 (D-080) load as none.
@@ -29,9 +35,10 @@ const OPTIONAL_ECONOMY_FIELDS: Array[String] = ["player_roads", "transport_fract
 static func build(session: GameSession) -> Dictionary:
 	var mods: Array = []
 	mods.assign(session.mods)
+	# The name, version and hash of each mod (issue #136); a save from before them has only `mods`.
 	return {"format": FORMAT, "version": VERSION, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"scenario": session.scenario_id(), "difficulty": session.difficulty, "knobs": {}, "mods": mods,
-		"simulation": session.simulation.to_save()}
+		"mod_versions": session.mod_fingerprints.duplicate(true), "simulation": session.simulation.to_save()}
 
 
 # Written beside the target first and then moved over it, so a failed write never leaves half a save behind.
@@ -72,11 +79,28 @@ static func validate(raw: Variant) -> Dictionary:
 	for mod: Variant in raw["mods"]:
 		if typeof(mod) not in [TYPE_STRING, TYPE_STRING_NAME]:
 			return _refusal(INVALID_FILE)
+	if raw.has("mod_versions") and not _valid_mod_versions(raw["mod_versions"], raw["mods"]):
+		return _refusal(INVALID_FILE)
 	return {"reason": &"", "args": [], "data": raw}
 
 
+# One {name, version, hash} of text per mod, in the order of `mods`.
+static func _valid_mod_versions(versions: Variant, mods: Array) -> bool:
+	if versions is not Array or versions.size() != mods.size():
+		return false
+	for index: int in versions.size():
+		var mod: Variant = versions[index]
+		if mod is not Dictionary or str(mod.get("name", "")) != String(mods[index]):
+			return false
+		for field: String in MOD_FIELDS:
+			if typeof(mod.get(field)) != TYPE_STRING:
+				return false
+	return true
+
+
 # A valid save still needs the game it was played on: same scenario, a difficulty this data has, same mods in the
-# same order (a mod changes the numbers, so another set would not play the saved game).
+# same order with the same data (a mod changes the numbers, so another set would not play the saved game). On
+# OTHER_MODS, `mods_offer` tells whether it can load with its own mods instead (issue #136).
 static func check_compatible(data: Dictionary, session: GameSession, catalog: DataCatalog) -> Dictionary:
 	if StringName(data["scenario"]) != session.scenario_id() \
 			or not catalog.difficulties.has(StringName(data["difficulty"])):
@@ -84,9 +108,40 @@ static func check_compatible(data: Dictionary, session: GameSession, catalog: Da
 	var mods: Array[StringName] = []
 	for mod: Variant in data["mods"]:
 		mods.append(StringName(mod))
-	if mods != session.mods:
+	if mods != session.mods or (data.has("mod_versions")
+			and _hashes(data["mod_versions"]) != _hashes(session.mod_fingerprints)):
 		return _refusal(OTHER_MODS, [mods])
 	return {"reason": &"", "args": [], "data": data}
+
+
+# Whether a save played with other mods can load with its own (issue #136, D-117): every one of them installed with
+# the same data. A missing mod or another version is refused, naming the mod and the versions; a save from before
+# the versions keeps the old refusal, because nothing tells whether its mods changed.
+static func mods_offer(data: Dictionary, installed: Dictionary[StringName, Dictionary]) -> Dictionary:
+	if not data.has("mod_versions"):
+		return _refusal(OTHER_MODS, [data["mods"]])
+	for saved: Dictionary in data["mod_versions"]:
+		var present: Dictionary = installed.get(StringName(saved["name"]), {})
+		if present.is_empty():
+			return _refusal(MISSING_MOD, [saved["name"], _version_label(saved, false)])
+		if present["hash"] != saved["hash"]:
+			# Two mods with the same version name but other data are told apart by their hashes.
+			var same_name: bool = saved["version"] == present["version"]
+			return _refusal(OTHER_MOD_VERSION, [saved["name"], _version_label(saved, same_name),
+				_version_label(present, same_name)])
+	return {"reason": &"", "args": [], "data": data}
+
+
+# The version a player reads: the one in mod.json, or the start of the hash for a mod without one.
+static func _version_label(mod: Dictionary, with_hash: bool) -> String:
+	var short_hash: String = str(mod["hash"]).left(SHORT_HASH)
+	if str(mod["version"]).is_empty():
+		return short_hash
+	return "%s (%s)" % [mod["version"], short_hash] if with_hash else str(mod["version"])
+
+
+static func _hashes(mods: Array) -> Array:
+	return mods.map(func(mod: Dictionary) -> String: return mod["hash"])
 
 
 # A save in this format: one of format 1 converted to cells of `cell_size_m` (D-087). Every old cell (x, y) becomes its

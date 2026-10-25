@@ -45,6 +45,7 @@ ui.mods.down,Bajar,Down
 ui.mods.conflicts,Conflictos:,Conflicts:
 ui.mods.conflict,"%s: %s; gana %s","%s: %s; %s wins"
 ui.mods.error,"No se pudo aplicar el orden nuevo, se mantiene el anterior: %s","Could not apply the new order, the previous one stays: %s"
+ui.mods.from_save,"Esta partida usa los mods con que se guardó, solo por esta sesión. Tus mods y su orden vuelven al empezar una partida nueva.","This game runs on the mods it was saved with, for this session only. Your mods and their order come back when you start a new game."
 ui.population,Población: %d · empleados %d · desempleados %d,Population: %d · employed %d · unemployed %d
 ui.satisfaction,Satisfacción: %.0f/100 (pan +%.0f · té +%.0f · impuestos −%.0f · hacinamiento −%.0f),Satisfaction: %.0f/100 (bread +%.0f · tea +%.0f · tax −%.0f · overcrowding −%.0f)
 ui.bread_rate,Pan/min: producido %.1f · consumido %.1f · demanda %.1f,Bread/min: produced %.1f · consumed %.1f · demand %.1f
@@ -256,6 +257,10 @@ ui.save.saved_without_queue,"Partida guardada. Las órdenes que todavía no se a
 ui.save.write_error,"No se pudo guardar la partida.","Could not save the game."
 ui.save.loaded,Partida cargada.,Game loaded.
 ui.save.no_mods,sin mods,no mods
+ui.save.mods_differ,"Esta partida se jugó con otros mods. De la partida: %s. Activos ahora: %s. Si la cargás con los suyos, valen solo para esta sesión y tu orden de mods no cambia.","This game was played with other mods. The game's: %s. Active now: %s. If you load it with its own, they apply to this session only and your mod order does not change."
+ui.save.load_with_save_mods,Cargar con los mods de esta partida,Load with this game's mods
+ui.save.missing_mod,"No se pudo cargar: falta el mod %s (versión %s), con el que se jugó la partida.","Could not load: the mod %s (version %s) this game was played with is missing."
+ui.save.other_mod_version,"No se pudo cargar: la partida se jugó con el mod %s en la versión %s y está instalada la versión %s.","Could not load: the game was played with the mod %s version %s and version %s is installed."
 ui.save.kind.manual,Guardada a mano,Manual save
 ui.save.kind.autosave,Autoguardado %d,Autosave %d
 ui.save.kind.stage,Etapa cumplida,Stage met

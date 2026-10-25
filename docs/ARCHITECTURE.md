@@ -224,7 +224,10 @@ Every value goes through the same layers, in this order: **base → mods → pre
    A path that is not in `data/` is an error; another era's files are skipped. A mod file over
    `ModLayer.MAX_FILE_BYTES` or nested deeper than `ModLayer.MAX_DEPTH` is rejected before it merges, and so is a
    symbolic link anywhere in `user://mods` (the mod folder, a folder or file inside it, or `load_order.json`): a mod
-   is only what is inside its folder, and the error names the mod.
+   is only what is inside its folder, and the error names the mod. Each active mod has a fingerprint
+   (`DataLoadResult.mod_fingerprints`, issue #136): its name, the `version` text of an optional
+   `user://mods/<name>/mod.json` (outside `data/`, so it is not data; "" without one) and a SHA-256 hash of the paths
+   and bytes of its `data/` files. `ModLayer.installed(root)` gives the same for every folder, whatever the order.
 3. **Preset:** relative (`mul`/`add` on the values below it, so on base + mods). Normal has no modifiers.
 4. **Knobs:** absolute; they replace the preset's value.
 5. **Role:** last, through the single modifier function (D-014).
@@ -237,7 +240,9 @@ without them, so nothing on the machine changes their results. The mods menu (`s
 stats panel) lists the active mods in order, their conflicts and the winner of each, and moves a mod up or down: the
 map view saves the new `load_order.json`, loads the data again and starts a new game on the same difficulty. If the
 new order does not validate, the previous list is written back and the game goes on. `GameSession` keeps the
-difficulty, the active mods and their conflicts for saving (#57, see "Save and load").
+difficulty, the active mods, their conflicts and fingerprints for saving (#57, see "Save and load"). While a game
+runs on a save's mods (`GameSession.mods_from_save`, issue #136) the menu lists them with a note and does not reorder
+them, since a new order would be written to the player's `load_order.json`.
 
 ## Chapter objectives (D-064, issue #56)
 `data/scenarios/victorian_demo.json` defines `victory.stages`; a scenario without that property has no victory.
@@ -297,7 +302,8 @@ is meant for `var_to_bytes` + compression (`StatsHistory.compressed_size`, the m
 ## Save and load (D-037, D-067, issue #57, ADR 0011)
 A save is one Variant written with `store_var` into a ZSTD-compressed file, never with objects, in `user://saves/`.
 `SaveFile.build(session)` makes the envelope: `format`, `version` (`SaveFile.VERSION`), `saved_at`, `scenario`,
-`difficulty`, `knobs` (empty until something sets them), `mods` in load order and `simulation`, which is
+`difficulty`, `knobs` (empty until something sets them), `mods` in load order, `mod_versions` (the fingerprint of each,
+issue #136; a save from before it lacks the field) and `simulation`, which is
 `Simulation.to_save()`: `EconomyState.to_dict()`, the stats window, `stats_history_to_dict()`, the tick, the seed and
 both generators' states. `Simulation.from_save()` rebuilds it and restores the tick and the generators, so a game
 saved at minute N and played to M ends in the same state as one never saved (`tests/sim/test_save_round_trip.gd`).
@@ -307,7 +313,17 @@ A save holds the state at the end of the last tick; commands still queued stay i
 in the file (the panel says so when that happens). `SaveFile.read` refuses a file that is not a save or whose economy
 lacks a field (or its kind of value) that a new `EconomyState` has, and one of another version (the player's streets and
 the transport fraction of issue #67 are the exception: a save from before them loads with no streets, D-080);
-`SaveFile.check_compatible` refuses another scenario, an unknown difficulty and other mods (another set or order).
+`SaveFile.check_compatible` refuses another scenario, an unknown difficulty and other mods (another set or order, or
+the same names with other data).
+**Loading with the save's mods (issue #136, D-117).** On other mods, `SaveFile.mods_offer` checks the save's
+fingerprints against `ModLayer.installed`: a missing mod, or one whose hash differs, is refused naming the mod and
+both versions (the start of the hash when a mod has no version, or next to a version name both share). Otherwise the
+saves menu shows both lists and the option to load with the save's mods. Accepting loads `data/` again with exactly
+those mods in the save's order (`DataLoader.load_all(..., save_mods)`, which ignores `load_order.json`; conflicts
+resolve as when it was saved, the last wins), for that session only: nothing is written, and the next new game
+(restart or difficulty) or start loads the player's own list again. A save without `mod_versions` keeps the plain
+refusal, because nothing tells whether its mods changed. Mods cannot be switched off (D-072), so an installed mod the
+save lacks simply does not load in that session.
 A save of format 1 was played on cells of 50 m and still loads (D-087, issue #186): `GameSession.load_save` passes it
 through `SaveFile.upgraded`, which puts every old cell (x, y) at the corner of its 2x2 block (2x, 2y), in the
 buildings, the player's streets and the buildings the causes of the history name (`<id>@<x>,<y>`). The converted game

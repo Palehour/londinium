@@ -146,8 +146,7 @@ func _ready() -> void:
 	layer.add_child(panel_mount)
 	_catalog = loaded.catalog
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]), scenario_id)
-	session.mods = loaded.mods
-	session.mod_conflicts = loaded.mod_conflicts
+	_use_mods(loaded, false)
 	_autosave = Autosave.new(session, save_settings, saves_root)
 	_update_help()
 	geometry = MapGeometry.new(Vector2i(session.context.map.width, session.context.map.height), presentation.layout["cell_size"], _map_viewport(), presentation.camera["max_zoom_factor"])
@@ -172,6 +171,7 @@ func _ready() -> void:
 	_stats_panel.mod_order_requested.connect(_reorder_mods)
 	_stats_panel.save_requested.connect(_save_game)
 	_stats_panel.load_requested.connect(_load_game)
+	_stats_panel.load_with_save_mods_requested.connect(_load_with_save_mods)
 	_stats_panel.stats_requested.connect(_open_stats)
 	if not mods_root.is_empty():
 		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
@@ -663,16 +663,48 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 	queue_redraw()
 
 
+# A new game leaves a save's mods (issue #136).
 func _restart_session() -> void:
-	session.restart()
+	if session.mods_from_save and _load_player_mods():
+		_restart_on(session.difficulty, _catalog)
+	else:
+		session.restart()
 	_reset_view()
 
 
-# The presets were validated when data/ loaded, so resolving one here cannot fail.
 func _start_on_difficulty(preset_id: StringName) -> void:
-	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
-	session.restart_with(Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers), preset_id)
+	var catalog: DataCatalog = null
+	if session.mods_from_save and _load_player_mods():
+		catalog = _catalog
+	_restart_on(preset_id, catalog)
 	_reset_view()
+
+
+# The presets were validated when data/ loaded, so resolving one here cannot fail. `catalog` is data loaded again.
+func _restart_on(preset_id: StringName, catalog: DataCatalog) -> void:
+	var layers: DataLayers = DataLayers.resolve(_catalog, preset_id)
+	session.restart_with(Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers), preset_id,
+		catalog)
+
+
+func _use_mods(loaded: DataLoadResult, from_save: bool) -> void:
+	_catalog = loaded.catalog
+	session.mods = loaded.mods
+	session.mod_conflicts = loaded.mod_conflicts
+	session.mod_fingerprints = loaded.mod_fingerprints
+	session.mods_from_save = from_save
+
+
+# Back to the player's own mods after a save's (issue #136): load_order.json was never touched, so it loads as it is.
+# If it no longer validates, the game stays on the save's mods and the mods menu says why.
+func _load_player_mods() -> bool:
+	var loaded: DataLoadResult = _load_catalog()
+	if not loaded.is_ok():
+		_stats_panel.show_mod_error("\n".join(loaded.errors))
+		return false
+	_use_mods(loaded, false)
+	_update_help()
+	return true
 
 
 # The mods menu's new order (D-065): saved to load_order.json, then data/ and the mods load again and a new game
@@ -689,9 +721,7 @@ func _reorder_mods(order: Array[StringName]) -> void:
 		_stats_panel.show_mod_error("
 ".join(loaded.errors))
 		return
-	_catalog = loaded.catalog
-	session.mods = loaded.mods
-	session.mod_conflicts = loaded.mod_conflicts
+	_use_mods(loaded, false)
 	var layers: DataLayers = DataLayers.resolve(_catalog, session.difficulty)
 	session.restart_with_catalog(_catalog, Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
 	_update_help()
@@ -705,17 +735,48 @@ func _save_game() -> void:
 	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_WRITE_ERROR if path.is_empty() else message))
 
 
-# A save loads on the difficulty it was played on; a file from another version or other mods is refused and the
-# current game goes on.
+# A save loads on the difficulty it was played on; a file from another version is refused and the current game goes
+# on. One played with other mods shows them and offers to load with its own, unless one is missing or changed.
 func _load_game(path: String) -> void:
 	var result: Dictionary = SaveFile.read(path)
+	var saved: Dictionary = result["data"]
 	if result["reason"] == &"":
-		result = SaveFile.check_compatible(result["data"], session, _catalog)
+		result = SaveFile.check_compatible(saved, session, _catalog)
+	if result["reason"] == SaveFile.OTHER_MODS:
+		result = SaveFile.mods_offer(saved, ModLayer.installed(mods_root))
+		if result["reason"] == &"":
+			_stats_panel.show_saves(SaveFile.list(saves_root), Strings.save_mods_differ(saved["mods"], session.mods), path)
+			return
 	if result["reason"] != &"":
 		_stats_panel.show_saves(SaveFile.list(saves_root), Strings.save_refusal(result["reason"], result["args"]))
 		return
-	var layers: DataLayers = DataLayers.resolve(_catalog, StringName(result["data"]["difficulty"]))
-	session.load_save(result["data"], Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers))
+	_load_checked(saved, null)
+
+
+# The player accepted the save's mods (issue #136, D-117): data/ loads again with exactly those, in the save's order,
+# for this session only. load_order.json is not written, so the next new game or start brings the player's back.
+func _load_with_save_mods(path: String) -> void:
+	var result: Dictionary = SaveFile.read(path)
+	if result["reason"] == &"":
+		result = SaveFile.mods_offer(result["data"], ModLayer.installed(mods_root))
+	if result["reason"] != &"":
+		_stats_panel.show_saves(SaveFile.list(saves_root), Strings.save_refusal(result["reason"], result["args"]))
+		return
+	var save_mods: Array[StringName] = []
+	save_mods.assign(result["data"]["mods"].map(func(mod: Variant) -> StringName: return StringName(mod)))
+	var loaded: DataLoadResult = DataLoader.new().load_all("res://data", DataLoader.DEFAULT_ERA, mods_root, save_mods)
+	if not loaded.is_ok():
+		_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.MODS_ERROR) % "\n".join(loaded.errors))
+		return
+	_use_mods(loaded, true)
+	_update_help()
+	_load_checked(result["data"], _catalog)
+
+
+# `catalog` is the data loaded with the save's mods, or null when the save runs on the current one.
+func _load_checked(saved: Dictionary, catalog: DataCatalog) -> void:
+	var layers: DataLayers = DataLayers.resolve(_catalog, StringName(saved["difficulty"]))
+	session.load_save(saved, Params.new(_catalog, _catalog.roles[&"neutral_administrator"], layers.modifiers), catalog)
 	_reset_view()
 	_stats_panel.show_saves(SaveFile.list(saves_root), Strings.text(Strings.SAVE_LOADED))
 

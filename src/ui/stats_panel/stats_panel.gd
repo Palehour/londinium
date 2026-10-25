@@ -6,6 +6,7 @@ signal difficulty_selected(preset_id: StringName)
 signal mod_order_requested(order: Array[StringName])
 signal save_requested
 signal load_requested(path: String)
+signal load_with_save_mods_requested(path: String)
 # The Archive button (issue #64, D-110): the map view opens the panel.
 signal archive_requested
 # The player asked for the statistics screen (issue #83).
@@ -198,7 +199,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_notice.visible = not _notice.text.is_empty()
 	_restart.visible = defeated
 	_sync_difficulty_buttons()
-	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder, session.mods_from_save)
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
@@ -299,12 +300,13 @@ func show_mod_error(message: String) -> void:
 
 func set_mods_folder(folder: String) -> void:
 	_mods_folder = folder
-	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder, session.mods_from_save)
 
 
 # The saves in the folder and the outcome of the last save or load (issue #57); the map view owns the files.
-func show_saves(entries: Array[Dictionary], message: String = "") -> void:
-	_saves_menu.show_saves(entries, message)
+# `offer_path` is a save that can load with its own mods (issue #136).
+func show_saves(entries: Array[Dictionary], message: String = "", offer_path: String = "") -> void:
+	_saves_menu.show_saves(entries, message, offer_path)
 
 
 func _build_controls(content: VBoxContainer) -> void:
@@ -317,12 +319,14 @@ func _build_controls(content: VBoxContainer) -> void:
 	_saves_menu = SavesMenu.new()
 	_saves_menu.save_requested.connect(func() -> void: save_requested.emit())
 	_saves_menu.load_requested.connect(func(path: String) -> void: load_requested.emit(path))
+	_saves_menu.load_with_save_mods_requested.connect(
+		func(path: String) -> void: load_with_save_mods_requested.emit(path))
 	content.add_child(_saves_menu)
 	_build_difficulty_row(content)
 	_mods_menu = ModsMenu.new()
 	_mods_menu.order_changed.connect(func(order: Array[StringName]) -> void: mod_order_requested.emit(order))
 	content.add_child(_mods_menu)
-	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder)
+	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder, session.mods_from_save)
 	var tax_row: HBoxContainer = HBoxContainer.new()
 	_tax_label = Label.new()
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)

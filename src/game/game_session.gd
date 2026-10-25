@@ -14,6 +14,10 @@ var difficulty: StringName = DataLayers.NORMAL
 # Active mods in load order and their conflicts (D-065), for the mods menu and saving (#57).
 var mods: Array[StringName] = []
 var mod_conflicts: Array[Dictionary] = []
+# {name, version, hash} of each active mod, for saving (issue #136).
+var mod_fingerprints: Array[Dictionary] = []
+# On while this game runs on the mods of the save it loaded instead of the player's (issue #136, D-117).
+var mods_from_save: bool = false
 var _params: Params
 var _initial_state: EconomyState
 var _victory_stages: Array[Dictionary] = []
@@ -36,9 +40,12 @@ func restart_with_catalog(catalog: DataCatalog, params: Params) -> void:
 	_start(params, difficulty)
 
 
-# A new game on another difficulty: the startup values come from the new parameters.
-func restart_with(params: Params, preset_id: StringName) -> void:
+# A new game on another difficulty: the startup values come from the new parameters, and from `catalog` when the
+# data loaded again (back to the player's mods after a save's, issue #136).
+func restart_with(params: Params, preset_id: StringName, catalog: DataCatalog = null) -> void:
 	_pending.clear()
+	if catalog != null:
+		_use_catalog(catalog)
 	_start(params, preset_id)
 
 
@@ -64,9 +71,11 @@ func _start(params: Params, preset_id: StringName) -> void:
 
 
 # A saved game (issue #57) on the parameters of its difficulty: a later restart starts a new game on them. One saved on
-# cells of 50 m is converted first (D-087).
-func load_save(saved: Dictionary, params: Params) -> void:
+# cells of 50 m is converted first (D-087). `catalog` is the data loaded with the save's own mods (issue #136).
+func load_save(saved: Dictionary, params: Params, catalog: DataCatalog = null) -> void:
 	_pending.clear()
+	if catalog != null:
+		_use_catalog(catalog)
 	_start(params, StringName(saved["difficulty"]))
 	var upgraded: Dictionary = SaveFile.upgraded(saved, int(params.get_value(&"map.cell_size_m")))
 	simulation = Simulation.from_save(params, context, _victory_stages, upgraded["simulation"])
