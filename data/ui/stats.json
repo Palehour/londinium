@@ -7,6 +7,7 @@
       { "id": "chapter", "tier": "chapter", "span_seconds": 0 }
     ]
   },
+  "classes": { "fill_alpha": 0.35 },
   "layout": { "font_size": 16, "margin": 16, "card_columns": 3, "chart_height": 120, "legend_width": 32,
     "line_width": 2, "history_chart_height": 360 },
   "colors": { "background": "#20242b", "card": "#2b3038", "marker": "#8a919c", "cursor": "#f0e442" },
