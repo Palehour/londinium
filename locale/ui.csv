@@ -245,6 +245,22 @@ ui.stats_screen.card.satisfaction,Satisfacción por clase,Satisfaction by class
 ui.stats_screen.card.coverage,Cobertura de pan y cerveza,Bread and beer coverage
 ui.stats_screen.card.fear,Miedo,Fear
 ui.stats_screen.card.debt,Deuda,Debt
+ui.stats_screen.history,Historia,History
+ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · ↑/↓: métrica · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · ↑/↓: metric · LT/RT or +/-: range"
+ui.stats_screen.history.reading,Minuto %s · %s,Minute %s · %s
+ui.stats_screen.marker.policy,Política: %s,Policy: %s
+ui.stats_screen.marker.warning,Aviso: %s,Warning: %s
+ui.stats_screen.marker.defeat,Derrota: %s,Defeat: %s
+ui.stats_screen.marker.stage,Objetivo cumplido,Objective completed
+ui.stats_screen.range.ten_minutes,10 min,10 min
+ui.stats_screen.range.hour,1 h,1 h
+ui.stats_screen.range.chapter,Todo,All
+ui.stats_screen.policy.tax_rate,Impuestos,Tax
+ui.stats_screen.policy.wheat_purchases,Compra de trigo,Wheat purchases
+ui.stats_screen.policy.wheat_policy,Reserva de trigo,Wheat reserve
+ui.stats_screen.policy.unloading_barley_percent,Descarga de cebada,Barley unloading
+ui.stats_screen.policy.tea_imports,Importación de té,Tea imports
+ui.stats_screen.policy.flour_imports,Importación de harina,Flour imports
 ui.save.title,Partidas guardadas:,Saved games:
 ui.save.none,Todavía no hay partidas guardadas.,No saved games yet.
 ui.save.save,Guardar partida,Save game

@@ -3,12 +3,17 @@ extends Control
 
 # A small line chart (issue #83): every line on one shared scale, each with its own stroke. Buckets without data
 # (NaN) leave a gap instead of a made-up value. The dashes run along the whole line, not segment by segment, so a
-# dashed line still reads as dashed when its buckets are only a few pixels apart.
+# dashed line still reads as dashed when its buckets are only a few pixels apart. The history view also marks
+# buckets with thin vertical rules and the one its cursor is on with a wider one.
 
 var _lines: Array[PackedFloat32Array] = []
 var _colors: Array[Color] = []
 var _dashes: PackedFloat32Array = []
 var _width: float = 1.0
+var _marks: PackedInt32Array = []
+var _cursor: int = -1
+var _mark_color: Color = Color.WHITE
+var _cursor_color: Color = Color.WHITE
 
 
 func show_lines(lines: Array[PackedFloat32Array], colors: Array[Color], dashes: PackedFloat32Array, width: float) -> void:
@@ -19,7 +24,17 @@ func show_lines(lines: Array[PackedFloat32Array], colors: Array[Color], dashes: 
 	queue_redraw()
 
 
+# Buckets to mark, by index in the lines, and the cursor's bucket (-1 for none).
+func show_marks(marks: PackedInt32Array, cursor: int, mark_color: Color, cursor_color: Color) -> void:
+	_marks = marks
+	_cursor = cursor
+	_mark_color = mark_color
+	_cursor_color = cursor_color
+	queue_redraw()
+
+
 func _draw() -> void:
+	_draw_marks()
 	var low: float = INF
 	var high: float = -INF
 	for values: PackedFloat32Array in _lines:
@@ -58,3 +73,14 @@ func _stroke(from: Vector2, to: Vector2, color: Color, dash: float, travelled: f
 			draw_line(from.lerp(to, done / length), from.lerp(to, (done + piece) / length), color, _width, true)
 		done += piece
 	return travelled + length
+
+
+func _draw_marks() -> void:
+	var buckets: int = _lines[0].size() if not _lines.is_empty() else 0
+	if buckets == 0:
+		return
+	var step: float = size.x / float(maxi(1, buckets - 1))
+	for bucket: int in _marks:
+		draw_line(Vector2(bucket * step, 0.0), Vector2(bucket * step, size.y), _mark_color, 1.0)
+	if _cursor >= 0:
+		draw_line(Vector2(_cursor * step, 0.0), Vector2(_cursor * step, size.y), _cursor_color, _width)

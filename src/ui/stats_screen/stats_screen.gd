@@ -3,14 +3,19 @@ extends PanelContainer
 
 # The statistics screen (issue #83, D-052): views of the chapter's history over the whole window, one tab each.
 # It only reads the history the simulation keeps (#82, D-066) and never sends a command. While it shows, the map
-# gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back.
+# gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back; the
+# history tab takes the rest.
 
 signal closed
+
+const SUMMARY_TAB: int = 0
+const HISTORY_TAB: int = 1
 
 var session: GameSession
 var presentation: StatsPresentation
 var _tabs: TabContainer
 var _summary: GridContainer
+var _history: TimelineTab
 var _hint: Label
 var _back: Button
 # Per summary card, in StatsSummary.CARDS order: its title, reading, chart and legend row.
@@ -52,6 +57,10 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_tabs.add_child(_summary)
 	for id: StringName in StatsSummary.CARDS:
 		_summary.add_child(_card())
+	_history = TimelineTab.new()
+	_tabs.add_child(_history)
+	_history.setup(session, look)
+	_tabs.tab_changed.connect(func(_tab: int) -> void: refresh())
 	session.snapshot_changed.connect(func(_snapshot: Dictionary) -> void: refresh())
 	hide()
 	_apply_texts()
@@ -76,10 +85,15 @@ func handle(event: InputEvent) -> void:
 		_tabs.select_next_available()
 	elif event.is_action_pressed(&"map_build_prev"):
 		_tabs.select_previous_available()
+	elif _tabs.current_tab == HISTORY_TAB:
+		_history.handle(event)
 
 
 func refresh() -> void:
 	if not visible:
+		return
+	if _tabs.current_tab == HISTORY_TAB:
+		_history.refresh()
 		return
 	var cards: Array[Dictionary] = StatsSummary.build(session.simulation, presentation.summary_span_seconds)
 	for index: int in cards.size():
@@ -95,7 +109,9 @@ func _notification(what: int) -> void:
 func _apply_texts() -> void:
 	_hint.text = Strings.text(Strings.STATS_SCREEN_HINT)
 	_back.text = Strings.text(Strings.STATS_SCREEN_BACK)
-	_tabs.set_tab_title(0, Strings.text(Strings.STATS_SCREEN_SUMMARY))
+	_tabs.set_tab_title(SUMMARY_TAB, Strings.text(Strings.STATS_SCREEN_SUMMARY))
+	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
+	_history.apply_texts()
 	for index: int in StatsSummary.CARDS.size():
 		_titles[index].text = Strings.text(Strings.STATS_SCREEN_CARDS[StatsSummary.CARDS[index]])
 
@@ -133,11 +149,11 @@ func _show_card(index: int, card: Dictionary) -> void:
 	var no_data: bool = card["lines"].is_empty()
 	_charts[index].visible = not no_data
 	_values[index].text = Strings.text(Strings.STATS_SCREEN_NO_DATA) if no_data else card["value"]
-	_show_legend(_legends[index], card["lines"])
+	show_legend(_legends[index], card["lines"], presentation)
 
 
-# Only a card with more than one line needs a legend: a short sample of each stroke beside its name.
-func _show_legend(row: HBoxContainer, lines: Array[Dictionary]) -> void:
+# Only a chart with more than one line needs a legend: a short sample of each stroke beside its name.
+static func show_legend(row: HBoxContainer, lines: Array[Dictionary], look: StatsPresentation) -> void:
 	var names: PackedStringArray = []
 	for line: Dictionary in lines:
 		names.append(line["label"])
@@ -151,10 +167,10 @@ func _show_legend(row: HBoxContainer, lines: Array[Dictionary]) -> void:
 		return
 	for line: int in lines.size():
 		var sample: Sparkline = Sparkline.new()
-		sample.custom_minimum_size = Vector2(presentation.layout["legend_width"], presentation.layout["font_size"])
+		sample.custom_minimum_size = Vector2(look.layout["legend_width"], look.layout["font_size"])
 		sample.show_lines([PackedFloat32Array([0.0, 0.0])] as Array[PackedFloat32Array],
-			[presentation.stroke_color(line)] as Array[Color], PackedFloat32Array([presentation.stroke_dash(line)]),
-			presentation.layout["line_width"])
+			[look.stroke_color(line)] as Array[Color], PackedFloat32Array([look.stroke_dash(line)]),
+			look.layout["line_width"])
 		row.add_child(sample)
 		var name_label: Label = Label.new()
 		name_label.text = lines[line]["label"]

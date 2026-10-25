@@ -3,13 +3,18 @@ extends RefCounted
 
 # Look of the statistics screen (issue #83), from data/ui/stats.json. The strokes pair a colour from a palette
 # readable with colour blindness with a dash length (0 = solid), so two lines differ even without their colour.
+# The history view's ranges each read one level of the history over a span (0 = the whole level).
 
 const PATH: String = "res://data/ui/stats.json"
 const LAYOUT_KEYS: Array[String] = ["font_size", "margin", "card_columns", "chart_height", "legend_width",
-	"line_width"]
-const COLOR_KEYS: Array[String] = ["background", "card"]
+	"line_width", "history_chart_height"]
+const COLOR_KEYS: Array[String] = ["background", "card", "marker", "cursor"]
+# The fine level holds one value a second, not buckets, so the ranges read only these two.
+const RANGE_TIERS: Array[StringName] = [StatsHistory.TIER_MEDIUM, StatsHistory.TIER_CHAPTER]
 
 var summary_span_seconds: int = 0
+# {"id", "tier", "span_seconds"}, in the order the triggers go through them.
+var history_ranges: Array[Dictionary] = []
 var layout: Dictionary[String, float] = {}
 var colors: Dictionary[String, Color] = {}
 var stroke_colors: Array[Color] = []
@@ -43,6 +48,7 @@ func validate(raw: Variant) -> void:
 			continue
 		stroke_colors.append(_color(stroke.get("color"), "strokes.%d.color" % index))
 		stroke_dashes.append(float(dash))
+	_validate_ranges(raw.get("history"))
 
 
 # Stroke of the index-th line of a chart; they repeat when a chart has more lines than strokes.
@@ -52,6 +58,25 @@ func stroke_color(index: int) -> Color:
 
 func stroke_dash(index: int) -> float:
 	return stroke_dashes[index % stroke_dashes.size()]
+
+
+func _validate_ranges(history: Variant) -> void:
+	if history is not Dictionary or history.get("ranges") is not Array or history["ranges"].is_empty():
+		errors.append("data/ui/stats.json.history.ranges: expected a list of ranges")
+		return
+	for index: int in history["ranges"].size():
+		var entry: Variant = history["ranges"][index]
+		var key: String = "data/ui/stats.json.history.ranges.%d" % index
+		if entry is not Dictionary or entry.get("id") is not String or entry.get("tier") is not String \
+				or StringName(entry["tier"]) not in RANGE_TIERS:
+			errors.append(key + ": expected an id and a tier, medium or chapter")
+			continue
+		var span: Variant = entry.get("span_seconds")
+		if (span is not float and span is not int) or span < 0:
+			errors.append(key + ".span_seconds: expected 0 or more")
+			continue
+		history_ranges.append({"id": StringName(entry["id"]), "tier": StringName(entry["tier"]),
+			"span_seconds": int(span)})
 
 
 func _positive(value: Variant, key: String) -> int:
