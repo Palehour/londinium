@@ -249,6 +249,10 @@ ui.stats_screen.card.debt,Deuda,Debt
 ui.stats_screen.history,Historia,History
 ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · ↑/↓: métrica · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · ↑/↓: metric · LT/RT or +/-: range"
 ui.stats_screen.history.reading,Minuto %s · %s,Minute %s · %s
+ui.stats_screen.classes,Clases,Classes
+ui.stats_screen.classes.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · Cada capa: satisfacción de la clase por su parte de los habitantes","D-pad or arrows ←/→: browse · LT/RT or +/-: range · Each layer: the class's satisfaction times its share of the residents"
+ui.stats_screen.classes.city,Ciudad %.0f,City %.0f
+ui.stats_screen.classes.class,%s %.0f (%.0f %% de los habitantes),%s %.0f (%.0f %% of residents)
 ui.stats_screen.marker.policy,Política: %s,Policy: %s
 ui.stats_screen.marker.warning,Aviso: %s,Warning: %s
 ui.stats_screen.marker.defeat,Derrota: %s,Defeat: %s

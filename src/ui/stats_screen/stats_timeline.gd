@@ -15,20 +15,25 @@ const FIRST_SECOND: int = 1
 # "bucket_seconds", and its "markers": {"bucket" (index in the lines), "second", "text"}, oldest first.
 static func build(simulation: Simulation, metric: StringName, tier: StringName, span: int) -> Dictionary:
 	var chart: Dictionary = StatsSummary.card(simulation, metric, tier, span)
-	chart["first_bucket"] = 0
-	chart["bucket_seconds"] = 1
-	chart["markers"] = [] as Array[Dictionary]
+	chart.merge(place(simulation, tier, span))
+	return chart
+
+
+# Where a range's buckets sit in the chapter, "first_bucket" and "bucket_seconds", and its "markers"; every series
+# of a level shares its buckets, so any one tells.
+static func place(simulation: Simulation, tier: StringName, span: int) -> Dictionary:
+	var placed: Dictionary = {"first_bucket": 0, "bucket_seconds": 1, "markers": [] as Array[Dictionary]}
 	var defs: Array[Dictionary] = simulation.stats_series_defs()
 	if defs.is_empty():
-		return chart
+		return placed
 	var series: Dictionary = simulation.stats_series(defs[0]["id"], tier)
 	var count: int = StatsSummary.window(series, "mean", span).size()
 	var bucket_seconds: int = maxi(1, int(series.get("bucket_seconds", 1)))
 	var first: int = int(series.get("first_bucket", 0)) + series.get("mean", PackedFloat32Array()).size() - count
-	chart["first_bucket"] = first
-	chart["bucket_seconds"] = bucket_seconds
-	chart["markers"] = _markers(simulation, first, count, bucket_seconds)
-	return chart
+	placed["first_bucket"] = first
+	placed["bucket_seconds"] = bucket_seconds
+	placed["markers"] = _markers(simulation, first, count, bucket_seconds)
+	return placed
 
 
 # What a marker says about an event, or nothing when the event is not one the chart marks: a policy the player

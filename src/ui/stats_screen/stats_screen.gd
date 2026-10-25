@@ -4,18 +4,20 @@ extends PanelContainer
 # The statistics screen (issue #83, D-052): views of the chapter's history over the whole window, one tab each.
 # It only reads the history the simulation keeps (#82, D-066) and never sends a command. While it shows, the map
 # gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back; the
-# history tab takes the rest.
+# chart tabs (history and classes) take the rest.
 
 signal closed
 
 const SUMMARY_TAB: int = 0
 const HISTORY_TAB: int = 1
+const CLASSES_TAB: int = 2
 
 var session: GameSession
 var presentation: StatsPresentation
 var _tabs: TabContainer
 var _summary: GridContainer
 var _history: TimelineTab
+var _classes: ClassesTab
 var _hint: Label
 var _back: Button
 # Per summary card, in StatsSummary.CARDS order: its title, reading, chart and legend row.
@@ -60,6 +62,9 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_history = TimelineTab.new()
 	_tabs.add_child(_history)
 	_history.setup(session, look)
+	_classes = ClassesTab.new()
+	_tabs.add_child(_classes)
+	_classes.setup(session, look)
 	_tabs.tab_changed.connect(func(_tab: int) -> void: refresh())
 	session.snapshot_changed.connect(func(_snapshot: Dictionary) -> void: refresh())
 	hide()
@@ -85,15 +90,15 @@ func handle(event: InputEvent) -> void:
 		_tabs.select_next_available()
 	elif event.is_action_pressed(&"map_build_prev"):
 		_tabs.select_previous_available()
-	elif _tabs.current_tab == HISTORY_TAB:
-		_history.handle(event)
+	elif _tabs.get_current_tab_control() is ChartTab:
+		(_tabs.get_current_tab_control() as ChartTab).handle(event)
 
 
 func refresh() -> void:
 	if not visible:
 		return
-	if _tabs.current_tab == HISTORY_TAB:
-		_history.refresh()
+	if _tabs.get_current_tab_control() is ChartTab:
+		(_tabs.get_current_tab_control() as ChartTab).refresh()
 		return
 	var cards: Array[Dictionary] = StatsSummary.build(session.simulation, presentation.summary_span_seconds)
 	for index: int in cards.size():
@@ -111,7 +116,9 @@ func _apply_texts() -> void:
 	_back.text = Strings.text(Strings.STATS_SCREEN_BACK)
 	_tabs.set_tab_title(SUMMARY_TAB, Strings.text(Strings.STATS_SCREEN_SUMMARY))
 	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
+	_tabs.set_tab_title(CLASSES_TAB, Strings.text(Strings.STATS_SCREEN_CLASSES))
 	_history.apply_texts()
+	_classes.apply_texts()
 	for index: int in StatsSummary.CARDS.size():
 		_titles[index].text = Strings.text(Strings.STATS_SCREEN_CARDS[StatsSummary.CARDS[index]])
 

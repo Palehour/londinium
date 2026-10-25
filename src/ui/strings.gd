@@ -267,6 +267,11 @@ const STATS_SCREEN_MARKER_POLICY: StringName = &"ui.stats_screen.marker.policy"
 const STATS_SCREEN_MARKER_WARNING: StringName = &"ui.stats_screen.marker.warning"
 const STATS_SCREEN_MARKER_DEFEAT: StringName = &"ui.stats_screen.marker.defeat"
 const STATS_SCREEN_MARKER_STAGE: StringName = &"ui.stats_screen.marker.stage"
+# The classes view (issue #83): its tab, hint and reading at the cursor, the city's and each class's.
+const STATS_SCREEN_CLASSES: StringName = &"ui.stats_screen.classes"
+const STATS_SCREEN_CLASSES_HINT: StringName = &"ui.stats_screen.classes.hint"
+const STATS_SCREEN_CLASSES_CITY: StringName = &"ui.stats_screen.classes.city"
+const STATS_SCREEN_CLASSES_CLASS: StringName = &"ui.stats_screen.classes.class"
 const STATS_SCREEN_RANGES: Dictionary[StringName, StringName] = {
 	&"ten_minutes": &"ui.stats_screen.range.ten_minutes", &"hour": &"ui.stats_screen.range.hour",
 	&"chapter": &"ui.stats_screen.range.chapter",
@@ -468,6 +473,7 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
 		STATS_SCREEN_CLASS_VALUE, STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
 		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
+		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 	]
 	for kind_id: StringName in ARCHIVE_KIND_LABELS:
 		_append_unique(keys, ARCHIVE_KIND_LABELS[kind_id])

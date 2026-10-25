@@ -3,7 +3,8 @@ extends RefCounted
 
 # Look of the statistics screen (issue #83), from data/ui/stats.json. The strokes pair a colour from a palette
 # readable with colour blindness with a dash length (0 = solid), so two lines differ even without their colour.
-# The history view's ranges each read one level of the history over a span (0 = the whole level).
+# The history view's ranges each read one level of the history over a span (0 = the whole level). The classes
+# view fills its layers with the strokes' colours at fill_alpha.
 
 const PATH: String = "res://data/ui/stats.json"
 const LAYOUT_KEYS: Array[String] = ["font_size", "margin", "card_columns", "chart_height", "legend_width",
@@ -19,6 +20,8 @@ var layout: Dictionary[String, float] = {}
 var colors: Dictionary[String, Color] = {}
 var stroke_colors: Array[Color] = []
 var stroke_dashes: PackedFloat32Array = []
+# Opacity of a stacked layer, more than 0 and at most 1.
+var fill_alpha: float = 1.0
 var errors: Array[String] = []
 
 
@@ -49,6 +52,7 @@ func validate(raw: Variant) -> void:
 		stroke_colors.append(_color(stroke.get("color"), "strokes.%d.color" % index))
 		stroke_dashes.append(float(dash))
 	_validate_ranges(raw.get("history"))
+	_validate_fill(raw.get("classes"))
 
 
 # Stroke of the index-th line of a chart; they repeat when a chart has more lines than strokes.
@@ -77,6 +81,14 @@ func _validate_ranges(history: Variant) -> void:
 			continue
 		history_ranges.append({"id": StringName(entry["id"]), "tier": StringName(entry["tier"]),
 			"span_seconds": int(span)})
+
+
+func _validate_fill(classes: Variant) -> void:
+	var alpha: Variant = classes.get("fill_alpha") if classes is Dictionary else null
+	if (alpha is not float and alpha is not int) or alpha <= 0 or alpha > 1:
+		errors.append("data/ui/stats.json.classes.fill_alpha: expected more than 0 and at most 1")
+		return
+	fill_alpha = float(alpha)
 
 
 func _positive(value: Variant, key: String) -> int:
