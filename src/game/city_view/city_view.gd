@@ -399,6 +399,10 @@ func _sync_world(force: bool) -> void:
 	_fill(_roofs, roofs)
 	for house: Dictionary in _snapshot["crisis"]["houses"]:
 		_add_crisis_mark(session.context.area_of(house), tops.get(RoadNetwork.cell_of(house), land), house["lock"] == CrisisSystem.HOUSE_SICK)
+	# A service carries a block of its attribute's colour, the icon of the 2D map (issue #87, D-118).
+	for service: Dictionary in _snapshot["services"]["buildings"]:
+		var area: Rect2i = session.context.area_of(service)
+		_add_block(_metres(area).get_center(), tops.get(area.position, land), presentation.service_colors[StringName(service["attribute"])])
 
 
 func _metres(area: Rect2i) -> Rect2:
@@ -469,6 +473,12 @@ func _add_crisis_mark(area: Rect2i, top: float, sick: bool) -> void:
 		_marks.add_child(frame)
 		_place_frame(frame, Rect2(ground - Vector2.ONE * size / 2.0, Vector2.ONE * size), top + size)
 		return
+	_add_block(ground, top, color)
+
+
+# A solid block of mark_size_m one block above the top of a building.
+func _add_block(ground: Vector2, top: float, color: Color) -> void:
+	var size: float = style.marks["mark_size_m"]
 	var block: MeshInstance3D = MeshInstance3D.new()
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3.ONE * size

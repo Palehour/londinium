@@ -18,7 +18,7 @@ func _disabled_mark(building: String) -> String:
 
 func _fixture(has_cultivable_cells: bool, changed_tags: bool = false) -> Node2D:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)
@@ -150,7 +150,7 @@ func test_malthouse_and_brewery_are_built_from_keys_six_and_seven() -> void:
 
 func test_beer_buildings_availability_comes_from_the_catalog_tags_not_their_ids() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

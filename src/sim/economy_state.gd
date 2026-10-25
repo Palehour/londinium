@@ -136,6 +136,9 @@ var service_access: Dictionary[StringName, Dictionary] = {}
 var bread_access: float = 1.0
 var transport_legs: Array[Dictionary] = []
 var house_service: Array[Dictionary] = []
+# Each connected house's cell to the cells of the service buildings of each attribute that cover it (issue #87,
+# D-118). Derived from the layout like the rest of the coverage, never saved.
+var service_cover: Dictionary[Vector2i, Dictionary] = {}
 # Units each building took out of the store this tick, by cell, for its transport leg. Transient: never saved.
 var transport_units_tick: Dictionary[Vector2i, int] = {}
 

@@ -9,8 +9,8 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	var catalog: DataCatalog = result.catalog
 	assert_eq(catalog.goods.size(), 7)
 	# The public fountain of issue #63 (D-089) is the tenth; the Lea Bridge fountain and the well (#202, D-090) follow,
-	# and the health post (#222, D-106) after them.
-	assert_eq(catalog.buildings.size(), 13)
+	# and the health post (#222, D-106) after them; the fire station and the police station (#87, D-118) close the list.
+	assert_eq(catalog.buildings.size(), 15)
 	assert_eq(catalog.roles.size(), 1)
 	# The 8x8 map of the scripted scenarios, the strip the game plays on (D-074) and the full map (#204, D-093).
 	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s", &"whitechapel_full"] as Array[StringName])

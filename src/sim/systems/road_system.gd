@@ -8,7 +8,7 @@ extends RefCounted
 # building that hands it out, and people move into the served houses first. Routes are measured in metres since
 # issue #186 (D-086): the street pieces walked times the side of a piece. Everything here is derived from the
 # layout and the people, worked out again each tick and never saved, so a loaded game gets the same coverage as one
-# that never stopped.
+# that never stopped. The service buildings (issue #87, D-118) reuse the same radius for the houses they cover.
 
 const NO_ROAD_ACCESS: StringName = &"no_road_access"
 const NO_ROUTE: StringName = &"no_route"
@@ -40,6 +40,7 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 	state.transport_legs.clear()
 	state.house_service.clear()
 	state.service_rooms.clear()
+	state.service_cover.clear()
 	var connected: Array[Dictionary] = []
 	for building: Dictionary in state.buildings:
 		if network.has_access(context.area_of(building)):
@@ -50,6 +51,7 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 		_add_legs(state, params, context, network, building, connected)
 	for def: ClassDef in context.classes.values():
 		_add_service(state, params, context, network, def, connected)
+	ServiceSystem.evaluate(state, params, context, network, connected)
 
 
 # Transport of this tick: every leg's units taken out of the store times its metres times k, in pence. Worked out as
@@ -230,15 +232,21 @@ static func _is_served(params: Params, context: EconomyContext, network: RoadNet
 	if not _hands_out(context, good):
 		return true
 	for building: Dictionary in connected:
-		if good not in context.buildings[building["definition_id"]].distributes:
-			continue
-		var radius: int = int(params.get_value(StringName("building.%s.service_radius_m" % building["definition_id"])))
-		if radius == 0:
-			return true
-		var steps: int = network.steps(context.area_of(building), context.area_of(house))
-		if steps != RoadNetwork.NO_ROUTE and metres(params, context, steps) <= radius:
+		if good in context.buildings[building["definition_id"]].distributes \
+				and within_radius(params, context, network, building, house):
 			return true
 	return false
+
+
+# Whether the house lies within the building's service radius along the streets (D-086), 0 being the whole network.
+# Both are connected buildings. The goods a building hands out and the service buildings (issue #87) share it.
+static func within_radius(params: Params, context: EconomyContext, network: RoadNetwork, building: Dictionary,
+		house: Dictionary) -> bool:
+	var radius: int = int(params.get_value(StringName("building.%s.service_radius_m" % building["definition_id"])))
+	if radius == 0:
+		return true
+	var steps: int = network.steps(context.area_of(building), context.area_of(house))
+	return steps != RoadNetwork.NO_ROUTE and metres(params, context, steps) <= radius
 
 
 static func _hands_out(context: EconomyContext, good: StringName) -> bool:

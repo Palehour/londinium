@@ -23,6 +23,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.coverage = definition.coverage
 		copy.water_source = definition.water_source
 		copy.priced_as = definition.priced_as
+		copy.service_attribute = definition.service_attribute
 		if definition.recipe != null:
 			copy.recipe = RecipeDef.new()
 			copy.recipe.inputs.assign(definition.recipe.inputs)

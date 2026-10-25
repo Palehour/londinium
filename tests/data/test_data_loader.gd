@@ -41,7 +41,7 @@ var _documents: Dictionary[String, Dictionary] = {}
 
 func before_each() -> void:
 	_documents.clear()
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		var dir: DirAccess = DirAccess.open("res://data/" + folder)
 		for file_name: String in dir.get_files():
 			if file_name.ends_with(".json"):
@@ -345,7 +345,7 @@ func _assert_invalid(message: String) -> void:
 
 
 func _load_file_fixture(text: String) -> DataLoadResult:
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		DirAccess.make_dir_recursive_absolute(FIXTURE_ROOT.path_join(folder))
 	var path: String = FIXTURE_ROOT.path_join("economy/goods.json")
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
@@ -353,7 +353,7 @@ func _load_file_fixture(text: String) -> DataLoadResult:
 	file.close()
 	var result: DataLoadResult = DataLoader.new().load_all(FIXTURE_ROOT)
 	DirAccess.remove_absolute(path)
-	for folder: String in ["economy", "roles", "maps", "eras/victorian", "eras"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services", "eras"]:
 		DirAccess.remove_absolute(FIXTURE_ROOT.path_join(folder))
 	DirAccess.remove_absolute(FIXTURE_ROOT)
 	return result

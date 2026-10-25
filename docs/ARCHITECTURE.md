@@ -31,7 +31,7 @@ londinium/
 ├── data/                     # ALL balance + content, JSON, edited by agents/Mason, approved by Cristian
 │   ├── economy/
 │   │   ├── goods.json        # wheat, barley, flour, bread, malt, beer, tea, money unit
-│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain, lea_bridge_fountain and well (tag `water`, no recipe, #63, #202): cost, upkeep, jobs, recipe, tags;
+│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain, lea_bridge_fountain and well (tag `water`, no recipe, #63, #202), health_post, fire_station and police_station (tag `service`, no recipe, cost and upkeep in data/services/, #87): cost, upkeep, jobs, recipe, tags;
 │   │   │                     #   a water building names `coverage` (the section of its radius_m) and optionally `water_source` (the section of its own source_risk; without it, the district's source); `priced_as` another building reads that one's cost, upkeep, wage and jobs (Params aliases the keys, #202)
 │   │   │                     #   optional service_radius_m (metres along the streets) + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67, #186;
 │   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 2x2 since #186), #184, D-086
@@ -51,6 +51,9 @@ londinium/
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
 │   │   ├── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota"); `enabled` is the defeats switch (D-065)
 │   │   └── events.json       # historical events (#63): `cholera.defeat_pause`, the switch a mission names to pause the depopulation timer (D-090)
+│   ├── services/             # one file per service building of buildings.json (tag `service`, #87, D-118): attribute
+│   │                         #   (safety, health or order), service_radius_m (D-086), availability_max, recovery_per_min,
+│   │                         #   cost_build_p and upkeep_p_per_min (the building's cost and upkeep); provisional values
 │   ├── difficulty/           # optional (D-065): without it the game runs on the base values
 │   │   ├── presets.json      # easy, normal, hard: relative modifiers (mul|add) and `events` (reserved, empty until #63)
 │   │   └── knobs.json        # loose knobs: kind (switch, value, price_volatility), keys, min, max, step
@@ -167,7 +170,14 @@ londinium/
    served houses first (D-081): a badly placed house is room nobody uses. The city's bread access weights the classes
    by their people. The satisfaction, the housing bonus and the hunger read the coverage times that
    access (`NeedsSystem.coverage`, `EconomyState.hunger_coverage`); consumption does not change. All of it is derived
-   from the layout and the people, recomputed each tick and never saved.
+   from the layout and the people, recomputed each tick and never saved. The service buildings (`ServiceSystem`, #87,
+   D-118) reuse the same radius (`RoadSystem.within_radius`): each connected house gets the services of each attribute
+   that reach it (`EconomyState.service_cover`, derived and never saved).
+1c. Service availability (`ServiceSystem`, #87, D-118): a service spent below its `availability_max` gets back
+   `recovery_per_min` / 60. Only `Simulation.consume_service()` spends it, and nothing in the game calls it yet: the
+   incidents of D-119 (#87, task 2) will; the tests do. The availability lives on the building's dictionary and is
+   saved with it. A house is worth the best availability among the services of each attribute that cover it (0 when
+   none does), and a district's attribute is the mean of its houses (`snapshot()["services"]`).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,

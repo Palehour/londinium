@@ -107,3 +107,55 @@ func test_house_without_street_adds_no_capacity() -> void:
 	assert_eq(two.snapshot()["economy"]["buildings"].size(), 2)
 	assert_eq(two.snapshot()["economy"]["housing_capacity"], one.snapshot()["economy"]["housing_capacity"])
 	assert_false(RoadTestMap.entry(two.snapshot(), "houses", RoadTestMap.cell(Vector2i(4, 2)))["connected"])
+
+
+# Issue #87 (D-118): the service buildings reuse this radius (building.<id>.service_radius_m, D-086) and this coverage.
+# A fire station at the first street cell and a house at the given steps; the house is worth the station's
+# availability when covered and 0 when not.
+func _fire_sim(house_steps: int, role: RoleDef = null) -> Simulation:
+	var sim: Simulation = Simulation.new(_params(role), _initial, 7, _context)
+	sim.apply_command(BuildCommand.new(_context, &"fire_station", RoadTestMap.land(1)))
+	sim.apply_command(BuildCommand.new(_context, &"housing", RoadTestMap.land(house_steps)))
+	sim.tick()
+	return sim
+
+
+func _fire_steps() -> int:
+	return int(_params().get_value(&"building.fire_station.service_radius_m")) / RoadSystem.metres(_params(), _context, 1)
+
+
+func _safety(sim: Simulation, steps: int) -> float:
+	var cell: Vector2i = RoadTestMap.land(steps)
+	for house: Dictionary in sim.snapshot()["services"]["houses"]:
+		if house["cell"] == [cell.x, cell.y]:
+			return float(house["values"][ServiceSystem.SAFETY])
+	return -1.0
+
+
+func test_house_within_a_service_radius_is_covered() -> void:
+	var sim: Simulation = _fire_sim(_fire_steps())
+	assert_eq(_safety(sim, _fire_steps()), float(_params().get_value(&"service.fire_station.availability_max")))
+
+
+func test_house_one_step_beyond_a_service_radius_is_not() -> void:
+	var sim: Simulation = _fire_sim(_fire_steps() + 1)
+	assert_eq(_safety(sim, _fire_steps() + 1), 0.0)
+
+
+func test_service_radius_zero_is_global() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"building.fire_station.service_radius_m", &"set", 0))
+	var sim: Simulation = _fire_sim(WIDTH, role)
+	assert_eq(_safety(sim, WIDTH), float(_params().get_value(&"service.fire_station.availability_max")))
+
+
+func test_service_radius_zero_still_needs_a_street_to_the_house() -> void:
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"building.fire_station.service_radius_m", &"set", 0))
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), [Vector2i(0, 1)] as Array[Vector2i])
+	var sim: Simulation = Simulation.new(_params(role), _initial, 7, context)
+	sim.apply_command(BuildCommand.new(context, &"fire_station", RoadTestMap.cell(Vector2i(0, 0))))
+	sim.apply_command(BuildCommand.new(context, &"housing", RoadTestMap.cell(Vector2i(4, 2))))
+	sim.tick()
+	var house: Dictionary = sim.snapshot()["services"]["houses"][0]
+	assert_eq(float(house["values"][ServiceSystem.SAFETY]), 0.0)

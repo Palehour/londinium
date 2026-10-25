@@ -52,6 +52,18 @@ const CRISIS_DISINFECTION: StringName = &"ui.crisis.disinfection"
 const CRISIS_SECONDS_LEFT: StringName = &"ui.crisis.seconds_left"
 const CRISIS_DISINFECT: StringName = &"ui.crisis.disinfect"
 const CRISIS_DISINFECT_GAMEPAD: StringName = &"ui.crisis.disinfect_gamepad"
+# The service buildings (issue #87, D-118): each attribute's name and its icon on the map, the tooltip's availability,
+# one attribute's value, and the district a house stands in (the whole city on a map without districts).
+const SERVICE_ATTRIBUTES: Dictionary[StringName, StringName] = {
+	&"safety": &"ui.service.safety", &"health": &"ui.service.health", &"order": &"ui.service.order",
+}
+const SERVICE_ICONS: Dictionary[StringName, StringName] = {
+	&"safety": &"ui.service.icon.safety", &"health": &"ui.service.icon.health", &"order": &"ui.service.icon.order",
+}
+const SERVICE_AVAILABILITY: StringName = &"ui.service.availability"
+const SERVICE_VALUE: StringName = &"ui.service.value"
+const SERVICE_DISTRICT: StringName = &"ui.service.district"
+const SERVICE_WHOLE_CITY: StringName = &"ui.service.whole_city"
 const PENDING: StringName = &"ui.pending"
 const SUCCESS: StringName = &"ui.success"
 const LOAD_ERROR: StringName = &"ui.load_error"
@@ -205,6 +217,8 @@ const BUILDING_LABELS: Dictionary[String, StringName] = {
 	"lea_bridge_fountain": &"ui.building.lea_bridge_fountain",
 	"well": &"ui.building.well",
 	"health_post": &"ui.building.health_post",
+	"fire_station": &"ui.building.fire_station",
+	"police_station": &"ui.building.police_station",
 }
 const CLASS_LABELS: Dictionary[StringName, StringName] = {
 	&"worker": &"ui.class.worker", &"artisan": &"ui.class.artisan",
@@ -474,7 +488,11 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_CLASS_VALUE, STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
 		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
+		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 	]
+	for attribute: StringName in SERVICE_ATTRIBUTES:
+		_append_unique(keys, SERVICE_ATTRIBUTES[attribute])
+		_append_unique(keys, SERVICE_ICONS[attribute])
 	for kind_id: StringName in ARCHIVE_KIND_LABELS:
 		_append_unique(keys, ARCHIVE_KIND_LABELS[kind_id])
 	var archive: ArchiveCatalog = ArchiveCatalog.new()

@@ -214,9 +214,19 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 50.0, "max": 400.0, "min_inclusive": true, "max_inclusive": true},
 	&"crisis.health.exposure_tiles": {
 		"min": 1.0, "max": 4.0, "min_inclusive": true, "max_inclusive": true},
+	# The health post is the health service since issue #87 (D-118): services/health_post.json holds these two, and
+	# the other services keep the same ranges.
 	&"building.health_post.cost": {
 		"min": 100.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},
 	&"building.health_post.upkeep_per_minute": {
+		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.fire_station.cost": {
+		"min": 100.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.fire_station.upkeep_per_minute": {
+		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.police_station.cost": {
+		"min": 100.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},
+	&"building.police_station.upkeep_per_minute": {
 		"min": 0.0, "max": 10.0, "min_inclusive": true, "max_inclusive": true},
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
@@ -233,6 +243,12 @@ const PATTERNS: Array[Dictionary] = [
 	# Metres along the streets a building serves the houses around it (issue #67, #186); 0 is the whole map. The top is
 	# the old 30 steps of 50 m.
 	{"prefix": "building.", "suffix": ".service_radius_m", "min": 0.0, "max": 1500.0, "integer": true},
+	# Availability of a service building (issue #87, D-118): a top of at most 100 and a recovery per minute that never
+	# refills more than that in one minute.
+	{"prefix": "service.", "suffix": ".availability_max", "min": 0.0, "max": 100.0, "integer": false,
+		"min_exclusive": true},
+	{"prefix": "service.", "suffix": ".recovery_per_min", "min": 0.0, "max": 100.0, "integer": false,
+		"min_exclusive": true},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},

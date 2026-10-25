@@ -15,6 +15,8 @@ var labels: Dictionary[StringName, String] = {}
 # The lot styles of the free land (issue #178, D-083): only how a cell is drawn.
 var lot_colors: Dictionary[StringName, Color] = {}
 var lot_labels: Dictionary[StringName, String] = {}
+# The icon of each service attribute on the map (issue #87, D-118).
+var service_colors: Dictionary[StringName, Color] = {}
 var errors: Array[String] = []
 
 
@@ -37,6 +39,7 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 	labels.clear()
 	lot_colors.clear()
 	lot_labels.clear()
+	service_colors.clear()
 	if raw is not Dictionary or raw.get("terrain") is not Dictionary or raw.get("buildings") is not Dictionary:
 		errors.append("data/ui/map.json: expected terrain and buildings objects")
 		return
@@ -62,6 +65,12 @@ func validate(raw: Variant, building_ids: Array[StringName]) -> void:
 			lot_labels[style] = Strings.text(Strings.LOT_STYLE_LABELS[style])
 		else:
 			errors.append("data/ui/map.json.lot_styles.%s: invalid color" % style)
+	for attribute: StringName in ServiceSystem.ATTRIBUTES:
+		var color: Variant = raw.get("services", {}).get(String(attribute)) if raw.get("services", {}) is Dictionary else null
+		if _valid_color(color):
+			service_colors[attribute] = Color(color)
+		else:
+			errors.append("data/ui/map.json.services.%s: invalid color" % attribute)
 	for id: StringName in building_ids:
 		var entry: Variant = raw["buildings"].get(String(id))
 		var label: String = Strings.building_label(String(id))

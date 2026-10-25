@@ -16,5 +16,8 @@ var footprint: Vector2i = Vector2i.ONE
 # (`<water_source>.source_risk`); without a source it drinks from the district's.
 var coverage: StringName = &""
 var water_source: StringName = &""
+# Service buildings (issue #87, D-118): the district attribute it covers (ServiceSystem.ATTRIBUTES), from
+# services/<id>.json; empty for any other building.
+var service_attribute: StringName = &""
 # Another building whose cost, upkeep, wage and jobs it reads (Params aliases its keys); empty: its own.
 var priced_as: StringName = &""
