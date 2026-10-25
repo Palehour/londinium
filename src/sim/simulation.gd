@@ -182,6 +182,7 @@ func tick() -> void:
 	if _context != null:
 		CrisisSystem.tick(_state)
 		_roads.tick(_state, _params, _context)
+		ServiceSystem.tick(_state, _params, _context)
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
 		_imports.tick(_state, _params, _context)
@@ -213,6 +214,14 @@ func mark_house_sick(cell: Vector2i) -> bool:
 func cure_house(cell: Vector2i) -> bool:
 	var house: Dictionary = _building_at(cell)
 	return not house.is_empty() and CrisisSystem.cure(_state, house)
+
+
+# The consume(service, amount) of D-118 (#87), for any cell of the service's footprint: the incidents of task 2 will
+# call it; nothing in the game does yet, the tests do (as with the hooks above). False when no service stands there or
+# the amount is below 0.
+func consume_service(cell: Vector2i, amount: float) -> bool:
+	var service: Dictionary = _building_at(cell)
+	return not service.is_empty() and ServiceSystem.consume(_params, _context, service, amount)
 
 
 func _building_at(cell: Vector2i) -> Dictionary:
@@ -293,6 +302,7 @@ func snapshot() -> Dictionary:
 		"distance": RoadSystem.snapshot(_state, _context),
 		"repair": RepairWharfCommand.snapshot(_state, _params, _context),
 		"crisis": CrisisSystem.snapshot(_state, _params, _context),
+		"services": ServiceSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,

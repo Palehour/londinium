@@ -1,0 +1,4 @@
+{
+  "attribute": "health", "service_radius_m": 300, "availability_max": 100, "recovery_per_min": 10,
+  "cost_build_p": 400, "upkeep_p_per_min": 1
+}

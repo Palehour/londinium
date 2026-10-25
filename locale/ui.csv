@@ -1,5 +1,5 @@
 keys,es,en
-ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Calle\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Street\nClick: select/build · Del: demolish · Esc: select\nMove: middle button / WASD / arrows · Zoom: wheel / + / −
+ui.help,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Calle · 0 Servicios\nClic: seleccionar/construir · Supr: demoler · Esc: seleccionar\nMover: botón central / WASD / flechas · Zoom: rueda / + / −,1 %s · 2 %s · 3 %s · 4 %s · 5 %s\n6 %s · 7 %s · 8 %s · 9 Street · 0 Services\nClick: select/build · Del: demolish · Esc: select\nMove: middle button / WASD / arrows · Zoom: wheel / + / −
 ui.help_gamepad,LB/RB elige: %s · %s · %s · %s · %s\n%s · %s · %s · Calle\nA: construir · mantener X: demoler · B: seleccionar · Cruceta: cursor\nStick: mover · LT/RT: zoom · Menú: panel (B vuelve) · Vista: pausa,LB/RB pick: %s · %s · %s · %s · %s\n%s · %s · %s · Street\nA: build · hold X: demolish · B: select · D-pad: cursor\nStick: move · LT/RT: zoom · Menu: panel (B returns) · View: pause
 ui.help_city,Girar: Q / E / botón derecho,Rotate: Q / E / right button
 ui.help_city_gamepad,Stick derecho: girar,Right stick: rotate
@@ -125,6 +125,18 @@ ui.building.dense_housing,Vivienda densa,Dense housing
 ui.building.public_fountain,Fuente pública,Public fountain
 ui.building.lea_bridge_fountain,Fuente de Lea Bridge,Lea Bridge fountain
 ui.building.health_post,Puesto sanitario,Health post
+ui.building.fire_station,Cuartel de bomberos,Fire station
+ui.building.police_station,Comisaría,Police station
+ui.service.safety,Seguridad,Safety
+ui.service.health,Salud,Health
+ui.service.order,Orden,Order
+ui.service.icon.safety,S,S
+ui.service.icon.health,+,+
+ui.service.icon.order,O,O
+ui.service.availability,Disponibilidad: %d / %d,Availability: %d / %d
+ui.service.value,%s %d,%s %d
+ui.service.district,Distrito %s,District %s
+ui.service.whole_city,Toda la ciudad,Whole city
 ui.building.well,Pozo,Well
 ui.class.worker,Trabajadores,Workers
 ui.class.artisan,Artesanos,Artisans

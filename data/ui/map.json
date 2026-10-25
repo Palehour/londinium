@@ -3,6 +3,7 @@
     "player_road": "#b3a68f", "existing": "#6e5a55"},
   "colors": {"header": "#20242b", "label": "#000000", "selection": "#ffffff", "alert": "#ff8a7a",
     "damaged_wharf": "#8a7a5c", "inspection": "#f2c14e"},
+  "services": {"safety": "#e0704f", "health": "#7cc47a", "order": "#6f95d6"},
   "lot_styles": {"yard": "#5f5a54", "timber_yard": "#6e5f45", "garden": "#4d6448", "plain": "#5b6168"},
   "layout": {
     "cell_size": 56, "header_height": 296, "panel_width": 360, "panel_margin": 8, "help_x": 16, "help_y": 8,
@@ -24,6 +25,8 @@
     "public_fountain": {"color": "#5fb3d9"},
     "lea_bridge_fountain": {"color": "#3f8fd9"},
     "well": {"color": "#7fa3b3"},
-    "health_post": {"color": "#d9d2b0"}
+    "health_post": {"color": "#d9d2b0"},
+    "fire_station": {"color": "#c98a7a"},
+    "police_station": {"color": "#8f97b8"}
   }
 }

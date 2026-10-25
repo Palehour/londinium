@@ -8,15 +8,23 @@ const BUILDING_FIELDS: Dictionary = {
 # Every tag a building may carry. Some change rules (housing, river, cultivable, and basic_infrastructure, which keeps
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
 # changing what a building costs or where it goes. A water building (issue #63, D-089) and the health post (issue #222,
-# D-106) make nothing, so they have no recipe.
+# D-106) make nothing, so they have no recipe, nor do the service buildings (issue #87, D-118).
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure",
-	"water", "health"]
+	"water", "health", "service"]
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
 # Water buildings (issue #202, D-090): the Params section of their radius (`coverage`, required) and of their own
 # source (`water_source`, optional: without it they drink from the district's source).
 const WATER_FIELDS: Array[String] = ["coverage", "water_source"]
+# Service buildings (issue #87, D-118): services/<id>.json holds the numbers of the building <id>, so a service
+# building of buildings.json leaves out its cost and upkeep. The attribute it covers, the top of its availability and
+# its recovery (service.<id>.*), and the building keys it fills: the service radius of D-086, its cost and its upkeep.
+const SERVICES_FOLDER: String = "services"
+const SERVICE_FIELDS: Dictionary[String, String] = {"availability_max": "percent", "recovery_per_min": "positive"}
+const SERVICE_BUILDING_FIELDS: Dictionary[String, Array] = {"service_radius_m": ["service_radius_m", "integer"],
+	"cost_build_p": ["cost", "money"], "upkeep_p_per_min": ["upkeep_per_minute", "money"]}
+const SERVICE_PRICES: Array[String] = ["cost", "upkeep_per_minute"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -164,7 +172,7 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root:
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
 	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), _missions_folder(), "scenarios",
-			DIFFICULTY_FOLDER]:
+			DIFFICULTY_FOLDER, SERVICES_FOLDER]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
 		if directory == null and folder in [DIFFICULTY_FOLDER, _missions_folder()]:
 			continue
@@ -232,6 +240,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_map(raw, path, catalog)
 		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), _crisis_texts_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
+		elif path.begins_with(SERVICES_FOLDER + "/"):
+			_load_service(raw, path, catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
 			# The street piece is structure, read above.
@@ -242,6 +252,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_errors.append("%s: unsupported data file" % path)
 	_check_grid_maps(catalog)
 	_check_water_buildings(catalog)
+	_check_services(catalog)
 	_check_prep_weights(catalog)
 	_check_quarantine(catalog)
 	if documents.has(_crisis_texts_path()):
@@ -441,9 +452,14 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			continue
 		var is_housing: bool = "housing" in building.tags
 		var is_water: bool = WaterSystem.WATER_TAG in building.tags
-		var makes_goods: bool = not is_housing and not is_water and CrisisSystem.POST_TAG not in building.tags
+		var is_service: bool = ServiceSystem.SERVICE_TAG in building.tags
+		var makes_goods: bool = not is_housing and not is_water and not is_service \
+			and CrisisSystem.POST_TAG not in building.tags
 		# A building priced as another reads that one's keys (issue #202): it has none of its own to copy.
 		var schema: Dictionary = {} if raw[id].has("priced_as") else BUILDING_FIELDS.duplicate()
+		if is_service:
+			for field: String in SERVICE_PRICES:
+				schema.erase(field)
 		if is_water and not _water_fields(raw[id], path, building):
 			continue
 		if raw[id].has("priced_as"):
@@ -515,6 +531,36 @@ func _check_water_buildings(catalog: DataCatalog) -> void:
 		var target: BuildingDef = catalog.buildings.get(building.priced_as)
 		if building.priced_as != &"" and (target == null or target.priced_as != &""):
 			_errors.append("%s.priced_as: unknown building %s" % [path, building.priced_as])
+
+
+# services/<id>.json of a service building of buildings.json (issue #87, D-118).
+func _load_service(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var id: StringName = StringName(path.get_file().get_basename())
+	var fields: Array[String] = ["attribute"]
+	fields.append_array(SERVICE_FIELDS.keys())
+	fields.append_array(SERVICE_BUILDING_FIELDS.keys())
+	if not _object(raw, fields, path):
+		return
+	var building: BuildingDef = catalog.buildings.get(id)
+	if building == null or ServiceSystem.SERVICE_TAG not in building.tags:
+		_errors.append("%s: expected a building of economy/buildings.json tagged %s" % [path, ServiceSystem.SERVICE_TAG])
+		return
+	if raw["attribute"] is not String or StringName(raw["attribute"]) not in ServiceSystem.ATTRIBUTES:
+		_errors.append("%s.attribute: expected safety, health or order" % path)
+		return
+	building.service_attribute = StringName(raw["attribute"])
+	for field: String in SERVICE_FIELDS:
+		_number(raw[field], SERVICE_FIELDS[field], "%s.%s" % [path, field], "service.%s.%s" % [id, field], catalog)
+	for field: String in SERVICE_BUILDING_FIELDS:
+		var target: Array = SERVICE_BUILDING_FIELDS[field]
+		_number(raw[field], target[1], "%s.%s" % [path, field], "building.%s.%s" % [id, target[0]], catalog)
+
+
+# Once every file is read: each service building got its services/<id>.json.
+func _check_services(catalog: DataCatalog) -> void:
+	for building: BuildingDef in catalog.buildings.values():
+		if ServiceSystem.SERVICE_TAG in building.tags and building.service_attribute == &"":
+			_errors.append("economy/buildings.json.%s: expected %s/%s.json" % [building.id, SERVICES_FOLDER, building.id])
 
 
 # Cells the building covers, [w, h] (issue #184, D-086): structure like the tags, not a balance number.

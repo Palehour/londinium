@@ -345,7 +345,7 @@ func test_with_too_few_hands_the_beer_chain_is_the_last_to_be_staffed() -> void:
 
 func _documents() -> Dictionary[String, Dictionary]:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

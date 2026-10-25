@@ -14,7 +14,7 @@ var _documents: Dictionary[String, Dictionary] = {}
 
 func before_each() -> void:
 	_documents.clear()
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		var dir: DirAccess = DirAccess.open("res://data/" + folder)
 		for file_name: String in dir.get_files():
 			if file_name.ends_with(".json"):

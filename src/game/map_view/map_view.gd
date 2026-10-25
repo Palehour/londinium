@@ -9,6 +9,9 @@ const TYPES: Array[StringName] = [&"wharf", &"mill", &"bakery", &"housing", &"wh
 # LB/RB cycle and key 9, only on a map with streets.
 const ROAD: StringName = GameSession.ROAD
 const ROAD_KEY: Key = KEY_9
+# The service buildings (issue #87, D-118): key 0 goes through them in the order of their attributes. The LB/RB cycle
+# does not take them yet.
+const SERVICE_KEY: Key = KEY_0
 # Repairs the damaged wharf under the selection (issue #178, D-083), or disinfects the house in a crisis (issue #222);
 # Y on the gamepad.
 const REPAIR_KEY: Key = KEY_R
@@ -61,6 +64,12 @@ var _demolish_cell: Vector2i = Vector2i(-1, -1)
 var _crisis_tip: PanelContainer
 var _crisis_text: Label
 var _crisis_button: Button
+# The tooltip of the selected service, with its availability bar, or of the selected house, with its district's
+# attributes (issue #87, D-118).
+var _service_tip: PanelContainer
+var _service_title: Label
+var _service_bar: ProgressBar
+var _service_text: Label
 
 
 func _ready() -> void:
@@ -138,6 +147,8 @@ func _ready() -> void:
 	_help = help.get_child(0) as Label
 	_crisis_tip = _crisis_tooltip()
 	layer.add_child(_crisis_tip)
+	_service_tip = _service_tooltip()
+	layer.add_child(_service_tip)
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
 	panel_mount.name = "PanelMount"
@@ -365,6 +376,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_building_type = type if reason.is_empty() else &""
 			if not reason.is_empty():
 				_show_result(false, reason_id)
+		elif event.keycode == SERVICE_KEY:
+			_next_service()
 		elif event.keycode == KEY_ESCAPE:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
@@ -522,6 +535,28 @@ func _cycle_building(step: int) -> void:
 	_building_type = choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())]
 
 
+# The service buildings of the data, safety first, then health and order.
+func _service_types() -> Array[StringName]:
+	var found: Array[StringName] = []
+	for attribute: StringName in ServiceSystem.ATTRIBUTES:
+		for definition: BuildingDef in session.context.buildings.values():
+			if ServiceSystem.SERVICE_TAG in definition.tags and definition.service_attribute == attribute:
+				found.append(definition.id)
+	return found
+
+
+# Key 0: the service after the one picked, the first one otherwise. One that cannot be built says why, like 1 to 8.
+func _next_service() -> void:
+	var services: Array[StringName] = _service_types()
+	if services.is_empty():
+		return
+	var next: StringName = services[(services.find(_building_type) + 1) % services.size()]
+	var reason_id: StringName = session.get_building_unavailable_reason(next)
+	_building_type = next if reason_id == &"" else &""
+	if reason_id != &"":
+		_show_result(false, reason_id)
+
+
 func _place_command(cell: Vector2i) -> SimulationCommand:
 	if _building_type == ROAD:
 		return BuildRoadCommand.new(session.context, cell)
@@ -588,6 +623,65 @@ func _update_crisis_tip() -> void:
 	_crisis_button.visible = sick
 	_crisis_button.disabled = house["disinfect"] != &""
 	_crisis_button.text = Strings.text(Strings.CRISIS_DISINFECT_GAMEPAD if _gamepad else Strings.CRISIS_DISINFECT)
+
+
+# Bottom left, beside the crisis tooltip so a house in a crisis shows both.
+func _service_tooltip() -> PanelContainer:
+	var tip: PanelContainer = PanelContainer.new()
+	tip.name = "ServiceTooltip"
+	tip.visible = false
+	tip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	tip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	tip.offset_left = presentation.layout["help_x"] * 2.0 + presentation.layout["panel_width"]
+	tip.offset_bottom = -presentation.layout["help_x"]
+	tip.custom_minimum_size.x = presentation.layout["panel_width"]
+	var rows: VBoxContainer = VBoxContainer.new()
+	tip.add_child(rows)
+	_service_title = Label.new()
+	_service_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rows.add_child(_service_title)
+	_service_bar = ProgressBar.new()
+	_service_bar.show_percentage = false
+	_service_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rows.add_child(_service_bar)
+	_service_text = Label.new()
+	rows.add_child(_service_text)
+	return tip
+
+
+# A service: its name and attribute, the bar and the figures of its availability. A house: its district and the
+# district's attributes, the figures the incidents of #87 will read.
+func _update_service_tip() -> void:
+	var service: Dictionary = _service_entry("buildings", geometry.selected)
+	var house: Dictionary = _service_entry("houses", geometry.selected)
+	_service_tip.visible = not service.is_empty() or not house.is_empty()
+	_service_bar.visible = not service.is_empty()
+	if not service.is_empty():
+		var attribute: StringName = StringName(service["attribute"])
+		_service_title.text = "%s %s · %s" % [Strings.text(Strings.SERVICE_ICONS[attribute]),
+			presentation.labels[StringName(service["definition_id"])], Strings.text(Strings.SERVICE_ATTRIBUTES[attribute])]
+		_service_bar.max_value = float(service["availability_max"])
+		_service_bar.value = float(service["availability"])
+		_service_text.text = Strings.text(Strings.SERVICE_AVAILABILITY) % [roundi(float(service["availability"])),
+			roundi(float(service["availability_max"]))]
+	elif not house.is_empty():
+		var district: StringName = StringName(house["district"])
+		var district_name: String = session.context.map.district_names.get(district, "")
+		_service_title.text = Strings.text(Strings.SERVICE_DISTRICT) % district_name if not district_name.is_empty() \
+			else Strings.text(Strings.SERVICE_WHOLE_CITY)
+		var values: Array[String] = []
+		for attribute: StringName in ServiceSystem.ATTRIBUTES:
+			values.append(Strings.text(Strings.SERVICE_VALUE) % [Strings.text(Strings.SERVICE_ATTRIBUTES[attribute]),
+				roundi(float(_snapshot["services"]["districts"][district][attribute]))])
+		_service_text.text = " · ".join(values)
+
+
+# The entry of the services snapshot whose footprint covers the cell, or {} when none does.
+func _service_entry(list: String, cell: Vector2i) -> Dictionary:
+	for entry: Dictionary in _snapshot["services"][list]:
+		if session.context.area_of(entry).has_point(cell):
+			return entry
+	return {}
 
 
 # Any cell of a damaged wharf repairs it. Elsewhere the command goes as it is and the simulation says why it cannot.
@@ -806,6 +900,7 @@ func _update_mode() -> void:
 		parts.append(Strings.text(Strings.REPAIR_HINT_GAMEPAD if _gamepad else Strings.REPAIR_HINT) % Strings.money(wharf["cost"]))
 	_mode.text = " · ".join(parts)
 	_update_crisis_tip()
+	_update_service_tip()
 
 
 func _draw() -> void:
@@ -841,6 +936,14 @@ func _draw() -> void:
 			draw_rect(mark, presentation.ui_colors["inspection"])
 		else:
 			draw_rect(mark, presentation.ui_colors["inspection"], false, presentation.layout["selection_width"])
+	# A service carries the icon of its attribute in its top-left corner (issue #87, D-118).
+	for service: Dictionary in _snapshot["services"]["buildings"]:
+		var rect: Rect2 = geometry.area_rect(session.context.area_of(service)).grow(-presentation.layout["building_inset"])
+		var side: float = presentation.layout["font_size"]
+		var icon: Rect2 = Rect2(rect.position, Vector2.ONE * side)
+		var attribute: StringName = StringName(service["attribute"])
+		draw_rect(icon, presentation.service_colors[attribute])
+		_draw_label(icon.get_center(), Strings.text(Strings.SERVICE_ICONS[attribute]))
 	# A damaged wharf that can be repaired, with what repairing costs (issue #178, D-083).
 	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
 		var rect: Rect2 = geometry.area_rect(_damaged_wharf_area(wharf)).grow(-presentation.layout["building_inset"])

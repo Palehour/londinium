@@ -8,7 +8,7 @@ const CLASSES: String = "eras/victorian/classes.json"
 
 func before_each() -> void:
 	_documents.clear()
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

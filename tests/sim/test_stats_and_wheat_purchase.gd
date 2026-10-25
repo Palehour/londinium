@@ -248,7 +248,7 @@ func test_startup_wheat_purchase_flag_is_a_boolean_in_data_params_and_state() ->
 
 func test_data_rejects_a_numeric_wheat_purchase_switch() -> void:
 	var documents: Dictionary[String, Dictionary] = {}
-	for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 		for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 			if file_name.ends_with(".json"):
 				var path: String = folder.path_join(file_name)

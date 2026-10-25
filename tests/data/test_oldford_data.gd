@@ -12,7 +12,7 @@ var _documents: Dictionary[String, Dictionary] = {}
 
 func before_each() -> void:
 	_documents.clear()
-	for folder: String in ["economy", "roles", "maps", "eras/victorian", "eras/victorian/missions"]:
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services", "eras/victorian/missions"]:
 		for name: String in DirAccess.open("res://data/" + folder).get_files():
 			if name.ends_with(".json"):
 				var path: String = folder.path_join(name)

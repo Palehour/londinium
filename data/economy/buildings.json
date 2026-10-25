@@ -57,7 +57,12 @@
     "jobs": 0, "tags": ["water"], "footprint": [1, 1], "coverage": "well", "water_source": "well"
   },
   "health_post": {
-    "cost": 400, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "tags": ["health"], "footprint": [2, 2]
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["health", "service"], "footprint": [2, 2]
+  },
+  "fire_station": {
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2]
+  },
+  "police_station": {
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2]
   }
 }

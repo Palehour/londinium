@@ -362,7 +362,7 @@ func test_data_rejects_invalid_import_values_and_a_numeric_switch() -> void:
 	]
 	for entry: Array in cases:
 		var documents: Dictionary[String, Dictionary] = {}
-		for folder: String in ["economy", "roles", "maps", "eras/victorian"]:
+		for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
 			for file_name: String in DirAccess.open("res://data/" + folder).get_files():
 				if file_name.ends_with(".json"):
 					var path: String = folder.path_join(file_name)
