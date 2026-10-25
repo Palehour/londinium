@@ -1,3 +1,4 @@
 {
-  "map": "whitechapel_full"
+  "map": "whitechapel_full",
+  "incidents_enabled": false
 }

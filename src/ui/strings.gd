@@ -64,6 +64,11 @@ const SERVICE_AVAILABILITY: StringName = &"ui.service.availability"
 const SERVICE_VALUE: StringName = &"ui.service.value"
 const SERVICE_DISTRICT: StringName = &"ui.service.district"
 const SERVICE_WHOLE_CITY: StringName = &"ui.service.whole_city"
+# The small incidents (issue #87, D-119): a house's line with its district's pressure by attribute, the attributes the
+# district warns about, and the warning's icon on the map.
+const INCIDENT_PRESSURE: StringName = &"ui.incident.pressure"
+const INCIDENT_WARNING: StringName = &"ui.incident.warning"
+const INCIDENT_ICON: StringName = &"ui.incident.icon"
 const PENDING: StringName = &"ui.pending"
 const SUCCESS: StringName = &"ui.success"
 const LOAD_ERROR: StringName = &"ui.load_error"
@@ -489,6 +494,7 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
+		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
 	]
 	for attribute: StringName in SERVICE_ATTRIBUTES:
 		_append_unique(keys, SERVICE_ATTRIBUTES[attribute])

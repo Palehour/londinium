@@ -112,14 +112,20 @@ static func strip_long_scenario_paths() -> Array[String]:
 	return _json_files(STRIP_LONG_SCENARIO_DIR)
 
 
-# The map a scenario is played on (issue #67): the 8x8 unless it names another, like the strip scenarios. validate()
-# reports an unknown one.
+# The map a scenario is played on (issue #67): the 8x8 unless it names another, like the strip scenarios, or the one of
+# the data scenario it names (issue #87). validate() reports an unknown one.
 func _use_map(scenario: Dictionary) -> void:
-	var map_id: StringName = StringName(str(scenario.get("map", MapDef.DEFAULT_ID)))
+	var map_id: StringName = StringName(str(scenario.get("map", _data_scenario(scenario).get("map", MapDef.DEFAULT_ID))))
 	if map_id == _map_id or not _catalog.maps.has(map_id):
 		return
 	_map_id = map_id
 	_context = EconomyContext.new(_catalog, _catalog.maps[map_id])
+
+
+# The scenario of data/scenarios a script names with "scenario" (issue #87, D-122): its map and whether it has
+# incidents. {} when it names none.
+func _data_scenario(scenario: Dictionary) -> Dictionary:
+	return _catalog.scenarios.get(StringName(str(scenario.get("scenario", ""))), {})
 
 
 # Scripts rewritten for one difficulty preset (issue #128: hard/ buys later, for its 800 d), in
@@ -164,6 +170,9 @@ func validate(scenario: Dictionary) -> Array[String]:
 		return errors
 	if scenario.has("map") and (scenario["map"] is not String or not _catalog.maps.has(StringName(scenario["map"]))):
 		errors.append("map must be the id of a map in data/maps")
+	if scenario.has("scenario") and (scenario["scenario"] is not String
+			or not _catalog.scenarios.has(StringName(scenario["scenario"]))):
+		errors.append("scenario must be the id of a scenario in data/scenarios")
 	_use_map(scenario)
 	if scenario.has("tax_override") and scenario["tax_override"] is not bool:
 		errors.append("tax_override must be true or false")
@@ -196,7 +205,9 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	var schedule: Array = scenario.get("price_schedule", [])
 	if not schedule.is_empty():
 		_params = _params_without_repricing(int(scenario["duration_ticks"]))
-	var sim: Simulation = Simulation.create_new(_params, _initial_state(), int(scenario["seed"]), _context)
+	var initial: EconomyState = _initial_state()
+	initial.incidents_enabled = _data_scenario(scenario).get("incidents_enabled", false)
+	var sim: Simulation = Simulation.create_new(_params, initial, int(scenario["seed"]), _context)
 	var next_price: int = 0
 	var script: Array = scenario["commands"]
 	var issued: Array[Dictionary] = []
@@ -239,6 +250,7 @@ func run(scenario: Dictionary) -> ScenarioResult:
 	result.final_economy = snapshot["economy"]
 	result.final_distance = snapshot["distance"]
 	result.final_diagnostics = snapshot["diagnostics"]
+	result.final_incidents = snapshot["incidents"]
 	var history: Dictionary = sim.stats_history_to_dict()
 	result.stats_history_bytes = StatsHistory.compressed_size(history)
 	result.save_bytes = StatsHistory.compressed_size({"snapshot": snapshot, "stats_history": history})

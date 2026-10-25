@@ -6,7 +6,7 @@ extends RefCounted
 # disinfected for crisis.health.response_cost, which frees it once done (D-104). The houses exposed to it wait out a
 # preventive quarantine, shorter within the radius, once per crisis: a new case does not restart it (D-107). When the
 # crisis ends every lock goes and an unfinished disinfection is paid back.
-# Nothing makes a house sick yet: mark_sick() and cure() are the hooks of the D-054 outbreaks (#87).
+# The outbreaks of #87 (IncidentSystem, D-119) make a house sick through mark_sick(); cure() is for the tests (D-109).
 # The state lives on the house's own dictionary, so it is saved with it and goes when the house does.
 
 const HEALTH: StringName = &"health"
@@ -50,7 +50,7 @@ static func mark_sick(state: EconomyState, params: Params, context: EconomyConte
 		if is_same(other, house) or not _is_house(context, other) or other.get(SICK, false) or other.has(QUARANTINE):
 			continue
 		if exposed(params, context, house, other):
-			var key: StringName = &"crisis.health.quarantine_post_min" if in_post_radius(state, params, context, other) \
+			var key: StringName = &"crisis.health.quarantine_post_min" if in_post_radius(state, context, other) \
 				else &"crisis.health.quarantine_min"
 			other[QUARANTINE] = SimTime.minutes_to_ticks(float(params.get_value(key)))
 	return true
@@ -90,7 +90,7 @@ static func disinfect_reason(state: EconomyState, params: Params, context: Econo
 		return NOT_SICK
 	if house.has(DISINFECTION):
 		return DISINFECTION_RUNNING
-	if not in_post_radius(state, params, context, house):
+	if not in_post_radius(state, context, house):
 		return OUTSIDE_POST
 	if state.money < int(params.get_value(&"crisis.health.response_cost")):
 		return &"insufficient_money"
@@ -117,13 +117,14 @@ static func exposed(params: Params, context: EconomyContext, sick: Dictionary, o
 	return tiles <= int(params.get_value(&"crisis.health.exposure_tiles"))
 
 
-# Centre to centre, in metres, like the fountains (D-086).
-static func in_post_radius(state: EconomyState, params: Params, context: EconomyContext, house: Dictionary) -> bool:
-	var radius: float = float(params.get_value(&"crisis.health.post_radius_m"))
+# The post has one radius (D-121): its service_radius_m along the streets, the coverage it has as the health service
+# (D-118), worked out by RoadSystem. A house without a street, or on a map without streets, is outside it.
+static func in_post_radius(state: EconomyState, context: EconomyContext, house: Dictionary) -> bool:
+	var covering: Array = state.service_cover.get(RoadNetwork.cell_of(house), {}).get(ServiceSystem.HEALTH, [])
 	return state.buildings.any(func(building: Dictionary) -> bool:
 		var definition: BuildingDef = context.buildings.get(StringName(building["definition_id"]))
-		return definition != null and POST_TAG in definition.tags \
-			and WaterSystem.distance_m(params, context, house, building) <= radius)
+		return definition != null and POST_TAG in definition.tags and building.has("cell") \
+			and RoadNetwork.cell_of(building) in covering)
 
 
 # For the map (D-108): the price and length of a disinfection, and every locked house with why, whether it can be

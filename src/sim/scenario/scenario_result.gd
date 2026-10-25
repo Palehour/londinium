@@ -34,6 +34,8 @@ var final_economy: Dictionary = {}
 # a building stops.
 var final_distance: Dictionary = {}
 var final_diagnostics: Dictionary = {}
+# The incidents of each district at the end (issue #87, D-119): its pressure and its incidents by attribute.
+var final_incidents: Dictionary = {}
 # First tick (1-based count of ticks run) with a defeat cause, or -1 if the city survived.
 var defeat_tick: int = -1
 var defeat_causes: Array[StringName] = []

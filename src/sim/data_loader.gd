@@ -8,9 +8,10 @@ const BUILDING_FIELDS: Dictionary = {
 # Every tag a building may carry. Some change rules (housing, river, cultivable, and basic_infrastructure, which keeps
 # a building out of construction escalation in BuildingCosts, #118), so a typo must stop loading instead of silently
 # changing what a building costs or where it goes. A water building (issue #63, D-089) and the health post (issue #222,
-# D-106) make nothing, so they have no recipe, nor do the service buildings (issue #87, D-118).
+# D-106) make nothing, so they have no recipe, nor do the service buildings (issue #87, D-118). A tavern raises the
+# pressure of riots in its district (issue #87, D-119).
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure",
-	"water", "health", "service"]
+	"water", "health", "service", "tavern"]
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
@@ -25,6 +26,13 @@ const SERVICE_FIELDS: Dictionary[String, String] = {"availability_max": "percent
 const SERVICE_BUILDING_FIELDS: Dictionary[String, Array] = {"service_radius_m": ["service_radius_m", "integer"],
 	"cost_build_p": ["cost", "money"], "upkeep_p_per_min": ["upkeep_per_minute", "money"]}
 const SERVICE_PRICES: Array[String] = ["cost", "upkeep_per_minute"]
+# Small incidents (issue #87, D-119): incidents/<attribute>.json holds the pressure of one district attribute
+# (incident.<attribute>.*) and its causes, each the pressure per minute one unit of it adds (incident.<attribute>.cause.<id>).
+const INCIDENTS_FOLDER: String = "incidents"
+const INCIDENT_FIELDS: Dictionary[String, String] = {"pressure_max": "positive", "pressure_rate": "number",
+	"k": "fraction", "pressure_drop": "number", "consume_amount": "number", "unresolved_penalty": "number",
+	"unresolved_min": "number", "warning_threshold": "number"}
+const INCIDENT_CAUSE_FIELDS: Array[String] = ["id", "per_unit_per_min"]
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -87,11 +95,11 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"recovery_min": "positive"},
 	"mission": {"min_water_d": "fraction"},
 	# What each crisis asks of a house (issue #222, D-105): only health so far. Its response (the disinfection of
-	# D-104), the preventive quarantine of the exposed houses, shorter within the health post's radius (D-106, D-107),
-	# and who is exposed: the houses within exposure_tiles of a sick one, in a square or, with exposure_diamond, a diamond.
+	# D-104), the preventive quarantine of the exposed houses, shorter within the health post's radius (D-106, D-107;
+	# the radius of the post as a service since D-121), and who is exposed: the houses within exposure_tiles of a sick
+	# one, in a square or, with exposure_diamond, a diamond.
 	"crisis": {"health": {"response_cost": "money", "response_min": "positive", "quarantine_min": "positive",
-		"quarantine_post_min": "positive", "post_radius_m": "positive", "exposure_tiles": "positive_integer",
-		"exposure_diamond": "boolean"}},
+		"quarantine_post_min": "positive", "exposure_tiles": "positive_integer", "exposure_diamond": "boolean"}},
 	# Money sinks of issue #118: upkeep grows with the city's size, construction with each copy of a type.
 	"economy": {
 		"administration": {"per_building": "number", "free_buildings": "integer", "max_multiplier": "number"},
@@ -172,7 +180,7 @@ func load_all(root: String = "res://data", era: String = DEFAULT_ERA, mods_root:
 	_era = era
 	var documents: Dictionary[String, Dictionary] = {}
 	for folder: String in ["economy", "roles", "maps", "eras".path_join(_era), _missions_folder(), "scenarios",
-			DIFFICULTY_FOLDER, SERVICES_FOLDER]:
+			DIFFICULTY_FOLDER, SERVICES_FOLDER, INCIDENTS_FOLDER]:
 		var directory: DirAccess = DirAccess.open(root.path_join(folder))
 		if directory == null and folder in [DIFFICULTY_FOLDER, _missions_folder()]:
 			continue
@@ -242,6 +250,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			continue
 		elif path.begins_with(SERVICES_FOLDER + "/"):
 			_load_service(raw, path, catalog)
+		elif path.begins_with(INCIDENTS_FOLDER + "/"):
+			_load_incident(raw, path, catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
 			# The street piece is structure, read above.
@@ -554,6 +564,40 @@ func _load_service(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	for field: String in SERVICE_BUILDING_FIELDS:
 		var target: Array = SERVICE_BUILDING_FIELDS[field]
 		_number(raw[field], target[1], "%s.%s" % [path, field], "building.%s.%s" % [id, target[0]], catalog)
+
+
+# incidents/<attribute>.json (issue #87, D-119): the warning comes at a pressure the district can reach.
+func _load_incident(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var attribute: StringName = StringName(path.get_file().get_basename())
+	if attribute not in ServiceSystem.ATTRIBUTES:
+		_errors.append("%s: expected safety, health or order" % path)
+		return
+	var fields: Array[String] = ["causes"]
+	fields.append_array(INCIDENT_FIELDS.keys())
+	if not _object(raw, fields, path):
+		return
+	var prefix: String = "incident.%s" % attribute
+	for field: String in INCIDENT_FIELDS:
+		_number(raw[field], INCIDENT_FIELDS[field], "%s.%s" % [path, field], "%s.%s" % [prefix, field], catalog)
+	var top: Variant = catalog.base_values.get(StringName(prefix + ".pressure_max"))
+	var warning: Variant = catalog.base_values.get(StringName(prefix + ".warning_threshold"))
+	if top != null and warning != null and float(warning) > float(top):
+		_errors.append("%s.warning_threshold: must be <= pressure_max" % path)
+	if raw["causes"] is not Array:
+		_errors.append("%s.causes: expected an array" % path)
+		return
+	var seen: Array[String] = []
+	for index: int in range(raw["causes"].size()):
+		var where: String = "%s.causes[%d]" % [path, index]
+		var cause: Variant = raw["causes"][index]
+		if not _object(cause, INCIDENT_CAUSE_FIELDS, where):
+			continue
+		if cause["id"] is not String or StringName(cause["id"]) not in IncidentSystem.CAUSES or cause["id"] in seen:
+			_errors.append("%s.id: expected one of %s, once" % [where, IncidentSystem.CAUSES])
+			continue
+		seen.append(cause["id"])
+		_number(cause["per_unit_per_min"], "number", where + ".per_unit_per_min",
+			"%s.cause.%s" % [prefix, cause["id"]], catalog)
 
 
 # Once every file is read: each service building got its services/<id>.json.
@@ -1530,13 +1574,19 @@ func _load_terrain(raw: Variant, location: String, map: MapDef) -> void:
 func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	var id: StringName = StringName(path.get_file().get_basename())
 	var stages: Array[Dictionary] = []
-	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID}
+	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID, "incidents_enabled": false}
 	var scenario_fields: Array[String] = []
-	for field: String in ["victory", "map"]:
+	for field: String in ["victory", "map", "incidents_enabled"]:
 		if raw.has(field):
 			scenario_fields.append(field)
 	if not _object(raw, scenario_fields, path):
 		return
+	# Off unless the scenario switches the incidents of D-119 on (D-122).
+	if raw.has("incidents_enabled"):
+		if raw["incidents_enabled"] is not bool:
+			_errors.append("%s.incidents_enabled: expected a boolean" % path)
+		else:
+			catalog.scenarios[id]["incidents_enabled"] = raw["incidents_enabled"]
 	if raw.has("map"):
 		if raw["map"] is not String or not catalog.maps.has(StringName(raw["map"])):
 			_errors.append("%s.map: unknown map %s" % [path, raw["map"]])

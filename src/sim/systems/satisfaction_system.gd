@@ -31,7 +31,7 @@ func update_target(state: EconomyState, params: Params, context: EconomyContext)
 		var entry: ClassState = ClassStates.checkout(state, def)
 		entry.housing_capacity = NeedsSystem.class_housing_capacity(state, params, context, def)
 		total_capacity += entry.housing_capacity
-		_update_class_target(state, params, def, entry)
+		_update_class_target(state, params, context, def, entry)
 		ClassStates.commit(state, def, entry)
 	state.housing_capacity = total_capacity
 
@@ -41,14 +41,14 @@ func update_target(state: EconomyState, params: Params, context: EconomyContext)
 func prime_class(state: EconomyState, params: Params, context: EconomyContext, def: ClassDef) -> void:
 	var entry: ClassState = ClassStates.checkout(state, def)
 	var capacity: int = NeedsSystem.class_housing_capacity(state, params, context, def)
-	_update_class_target(state, params, def, entry, capacity)
+	_update_class_target(state, params, context, def, entry, capacity)
 	entry.satisfaction = entry.satisfaction_target
 	entry.satisfaction_breakdown["smoothed"] = entry.satisfaction
 	ClassStates.commit(state, def, entry)
 
 
-func _update_class_target(state: EconomyState, params: Params, def: ClassDef, entry: ClassState,
-		capacity: int = -1) -> void:
+func _update_class_target(state: EconomyState, params: Params, context: EconomyContext, def: ClassDef,
+		entry: ClassState, capacity: int = -1) -> void:
 	var residents: int = ClassStates.population_of(state, def)
 	var room: int = entry.housing_capacity if capacity < 0 else capacity
 	entry.overcrowding = float(maxi(0, residents - room)) / residents if residents > 0 else 0.0
@@ -61,7 +61,12 @@ func _update_class_target(state: EconomyState, params: Params, def: ClassDef, en
 		needs_total += term
 	breakdown["tax"] = state.tax_rate * float(params.get_value(def.tax_weight_key))
 	breakdown["overcrowding"] = entry.overcrowding * float(params.get_value(def.overcrowding_weight_key))
+	# Unresolved incidents (issue #87, D-119): a term only while one weighs on the class, so a game without them keeps
+	# the breakdown it had.
+	var incidents: float = IncidentSystem.class_penalty(state, params, context, def) if context != null else 0.0
+	if incidents > 0.0:
+		breakdown["incidents"] = incidents
 	entry.satisfaction_breakdown.assign(breakdown)
-	entry.satisfaction_target = clampf(needs_total - entry.satisfaction_breakdown["tax"] 		- entry.satisfaction_breakdown["overcrowding"], 0.0, 100.0)
+	entry.satisfaction_target = clampf(needs_total - entry.satisfaction_breakdown["tax"] 		- entry.satisfaction_breakdown["overcrowding"] - incidents, 0.0, 100.0)
 	entry.satisfaction_breakdown["target"] = entry.satisfaction_target
 	entry.satisfaction_breakdown["smoothed"] = entry.satisfaction

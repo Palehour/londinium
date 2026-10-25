@@ -23,7 +23,7 @@
   },
   "brewery": {
     "cost": 160, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["producer", "tavern"], "footprint": [2, 2],
     "recipe": { "inputs": { "malt": 4 }, "outputs": { "beer": 8 }, "seconds": 60 },
     "service_radius_m": 300, "distributes": ["beer"]
   },

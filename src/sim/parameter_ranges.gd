@@ -210,8 +210,6 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 15.0, "min_inclusive": false, "max_inclusive": true},
 	&"crisis.health.quarantine_post_min": {
 		"min": 0.0, "max": 15.0, "min_inclusive": false, "max_inclusive": true},
-	&"crisis.health.post_radius_m": {
-		"min": 50.0, "max": 400.0, "min_inclusive": true, "max_inclusive": true},
 	&"crisis.health.exposure_tiles": {
 		"min": 1.0, "max": 4.0, "min_inclusive": true, "max_inclusive": true},
 	# The health post is the health service since issue #87 (D-118): services/health_post.json holds these two, and
@@ -249,6 +247,21 @@ const PATTERNS: Array[Dictionary] = [
 		"min_exclusive": true},
 	{"prefix": "service.", "suffix": ".recovery_per_min", "min": 0.0, "max": 100.0, "integer": false,
 		"min_exclusive": true},
+	# Pressure of the small incidents of each district attribute (issue #87, D-119), provisional: its top and warning,
+	# what it gains per minute for each missing point of the attribute and for each unit of a cause, the chance of an
+	# incident per tick for each point of it, what an incident takes off it and spends of the service, and the
+	# satisfaction an unresolved one takes from its house for a few minutes.
+	{"prefix": "incident.", "suffix": ".pressure_max", "min": 1.0, "max": 1000.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".warning_threshold", "min": 0.0, "max": 1000.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".pressure_rate", "min": 0.0, "max": 10.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".k", "min": 0.0, "max": 0.01, "integer": false},
+	{"prefix": "incident.", "suffix": ".pressure_drop", "min": 0.0, "max": 1000.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".consume_amount", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".unresolved_penalty", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".unresolved_min", "min": 0.0, "max": 60.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".cause.overcrowding", "min": 0.0, "max": 50.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".cause.taverns", "min": 0.0, "max": 50.0, "integer": false},
+	{"prefix": "incident.", "suffix": ".cause.sick_houses", "min": 0.0, "max": 50.0, "integer": false},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},

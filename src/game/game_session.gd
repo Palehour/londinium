@@ -21,6 +21,8 @@ var mods_from_save: bool = false
 var _params: Params
 var _initial_state: EconomyState
 var _victory_stages: Array[Dictionary] = []
+# The small incidents of D-119 run only in the scenarios that switch them on (D-122).
+var _incidents_enabled: bool = false
 var _seed: int
 var _pending: Array[SimulationCommand] = []
 var _scenario_id: StringName
@@ -52,6 +54,7 @@ func restart_with(params: Params, preset_id: StringName, catalog: DataCatalog = 
 func _use_catalog(catalog: DataCatalog) -> void:
 	var scenario: Dictionary = catalog.scenarios.get(_scenario_id, {})
 	_victory_stages.assign(scenario.get("stages", []))
+	_incidents_enabled = scenario.get("incidents_enabled", false)
 	context = EconomyContext.new(catalog, catalog.maps[scenario.get("map", MapDef.DEFAULT_ID)])
 
 
@@ -64,6 +67,7 @@ func _start(params: Params, preset_id: StringName) -> void:
 	state.wheat_purchases_enabled = params.get_value(&"startup.wheat_purchases_enabled")
 	state.tea_imports_enabled = params.get_value(&"startup.tea_imports_enabled")
 	state.flour_imports_enabled = params.get_value(&"startup.flour_imports_enabled")
+	state.incidents_enabled = _incidents_enabled
 	# create_new copies the state, so this template stays pristine for restarts.
 	_initial_state = state
 	_seed = int(params.get_value(&"startup.seed"))

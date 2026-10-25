@@ -45,6 +45,11 @@ var victory: VictoryState = VictoryState.new()
 var missions: Dictionary[StringName, MissionState] = {}
 # The risk a mission left on a district's own source (issue #202, D-090: the Old Ford cut, then 0 or 1), by district.
 var district_source_risk: Dictionary[StringName, float] = {}
+# Small incidents (issue #87, D-119): off unless the scenario switches them on (D-122). The pressure of each district
+# by attribute, and the incidents it has had by attribute, {resolved, unresolved}. A district without any has no entry.
+var incidents_enabled: bool = false
+var incident_pressure: Dictionary[StringName, Dictionary] = {}
+var incident_counts: Dictionary[StringName, Dictionary] = {}
 var defeat_causes: Array[StringName] = []
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
@@ -263,6 +268,13 @@ func to_dict() -> Dictionary:
 		values["missions"] = _missions_dict()
 	if not district_source_risk.is_empty():
 		values["district_source_risk"] = district_source_risk.duplicate()
+	# Only with the incidents on, so a game without them saves exactly as before them (D-122).
+	if incidents_enabled:
+		values["incidents_enabled"] = true
+	if not incident_pressure.is_empty():
+		values["incident_pressure"] = incident_pressure.duplicate(true)
+	if not incident_counts.is_empty():
+		values["incident_counts"] = incident_counts.duplicate(true)
 	return values
 
 
@@ -351,7 +363,22 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	var saved_risk: Dictionary = values.get("district_source_risk", {})
 	for district: Variant in saved_risk:
 		result.district_source_risk[StringName(district)] = float(saved_risk[district])
+	result.incidents_enabled = bool(values.get("incidents_enabled", false))
+	result.incident_pressure = _by_district(values.get("incident_pressure", {}))
+	result.incident_counts = _by_district(values.get("incident_counts", {}))
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))
+	return result
+
+
+# A saved {district: {attribute: value}} with its keys as StringName again (a save's JSON gives them back as String).
+static func _by_district(saved: Dictionary) -> Dictionary[StringName, Dictionary]:
+	var result: Dictionary[StringName, Dictionary] = {}
+	for district: Variant in saved:
+		var values: Dictionary = {}
+		for attribute: Variant in saved[district]:
+			var value: Variant = saved[district][attribute]
+			values[StringName(attribute)] = value.duplicate(true) if value is Dictionary else float(value)
+		result[StringName(district)] = values
 	return result

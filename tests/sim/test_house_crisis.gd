@@ -2,14 +2,16 @@ extends GutTest
 
 # Issue #222 (D-104 to D-108): during a health crisis a house with sick people is never demolished (D-106), its
 # exposed neighbours wait out a preventive quarantine (D-107), and a sick house within the health post's radius can be
-# disinfected for a price (D-104). Nothing makes a house sick yet (#87, D-054): the tests use the hooks
-# Simulation.mark_house_sick() and Simulation.cure_house(). Ticks are game seconds.
+# disinfected for a price (D-104). The tests make houses sick with the hooks Simulation.mark_house_sick() and
+# Simulation.cure_house() (D-109). Ticks are game seconds. The post's radius is its service_radius_m along the streets
+# since D-121, so the tests with a post play on the street of RoadTestMap.
 
 const HOUSE: StringName = &"housing"
 const POST: StringName = &"health_post"
 const SHAPE_KEY: StringName = &"crisis.health.exposure_diamond"
 const TILES_KEY: StringName = &"crisis.health.exposure_tiles"
-const RADIUS_KEY: StringName = &"crisis.health.post_radius_m"
+const RADIUS_KEY: StringName = &"building.health_post.service_radius_m"
+const STREET_WIDTH: int = 12
 # A 3x3 block of 2x2 houses whose middle one falls sick; ORIGIN is its north-west corner.
 const ORIGIN: Vector2i = Vector2i(2, 2)
 const CENTRE: Vector2i = ORIGIN + Vector2i(2, 2)
@@ -42,6 +44,11 @@ func _params(modifiers: Array[Modifier] = []) -> Params:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign(modifiers)
 	return SimTestParams.isolated_params(_catalog, role)
+
+
+# A street on the land row (RoadTestMap): the post at its first piece and every house beside it, so each is covered.
+func _on_street() -> void:
+	_context = RoadTestMap.street(_catalog, STREET_WIDTH)
 
 
 func _place(id: StringName, cell: Vector2i) -> void:
@@ -155,16 +162,18 @@ func test_a_sick_house_is_never_demolished_outside_the_post_radius() -> void:
 
 
 func test_the_quarantine_is_shorter_within_the_post_radius() -> void:
-	var params: Params = _params([Modifier.new(RADIUS_KEY, &"set", 50)])
-	# Centres two cells apart are 50 m on 25 m cells: the post covers the west neighbour, not the east one.
-	var sick: Vector2i = Vector2i(8, 4)
-	var west: Vector2i = sick - Vector2i(2, 0)
-	var east: Vector2i = sick + Vector2i(2, 0)
+	var params: Params = _params([Modifier.new(RADIUS_KEY, &"set", 100)])
+	# Along the street the west neighbour is two pieces (100 m) from the post and the east one four (200 m): the post
+	# covers the west neighbour, not the east one.
+	_on_street()
+	var sick: Vector2i = RoadTestMap.land(3)
+	var west: Vector2i = RoadTestMap.land(2)
+	var east: Vector2i = RoadTestMap.land(4)
 	_place(HOUSE, sick)
 	_place(HOUSE, west)
 	_place(HOUSE, east)
-	_place(POST, west - Vector2i(2, 0))
-	var sim: Simulation = _sim([Modifier.new(RADIUS_KEY, &"set", 50)])
+	_place(POST, RoadTestMap.land(1))
+	var sim: Simulation = _sim([Modifier.new(RADIUS_KEY, &"set", 100)])
 	sim.mark_house_sick(sick)
 	var short: int = _minutes(params, &"crisis.health.quarantine_post_min")
 	var full: int = _minutes(params, &"crisis.health.quarantine_min")
@@ -218,45 +227,51 @@ func test_the_end_of_the_crisis_lifts_every_quarantine() -> void:
 
 
 func test_a_disinfection_within_the_radius_frees_the_house_once_it_is_done() -> void:
-	_place(HOUSE, CENTRE)
-	_place(POST, CENTRE + Vector2i(2, 0))
+	_on_street()
+	var house: Vector2i = RoadTestMap.land(2)
+	_place(HOUSE, house)
+	_place(POST, RoadTestMap.land(1))
 	var params: Params = _params()
 	var cost: int = int(params.get_value(&"crisis.health.response_cost"))
 	var sim: Simulation = _sim()
-	sim.mark_house_sick(CENTRE)
-	assert_true(_disinfect(sim, CENTRE).accepted)
+	sim.mark_house_sick(house)
+	assert_true(_disinfect(sim, house).accepted)
 	assert_eq(_money(sim), _initial.money - cost)
-	assert_eq(_disinfect(sim, CENTRE).reason, CrisisSystem.DISINFECTION_RUNNING)
-	assert_eq(_demolish(sim, CENTRE).reason, CrisisSystem.HOUSE_SICK, "Locked while it is being disinfected")
+	assert_eq(_disinfect(sim, house).reason, CrisisSystem.DISINFECTION_RUNNING)
+	assert_eq(_demolish(sim, house).reason, CrisisSystem.HOUSE_SICK, "Locked while it is being disinfected")
 	_ticks(sim, _minutes(params, &"crisis.health.response_min"))
 	assert_true(_locks(sim).is_empty())
-	assert_true(_demolish(sim, CENTRE).accepted)
+	assert_true(_demolish(sim, house).accepted)
 
 
 func test_a_crisis_that_ends_before_the_disinfection_refunds_it() -> void:
-	_place(HOUSE, CENTRE)
-	_place(POST, CENTRE + Vector2i(2, 0))
+	_on_street()
+	var house: Vector2i = RoadTestMap.land(2)
+	_place(HOUSE, house)
+	_place(POST, RoadTestMap.land(1))
 	var sim: Simulation = _sim()
-	sim.mark_house_sick(CENTRE)
-	assert_true(_disinfect(sim, CENTRE).accepted)
-	sim.cure_house(CENTRE)
+	sim.mark_house_sick(house)
+	assert_true(_disinfect(sim, house).accepted)
+	sim.cure_house(house)
 	assert_eq(_money(sim), _initial.money)
-	assert_true(_demolish(sim, CENTRE).accepted)
+	assert_true(_demolish(sim, house).accepted)
 
 
 func test_without_money_the_disinfection_does_not_start_and_leaves_no_debt() -> void:
+	_on_street()
+	var house: Vector2i = RoadTestMap.land(2)
 	_initial.money = int(_params().get_value(&"crisis.health.response_cost")) - 1
-	_place(HOUSE, CENTRE)
-	_place(POST, CENTRE + Vector2i(2, 0))
+	_place(HOUSE, house)
+	_place(POST, RoadTestMap.land(1))
 	var sim: Simulation = _sim()
-	sim.mark_house_sick(CENTRE)
-	var command: DisinfectCommand = _disinfect(sim, CENTRE)
+	sim.mark_house_sick(house)
+	var command: DisinfectCommand = _disinfect(sim, house)
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"insufficient_money")
 	assert_eq(_money(sim), _initial.money)
-	assert_eq(_demolish(sim, CENTRE).reason, CrisisSystem.HOUSE_SICK, "It waits for the end of the crisis")
-	sim.cure_house(CENTRE)
-	assert_true(_demolish(sim, CENTRE).accepted)
+	assert_eq(_demolish(sim, house).reason, CrisisSystem.HOUSE_SICK, "It waits for the end of the crisis")
+	sim.cure_house(house)
+	assert_true(_demolish(sim, house).accepted)
 
 
 func test_only_a_sick_house_can_be_disinfected() -> void:
@@ -269,21 +284,24 @@ func test_only_a_sick_house_can_be_disinfected() -> void:
 
 
 func test_the_snapshot_gives_the_map_the_price_the_duration_and_whether_it_can_disinfect() -> void:
-	_place(HOUSE, CENTRE)
-	_place(HOUSE, CENTRE + Vector2i(2, 0))
-	_place(POST, CENTRE - Vector2i(2, 0))
+	_on_street()
+	var sick: Vector2i = RoadTestMap.land(2)
+	var neighbour: Vector2i = RoadTestMap.land(3)
+	_place(HOUSE, sick)
+	_place(HOUSE, neighbour)
+	_place(POST, RoadTestMap.land(1))
 	var params: Params = _params()
 	var sim: Simulation = _sim()
-	sim.mark_house_sick(CENTRE)
+	sim.mark_house_sick(sick)
 	var crisis: Dictionary = sim.snapshot()["crisis"]
 	assert_eq(crisis["cost"], int(params.get_value(&"crisis.health.response_cost")))
 	assert_eq(crisis["duration_seconds"], _minutes(params, &"crisis.health.response_min"))
 	var houses: Dictionary = {}
 	for house: Dictionary in crisis["houses"]:
 		houses[Vector2i(int(house["cell"][0]), int(house["cell"][1]))] = house
-	assert_eq(houses[CENTRE]["disinfect"], &"")
-	assert_eq(houses[CENTRE + Vector2i(2, 0)]["disinfect"], CrisisSystem.NOT_SICK)
-	assert_gt(int(houses[CENTRE + Vector2i(2, 0)]["seconds_left"]), 0)
+	assert_eq(houses[sick]["disinfect"], &"")
+	assert_eq(houses[neighbour]["disinfect"], CrisisSystem.NOT_SICK)
+	assert_gt(int(houses[neighbour]["seconds_left"]), 0)
 
 
 func test_a_saved_game_keeps_the_locks() -> void:

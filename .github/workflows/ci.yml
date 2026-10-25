@@ -69,7 +69,7 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
         # GUT takes ~5 min on a fast runner and ~8 on a slow one: 8 cut slow runners with no failed test (#192).
-        timeout-minutes: 12
+        timeout-minutes: 15
 
       # Every test file that reads docs/ (today test_population_peak_decay and test_city_start_and_defeat), so a
       # docs edit cannot break them unseen. -gconfig= skips .gutconfig.json, which would run the whole suite.

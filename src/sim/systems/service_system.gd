@@ -6,9 +6,8 @@ extends RefCounted
 # coverage of RoadSystem, worked out with the rest of the layout (RoadSystem.evaluate). A covered house is worth the
 # availability of the best service of its kind that reaches it, 0 when none does, and a district's attribute is the
 # mean of its houses. A service's availability, 0 to availability_max, is spent by consume() and comes back at
-# recovery_per_min. Nothing in the game spends it yet: the incidents of D-119 (task 2 of #87) will, and the tests do,
-# as with the hooks of D-109. It lives on the building's own dictionary, so it is saved with it and goes when the
-# building does; a building without it stands at its maximum.
+# recovery_per_min. The incidents of D-119 (IncidentSystem) spend it, and so do the tests. It lives on the building's
+# own dictionary, so it is saved with it and goes when the building does; a building without it stands at its maximum.
 
 const SERVICE_TAG: String = "service"
 const SAFETY: StringName = &"safety"
@@ -82,35 +81,66 @@ static func snapshot(state: EconomyState, params: Params, context: EconomyContex
 	var result: Dictionary = {"buildings": [], "houses": [], "districts": {}}
 	if context == null:
 		return result
-	var by_cell: Dictionary[Vector2i, Dictionary] = {}
+	for service: Dictionary in _services_by_cell(state, context).values():
+		result["buildings"].append({"cell": service["cell"].duplicate(),
+			"definition_id": service["definition_id"], "attribute": attribute_of(context, service),
+			"availability": availability(params, service), "availability_max": availability_max(params, service)})
+	var districts: Dictionary[StringName, Dictionary] = district_values(state, params, context)
+	for district: StringName in districts:
+		for entry: Dictionary in districts[district]["houses"]:
+			var house: Dictionary = entry["house"]
+			result["houses"].append({"cell": house["cell"].duplicate(), "definition_id": house["definition_id"],
+				"district": district, "values": entry["values"]})
+		result["districts"][district] = districts[district]["attributes"]
+	return result
+
+
+# Every district of the map with its houses, each {house, values}, and its attributes: the mean of its houses, 0
+# without any. The incidents of D-119 read the same figures the views do.
+static func district_values(state: EconomyState, params: Params,
+		context: EconomyContext) -> Dictionary[StringName, Dictionary]:
+	var by_cell: Dictionary[Vector2i, Dictionary] = _services_by_cell(state, context)
 	var houses: Dictionary[StringName, Array] = {}
 	for district: StringName in WaterSystem.districts(context):
 		houses[district] = []
 	for building: Dictionary in state.buildings:
 		# A state saved before the map (M1) has buildings without a cell: they stand nowhere, so nothing covers them.
-		if not building.has("cell"):
-			continue
-		var cell: Vector2i = RoadNetwork.cell_of(building)
-		if is_service(context, building):
-			by_cell[cell] = building
-			result["buildings"].append({"cell": building["cell"].duplicate(),
-				"definition_id": building["definition_id"], "attribute": attribute_of(context, building),
-				"availability": availability(params, building), "availability_max": availability_max(params, building)})
-		elif _is_house(context, building):
+		if building.has("cell") and _is_house(context, building):
+			var cell: Vector2i = RoadNetwork.cell_of(building)
 			houses.get_or_add(context.map.district_by_cell.get(cell, WaterSystem.DEFAULT_DISTRICT), []).append(building)
+	var result: Dictionary[StringName, Dictionary] = {}
 	for district: StringName in houses:
 		var totals: Dictionary = _zeros()
+		var entries: Array[Dictionary] = []
 		for house: Dictionary in houses[district]:
 			var values: Dictionary = _house_values(state, params, by_cell, house)
 			for attribute: StringName in ATTRIBUTES:
 				totals[attribute] += values[attribute]
-			result["houses"].append({"cell": house["cell"].duplicate(), "definition_id": house["definition_id"],
-				"district": district, "values": values})
+			entries.append({"house": house, "values": values})
 		for attribute: StringName in ATTRIBUTES:
-			if not houses[district].is_empty():
-				totals[attribute] /= float(houses[district].size())
-		result["districts"][district] = totals
+			if not entries.is_empty():
+				totals[attribute] /= float(entries.size())
+		result[district] = {"houses": entries, "attributes": totals}
 	return result
+
+
+# The service of the attribute with the most availability among those that cover the house, {} when none does.
+static func best_service(state: EconomyState, params: Params, context: EconomyContext, house: Dictionary,
+		attribute: StringName) -> Dictionary:
+	var by_cell: Dictionary[Vector2i, Dictionary] = _services_by_cell(state, context)
+	var best: Dictionary = {}
+	for cell: Vector2i in state.service_cover.get(RoadNetwork.cell_of(house), {}).get(attribute, []):
+		if by_cell.has(cell) and (best.is_empty() or availability(params, by_cell[cell]) > availability(params, best)):
+			best = by_cell[cell]
+	return best
+
+
+static func _services_by_cell(state: EconomyState, context: EconomyContext) -> Dictionary[Vector2i, Dictionary]:
+	var by_cell: Dictionary[Vector2i, Dictionary] = {}
+	for building: Dictionary in state.buildings:
+		if building.has("cell") and is_service(context, building):
+			by_cell[RoadNetwork.cell_of(building)] = building
+	return by_cell
 
 
 # Covered times the availability of the best service that covers it, for each attribute.

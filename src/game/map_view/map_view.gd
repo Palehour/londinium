@@ -12,6 +12,7 @@ const ROAD_KEY: Key = KEY_9
 # The service buildings (issue #87, D-118): key 0 goes through them in the order of their attributes. The LB/RB cycle
 # does not take them yet.
 const SERVICE_KEY: Key = KEY_0
+const SCENARIO_FLAG: String = "--scenario="
 # Repairs the damaged wharf under the selection (issue #178, D-083), or disinfects the house in a crisis (issue #222);
 # Y on the gamepad.
 const REPAIR_KEY: Key = KEY_R
@@ -26,7 +27,8 @@ var presentation: MapPresentation = MapPresentation.new()
 var mods_root: String = ModLayer.DEFAULT_ROOT
 # Where saved games live (issue #57); a test points it elsewhere so the player's saves are never touched.
 var saves_root: String = SaveFile.DEFAULT_ROOT
-# The scenario this view plays; the 3D city plays the full map (issue #65).
+# The scenario this view plays; the 3D city plays the full map (issue #65). `-- --scenario=<id>` on the command line
+# plays another scenario of data/scenarios, like the trial one with the incidents on (issue #87, D-122).
 var scenario_id: StringName = &"victorian_demo"
 var _catalog: DataCatalog
 var _snapshot: Dictionary
@@ -156,6 +158,7 @@ func _ready() -> void:
 	panel_mount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(panel_mount)
 	_catalog = loaded.catalog
+	scenario_id = launch_scenario(loaded.catalog, scenario_id)
 	session = GameSession.new(loaded.catalog, Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"]), scenario_id)
 	_use_mods(loaded, false)
 	_autosave = Autosave.new(session, save_settings, saves_root)
@@ -649,8 +652,17 @@ func _service_tooltip() -> PanelContainer:
 	return tip
 
 
+# The scenario named by `--scenario=<id>` among the user arguments, when data/scenarios has it; `fallback` otherwise.
+static func launch_scenario(catalog: DataCatalog, fallback: StringName,
+		user_args: PackedStringArray = OS.get_cmdline_user_args()) -> StringName:
+	for argument: String in user_args:
+		if argument.begins_with(SCENARIO_FLAG) and catalog.scenarios.has(StringName(argument.trim_prefix(SCENARIO_FLAG))):
+			return StringName(argument.trim_prefix(SCENARIO_FLAG))
+	return fallback
+
+
 # A service: its name and attribute, the bar and the figures of its availability. A house: its district and the
-# district's attributes, the figures the incidents of #87 will read.
+# district's attributes, and with the incidents on its pressure by attribute and the warning (issue #87, D-119).
 func _update_service_tip() -> void:
 	var service: Dictionary = _service_entry("buildings", geometry.selected)
 	var house: Dictionary = _service_entry("houses", geometry.selected)
@@ -674,6 +686,34 @@ func _update_service_tip() -> void:
 			values.append(Strings.text(Strings.SERVICE_VALUE) % [Strings.text(Strings.SERVICE_ATTRIBUTES[attribute]),
 				roundi(float(_snapshot["services"]["districts"][district][attribute]))])
 		_service_text.text = " · ".join(values)
+		if _snapshot["incidents"]["enabled"]:
+			_service_text.text += "\n" + _pressure_text(district)
+
+
+# The district's pressure by attribute, then the attributes it warns about, if any.
+func _pressure_text(district: StringName) -> String:
+	var values: Array[String] = []
+	for attribute: StringName in ServiceSystem.ATTRIBUTES:
+		values.append(Strings.text(Strings.SERVICE_VALUE) % [Strings.text(Strings.SERVICE_ATTRIBUTES[attribute]),
+			roundi(float(_snapshot["incidents"]["districts"][district][attribute]["pressure"]))])
+	var text: String = Strings.text(Strings.INCIDENT_PRESSURE) % " · ".join(values)
+	var warned: Array[String] = []
+	for attribute: StringName in _warnings(district):
+		warned.append(Strings.text(Strings.SERVICE_ATTRIBUTES[attribute]))
+	if not warned.is_empty():
+		text += "\n" + Strings.text(Strings.INCIDENT_WARNING) % ", ".join(warned)
+	return text
+
+
+# The attributes whose pressure in the district has reached its warning threshold; none with the incidents off.
+func _warnings(district: StringName) -> Array[StringName]:
+	var found: Array[StringName] = []
+	if not _snapshot["incidents"]["enabled"]:
+		return found
+	for attribute: StringName in ServiceSystem.ATTRIBUTES:
+		if _snapshot["incidents"]["districts"][district][attribute]["warning"]:
+			found.append(attribute)
+	return found
 
 
 # The entry of the services snapshot whose footprint covers the cell, or {} when none does.
@@ -944,6 +984,17 @@ func _draw() -> void:
 		var attribute: StringName = StringName(service["attribute"])
 		draw_rect(icon, presentation.service_colors[attribute])
 		_draw_label(icon.get_center(), Strings.text(Strings.SERVICE_ICONS[attribute]))
+	# Every house of a district under pressure carries the warning in its bottom-left corner, in the colour of the
+	# first attribute it warns about (issue #87, D-119).
+	for house: Dictionary in _snapshot["services"]["houses"]:
+		var warned: Array[StringName] = _warnings(StringName(house["district"]))
+		if warned.is_empty():
+			continue
+		var rect: Rect2 = geometry.area_rect(session.context.area_of(house)).grow(-presentation.layout["building_inset"])
+		var side: float = presentation.layout["font_size"]
+		var icon: Rect2 = Rect2(rect.position.x, rect.end.y - side, side, side)
+		draw_rect(icon, presentation.service_colors[warned[0]])
+		_draw_label(icon.get_center(), Strings.text(Strings.INCIDENT_ICON))
 	# A damaged wharf that can be repaired, with what repairing costs (issue #178, D-083).
 	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
 		var rect: Rect2 = geometry.area_rect(_damaged_wharf_area(wharf)).grow(-presentation.layout["building_inset"])
