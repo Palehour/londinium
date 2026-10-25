@@ -1,7 +1,7 @@
 {
   "id": "incidents_district_services",
   "seed": 1,
-  "duration_ticks": 1800,
+  "duration_ticks": 1200,
   "scenario": "incidents_trial",
   "commands": [
     {
