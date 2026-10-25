@@ -1,0 +1,5 @@
+{
+  "pressure_max": 100, "pressure_rate": 0.05, "k": 0.00002, "pressure_drop": 40, "consume_amount": 20,
+  "unresolved_penalty": 5, "unresolved_min": 3, "warning_threshold": 50,
+  "causes": [{"id": "taverns", "per_unit_per_min": 0.5}]
+}

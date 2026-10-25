@@ -350,7 +350,11 @@ func _world_signature() -> Array:
 	var wharves: Array = []
 	for wharf: Dictionary in _snapshot["repair"]["wharves"]:
 		wharves.append([wharf["cell"], wharf["cost"]])
-	return [buildings, _snapshot["distance"]["player_roads"].duplicate(true), houses, wharves, TranslationServer.get_locale()]
+	# The districts' warnings change the marks too (issue #87, D-119).
+	var warnings: Array = []
+	for district: StringName in WaterSystem.districts(session.context):
+		warnings.append(_warnings(district))
+	return [buildings, _snapshot["distance"]["player_roads"].duplicate(true), houses, wharves, warnings, TranslationServer.get_locale()]
 
 
 func _sync_world(force: bool) -> void:
@@ -403,6 +407,13 @@ func _sync_world(force: bool) -> void:
 	for service: Dictionary in _snapshot["services"]["buildings"]:
 		var area: Rect2i = session.context.area_of(service)
 		_add_block(_metres(area).get_center(), tops.get(area.position, land), presentation.service_colors[StringName(service["attribute"])])
+	# A house of a district under pressure carries a block of the first attribute it warns about, the warning of the 2D
+	# map, one block above where a crisis mark would sit (issue #87, D-119).
+	for house: Dictionary in _snapshot["services"]["houses"]:
+		var warned: Array[StringName] = _warnings(StringName(house["district"]))
+		if not warned.is_empty():
+			var area: Rect2i = session.context.area_of(house)
+			_add_block(_metres(area).get_center(), tops.get(area.position, land) + style.marks["mark_size_m"], presentation.service_colors[warned[0]])
 
 
 func _metres(area: Rect2i) -> Rect2:

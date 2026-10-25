@@ -31,7 +31,7 @@ londinium/
 ├── data/                     # ALL balance + content, JSON, edited by agents/Mason, approved by Cristian
 │   ├── economy/
 │   │   ├── goods.json        # wheat, barley, flour, bread, malt, beer, tea, money unit
-│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain, lea_bridge_fountain and well (tag `water`, no recipe, #63, #202), health_post, fire_station and police_station (tag `service`, no recipe, cost and upkeep in data/services/, #87): cost, upkeep, jobs, recipe, tags;
+│   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain, lea_bridge_fountain and well (tag `water`, no recipe, #63, #202), health_post, fire_station and police_station (tag `service`, no recipe, cost and upkeep in data/services/, #87): cost, upkeep, jobs, recipe, tags (the brewery's `tavern` raises the riot pressure of its district, #87, D-119);
 │   │   │                     #   a water building names `coverage` (the section of its radius_m) and optionally `water_source` (the section of its own source_risk; without it, the district's source); `priced_as` another building reads that one's cost, upkeep, wage and jobs (Params aliases the keys, #202)
 │   │   │                     #   optional service_radius_m (metres along the streets) + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67, #186;
 │   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 2x2 since #186), #184, D-086
@@ -40,7 +40,7 @@ londinium/
 │   │   ├── map.json          # cell_size_m, the side of a map cell: 25 m (#186, D-086); min_riverside_buildable, the least buildable cells beside the river of a map drawn as rows (#61, provisional)
 │   │   ├── zones.json        # all_unlocked: every zone of the full map is open until their unlocking is decided (#61, D-091)
 │   │   ├── fountain.json     # radius_m, the houses a public fountain covers, centre to centre in metres (#63, D-089)
-│   │   ├── crisis.json       # per crisis type (only `health`, D-105): response_cost and response_min of the disinfection (D-104), quarantine_min and the shorter quarantine_post_min within post_radius_m of a health post (D-106, D-107), exposure_tiles and exposure_diamond (square by default) for who is exposed (#222); provisional values
+│   │   ├── crisis.json       # per crisis type (only `health`, D-105): response_cost and response_min of the disinfection (D-104), quarantine_min and the shorter quarantine_post_min within the health post's service_radius_m along the streets, its one radius (D-106, D-107, D-121), exposure_tiles and exposure_diamond (square by default) for who is exposed (#222); provisional values
 │   │   ├── well.json         # radius_m and source_risk of the well, 1x1 (#202, D-090)
 │   │   ├── lea_bridge.json   # source_risk of the Lea Bridge water and max_fountains, the cap on its fountains (#202, D-090)
 │   │   ├── events.json       # historic events (#63): `enabled` (off: no water building can be built), the risk of each water source, `cholera.trigger_min` (the outbreak) and `prep.w_*`, the weights of a district's preparation, which add up to 1 (D-088, #202)
@@ -54,6 +54,9 @@ londinium/
 │   ├── services/             # one file per service building of buildings.json (tag `service`, #87, D-118): attribute
 │   │                         #   (safety, health or order), service_radius_m (D-086), availability_max, recovery_per_min,
 │   │                         #   cost_build_p and upkeep_p_per_min (the building's cost and upkeep); provisional values
+│   ├── incidents/            # one file per district attribute (safety, health, order; #87, D-119): pressure_max, pressure_rate,
+│   │                         #   k, pressure_drop, consume_amount, unresolved_penalty, unresolved_min, warning_threshold and
+│   │                         #   causes [{id, per_unit_per_min}] (overcrowding, taverns, sick_houses); provisional values
 │   ├── difficulty/           # optional (D-065): without it the game runs on the base values
 │   │   ├── presets.json      # easy, normal, hard: relative modifiers (mul|add) and `events` (reserved, empty until #63)
 │   │   └── knobs.json        # loose knobs: kind (switch, value, price_volatility), keys, min, max, step
@@ -64,7 +67,8 @@ londinium/
 │   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` with the `source` whose districts it sets, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
 │   │       ├── archive/      # the Archive's read-only cards (#64, D-096/D-097/D-099/D-103), one per file, never loaded by the sim: order, kind (moment, character, finding), unlock.mission_closed (the mission whose close, met or not, opens it) and image (null, or its full credit: title, author, publication, date, held_at, license, url, and context; a context image needs archive.<id>.image_context in locale/ui.csv). Words in locale/ui.csv as archive.<id>.title/date/body/sources (D-100)
 │   │       └── crisis.json   # optional: Chronicler's texts per crisis type, the tooltip note and a card (year, title, text, sources); placeholders until Chronicler writes them (#222)
-│   ├── scenarios/             # optional playable scenarios: victory.stages (D-064) and the map they are played on
+│   ├── scenarios/             # optional playable scenarios: victory.stages (D-064), the map they are played on and
+│   │                         #   incidents_enabled (off when missing, D-122); incidents_trial.json is the trial one with them on
 │   ├── game/
 │   │   └── save.json          # autosave interval and rotating slots (#57); not economy, read by SaveSettings
 │   ├── roles/
@@ -124,7 +128,8 @@ londinium/
 │   │                         #   map_sources (#170): projection, OHM, sheet fits, digitizer, comparison image
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 │       ├── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
-│       └── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them
+│       ├── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them
+│       └── incidents/        # scripts on the trial scenario of data/ ("scenario": "incidents_trial", #87, D-122)
 ├── tools/                    # run_tests.sh / run_tests.ps1, check_gdscript.sh / .ps1, run_long_tests.sh / .ps1, balance report script,
 │                             # map_import.sh / .ps1 (map_import/: data/maps/sources/<map>/ → data/maps/<map>.json),
 │                             # map_sources.sh / .ps1 (map_sources/, #170: OHM export and NLS sheets → GeoJSON layers,
@@ -174,10 +179,19 @@ londinium/
    D-118) reuse the same radius (`RoadSystem.within_radius`): each connected house gets the services of each attribute
    that reach it (`EconomyState.service_cover`, derived and never saved).
 1c. Service availability (`ServiceSystem`, #87, D-118): a service spent below its `availability_max` gets back
-   `recovery_per_min` / 60. Only `Simulation.consume_service()` spends it, and nothing in the game calls it yet: the
-   incidents of D-119 (#87, task 2) will; the tests do. The availability lives on the building's dictionary and is
+   `recovery_per_min` / 60. The incidents of step 1d spend it (`ServiceSystem.consume`), and so does
+   `Simulation.consume_service()` in the tests. The availability lives on the building's dictionary and is
    saved with it. A house is worth the best availability among the services of each attribute that cover it (0 when
    none does), and a district's attribute is the mean of its houses (`snapshot()["services"]`).
+1d. Small incidents (`IncidentSystem`, #87, D-119), only when the state has `incidents_enabled` (the scenario's switch,
+   D-122): each district with houses gains, per attribute, `(100 − attribute) × pressure_rate` plus each cause's
+   `per_unit_per_min` × its units a minute, up to `pressure_max`. Then a draw of `pressure × k` on a generator of its
+   own (seeded from the game's seed, like the barley one, saved as `incident_rng_state`) strikes a random house of the
+   district: the pressure drops by `pressure_drop`, and the covering service with the most availability spends
+   `consume_amount`; without one the house carries `unresolved_penalty` of satisfaction for `unresolved_min` (step 7
+   averages it over the class's houses). A health incident makes the house sick (`CrisisSystem.mark_sick`, D-109). The
+   pressure and the counts are saved; `snapshot()["incidents"]` adds whether each district warns (`warning_threshold`).
+   The health post's crisis radius is its service coverage along the streets (D-121).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,

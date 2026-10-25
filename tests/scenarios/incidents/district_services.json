@@ -1,0 +1,107 @@
+{
+  "id": "incidents_district_services",
+  "seed": 1,
+  "duration_ticks": 1800,
+  "scenario": "incidents_trial",
+  "commands": [
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        26,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        28,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "fire_station",
+      "cell": [
+        30,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "health_post",
+      "cell": [
+        32,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "police_station",
+      "cell": [
+        34,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        36,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        38,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        24,
+        18
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        26,
+        18
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        28,
+        18
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "housing",
+      "cell": [
+        30,
+        18
+      ]
+    }
+  ]
+}

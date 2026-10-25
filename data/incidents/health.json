@@ -1,0 +1,5 @@
+{
+  "pressure_max": 100, "pressure_rate": 0.05, "k": 0.00002, "pressure_drop": 40, "consume_amount": 20,
+  "unresolved_penalty": 5, "unresolved_min": 3, "warning_threshold": 50,
+  "causes": [{"id": "overcrowding", "per_unit_per_min": 3}, {"id": "sick_houses", "per_unit_per_min": 1}]
+}

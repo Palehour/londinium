@@ -4,10 +4,13 @@ extends RefCounted
 # Salt of the barley price generator: derived from the seed, but a stream of its own, so the barley walk
 # never moves a draw of the wheat one.
 const BARLEY_SEED_SALT: int = 0x6A09E667
+# The same for the draws of the small incidents (issue #87, D-119): a game with them on keeps the market's numbers.
+const INCIDENT_SEED_SALT: int = 0x3C6EF372
 const DENSE_HOUSING: StringName = &"dense_housing"
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _barley_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _incident_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _state: EconomyState
 var _params: Params
 var _seed: int
@@ -82,6 +85,7 @@ func _init(params: Params, initial_state: EconomyState, seed_value: int,
 	_seed = seed_value
 	_rng.seed = seed_value
 	_barley_rng.seed = seed_value ^ BARLEY_SEED_SALT
+	_incident_rng.seed = seed_value ^ INCIDENT_SEED_SALT
 	_context = context.copy() if context != null else null
 	_stats = Stats.new(int(_params.get_value(&"population.stats_window_seconds")))
 	_stats.restore(stats_window)
@@ -127,12 +131,15 @@ static func from_save(params: Params, context: EconomyContext, victory_stages: A
 	sim._tick_count = int(saved["tick_count"])
 	sim._rng.state = int(saved["rng_state"])
 	sim._barley_rng.state = int(saved["barley_rng_state"])
+	# Saved only by a game with the incidents on (D-122); any other starts them from the seed.
+	if saved.has("incident_rng_state"):
+		sim._incident_rng.state = int(saved["incident_rng_state"])
 	return sim
 
 
 # The state at the end of the last tick. Commands still queued are not part of it: a save is taken between ticks.
 func to_save() -> Dictionary:
-	return {
+	var saved: Dictionary = {
 		"economy": _state.to_dict(),
 		"stats_window": _stats.snapshot()["window"],
 		"stats_history": stats_history_to_dict(),
@@ -141,6 +148,9 @@ func to_save() -> Dictionary:
 		"rng_state": get_rng_state(),
 		"barley_rng_state": get_barley_rng_state(),
 	}
+	if _state.incidents_enabled:
+		saved["incident_rng_state"] = _incident_rng.state
+	return saved
 
 
 func has_queued_commands() -> bool:
@@ -183,6 +193,7 @@ func tick() -> void:
 		CrisisSystem.tick(_state)
 		_roads.tick(_state, _params, _context)
 		ServiceSystem.tick(_state, _params, _context)
+		IncidentSystem.tick(_state, _params, _context, _incident_rng)
 		_workers.tick(_state, _params)
 		_market.tick(_state, _params, _rng, _tick_count, _barley_rng)
 		_imports.tick(_state, _params, _context)
@@ -204,8 +215,8 @@ func tick() -> void:
 		_history.record(_state)
 
 
-# The hooks of the D-054 outbreaks (#87) for the houses in a crisis (issue #222): any cell of the house's footprint.
-# Nothing in the game calls them yet; the tests do. False when there is no house there to change.
+# The hooks of D-109 for the houses in a crisis (issue #222): any cell of the house's footprint. The outbreaks of #87
+# (IncidentSystem) make houses sick on their own; the tests call these. False when there is no house there to change.
 func mark_house_sick(cell: Vector2i) -> bool:
 	var house: Dictionary = _building_at(cell)
 	return not house.is_empty() and CrisisSystem.mark_sick(_state, _params, _context, house)
@@ -216,9 +227,8 @@ func cure_house(cell: Vector2i) -> bool:
 	return not house.is_empty() and CrisisSystem.cure(_state, house)
 
 
-# The consume(service, amount) of D-118 (#87), for any cell of the service's footprint: the incidents of task 2 will
-# call it; nothing in the game does yet, the tests do (as with the hooks above). False when no service stands there or
-# the amount is below 0.
+# The consume(service, amount) of D-118 (#87), for any cell of the service's footprint: the incidents spend it through
+# IncidentSystem, the tests through this. False when no service stands there or the amount is below 0.
 func consume_service(cell: Vector2i, amount: float) -> bool:
 	var service: Dictionary = _building_at(cell)
 	return not service.is_empty() and ServiceSystem.consume(_params, _context, service, amount)
@@ -303,6 +313,7 @@ func snapshot() -> Dictionary:
 		"repair": RepairWharfCommand.snapshot(_state, _params, _context),
 		"crisis": CrisisSystem.snapshot(_state, _params, _context),
 		"services": ServiceSystem.snapshot(_state, _params, _context),
+		"incidents": IncidentSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,

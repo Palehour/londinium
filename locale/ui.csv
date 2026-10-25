@@ -137,6 +137,9 @@ ui.service.availability,Disponibilidad: %d / %d,Availability: %d / %d
 ui.service.value,%s %d,%s %d
 ui.service.district,Distrito %s,District %s
 ui.service.whole_city,Toda la ciudad,Whole city
+ui.incident.pressure,Presión: %s,Pressure: %s
+ui.incident.warning,Aviso: %s,Warning: %s
+ui.incident.icon,!,!
 ui.building.well,Pozo,Well
 ui.class.worker,Trabajadores,Workers
 ui.class.artisan,Artesanos,Artisans

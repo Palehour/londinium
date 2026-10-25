@@ -2,7 +2,6 @@
   "health": {
     "response_cost": 200, "response_min": 1,
     "quarantine_min": 2, "quarantine_post_min": 1,
-    "post_radius_m": 150,
     "exposure_tiles": 1, "exposure_diamond": false
   }
 }
