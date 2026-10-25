@@ -259,6 +259,25 @@ const STATS_SCREEN_CARDS: Dictionary[StringName, StringName] = {
 	&"satisfaction": &"ui.stats_screen.card.satisfaction", &"coverage": &"ui.stats_screen.card.coverage",
 	&"fear": &"ui.stats_screen.card.fear", &"debt": &"ui.stats_screen.card.debt",
 }
+# The history view (issue #83): its tab, hint, reading at the cursor, the markers and the ranges of data/ui/stats.json.
+const STATS_SCREEN_HISTORY: StringName = &"ui.stats_screen.history"
+const STATS_SCREEN_HISTORY_HINT: StringName = &"ui.stats_screen.history.hint"
+const STATS_SCREEN_HISTORY_READING: StringName = &"ui.stats_screen.history.reading"
+const STATS_SCREEN_MARKER_POLICY: StringName = &"ui.stats_screen.marker.policy"
+const STATS_SCREEN_MARKER_WARNING: StringName = &"ui.stats_screen.marker.warning"
+const STATS_SCREEN_MARKER_DEFEAT: StringName = &"ui.stats_screen.marker.defeat"
+const STATS_SCREEN_MARKER_STAGE: StringName = &"ui.stats_screen.marker.stage"
+const STATS_SCREEN_RANGES: Dictionary[StringName, StringName] = {
+	&"ten_minutes": &"ui.stats_screen.range.ten_minutes", &"hour": &"ui.stats_screen.range.hour",
+	&"chapter": &"ui.stats_screen.range.chapter",
+}
+# The policies the cause log follows (StatsHistory), by subject.
+const STATS_SCREEN_POLICIES: Dictionary[StringName, StringName] = {
+	&"tax_rate": &"ui.stats_screen.policy.tax_rate", &"wheat_purchases": &"ui.stats_screen.policy.wheat_purchases",
+	&"wheat_policy": &"ui.stats_screen.policy.wheat_policy",
+	&"unloading_barley_percent": &"ui.stats_screen.policy.unloading_barley_percent",
+	&"tea_imports": &"ui.stats_screen.policy.tea_imports", &"flour_imports": &"ui.stats_screen.policy.flour_imports",
+}
 # Saved games (issue #57): the kind of each file and why one does not load.
 const SAVE_KIND_LABELS: Dictionary[StringName, StringName] = {
 	&"manual": &"ui.save.kind.manual", &"autosave": &"ui.save.kind.autosave", &"stage": &"ui.save.kind.stage",
@@ -447,7 +466,8 @@ static func all_keys() -> Array[StringName]:
 		ARCHIVE_BUTTON, ARCHIVE_TITLE, ARCHIVE_CLOSE, ARCHIVE_LOCKED, ARCHIVE_SOURCES, ARCHIVE_NO_IMAGE,
 		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
-		STATS_SCREEN_CLASS_VALUE,
+		STATS_SCREEN_CLASS_VALUE, STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
+		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
 	]
 	for kind_id: StringName in ARCHIVE_KIND_LABELS:
 		_append_unique(keys, ARCHIVE_KIND_LABELS[kind_id])
@@ -484,6 +504,10 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, STATS_SERIES_LABELS[metric_id])
 	for card_id: StringName in STATS_SCREEN_CARDS:
 		_append_unique(keys, STATS_SCREEN_CARDS[card_id])
+	for range_id: StringName in STATS_SCREEN_RANGES:
+		_append_unique(keys, STATS_SCREEN_RANGES[range_id])
+	for policy_id: StringName in STATS_SCREEN_POLICIES:
+		_append_unique(keys, STATS_SCREEN_POLICIES[policy_id])
 	return keys
 
 

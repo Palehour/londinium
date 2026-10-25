@@ -387,7 +387,11 @@ at 1280×800, the Steam Deck's resolution.
 **Statistics screen** (`src/ui/stats_screen/`, issue #83, D-052): the panel's Statistics button opens a full-window
 `StatsScreen` over the map and the panel. It only reads the history of #82 (`Simulation.stats_series`, medium level) and
 sends no command. While it shows, the map view passes it every event and polls nothing: LB/RB change tab and B or Esc
-go back. Its look (palette, dash of each stroke, 16 px text, summary window) is in `data/ui/stats.json`.
+go back. Its look (palette, dash of each stroke, 16 px text, summary window, history ranges) is in
+`data/ui/stats.json`. The history tab (`TimelineTab`, built by `StatsTimeline`) draws one metric over 10 min or 1 h of
+the medium level, or the whole chapter's minute level, with a marker on each bucket where the cause log
+(`Simulation.stats_events`) has a policy change, a defeat warning or defeat, or a stage completed. The D-pad or arrows
+walk the buckets and change metric, and the triggers or +/- change range.
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json

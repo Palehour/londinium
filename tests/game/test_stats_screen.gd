@@ -188,7 +188,7 @@ func test_shoulders_change_tab_instead_of_the_building() -> void:
 	var tabs: TabContainer = screen.get("_tabs") as TabContainer
 	_pad(JOY_BUTTON_RIGHT_SHOULDER)
 	assert_eq(view.get("_building_type"), &"", "The map does not cycle buildings behind the screen")
-	assert_eq(tabs.current_tab, 0, "One view so far: the tab stays")
+	assert_eq(tabs.current_tab, StatsScreen.HISTORY_TAB, "RB goes on to the next view")
 
 
 func test_fear_card_says_no_data_in_both_languages() -> void:

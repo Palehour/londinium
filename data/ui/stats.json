@@ -1,8 +1,15 @@
 {
   "summary": { "span_seconds": 600 },
+  "history": {
+    "ranges": [
+      { "id": "ten_minutes", "tier": "medium", "span_seconds": 600 },
+      { "id": "hour", "tier": "medium", "span_seconds": 3600 },
+      { "id": "chapter", "tier": "chapter", "span_seconds": 0 }
+    ]
+  },
   "layout": { "font_size": 16, "margin": 16, "card_columns": 3, "chart_height": 120, "legend_width": 32,
-    "line_width": 2 },
-  "colors": { "background": "#20242b", "card": "#2b3038" },
+    "line_width": 2, "history_chart_height": 360 },
+  "colors": { "background": "#20242b", "card": "#2b3038", "marker": "#8a919c", "cursor": "#f0e442" },
   "strokes": [
     { "color": "#e69f00", "dash": 0 },
     { "color": "#56b4e9", "dash": 8 },
