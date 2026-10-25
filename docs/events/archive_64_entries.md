@@ -22,13 +22,14 @@ Etiquetas: [FACT] (con fuente) · [DEBATED] · [LEGEND] · [INVENTED]. Máximo ~
 - Tags: rates and admission [FACT: Farr 1866; MOH reports, Wellcome]. Causation [DEBATED: Letheby denied it].
 - Dignidad: sin cifras de muertos en primer plano, sin nombres de víctimas.
 
-## ARC-1866-INQUIRY — "The Inquiry"
-- Fecha: 1866-1867. Tipo: momento.
-- Texto (EN): "After the epidemic, inquiries asked what had gone wrong. John Netten Radcliffe traced the first cases to a sewer draining into the Lea below Old Ford. Captain Tyler examined the company for the Board of Trade. Henry Letheby, for the company's side, insisted the water was innocent. The argument helped push London toward covered reservoirs and filtered supply."
-- Texto (ES): "Después de la epidemia, varias investigaciones preguntaron qué había fallado. John Netten Radcliffe rastreó los primeros casos hasta una cloaca que desaguaba en el Lea, aguas abajo de Old Ford. El capitán Tyler examinó a la compañía para el Board of Trade. Henry Letheby, del lado de la compañía, insistió en que el agua era inocente. La discusión ayudó a empujar a Londres hacia reservorios cubiertos y agua filtrada."
-- Tags: people and positions [FACT: Farr 1866; Wellcome MOH]. "Helped push" is an interpretation [DEBATED].
+## ARC-1866-INQUIRY — "Farr's report" / "El informe de Farr"
+- Fecha: 1866-1868. Tipo: momento.
+- Fuente canónica del texto: `archive.inquiry.*` en el CSV de #211-#213 (decisión de Cristian, 24/10, opción A). Esta ficha la resume para no contradecirla.
+- Contenido: Farr (Registro General) compara muertes por distrito y las ve concentradas donde llega el agua de la East London Water Company; sospecha del agua sin filtrar de Old Ford. La Sanitary Act 1866 s.22 obliga a limpiar y desinfectar casas certificadas. Informe completo en 1868.
+- Tags: Farr y su análisis [FACT: Farr, Report on the Cholera Epidemic of 1866 (1868)]. s.22 [FACT: 29 & 30 Vict. c.90]. Causa del brote [DEBATED: la compañía lo negó].
+- Dignidad: sin cifras de muertos ni nombres de víctimas.
 
 ## Para Mason
-- Son 4 fichas: el #64 pide 3 o 4. Si van 3, sugiero sacar INQUIRY.
+- Son 4 fichas: el #64 pide 3 o 4. INQUIRY queda en la versión de Farr (Radcliffe, Tyler y Letheby salen del texto).
 - No toca la sim del agua ni del cólera, así que no se solapa con #209.
 - El texto es original y no copia nada de libros ni de juegos.
