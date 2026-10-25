@@ -1,7 +1,6 @@
 # Política local en el Whitechapel victoriano
 
 Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente], [DEBATED], [LEGEND], [INVENTED], [A VERIFICAR].
-
 ## Quién hacía las normas
 - La Metropolis Management Act 1855 creó el Metropolitan Board of Works (MBW) para todo Londres y juntas de distrito para las parroquias chicas [FACT: 18 & 19 Vict. c.120, legislation.gov.uk].
 - El Whitechapel District Board of Works juntaba 9 áreas: St Mary Whitechapel, Christchurch Spitalfields, St Botolph Aldgate, Holy Trinity Minories, Precinto de St Katherine, Mile End New Town, Liberty of Norton Folgate, Old Artillery Ground y Tower [FACT: Ley 1855, Schedule B; Tower Hamlets Archives L/WBW].
@@ -38,6 +37,15 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Que la ley de 1858 limitó a £3 millones lo que el MBW podía pedir para el drenaje [A VERIFICAR: el PDF está escaneado sin texto].
 - Que hiciera falta la aprobación del Secretario de Estado para los préstamos de distrito [A VERIFICAR: no la encontré en 1855 ni en 1862].
 - En el juego (D-127): el tope de deuda es un número del juego [INVENTED]; la garantía en tasas y la aprobación del MBW son históricas.
+
+## Si la Board no pagaba
+- Si pasaban 6 meses sin pagar capital o intereses y había reclamo por escrito, el prestamista podía pedir a dos jueces de paz (Justices) que nombraran un receiver que cobrara las tasas hasta saldar la deuda y los costos [FACT: Ley 1855, secc. CLXXXVIII].
+- Eso era "sin perjuicio de otros modos de cobro"; si incluían juicio o mandamus [A VERIFICAR].
+- Si una District Board no pagaba lo que el MBW le reclamaba con un precept (la cuota de la Board para el MBW, no una deuda con prestamistas), el MBW podía nombrar personas que cobraran las tasas en el distrito [FACT: Ley 1855, secc. CLXVIII].
+- Que el MBW, el Secretario de Estado o los Public Works Loan Commissioners pudieran intervenir una Board por una deuda con prestamistas [A VERIFICAR: no está en las leyes de 1855 ni de 1862].
+- Que el MBW pudiera congelar las decisiones de una Board [A VERIFICAR: no lo encontré].
+- Un caso real de una Board de Londres que no pagara, en Whitechapel o en otro distrito [A VERIFICAR: no busqué en BHO ni en Hansard].
+- La opción C de Mason (el MBW manda un administrador, congela las decisiones y sube las tasas) [INVENTED]. Lo más parecido en la historia es el receiver de los jueces (CLXXXVIII) y el cobro de un precept (CLXVIII).
 
 ## Otras autoridades (no eran la Board)
 - Pobres: la Whitechapel Poor Law Union (desde 1837), con su Board of Guardians [FACT: The London Archives, STBG/WH].
