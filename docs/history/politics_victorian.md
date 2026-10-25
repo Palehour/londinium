@@ -27,6 +27,18 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Ratepayers que se oponían al gasto ("economists") [A VERIFICAR: documentado en vestries de Londres en general, no hallé fuente sobre Whitechapel].
 - El drenaje principal y la limpieza del Támesis necesitaron una ley nueva para darle esos poderes al MBW [FACT: Metropolis Management Amendment Act 1858, título; Hansard Lords, 27/7/1858].
 
+## Préstamos de la Board
+- Una District Board podía pedir prestado para pagar los gastos de la ley, "on the Credit of" las tasas [FACT: Ley 1855, secc. CLXXXIII].
+- Garantía: hipotecaba las tasas a favor de los prestamistas, que cobraban a prorrata, sin prioridad entre ellos [FACT: Ley 1855, secc. CLXXXIII].
+- Necesitaba la autorización previa y por escrito del MBW [FACT: Ley 1855, secc. CLXXXIII, proviso].
+- Los Public Works Loan Commissioners *podían* prestarle con la sola garantía de las tasas; no eran una autorización obligatoria [FACT: Ley 1855, secc. CLXXXIV].
+- Hipoteca por escritura, anotada en un registro de la Board dentro de 14 días [FACT: Ley 1855, secc. CLXXXV].
+- El prestamista no tenía que revisar para qué se usaba la plata [FACT: Metropolis Management Amendment Act 1862, secc. 19].
+- Tope: la secc. CLXXXIII no fija ningún monto para las District Boards [FACT: Ley 1855, secc. CLXXXIII]; que hubiera otro tope después [A VERIFICAR].
+- Que la ley de 1858 limitó a £3 millones lo que el MBW podía pedir para el drenaje [A VERIFICAR: el PDF está escaneado sin texto].
+- Que hiciera falta la aprobación del Secretario de Estado para los préstamos de distrito [A VERIFICAR: no la encontré en 1855 ni en 1862].
+- En el juego (D-127): el tope de deuda es un número del juego [INVENTED]; la garantía en tasas y la aprobación del MBW son históricas.
+
 ## Otras autoridades (no eran la Board)
 - Pobres: la Whitechapel Poor Law Union (desde 1837), con su Board of Guardians [FACT: The London Archives, STBG/WH].
 - Por encima estaba el Poor Law Board [FACT: Local Government Board Act 1871, secc. 2]; que se creó en 1847 [A VERIFICAR: el PDF de la ley de 1847 está escaneado sin texto].
@@ -48,6 +60,7 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Metropolitan Police Act 1829: https://www.legislation.gov.uk/ukpga/Geo4/10/44/contents/enacted
 - Local Government Board Act 1871: https://www.legislation.gov.uk/ukpga/Vict/34-35/70/contents/enacted
 - Metropolis Management Amendment Act 1858: https://www.legislation.gov.uk/ukpga/Vict/21-22/104/contents/enacted
+- Metropolis Management Amendment Act 1862: https://www.legislation.gov.uk/ukpga/Vict/25-26/102/contents/enacted
 - Hansard, Lords, 27/7/1858: https://api.parliament.uk/historic-hansard/lords/1858/jul/27/second-reading
 - The London Archives, Poor Law records: https://www.thelondonarchives.org/your-research/research-guides/poor-law-records-from-1834-onwards
 - Tácito, Anales XIV (LacusCurtius): https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Tacitus/Annals/14B*.html
