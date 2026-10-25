@@ -1,7 +1,6 @@
 # Política local en el Whitechapel victoriano
 
 Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente], [DEBATED], [LEGEND], [INVENTED], [A VERIFICAR].
-
 ## Quién hacía las normas
 - La Metropolis Management Act 1855 creó el Metropolitan Board of Works (MBW) para todo Londres y juntas de distrito para las parroquias chicas [FACT: 18 & 19 Vict. c.120, legislation.gov.uk].
 - El Whitechapel District Board of Works juntaba 9 áreas: St Mary Whitechapel, Christchurch Spitalfields, St Botolph Aldgate, Holy Trinity Minories, Precinto de St Katherine, Mile End New Town, Liberty of Norton Folgate, Old Artillery Ground y Tower [FACT: Ley 1855, Schedule B; Tower Hamlets Archives L/WBW].
@@ -27,6 +26,27 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Ratepayers que se oponían al gasto ("economists") [A VERIFICAR: documentado en vestries de Londres en general, no hallé fuente sobre Whitechapel].
 - El drenaje principal y la limpieza del Támesis necesitaron una ley nueva para darle esos poderes al MBW [FACT: Metropolis Management Amendment Act 1858, título; Hansard Lords, 27/7/1858].
 
+## Préstamos de la Board
+- Una District Board podía pedir prestado para pagar los gastos de la ley, "on the Credit of" las tasas [FACT: Ley 1855, secc. CLXXXIII].
+- Garantía: hipotecaba las tasas a favor de los prestamistas, que cobraban a prorrata, sin prioridad entre ellos [FACT: Ley 1855, secc. CLXXXIII].
+- Necesitaba la autorización previa y por escrito del MBW [FACT: Ley 1855, secc. CLXXXIII, proviso].
+- Los Public Works Loan Commissioners *podían* prestarle con la sola garantía de las tasas; no eran una autorización obligatoria [FACT: Ley 1855, secc. CLXXXIV].
+- Hipoteca por escritura, anotada en un registro de la Board dentro de 14 días [FACT: Ley 1855, secc. CLXXXV].
+- El prestamista no tenía que revisar para qué se usaba la plata [FACT: Metropolis Management Amendment Act 1862, secc. 19].
+- Tope: la secc. CLXXXIII no fija ningún monto para las District Boards [FACT: Ley 1855, secc. CLXXXIII]; que hubiera otro tope después [A VERIFICAR].
+- Que la ley de 1858 limitó a £3 millones lo que el MBW podía pedir para el drenaje [A VERIFICAR: el PDF está escaneado sin texto].
+- Que hiciera falta la aprobación del Secretario de Estado para los préstamos de distrito [A VERIFICAR: no la encontré en 1855 ni en 1862].
+- En el juego (D-127): el tope de deuda es un número del juego [INVENTED]; la garantía en tasas y la aprobación del MBW son históricas.
+
+## Si la Board no pagaba
+- Si pasaban 6 meses sin pagar capital o intereses y había reclamo por escrito, el prestamista podía pedir a dos jueces de paz (Justices) que nombraran un receiver que cobrara las tasas hasta saldar la deuda y los costos [FACT: Ley 1855, secc. CLXXXVIII].
+- Eso era "sin perjuicio de otros modos de cobro"; si incluían juicio o mandamus [A VERIFICAR].
+- Si una District Board no pagaba lo que el MBW le reclamaba con un precept (la cuota de la Board para el MBW, no una deuda con prestamistas), el MBW podía nombrar personas que cobraran las tasas en el distrito [FACT: Ley 1855, secc. CLXVIII].
+- Que el MBW, el Secretario de Estado o los Public Works Loan Commissioners pudieran intervenir una Board por una deuda con prestamistas [A VERIFICAR: no está en las leyes de 1855 ni de 1862].
+- Que el MBW pudiera congelar las decisiones de una Board [A VERIFICAR: no lo encontré].
+- Un caso real de una Board de Londres que no pagara, en Whitechapel o en otro distrito [A VERIFICAR: no busqué en BHO ni en Hansard].
+- La opción C de Mason (el MBW manda un administrador, congela las decisiones y sube las tasas) [INVENTED]. Lo más parecido en la historia es el receiver de los jueces (CLXXXVIII) y el cobro de un precept (CLXVIII).
+
 ## Otras autoridades (no eran la Board)
 - Pobres: la Whitechapel Poor Law Union (desde 1837), con su Board of Guardians [FACT: The London Archives, STBG/WH].
 - Por encima estaba el Poor Law Board [FACT: Local Government Board Act 1871, secc. 2]; que se creó en 1847 [A VERIFICAR: el PDF de la ley de 1847 está escaneado sin texto].
@@ -48,6 +68,7 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Metropolitan Police Act 1829: https://www.legislation.gov.uk/ukpga/Geo4/10/44/contents/enacted
 - Local Government Board Act 1871: https://www.legislation.gov.uk/ukpga/Vict/34-35/70/contents/enacted
 - Metropolis Management Amendment Act 1858: https://www.legislation.gov.uk/ukpga/Vict/21-22/104/contents/enacted
+- Metropolis Management Amendment Act 1862: https://www.legislation.gov.uk/ukpga/Vict/25-26/102/contents/enacted
 - Hansard, Lords, 27/7/1858: https://api.parliament.uk/historic-hansard/lords/1858/jul/27/second-reading
 - The London Archives, Poor Law records: https://www.thelondonarchives.org/your-research/research-guides/poor-law-records-from-1834-onwards
 - Tácito, Anales XIV (LacusCurtius): https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Tacitus/Annals/14B*.html
