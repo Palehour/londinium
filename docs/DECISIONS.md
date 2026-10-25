@@ -118,6 +118,7 @@ Cada entrada dice si está **Decidida** (Cristian la confirmó) o **Propuesta** 
 | D-110 | 2026-10-24 | #64 P6: el Archivo se abre como un panel dentro de la partida, con un botón en la barra (opción A, OK de Cristian vía Chief, 2026-10-24 14:44 ART). Motivo: se consulta sin salir de la partida. Alternativas descartadas: las otras opciones de P6 (ver #64). |
 | D-111 | 2026-10-24 | #65: la cámara 3D tiene rotación libre y zoom continuo; reemplaza los saltos de 90° del cuerpo del issue. Registra tarde el OK de Cristian en #65 (2026-10-11 13:17 ART), que también fijó paleta fría y desaturada con acentos cálidos y que la niebla y el grano nunca tapan información de juego. Motivo: faltaba la fila. Alternativas descartadas: rotación en saltos de 90°. |
 | D-112 | 2026-10-24 | #65: después del splash, el juego arranca en la ciudad 3D del mapa completo, no en la demo 2D (OK de Cristian vía Chief, 2026-10-24 18:17 ART). Motivo: la ciudad 3D pasa a ser la entrada principal del juego. Alternativas descartadas: arrancar en la demo 2D. |
+| D-113 | 2026-10-24 | #65 se cierra con sus 4 partes mergeadas (#240, #236, #237 y #238). Que funcione en Steam Deck pasa a ser deseable y no bloqueante, porque no hay un Deck para medir; queda en #241 (p3, sin hito). OK de Cristian vía Chief, 2026-10-24 20:50 ART. Motivo: no se puede verificar sin el aparato. Alternativas descartadas: mantenerlo como requisito bloqueante de #65. |
 
 ## Propuestas
 
