@@ -37,6 +37,9 @@ Base histórica para facciones, legitimidad y decretos. Etiquetas: [FACT: fuente
 - Que la ley de 1858 limitó a £3 millones lo que el MBW podía pedir para el drenaje [A VERIFICAR: el PDF está escaneado sin texto].
 - Que hiciera falta la aprobación del Secretario de Estado para los préstamos de distrito [A VERIFICAR: no la encontré en 1855 ni en 1862].
 - En el juego (D-127): el tope de deuda es un número del juego [INVENTED]; la garantía en tasas y la aprobación del MBW son históricas.
+- Devolución: la Board podía fijar plazos y pagar "by Instalments or otherwise, as they may think fit"; los intereses iban cada 6 meses y, si la escritura no fijaba plazo, el prestamista podía exigir el pago pasados 12 meses avisando con 6 meses, y la Board podía pagar en cualquier momento con el mismo aviso [FACT: Ley 1855, secc. CLXXXVI]. Qué hipoteca se pagaba se sorteaba (ballot) [FACT: secc. CXCI].
+- Fondo de amortización obligatorio: cada año, "not less than Two Pounds per Centum" del capital [FACT: Ley 1855, secc. CXC]. La ley de 1855 no fija un plazo máximo.
+- Plazo de 30 años: solo para préstamos de los Public Works Loan Commissioners, "repayable by such Instalments, within a Period not exceeding Thirty Years" [FACT: Metropolis Management Amendment Act 1862, secc. 20].
 
 ## Si la Board no pagaba
 - Si pasaban 6 meses sin pagar capital o intereses y había reclamo por escrito, el prestamista podía pedir a dos jueces de paz (Justices) que nombraran un receiver que cobrara las tasas hasta saldar la deuda y los costos [FACT: Ley 1855, secc. CLXXXVIII].
