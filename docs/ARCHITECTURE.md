@@ -126,6 +126,7 @@ londinium/
 │   ├── game/                 # Node side: sim clock, game session, map geometry, panels (test_sim_clock.gd …)
 │   ├── tools/                # test_map_import.gd: rasterizing, overrides, and committed maps match their sources;
 │   │                         #   map_sources (#170): projection, OHM, sheet fits, digitizer, comparison image
+│   ├── slow/                 # tests that play the scripted games (test_scenarios.gd …); CI runs them in their own job (#268)
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 │       ├── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
 │       ├── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them

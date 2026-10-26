@@ -20,10 +20,17 @@ env:
   GODOT_VERSION: 4.7.2
 
 jobs:
+  # Two suites in parallel (#268, D-132): tests/slow/ (the scripted scenario games, ~45 % of the GUT time) and
+  # everything else. Together they run every test_*.gd of tests/, the same scripts as tools/run_tests. Both checks
+  # ("tests (unit)" and "tests (slow)") are required on develop.
   tests:
-    name: tests (headless GUT)
+    name: tests (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false      # a failure in one suite must not cancel the other's result
+      matrix:
+        suite: [unit, slow]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0 (pinned by SHA)
         with:
@@ -65,16 +72,23 @@ jobs:
         run: bash tools/check_gdscript.sh --parse-only
         timeout-minutes: 5
 
-      - name: Run tests
-        if: steps.scope.outputs.docs_only != 'true'
-        run: godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit
-        # GUT takes ~5 min on a fast runner and ~8 on a slow one: 8 cut slow runners with no failed test (#192).
-        timeout-minutes: 15
+      # -gconfig= skips .gutconfig.json, whose dirs would run the whole suite. GUT cannot exclude a folder, so the
+      # unit suite is the list of every test_*.gd outside tests/slow/.
+      - name: Run unit tests (all but tests/slow/)
+        if: matrix.suite == 'unit' && steps.scope.outputs.docs_only != 'true'
+        run: |
+          files="$(find tests -name 'test_*.gd' -not -path 'tests/slow/*' | sort | sed 's|^|res://|' | paste -sd, -)"
+          godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gconfig= -gtest="$files" -gjunit_xml_file=res://gut_results.xml
+
+      - name: Run slow tests (tests/slow/)
+        if: matrix.suite == 'slow' && steps.scope.outputs.docs_only != 'true'
+        run: |
+          godot --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gconfig= -gdir=res://tests/slow -ginclude_subdirs -gprefix=test_ -gjunit_xml_file=res://gut_results.xml
 
       # Every test file that reads docs/ (today test_population_peak_decay and test_city_start_and_defeat), so a
       # docs edit cannot break them unseen. -gconfig= skips .gutconfig.json, which would run the whole suite.
       - name: Run tests that read docs/ (docs-only PR)
-        if: steps.scope.outputs.docs_only == 'true'
+        if: matrix.suite == 'unit' && steps.scope.outputs.docs_only == 'true'
         run: |
           files="$(grep -rlE --include='test_*.gd' 'res://docs/' tests | sed 's|^|res://|' | paste -sd, -)"
           if [ -z "$files" ]; then
@@ -88,12 +102,12 @@ jobs:
       # Per-minute CSV of the scripted scenarios (tests/scenarios/) so Mason can tune data/ without Godot.
       # It never fails on values; the scenario tests above do that.
       - name: Balance report
-        if: always() && steps.scope.outputs.docs_only != 'true'
+        if: always() && matrix.suite == 'slow' && steps.scope.outputs.docs_only != 'true'
         run: godot --headless --path . -s tools/balance_report.gd -- --out build/balance
         timeout-minutes: 3
 
       - name: Balance summary
-        if: always() && steps.scope.outputs.docs_only != 'true'
+        if: always() && matrix.suite == 'slow' && steps.scope.outputs.docs_only != 'true'
         run: |
           {
             echo "### Balance report (minute 15 of each scenario)"
@@ -104,7 +118,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload balance report
-        if: always()
+        if: always() && matrix.suite == 'slow'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (pinned by SHA)
         with:
           name: balance-report
@@ -116,7 +130,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (pinned by SHA)
         with:
-          name: gut-results
+          name: gut-results-${{ matrix.suite }}
           path: gut_results.xml
           retention-days: 7
           if-no-files-found: ignore

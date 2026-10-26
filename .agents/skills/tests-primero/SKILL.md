@@ -14,7 +14,7 @@ La regla está en `AGENTS.md` ("Tests are guardrails"); acá, cómo cumplirla.
      (`SimTestParams.isolated_params()` aísla una regla de necesidades y finanzas) y llamá `sim.tick()` N veces
      (900 = 15 minutos de juego). Nada de frames, tiempo real ni árbol de escenas.
    - Datos y mods: `tests/data/`. Escenas y paneles: `tests/game/`.
-   - Balance de varias horas: un escenario JSON en `tests/scenarios/` (ver `test_scenarios.gd`).
+   - Balance de varias horas: un escenario JSON en `tests/scenarios/` (ver `tests/slow/test_scenarios.gd`).
 3. **Escribí el test y corrélo antes de tocar el código.** Tiene que fallar por el motivo del bug, no por un error
    de compilación o de setup. Un solo archivo:
    `"$GODOT" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -gtest=res://tests/sim/test_<x>.gd`.

@@ -2,7 +2,7 @@ extends GutTest
 
 # Issue #55 over 20 seeds: the balance scenarios of milestone 2 (bread against beer, the beer crisis and the
 # grain sweep). Too slow for CI, like long_test_artisans_beer.gd: run it with tools/run_long_tests. The short
-# suite plays each scenario once with the seed of its file (tests/scenarios/test_scenarios.gd).
+# suite plays each scenario once with the seed of its file (tests/slow/test_scenarios.gd).
 # Criteria approved by Cristian on 2026-10-13 (comment "Números aprobados por Cristian" in #55):
 # (a) the mean tax collected per minute from minute 50 to 70, median of 20 seeds, differs by at least 30 %
 #     between the stable splits of 0 % and 30 % barley;
