@@ -62,7 +62,7 @@ La partida se puede perder. Cada condición tiene un aviso previo, para que la c
 
 | Condición | Aviso | Derrota |
 |---|---|---|
-| Quiebra sin préstamo (D-013, D-131) | El tesoro cae por debajo del umbral negativo | El tesoro no vuelve a superar el umbral dentro de la ventana (umbral y ventana en `data/`, por fijar) |
+| Quiebra sin préstamo (D-013, D-131, D-133) | El tesoro cae por debajo del umbral negativo; no se puede construir mientras corre la ventana | El tesoro no vuelve a superar el umbral dentro de la ventana (A: −8 R y 6 min; B: −6 R y 5 min; Difícil: −4 R y 4 min; R es el ingreso por tasas por minuto; valores en `data/`) |
 | Quiebra con préstamo (D-128) | Una cuota del préstamo queda impaga: corre la ventana de atraso | Pasados N minutos de atraso, un receiver toma las tasas y los decretos caen por falta de mantenimiento. Si la deuda no se salda dentro de la ventana, es derrota (N y la ventana en `data/`) |
 | Motín de hambre | Menos del 50 % del pan cubierto | Menos del 50 % del pan cubierto durante 3 minutos seguidos |
 | Despoblación | La población cae por debajo del 50 % de su pico | La población se mantiene 180 s seguidos por debajo del 25 % de su pico, o por debajo de 10 habitantes mientras la ciudad no está estable. Con 0 habitantes cuenta siempre, una vez terminada la gracia |
