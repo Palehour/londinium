@@ -1,9 +1,10 @@
 extends GutTest
 
 # The 15-minute scripted games behind the GDD's "Criterios de éxito del hito". Each scenario's
-# command list lives next to this file as JSON. Numbers below were measured with the data/ in
-# force when the scenarios were written (docs: PR de #10); a failure after a data/ change means
-# "recalibrate the scenario or tell Mason", not that the simulator broke.
+# command list is a JSON file in tests/scenarios/; this file lives in tests/slow/, which CI runs in its own job
+# (#268, D-132). Numbers below were measured with the data/ in force when the scenarios were written (docs: PR
+# de #10); a failure after a data/ change means "recalibrate the scenario or tell Mason", not that the simulator
+# broke.
 
 const LAST_MINUTES_FROM: int = 13
 const MINUTES: int = 15

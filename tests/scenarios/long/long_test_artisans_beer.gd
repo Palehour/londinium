@@ -2,7 +2,7 @@ extends GutTest
 
 # Issue #52 over 20 seeds of the 70-minute artisans_beer game. Too slow for CI (it passed the 8 minutes of the
 # test step), so the file name does not start with test_: run it with tools/run_long_tests. The short suite
-# plays the same game once with the seed of the file (tests/scenarios/test_scenarios.gd).
+# plays the same game once with the seed of the file (tests/slow/test_scenarios.gd).
 # Criterion of Mason, approved by Cristian on 2026-10-13: the tax of the artisans pays the beer chain (without
 # their housing) back with a median under 10 minutes, and in at least 17 of the 20 seeds in under 12 minutes.
 
