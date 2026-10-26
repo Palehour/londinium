@@ -104,10 +104,11 @@ static func _apply_effects(state: EconomyState, params: Params, mission: Mission
 				_cholera(state, params, context, mission)
 
 
-# Each failing district loses pop x cholera.fail_mortality x (1 - prep), rounded; its houses then stay empty for
-# cholera.vacancy_min and fill cholera.recovery_mult as fast for cholera.recovery_min. The city keeps no people per
+# Each failing district loses pop x cholera.fail_mortality x severity x (1 - prep), rounded; its houses then stay empty
+# for cholera.vacancy_min and fill cholera.recovery_mult as fast for cholera.recovery_min. The city keeps no people per
 # house, so a district's pop is its share of the houses (issue #209); on a map without districts it is the city, and
-# every class loses its share.
+# every class loses its share. The severity is the district's own (D-120), 1 with the incidents off; with them on,
+# every housed district keeps the one it had, for the History view.
 static func _cholera(state: EconomyState, params: Params, context: EconomyContext, mission: MissionDef) -> void:
 	var failing: Dictionary[StringName, float] = _failing_districts(state, params, context, mission)
 	if failing.is_empty():
@@ -115,11 +116,22 @@ static func _cholera(state: EconomyState, params: Params, context: EconomyContex
 	var entry: MissionState = state.missions[mission.id]
 	var houses: Dictionary[StringName, Array] = WaterSystem.district_houses(state, context)
 	var all_houses: int = houses.values().reduce(func(total: int, list: Array) -> int: return total + list.size(), 0)
+	var health: Dictionary[StringName, Dictionary] = ServiceSystem.district_values(state, params, context)
 	var deaths: int = 0
-	for district: StringName in failing:
-		var share: float = 1.0 if houses.size() == 1 else float(houses[district].size()) / maxi(1, all_houses)
-		var prep: float = preparation(params, failing[district])
-		deaths += roundi(state.population * share * float(params.get_value(&"cholera.fail_mortality")) * (1.0 - prep))
+	for district: StringName in houses:
+		if houses[district].is_empty():
+			continue
+		var severity: float = IncidentSystem.severity(state, params, district,
+			float(health[district]["attributes"][ServiceSystem.HEALTH]) if health.has(district) else 0.0)
+		var lost: int = 0
+		if failing.has(district):
+			var share: float = 1.0 if houses.size() == 1 else float(houses[district].size()) / maxi(1, all_houses)
+			var prep: float = preparation(params, failing[district])
+			lost = roundi(state.population * share * float(params.get_value(&"cholera.fail_mortality")) * severity
+				* (1.0 - prep))
+		deaths += lost
+		if state.incidents_enabled:
+			entry.districts[district] = {"severity": severity, "deaths": lost}
 	entry.deaths = _kill(state, context, deaths)
 	entry.vacancy_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.vacancy_min")))
 	entry.recovery_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.recovery_min")))

@@ -33,6 +33,11 @@ const INCIDENT_FIELDS: Dictionary[String, String] = {"pressure_max": "positive",
 	"k": "fraction", "pressure_drop": "number", "consume_amount": "number", "unresolved_penalty": "number",
 	"unresolved_min": "number", "warning_threshold": "number"}
 const INCIDENT_CAUSE_FIELDS: Array[String] = ["id", "per_unit_per_min"]
+# The lessons of D-120 (issue #87, task 3): the severity of the crisis with no health and no lessons, what each lesson
+# takes off it, and the most all of them can (incident.lessons.*).
+const LESSONS_PATH: String = INCIDENTS_FOLDER + "/lessons.json"
+const LESSON_FIELDS: Dictionary[String, String] = {"severity_base": "number", "lesson_value": "fraction",
+	"lesson_cap": "fraction"}
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
@@ -232,6 +237,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		"roles/neutral_administrator.json", "maps/whitechapel_1850s.json", _needs_path(), _classes_path()]
 	for section: String in ECONOMY_SCHEMAS:
 		required.append("economy/%s.json" % section)
+	# The severity of D-120 needs the lessons file once there are incidents to learn from.
+	if documents.keys().any(func(path: String) -> bool: return path.begins_with(INCIDENTS_FOLDER + "/")):
+		required.append(LESSONS_PATH)
 	for path: String in required:
 		if not documents.has(path):
 			_errors.append("%s: missing file" % path)
@@ -250,6 +258,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			continue
 		elif path.begins_with(SERVICES_FOLDER + "/"):
 			_load_service(raw, path, catalog)
+		elif path == LESSONS_PATH:
+			_load_lessons(raw, catalog)
 		elif path.begins_with(INCIDENTS_FOLDER + "/"):
 			_load_incident(raw, path, catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
@@ -598,6 +608,16 @@ func _load_incident(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 		seen.append(cause["id"])
 		_number(cause["per_unit_per_min"], "number", where + ".per_unit_per_min",
 			"%s.cause.%s" % [prefix, cause["id"]], catalog)
+
+
+func _load_lessons(raw: Dictionary, catalog: DataCatalog) -> void:
+	var fields: Array[String] = []
+	fields.assign(LESSON_FIELDS.keys())
+	if not _object(raw, fields, LESSONS_PATH):
+		return
+	for field: String in LESSON_FIELDS:
+		_number(raw[field], LESSON_FIELDS[field], "%s.%s" % [LESSONS_PATH, field], "incident.lessons.%s" % field,
+			catalog)
 
 
 # Once every file is read: each service building got its services/<id>.json.

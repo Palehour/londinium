@@ -1,0 +1,24 @@
+{
+  "id": "incidents_lessons_early_late",
+  "description": "Issue #87, tarea 3 (D-120): St George in the East y Whitechapel con cuatro casas cada uno, dos al lado del puesto sanitario y dos fuera de su radio, así la salud de los dos queda en 50. St George tiene el puesto desde el principio; Whitechapel lo recibe en el minuto 55, cinco antes del cólera. Pan de sobra, una panadería por distrito y sin impuestos, para que la gente se quede.",
+  "notes": "Lo juega tests/scenarios/long/long_test_incident_lessons.gd con los eventos prendidos y el cólera en el minuto 60. Criterio 7 del #87: en 20 semillas, St George tiene menos muertes que Whitechapel en al menos 17.",
+  "seed": 1,
+  "duration_ticks": 3602,
+  "scenario": "incidents_trial",
+  "commands": [
+    {"tick": 0, "cmd": "set_stock", "good": "bread", "amount": 100000},
+    {"tick": 0, "cmd": "set_tax", "rate": 0.0},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [33, 40]},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [33, 18]},
+    {"tick": 0, "cmd": "build", "building": "health_post", "cell": [24, 40]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [26, 40]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [28, 40]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [40, 40]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [42, 40]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [26, 18]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [28, 18]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [40, 18]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [42, 18]},
+    {"tick": 3300, "cmd": "build", "building": "health_post", "cell": [24, 18]}
+  ]
+}

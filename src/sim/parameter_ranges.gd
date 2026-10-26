@@ -201,6 +201,10 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 1.0, "max": 3.0, "min_inclusive": true, "max_inclusive": true},
 	&"cholera.recovery_min": {
 		"min": 1.0, "max": 15.0, "min_inclusive": true, "max_inclusive": true},
+	# The severity of the crisis by district (issue #87, task 3, D-120), provisional: with no health and no lessons, it
+	# multiplies cholera.fail_mortality by severity_base; lesson_value and lesson_cap are fractions of the loader.
+	&"incident.lessons.severity_base": {
+		"min": 0.0, "max": 2.0, "min_inclusive": true, "max_inclusive": true},
 	# Houses in a health crisis (issue #222, D-104 to D-107): provisional values, the post on the scale of the fountain.
 	&"crisis.health.response_cost": {
 		"min": 0.0, "max": 2000.0, "min_inclusive": true, "max_inclusive": true},

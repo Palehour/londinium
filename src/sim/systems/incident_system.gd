@@ -8,6 +8,9 @@ extends RefCounted
 # that covers that house. Without one the incident goes unresolved and the house loses unresolved_penalty of
 # satisfaction for unresolved_min. An outbreak makes the house sick (D-109). The district warns from warning_threshold.
 # Only with the incidents switched on (D-122): off, the pressure stays at 0 and nothing is drawn.
+# Each resolved incident is a lesson for its district and attribute (D-120, task 3). The day of the cholera the health
+# lessons and the health attribute set each district's severity, which multiplies the deaths in its houses; with the
+# incidents off it is 1. The lessons are the resolved incidents of this game, so they last the chapter.
 
 # What raises the pressure, by the id the data gives it: the share of the district's residents without room (0 to 1),
 # its taverns, and its sick houses (D-109).
@@ -50,6 +53,21 @@ static func pressure(state: EconomyState, district: StringName, attribute: Strin
 	return float(state.incident_pressure.get(district, {}).get(attribute, 0.0))
 
 
+static func lessons(state: EconomyState, district: StringName, attribute: StringName) -> int:
+	return int(state.incident_counts.get(district, {}).get(attribute, {}).get(RESOLVED, 0))
+
+
+# severity_base x (1 - health / 100) x (1 - min(lessons x lesson_value, lesson_cap)) of D-120; 1 with the incidents
+# off, so the crisis kills as it did before them (D-122).
+static func severity(state: EconomyState, params: Params, district: StringName, health: float) -> float:
+	if not state.incidents_enabled:
+		return 1.0
+	var learned: float = minf(lessons(state, district, ServiceSystem.HEALTH)
+		* float(params.get_value(&"incident.lessons.lesson_value")), float(params.get_value(&"incident.lessons.lesson_cap")))
+	return float(params.get_value(&"incident.lessons.severity_base")) * (1.0 - clampf(health, 0.0, 100.0) / 100.0) \
+		* (1.0 - learned)
+
+
 # The pressure each cause adds a minute in the district, with the data's rate per unit.
 static func cause_rate(state: EconomyState, params: Params, context: EconomyContext, attribute: StringName,
 		houses: Array[Dictionary]) -> float:
@@ -76,7 +94,8 @@ static func class_penalty(state: EconomyState, params: Params, context: EconomyC
 	return penalty / houses if houses > 0 else 0.0
 
 
-# For the views and the tests: each district's pressure, whether it warns and its incidents, by attribute.
+# For the views and the tests: each district's pressure, whether it warns, its incidents and its lessons, by
+# attribute, and once the cholera has come the severity and deaths it had there under "crisis".
 static func snapshot(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
 	var districts: Dictionary = {}
 	if context == null or not state.incidents_enabled:
@@ -88,7 +107,11 @@ static func snapshot(state: EconomyState, params: Params, context: EconomyContex
 			var counts: Dictionary = state.incident_counts.get(district, {}).get(attribute, {})
 			entry[attribute] = {"pressure": value,
 				"warning": value >= float(params.get_value(_key(attribute, "warning_threshold"))),
-				RESOLVED: int(counts.get(RESOLVED, 0)), UNRESOLVED: int(counts.get(UNRESOLVED, 0))}
+				RESOLVED: int(counts.get(RESOLVED, 0)), UNRESOLVED: int(counts.get(UNRESOLVED, 0)),
+				"lessons": lessons(state, district, attribute)}
+		for mission: MissionState in state.missions.values():
+			if mission.districts.has(district):
+				entry["crisis"] = mission.districts[district].duplicate()
 		districts[district] = entry
 	return {"enabled": true, "districts": districts}
 

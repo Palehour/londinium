@@ -46,6 +46,8 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
 	_place_dense_housing(state, params, context)
+	# The lessons of D-120 last the chapter (a lateral legacy): a new one starts without any.
+	state.incident_counts.clear()
 	state.bread_coverage = ConsumptionSystem.new().coverage(state, params, context)
 	state.hunger_smoothed_coverage = state.bread_coverage
 	SatisfactionSystem.new().update_target(state, params, context)

@@ -56,7 +56,8 @@ londinium/
 │   │                         #   cost_build_p and upkeep_p_per_min (the building's cost and upkeep); provisional values
 │   ├── incidents/            # one file per district attribute (safety, health, order; #87, D-119): pressure_max, pressure_rate,
 │   │                         #   k, pressure_drop, consume_amount, unresolved_penalty, unresolved_min, warning_threshold and
-│   │                         #   causes [{id, per_unit_per_min}] (overcrowding, taverns, sick_houses); provisional values
+│   │                         #   causes [{id, per_unit_per_min}] (overcrowding, taverns, sick_houses); provisional values.
+│   │                         #   lessons.json (D-120): severity_base, lesson_value, lesson_cap (incident.lessons.*)
 │   ├── difficulty/           # optional (D-065): without it the game runs on the base values
 │   │   ├── presets.json      # easy, normal, hard: relative modifiers (mul|add) and `events` (reserved, empty until #63)
 │   │   └── knobs.json        # loose knobs: kind (switch, value, price_volatility), keys, min, max, step
@@ -130,7 +131,8 @@ londinium/
 │   └── scenarios/            # 15-minute scripted games (balance harness, GDD success criteria)
 │       ├── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
 │       ├── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them
-│       └── incidents/        # scripts on the trial scenario of data/ ("scenario": "incidents_trial", #87, D-122)
+│       └── incidents/        # scripts on the trial scenario of data/ ("scenario": "incidents_trial", #87, D-122);
+│                             #   lessons_early_late.json is played by long/long_test_incident_lessons.gd (D-120)
 ├── tools/                    # run_tests.sh / run_tests.ps1, check_gdscript.sh / .ps1, run_long_tests.sh / .ps1, balance report script,
 │                             # map_import.sh / .ps1 (map_import/: data/maps/sources/<map>/ → data/maps/<map>.json),
 │                             # map_sources.sh / .ps1 (map_sources/, #170: OHM export and NLS sheets → GeoJSON layers,
@@ -192,6 +194,8 @@ londinium/
    `consume_amount`; without one the house carries `unresolved_penalty` of satisfaction for `unresolved_min` (step 7
    averages it over the class's houses). A health incident makes the house sick (`CrisisSystem.mark_sick`, D-109). The
    pressure and the counts are saved; `snapshot()["incidents"]` adds whether each district warns (`warning_threshold`).
+   Each resolved incident is a lesson for its district and attribute (`IncidentSystem.lessons`, D-120): the resolved
+   counts of this game, so a new chapter (`Simulation.create_new`) starts without them.
    The health post's crisis radius is its service coverage along the streets (D-121).
 2. Assign workers automatically: first one worker per building in chain order (wharf → mill → bakery → malthouse → brewery), then the rest by priority bakery → mill → wharf → malthouse → brewery; emigration frees jobs in reverse order (D-021). Only the classes that take jobs look for one: artisans never fill a post (D-021, D-033).
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
@@ -228,8 +232,12 @@ londinium/
    Each house belongs to the district of its placed cell (`district_by_cell`) and drinks from that district's `water_source`
    (`neutral`, `old_ford` or `lea_bridge`, #209); a map without districts is the one district `default`, drinking from
    the neutral source, and the cut falls on it. The `cholera` effect of a failure kills, in each failing district,
-   `pop_d × cholera.fail_mortality × (1 − prep_d)` (pop_d = the district's share of the houses of the population; prep
-   = `events.prep.w_water` × water_d, sewer and health 0 until they exist), rounded and spread over
+   `pop_d × cholera.fail_mortality × severity_d × (1 − prep_d)` (pop_d = the district's share of the houses of the
+   population; prep = `events.prep.w_water` × water_d, sewer and health 0 until they exist). severity_d is 1 with the
+   incidents off (D-122); with them on it is `severity_base × (1 − health_d/100) × (1 − min(lessons_d × lesson_value,
+   lesson_cap))` (`IncidentSystem.severity`, D-120: health_d the district's health attribute, lessons_d its health
+   lessons), and each housed district's severity and deaths stay on the mission (`MissionState.districts`, saved). The
+   deaths are rounded and spread over
    the classes by the largest remainders, not as emigration, and starts the vacancy and then the recovery. The
    `defeat_pause` lasts from the start to the end of the recovery. Nothing here draws a random number.
 10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
@@ -419,7 +427,9 @@ the medium level, or the whole chapter's minute level, with a marker on each buc
 walk the buckets and change metric, and the triggers or +/- change range. The classes tab (`ClassesTab`, built by
 `StatsClasses`, drawn by `StackedChart`) stacks the city's satisfaction by class over the same ranges and markers:
 each layer is a class's satisfaction times its share of the residents, so the top is the average resident's, and a
-bucket with no residents is a gap. Both tabs share the range, cursor and trigger handling of `ChartTab`.
+bucket with no residents is a gap. Both tabs share the range, cursor and trigger handling of `ChartTab`. With the
+incidents on, the history tab also lists each district's lessons and the severity and deaths the cholera had there
+(`DistrictLessons`, from `snapshot()["incidents"]`, #87, D-120).
 
 ## Data example (shape only — numbers are placeholders owned by Mason, approved by Cristian)
 ```json
