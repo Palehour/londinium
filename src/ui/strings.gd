@@ -287,6 +287,12 @@ const STATS_SCREEN_MARKER_WARNING: StringName = &"ui.stats_screen.marker.warning
 const STATS_SCREEN_MARKER_DEFEAT: StringName = &"ui.stats_screen.marker.defeat"
 const STATS_SCREEN_MARKER_STAGE: StringName = &"ui.stats_screen.marker.stage"
 # The classes view (issue #83): its tab, hint and reading at the cursor, the city's and each class's.
+# The lessons of each district under the history chart (issue #87, D-120): the title, a district's line, and the
+# cholera's severity and deaths there, or that it has not come yet.
+const STATS_SCREEN_LESSONS: StringName = &"ui.stats_screen.lessons"
+const STATS_SCREEN_LESSONS_ROW: StringName = &"ui.stats_screen.lessons.row"
+const STATS_SCREEN_LESSONS_CRISIS: StringName = &"ui.stats_screen.lessons.crisis"
+const STATS_SCREEN_LESSONS_NO_CRISIS: StringName = &"ui.stats_screen.lessons.no_crisis"
 const STATS_SCREEN_CLASSES: StringName = &"ui.stats_screen.classes"
 const STATS_SCREEN_CLASSES_HINT: StringName = &"ui.stats_screen.classes.hint"
 const STATS_SCREEN_CLASSES_CITY: StringName = &"ui.stats_screen.classes.city"
@@ -492,6 +498,7 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
 		STATS_SCREEN_CLASS_VALUE, STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
 		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
+		STATS_SCREEN_LESSONS, STATS_SCREEN_LESSONS_ROW, STATS_SCREEN_LESSONS_CRISIS, STATS_SCREEN_LESSONS_NO_CRISIS,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,

@@ -3,13 +3,15 @@ extends ChartTab
 
 # The history tab of the statistics screen (issue #83, D-052): one metric over a range, picked by buttons or with
 # the D-pad or the arrows ↑/↓, with a marker on each bucket where something happened. The range and the cursor
-# work like every chart tab (ChartTab).
+# work like every chart tab (ChartTab). With the incidents on, the lessons of each district and the severity the cholera
+# had there go under the chart (issue #87, D-120), read from the snapshot.
 
 var _metric: int = 0
 var _metric_buttons: Array[Button] = []
 var _plot: Sparkline
 var _legend: HBoxContainer
 var _markers: Label
+var _lessons: Label
 
 
 func setup(game_session: GameSession, look: StatsPresentation) -> void:
@@ -26,6 +28,7 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	add_child(_legend)
 	_reading = _wrapped_label()
 	_markers = _wrapped_label()
+	_lessons = _wrapped_label()
 	_hint = _wrapped_label()
 	apply_texts()
 
@@ -42,6 +45,8 @@ func refresh() -> void:
 	_chart = StatsTimeline.build(session.simulation, StatsTimeline.METRICS[_metric], range_entry["tier"],
 		range_entry["span_seconds"])
 	_metric_buttons[_metric].set_pressed_no_signal(true)
+	_lessons.text = "\n".join(DistrictLessons.lines(session.get_snapshot()["incidents"], session.context.map.district_names))
+	_lessons.visible = not _lessons.text.is_empty()
 	_show()
 
 

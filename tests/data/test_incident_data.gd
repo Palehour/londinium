@@ -5,6 +5,7 @@ extends GutTest
 # the scenarios of before keep them off and the trial one has them. The health post keeps a single radius (D-121).
 
 const SAFETY: String = "incidents/safety.json"
+const LESSONS: String = "incidents/lessons.json"
 
 var _documents: Dictionary[String, Dictionary] = {}
 
@@ -106,3 +107,37 @@ func test_the_crisis_has_no_radius_of_its_own() -> void:
 
 func test_the_tavern_tag_is_known() -> void:
 	assert_has(_load().catalog.buildings[&"brewery"].tags, IncidentSystem.TAVERN_TAG)
+
+
+# Issue #87, task 3 (D-120): incidents/lessons.json holds the severity of the crisis and what each lesson takes off it,
+# every value read through Params with its range.
+func test_the_lessons_file_is_read_through_params() -> void:
+	var loaded: DataLoadResult = _load()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var params: Params = Params.new(loaded.catalog, loaded.catalog.roles[&"neutral_administrator"])
+	var raw: Dictionary = _documents[LESSONS]
+	assert_eq(raw.keys().size(), DataLoader.LESSON_FIELDS.size())
+	for field: String in DataLoader.LESSON_FIELDS:
+		assert_eq(float(params.get_value(StringName("incident.lessons.%s" % field))), float(raw[field]), field)
+
+
+func test_a_severity_base_above_2_is_rejected() -> void:
+	_documents[LESSONS]["severity_base"] = 2.5
+	_assert_invalid("%s.severity_base: invalid number value 2.5" % LESSONS)
+
+
+func test_a_lesson_value_or_cap_above_1_is_rejected() -> void:
+	_documents[LESSONS]["lesson_value"] = 1.5
+	_documents[LESSONS]["lesson_cap"] = 1.2
+	_assert_invalid("%s.lesson_value: invalid fraction value 1.5" % LESSONS)
+	_assert_invalid("%s.lesson_cap: invalid fraction value 1.2" % LESSONS)
+
+
+func test_a_missing_lesson_field_is_rejected() -> void:
+	_documents[LESSONS].erase("lesson_cap")
+	_assert_invalid("%s.lesson_cap: missing field" % LESSONS)
+
+
+func test_the_lessons_file_is_required() -> void:
+	_documents.erase(LESSONS)
+	_assert_invalid("%s: missing file" % LESSONS)

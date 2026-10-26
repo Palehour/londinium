@@ -264,6 +264,10 @@ ui.stats_screen.card.debt,Deuda,Debt
 ui.stats_screen.history,Historia,History
 ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · ↑/↓: métrica · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · ↑/↓: metric · LT/RT or +/-: range"
 ui.stats_screen.history.reading,Minuto %s · %s,Minute %s · %s
+ui.stats_screen.lessons,Lecciones por distrito (duran el capítulo),Lessons by district (they last the chapter)
+ui.stats_screen.lessons.row,%s · lecciones: %s · %s,%s · lessons: %s · %s
+ui.stats_screen.lessons.crisis,cólera: gravedad %d %% · %d muertes,cholera: severity %d %% · %d deaths
+ui.stats_screen.lessons.no_crisis,el cólera todavía no llegó,cholera has not come yet
 ui.stats_screen.classes,Clases,Classes
 ui.stats_screen.classes.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · Cada capa: satisfacción de la clase por su parte de los habitantes","D-pad or arrows ←/→: browse · LT/RT or +/-: range · Each layer: the class's satisfaction times its share of the residents"
 ui.stats_screen.classes.city,Ciudad %.0f,City %.0f
