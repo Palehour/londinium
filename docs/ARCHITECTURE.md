@@ -132,7 +132,7 @@ londinium/
 │       ├── long/             # longer games (70 min, 4 h, 8 h); their many-seed checks (long_test_*.gd) stay out of CI
 │       ├── hard/             # the scripts above rewritten for Hard's 800 d (*_hard); only balance_report --preset hard plays them
 │       └── incidents/        # scripts on the trial scenario of data/ ("scenario": "incidents_trial", #87, D-122);
-│                             #   lessons_early_late.json is played by long/long_test_incident_lessons.gd (D-120)
+│                             #   lessons_early_late.json is played by slow/test_incident_lessons_seeds.gd (D-120)
 ├── tools/                    # run_tests.sh / run_tests.ps1, check_gdscript.sh / .ps1, run_long_tests.sh / .ps1, balance report script,
 │                             # map_import.sh / .ps1 (map_import/: data/maps/sources/<map>/ → data/maps/<map>.json),
 │                             # map_sources.sh / .ps1 (map_sources/, #170: OHM export and NLS sheets → GeoJSON layers,

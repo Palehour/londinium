@@ -4,8 +4,8 @@ extends GutTest
 # scenario, with the historic events on and the cholera at the last minute its range allows, so the incidents have
 # time to teach. Both districts have the same health when it comes, half their houses within a post's radius; St George
 # had its post from the start and Whitechapel got its own five minutes before. St George, with the lessons of the
-# outbreaks its post resolved, has fewer cholera deaths in at least 17 of 20 seeds. Too slow for CI (about two
-# minutes): run it with tools/run_long_tests.
+# outbreaks its post resolved, has fewer cholera deaths in at least 17 of 20 seeds. It takes about two minutes, so
+# it lives in tests/slow/ and CI runs it in the slow job (#87, D-132).
 
 const PATH: String = "res://tests/scenarios/incidents/lessons_early_late.json"
 const SEEDS: int = 20
