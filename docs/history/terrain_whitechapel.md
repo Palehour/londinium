@@ -1,4 +1,4 @@
-# Terreno de Whitechapel: suelo firme, marisma y ribera (#88, dec. 2)
+# Terreno de Whitechapel: suelo firme, marisma y ribera (#88, dec. 2; D-136)
 
 - Hacia 1320 la parroquia de Whitechapel (St Mary Matfelon) iba desde el camino de Colchester hasta el Támesis; en el siglo XVI incluía una franja ganada al río, Wapping-Whitechapel [FACT: VCH Middlesex vol. 11, "Early Stepney", pp. 1-7].
 - En 1694 Wapping-Whitechapel pasó a ser la parroquia de St John, Wapping [FACT: VCH Middlesex 11, pp. 1-7]. Si después de eso St Mary Whitechapel seguía tocando el río [A VERIFICAR].
@@ -8,9 +8,9 @@
 - Que quedara marisma sin drenar cerca de Whitechapel en 1888 [A VERIFICAR: no lo encontré; lo más probable es que no].
 - London Dock (Wapping) abrió en 1805 [FACT: London Museum, "London Dock"]. St Katharine Docks: empezaron en 1827 y abrieron en 1828 [FACT: Old and New London vol. 2, pp. 117-121, en BHO; fuente de 1878, no primaria].
 
-## Liberty (para Mason)
-- Ribera en el borde del mapa y marisma drenable son [INVENTED]: en 1888 la ribera era el precinto de St Katharine, Wapping y los docks, no la parroquia de Whitechapel, y la marisma estaba drenada desde la Edad Media.
-- Las usamos para que el jugador tenga tres tipos de suelo con decisiones distintas, como recuerdo de Walmarsh y del río que limitaba el distrito.
+## Liberty (D-136)
+- La ribera en el borde del mapa y la marisma drenable son [INVENTED]. Desde 1855 el distrito llegaba al río por St Katharine [FACT: Ley de 1855, Schedule B], y la marisma de Wapping se había ganado al río entre los siglos XIII y XVI, con una inundación antes de 1570 [FACT: VCH Middlesex 11].
+- Las usamos para tener tres tipos de suelo con decisiones distintas.
 
 ## Fuentes
 - VCH Middlesex vol. 11, "Stepney: Early Stepney": https://www.british-history.ac.uk/vch/middx/vol11/pp1-7
