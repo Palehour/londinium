@@ -758,13 +758,13 @@ func _load_faction(raw: Variant, path: String, id: StringName, catalog: DataCata
 	if not _object(raw, fields, path):
 		return
 	var faction: FactionDef = FactionDef.new()
-	faction.id = id
+	faction.use_id(id)
 	faction.engine = StringName(str(raw["engine"]))
 	if faction.engine not in FactionDef.ENGINES:
 		_errors.append("%s.engine: unknown engine %s" % [path, raw["engine"]])
 		return
-	_number(raw["target_base"], "percent", path + ".target_base", faction.target_base_key(), catalog)
-	_number(raw["target_scale"], "number", path + ".target_scale", faction.target_scale_key(), catalog)
+	_number(raw["target_base"], "percent", path + ".target_base", faction.target_base_key, catalog)
+	_number(raw["target_scale"], "number", path + ".target_scale", faction.target_scale_key, catalog)
 	if fields.has("coverage"):
 		var attributes: Array[String] = []
 		if not _strings(raw["coverage"], path + ".coverage", attributes) or attributes.is_empty() \
@@ -803,6 +803,7 @@ func _load_affinity(raw: Variant, path: String, catalog: DataCatalog) -> void:
 			var key: StringName = FactionDef.affinity_key(StringName(class_id), StringName(faction_id))
 			if _number(raw[class_id][faction_id], "number", "%s.%s" % [location, faction_id], key, catalog):
 				total += float(raw[class_id][faction_id])
+				catalog.factions[StringName(faction_id)].affinity_keys[StringName(class_id)] = key
 		if total <= 0.0:
 			_errors.append("%s: expected an affinity above 0" % location)
 

@@ -2,6 +2,7 @@ class_name RequestLoanCommand
 extends SimulationCommand
 
 # Asks the Metropolitan Board for a loan on the rates (issue #72, D-127): whole pence, up to the cap, one at a time.
+# The rate and the sanction follow the legitimacy reserve of #84 (D-139, point 3).
 
 var _amount: int
 var _context: EconomyContext
@@ -17,7 +18,7 @@ func use_context(context: EconomyContext) -> void:
 
 func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -> void:
 	accepted = false
-	var rate: float = LoanSystem.interest_rate(params, LoanSystem.NO_LEGITIMACY, state.loan_late_installments)
+	var rate: float = LoanSystem.interest_rate(params, LoanSystem.legitimacy_of(state), state.loan_late_installments)
 	if state.loan != null:
 		reason = &"loan_active"
 	elif _amount <= 0:

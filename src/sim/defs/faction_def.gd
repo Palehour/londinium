@@ -28,12 +28,17 @@ func name_key(year: int) -> StringName:
 	return key
 
 
-func target_base_key() -> StringName:
-	return StringName("factions.%s.target_base" % id)
+# Built once by the loader: the systems read them every tick, and formatting keys there was most of the cost.
+var target_base_key: StringName
+var target_scale_key: StringName
+# By class id, the Params key of that class's affinity to this faction.
+var affinity_keys: Dictionary[StringName, StringName] = {}
 
 
-func target_scale_key() -> StringName:
-	return StringName("factions.%s.target_scale" % id)
+func use_id(faction_id: StringName) -> void:
+	id = faction_id
+	target_base_key = StringName("factions.%s.target_base" % id)
+	target_scale_key = StringName("factions.%s.target_scale" % id)
 
 
 static func affinity_key(class_id: StringName, faction_id: StringName) -> StringName:

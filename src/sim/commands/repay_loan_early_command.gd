@@ -16,7 +16,7 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 		return
 	state.money -= cost
 	state.loan_paid_tick += cost
-	# The legitimacy of D-116 arrives with issue #84, which reads this gain.
+	# FactionSystem adds this gain to the legitimacy reserve of #84 this very tick.
 	if not state.loan.receiver:
 		state.legitimacy_gain_tick += float(params.get_value(&"loan.early_payoff_legitimacy_gain"))
 	state.loan = null

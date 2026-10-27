@@ -225,8 +225,10 @@ londinium/
    cover stays overdue and is paid, oldest first, as soon as it can; after `loan.default_after_s` in arrears the
    receiver takes every tax of the tick until the debt is paid, or after `loan.receiver_window_s` the game is lost
    (`loan_bankruptcy`, D-128). `RepayLoanEarlyCommand` pays the balance plus `loan.early_payoff_surcharge` (D-129).
-   While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). The loan's rate still ignores the
-   legitimacy (`loan.base_interest`); wiring it to the reserve of #84 is pending (see PR #84).
+   While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). The sanction and the rate read the
+   legitimacy reserve of #84 (`LoanSystem.legitimacy_of`, D-139 point 3): from `loan.base_interest` at
+   `loan.rate_full_legitimacy` up to + `loan.rate_by_rating` at `loan.sanction_min_legitimacy`, and refused below it; a
+   state without factions has no legitimacy and gets the base rate.
    Then the factions (`FactionSystem`, issue #84, D-116, D-139): each faction's support moves to its engine's target at
    `factions.support_drift_per_min` (ratepayers 80 − 100 × gasto_tasas / max(R, `factions.ratio_income_floor`), with
    gasto_tasas the loan installment per minute, or R under the receiver; reformers 20 + 60 × the share of houses every

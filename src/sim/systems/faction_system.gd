@@ -35,8 +35,8 @@ static func tick(state: EconomyState, params: Params, context: EconomyContext) -
 		return
 	var step: float = float(params.get_value(&"factions.support_drift_per_min")) / SimTime.TICKS_PER_MINUTE
 	for faction: FactionDef in context.factions.values():
-		var support: float = state.faction_support.get(faction.id, target(state, params, context, faction))
-		state.faction_support[faction.id] = move_toward(support, target(state, params, context, faction), step)
+		var goal: float = target(state, params, context, faction)
+		state.faction_support[faction.id] = move_toward(state.faction_support.get(faction.id, goal), goal, step)
 	_fill(state, params, ceiling(state, params, context))
 
 
@@ -60,8 +60,8 @@ static func target(state: EconomyState, params: Params, context: EconomyContext,
 			driver = coverage(state, context, faction.coverage)
 		FactionDef.STABILITY:
 			driver = stability(state, context)
-	var value: float = float(params.get_value(faction.target_base_key())) \
-		+ float(params.get_value(faction.target_scale_key())) * driver
+	var value: float = float(params.get_value(faction.target_base_key)) \
+		+ float(params.get_value(faction.target_scale_key)) * driver
 	return clampf(value, MIN_POINTS, MAX_POINTS)
 
 
@@ -96,9 +96,16 @@ static func coverage(state: EconomyState, context: EconomyContext, attributes: A
 		# A building of an old save may have no cell yet: nothing covers it.
 		var cover: Dictionary = state.service_cover.get(RoadNetwork.cell_of(building), {}) \
 			if building.has("cell") else {}
-		if attributes.all(func(attribute: StringName) -> bool: return not cover.get(attribute, []).is_empty()):
+		if _covers(cover, attributes):
 			covered += 1
 	return float(covered) / houses if houses > 0 else 0.0
+
+
+static func _covers(cover: Dictionary, attributes: Array[StringName]) -> bool:
+	for attribute: StringName in attributes:
+		if cover.get(attribute, []).is_empty():
+			return false
+	return true
 
 
 # The mean satisfaction over 100, every class weighed by its people (D-141). An empty city: the base class's.
@@ -120,28 +127,31 @@ static func _satisfaction_of(state: EconomyState, def: ClassDef) -> float:
 
 
 # w_f = sum over classes of pop_c x affinity_c,f / pop_total (D-116), each class's affinities taken as shares of their
-# sum. An empty city weighs every class the same, so the ceiling still follows the supports.
+# sum. An empty city weighs every class the same, so the ceiling still follows the supports. Plain loops: it runs
+# every tick, and building dictionaries per class was most of the factions' cost.
 static func weights(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary[StringName, float]:
 	var result: Dictionary[StringName, float] = {}
 	for faction_id: StringName in context.factions:
 		result[faction_id] = 0.0
 	var defs: Array[ClassDef] = ClassStates.defs(context)
-	var people: int = 0
+	var others: int = ClassStates.others_total(state)
+	var people: int = state.population
 	for def: ClassDef in defs:
-		people += ClassStates.population_of(state, def)
-	for def: ClassDef in defs:
-		var share: float = float(ClassStates.population_of(state, def)) / people if people > 0 else 1.0 / defs.size()
-		var affinities: Dictionary[StringName, float] = {}
+		var count: int = state.population - others if def.base else ClassStates.population_of(state, def)
+		var share: float = float(count) / people if people > 0 else 1.0 / defs.size()
 		var total: float = 0.0
-		for faction_id: StringName in context.factions:
-			var key: StringName = FactionDef.affinity_key(def.id, faction_id)
-			affinities[faction_id] = float(params.get_value(key)) if params.has_value(key) else 0.0
-			total += affinities[faction_id]
-		if total <= 0.0:
+		for faction: FactionDef in context.factions.values():
+			total += _affinity(params, faction, def)
+		if total <= 0.0 or share <= 0.0:
 			continue
-		for faction_id: StringName in affinities:
-			result[faction_id] += share * affinities[faction_id] / total
+		for faction: FactionDef in context.factions.values():
+			result[faction.id] += share * _affinity(params, faction, def) / total
 	return result
+
+
+static func _affinity(params: Params, faction: FactionDef, def: ClassDef) -> float:
+	var key: StringName = faction.affinity_keys.get(def.id, &"")
+	return float(params.get_value(key)) if key != &"" else 0.0
 
 
 # The ceiling P = sum of w_f x support_f, 0 to 100 (D-116).

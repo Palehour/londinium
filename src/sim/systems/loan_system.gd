@@ -5,7 +5,8 @@ extends RefCounted
 # repaid in fixed installments or early with a surcharge (D-129). Installments in arrears for too long bring in the
 # receiver, who takes every tax until the debt is paid or its window runs out and the game is lost (D-128).
 const DEFEAT_CAUSE: StringName = &"loan_bankruptcy"
-# Legitimacy (D-116) arrives with issue #84. Until then the sanction is not checked and the rate is the base one.
+# A state without factions (a bare test state, an era without factions.json) has no legitimacy (D-116, issue #84):
+# the sanction is not checked and the rate is the base one.
 const NO_LEGITIMACY: float = -1.0
 const REFUSED: float = -1.0
 
@@ -30,6 +31,11 @@ static func interest_rate(params: Params, legitimacy: float, late_installments: 
 	if rating >= full:
 		return base
 	return base + float(params.get_value(&"loan.rate_by_rating")) * (full - rating) / (full - minimum)
+
+
+# The legitimacy reserve of #84 the sanction reads (D-139, point 3: low legitimacy makes the loan dearer or refuses it).
+static func legitimacy_of(state: EconomyState) -> float:
+	return state.legitimacy if state.legitimacy >= 0.0 else NO_LEGITIMACY
 
 
 static func open(state: EconomyState, params: Params, principal: int, rate: float) -> void:
@@ -107,7 +113,7 @@ static func _run_receiver(state: EconomyState, params: Params, loan: LoanState) 
 
 static func snapshot(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
 	var result: Dictionary = {"active": state.loan != null, "cap": cap(state, params, context),
-		"rate": interest_rate(params, NO_LEGITIMACY, state.loan_late_installments),
+		"rate": interest_rate(params, legitimacy_of(state), state.loan_late_installments),
 		"late_installments": state.loan_late_installments, "paid_tick": state.loan_paid_tick,
 		"legitimacy_gain_tick": state.legitimacy_gain_tick}
 	var loan: LoanState = state.loan

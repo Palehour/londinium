@@ -1,9 +1,9 @@
 extends GutTest
 
 # Issue #72: loans on the rates (D-127), fixed installments and early payoff (D-129), the receiver and the bankruptcy
-# with a loan (D-128), with the values of D-138. Legitimacy (D-116) arrives with issue #84: until then the sanction is
-# not checked and the rate is the base one, and the rating and the legitimacy gain are tested on their own.
-# The unit tests run the loan rules on a bare state; R there is the head tax of 10 employed workers.
+# with a loan (D-128), with the values of D-138. The sanction and the rate read the legitimacy reserve of #84 (D-139,
+# point 3). The unit tests run the loan rules on a bare state, which has no factions and so no legitimacy: the rate
+# there is the base one unless a test sets the reserve. R there is the head tax of 10 employed workers.
 
 const STRIP: StringName = &"riverside_strip"
 const WORKERS: int = 10
@@ -130,6 +130,37 @@ func test_the_rate_follows_the_rating_and_refuses_below_the_sanction() -> void:
 
 
 # Criterion 2: 601 pence in 10 installments are nine of 60 and a last one of 61.
+# D-139, point 3: the reserve of #84 makes the loan dearer as it falls and refuses it below the sanction minimum.
+func test_a_lower_legitimacy_makes_the_loan_dearer_and_then_refuses_it() -> void:
+	var totals: Array[int] = []
+	for legitimacy: float in [70.0, 50.0, 30.0]:
+		var state: EconomyState = _state(100)
+		state.legitimacy = legitimacy
+		var command: SimulationCommand = _request(state, _cap())
+		assert_true(command.accepted, str(command.reason))
+		totals.append(state.loan.total)
+	assert_eq(totals[0], _cap() + floori(_cap() * 0.10), "70: the base rate")
+	assert_eq(totals[1], _cap() + floori(_cap() * 0.15), "50: halfway")
+	assert_eq(totals[2], _cap() + floori(_cap() * 0.20), "30: the dearest rate")
+	assert_lt(totals[0], totals[1])
+	assert_lt(totals[1], totals[2])
+	var refused: EconomyState = _state(100)
+	refused.legitimacy = 29.0
+	var before: Dictionary = refused.to_dict()
+	var command: SimulationCommand = _request(refused, _cap())
+	assert_false(command.accepted)
+	assert_eq(command.reason, &"loan_not_sanctioned")
+	assert_eq(refused.to_dict(), before, "Refused without changes")
+
+
+func test_the_game_quotes_the_rate_of_its_reserve() -> void:
+	var sim: Simulation = _game()
+	sim.tick()
+	var legitimacy: float = sim.snapshot()["factions"]["legitimacy"]
+	assert_almost_eq(_loan(sim)["rate"], LoanSystem.interest_rate(_game_params, legitimacy, 0), 0.000001)
+	assert_gt(_loan(sim)["rate"], _value(&"loan.base_interest"), "Below 70 the loan costs more than the base rate")
+
+
 func test_the_installments_add_up_to_the_total_and_the_last_takes_the_remainder() -> void:
 	var state: EconomyState = _state(0)
 	assert_true(_request(state, 547).accepted)
@@ -381,15 +412,23 @@ func _advance(sim: Simulation, from_tick: int, to_tick: int) -> Simulation:
 	return sim
 
 
-# Without taxes the principal pays nine installments and the tenth goes unpaid: arrears, receiver, defeat.
+# Without taxes the principal pays eight installments and the ninth goes unpaid: arrears, receiver, defeat. The game
+# starts its reserve at 50 (D-141), so the Board sanctions the loan at 0.15 (D-138): eight installments are 92% of
+# the principal and nine would be 103.5%.
 func test_the_game_stops_on_a_bankruptcy_with_a_loan_and_only_that_one() -> void:
 	var sim: Simulation = _game()
 	sim.tick()
-	sim.apply_command(RequestLoanCommand.new(_loan(sim)["cap"]))
+	var cap: int = _loan(sim)["cap"]
+	var rate: float = _loan(sim)["rate"]
+	assert_almost_eq(rate, 0.15, 0.001, "The rate of a reserve of 50, after one tick of it moving")
+	var command: RequestLoanCommand = RequestLoanCommand.new(cap)
+	sim.apply_command(command)
 	sim.apply_command(SetTaxCommand.new(0.0))
 	sim.tick()
-	# Taken on tick 2, so the tenth installment falls due on tick 3001 and the receiver comes 600 s after it.
-	var receiver_in: int = 3001 + 600
+	assert_true(command.accepted, str(command.reason))
+	assert_eq(_loan(sim)["total"], cap + floori(cap * rate), "Charged at the sanctioned rate")
+	# Taken on tick 2, so the ninth installment falls due on tick 2701 and the receiver comes 600 s after it.
+	var receiver_in: int = 2701 + 600
 	_advance(sim, 2, receiver_in + 1500 - 1)
 	assert_true(sim.snapshot()["loan"]["receiver"])
 	assert_true(sim.snapshot()["defeat"]["causes"].is_empty())
