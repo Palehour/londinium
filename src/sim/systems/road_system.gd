@@ -20,6 +20,9 @@ const SERVED: StringName = &"_served"
 
 # What the last evaluation was made of; the same layout gives the same result.
 var _layout: Array = []
+# How many times the layout changed and was evaluated again: what is derived from it (the reformers' coverage, #84)
+# is worked out again only when this moves.
+var evaluations: int = 0
 
 
 func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
@@ -30,6 +33,7 @@ func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
 		return road["cell"]), state.flour_imports_enabled]
 	if layout != _layout:
 		_layout = layout
+		evaluations += 1
 		evaluate(state, params, context)
 	update_access(state, params, context)
 

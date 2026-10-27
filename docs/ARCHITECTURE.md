@@ -238,6 +238,8 @@ londinium/
    refuses any cost above the reserve (never negative), and `decree_cost` is ready for #71. No defeat comes from it.
    The supports and the reserve live on `EconomyState` but outside `to_dict()`: the save carries them in
    `to_save()["factions"]`, so the economy of a v0.3.0 save plays on and compares as before (a save without it starts them anew).
+   The reformers' coverage only changes with the layout, so `Simulation` keeps `FactionSystem.coverages()` and works it
+   out again only when `RoadSystem.evaluations` or the number of buildings moves; the tick and the snapshot reuse it.
 9b. Missions (`MissionSystem`, issue #63, D-090): `MissionCommand` starts one (once per game) or abandons an active one
    in step 1; its effects run then. Each active mission counts down `mission.<id>.duration_min`, turned into ticks only
    by `SimTime.minutes_to_ticks`, the start tick included; on its last tick `goal_met` checks the goal once, on the state

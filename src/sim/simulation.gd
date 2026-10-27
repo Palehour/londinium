@@ -34,6 +34,10 @@ var _stats: Stats
 var _history: StatsHistory
 # Classes this simulation had to add to the state it was given; primed once the needs are evaluated.
 var _new_classes: Array[ClassDef] = []
+# The reformers' coverage (issue #84) of the layout RoadSystem last evaluated, and what it was worked out for: the
+# evaluation and the number of buildings. Derived, never saved.
+var _faction_coverage: Dictionary[StringName, float] = {}
+var _faction_coverage_key: Array = []
 
 
 # New-game defaults are explicit so loading a snapshot never grants supplies or resets happiness.
@@ -215,7 +219,7 @@ func tick() -> void:
 		_mobility.tick(_state, _params, _context)
 		_money.tick(_state, _params, _context)
 		LoanSystem.tick(_state, _params)
-		FactionSystem.tick(_state, _params, _context)
+		FactionSystem.tick(_state, _params, _context, _coverages())
 		MissionSystem.tick(_state, _params, _context, _tick_count)
 		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context))
 		if not _state.defeat_causes.is_empty():
@@ -294,6 +298,16 @@ func stats_history_to_dict() -> Dictionary:
 	return _history.to_dict() if _history != null else {}
 
 
+# Worked out again only when the layout changes: a building built or demolished, or a street. The count of buildings
+# also covers a map without streets, where RoadSystem never evaluates (and nothing covers a house).
+func _coverages() -> Dictionary[StringName, float]:
+	var key: Array = [_roads.evaluations, _state.buildings.size()]
+	if key != _faction_coverage_key:
+		_faction_coverage_key = key
+		_faction_coverage = FactionSystem.coverages(_state, _context)
+	return _faction_coverage
+
+
 func _reject_after_defeat(command: SimulationCommand) -> void:
 	command.accepted = false
 	command.reason = &"simulation_defeated"
@@ -327,7 +341,7 @@ func snapshot() -> Dictionary:
 		"services": ServiceSystem.snapshot(_state, _params, _context),
 		"incidents": IncidentSystem.snapshot(_state, _params, _context),
 		"loan": LoanSystem.snapshot(_state, _params, _context),
-		"factions": FactionSystem.snapshot(_state, _params, _context),
+		"factions": FactionSystem.snapshot(_state, _params, _context, _coverages()),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,

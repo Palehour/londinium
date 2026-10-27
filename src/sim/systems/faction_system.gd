@@ -29,13 +29,14 @@ static func initialize(state: EconomyState, params: Params, context: EconomyCont
 	state.legitimacy = float(params.get_value(&"factions.legitimacy_start"))
 
 
-# After LoanSystem, so the rates it charged and the legitimacy an early payoff earned count this very tick.
-static func tick(state: EconomyState, params: Params, context: EconomyContext) -> void:
+# After LoanSystem, so the rates it charged and the legitimacy an early payoff earned count this very tick. `cached`
+# is coverages() of the current layout, which Simulation keeps between layout changes; empty works it out again.
+static func tick(state: EconomyState, params: Params, context: EconomyContext, cached: Dictionary = {}) -> void:
 	if not enabled(context) or state.legitimacy < 0.0:
 		return
 	var step: float = float(params.get_value(&"factions.support_drift_per_min")) / SimTime.TICKS_PER_MINUTE
 	for faction: FactionDef in context.factions.values():
-		var goal: float = target(state, params, context, faction)
+		var goal: float = target(state, params, context, faction, cached)
 		state.faction_support[faction.id] = move_toward(state.faction_support.get(faction.id, goal), goal, step)
 	_fill(state, params, ceiling(state, params, context))
 
@@ -51,13 +52,14 @@ static func _fill(state: EconomyState, params: Params, top: float) -> void:
 
 
 # target_base + target_scale x the engine's driver, clipped to 0-100. The ratepayers' driver is minus their ratio.
-static func target(state: EconomyState, params: Params, context: EconomyContext, faction: FactionDef) -> float:
+static func target(state: EconomyState, params: Params, context: EconomyContext, faction: FactionDef,
+		cached: Dictionary = {}) -> float:
 	var driver: float = 0.0
 	match faction.engine:
 		FactionDef.RATES_RATIO:
 			driver = -rates_ratio(state, params, context)
 		FactionDef.SERVICE_COVERAGE:
-			driver = coverage(state, context, faction.coverage)
+			driver = cached[faction.id] if cached.has(faction.id) else coverage(state, context, faction.coverage)
 		FactionDef.STABILITY:
 			driver = stability(state, context)
 	var value: float = float(params.get_value(faction.target_base_key)) \
@@ -82,6 +84,19 @@ static func rates_spending_per_minute(state: EconomyState, params: Params, incom
 		return income
 	var interval: float = float(params.get_value(&"loan.installment_interval_s"))
 	return loan.installment(loan.installments_paid) * SimTime.TICKS_PER_MINUTE / interval
+
+
+# The coverage of every faction with a SERVICE_COVERAGE engine, by id. It only changes with the layout (the buildings
+# and the streets), so Simulation keeps it until RoadSystem evaluates a new one instead of walking every building
+# each tick.
+static func coverages(state: EconomyState, context: EconomyContext) -> Dictionary[StringName, float]:
+	var result: Dictionary[StringName, float] = {}
+	if not enabled(context):
+		return result
+	for faction: FactionDef in context.factions.values():
+		if faction.engine == FactionDef.SERVICE_COVERAGE:
+			result[faction.id] = coverage(state, context, faction.coverage)
+	return result
 
 
 # Share of the houses, 0 to 1, that every service in `attributes` reaches (D-141). No houses: 0.
@@ -188,14 +203,15 @@ static func shift_support(state: EconomyState, faction_id: StringName, points: f
 		state.faction_support[faction_id] = clampf(state.faction_support[faction_id] + points, MIN_POINTS, MAX_POINTS)
 
 
-static func snapshot(state: EconomyState, params: Params, context: EconomyContext) -> Dictionary:
+static func snapshot(state: EconomyState, params: Params, context: EconomyContext,
+		cached: Dictionary = {}) -> Dictionary:
 	if not enabled(context) or state.legitimacy < 0.0:
 		return {}
 	var by_faction: Dictionary[StringName, float] = weights(state, params, context)
 	var factions: Dictionary = {}
 	for faction: FactionDef in context.factions.values():
 		factions[faction.id] = {"support": state.faction_support.get(faction.id, 0.0),
-			"target": target(state, params, context, faction), "weight": by_faction[faction.id]}
+			"target": target(state, params, context, faction, cached), "weight": by_faction[faction.id]}
 	return {"legitimacy": state.legitimacy, "ceiling": ceiling(state, params, context),
 		"decree_cost": decree_cost(state, params), "rates_ratio": rates_ratio(state, params, context),
 		"factions": factions}

@@ -387,3 +387,38 @@ func test_a_saved_game_plays_on_the_same_factions() -> void:
 		sim.tick()
 		other.tick()
 	assert_eq(other.snapshot()["factions"], sim.snapshot()["factions"])
+
+
+# The coverage is kept between layout changes (Simulation._coverages): building the services raises the reformers'
+# target and demolishing one lowers it again, on the tick the layout changes.
+func _reformers_target(sim: Simulation) -> float:
+	return sim.snapshot()["factions"]["factions"][REFORMERS]["target"]
+
+
+func _apply(sim: Simulation, command: SimulationCommand) -> void:
+	sim.apply_command(command)
+	sim.tick()
+	assert_true(command.accepted, str(command.reason))
+
+
+func test_the_reformers_coverage_follows_building_and_demolishing() -> void:
+	var context: EconomyContext = RoadTestMap.street(_catalog, 24)
+	var initial: EconomyState = EconomyState.new()
+	initial.money = 100000
+	initial.population = 10
+	initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 1000})
+	var sim: Simulation = Simulation.new(_params, initial, 7, context)
+	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(4)))
+	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "A house and no services")
+	_apply(sim, BuildCommand.new(context, &"health_post", RoadTestMap.land(1)))
+	_apply(sim, BuildCommand.new(context, &"fire_station", RoadTestMap.land(2)))
+	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Still no order")
+	_apply(sim, BuildCommand.new(context, &"police_station", RoadTestMap.land(3)))
+	assert_almost_eq(_reformers_target(sim), 80.0, EPSILON, "Every service reaches the one house")
+	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(20)))
+	assert_almost_eq(_reformers_target(sim), 50.0, EPSILON, "A second house beyond the services' reach")
+	_apply(sim, DemolishCommand.new(RoadTestMap.land(3)))
+	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Demolishing the police station")
+	for index: int in range(5):
+		sim.tick()
+	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Unchanged while the layout is")
