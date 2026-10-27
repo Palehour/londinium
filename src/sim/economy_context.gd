@@ -8,6 +8,8 @@ var map: MapDef
 var classes: Dictionary[StringName, ClassDef] = {}
 # Never changed after loading, so they are shared, not copied (issue #63).
 var missions: Dictionary[StringName, MissionDef] = {}
+# The era's factions (issue #84); shared like the missions.
+var factions: Dictionary[StringName, FactionDef] = {}
 
 
 func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
@@ -33,6 +35,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	for definition: ClassDef in catalog.classes.values():
 		classes[definition.id] = definition.copy()
 	missions.assign(catalog.missions)
+	factions.assign(catalog.factions)
 	map = MapDef.new()
 	map.id = selected_map.id
 	map.width = selected_map.width
@@ -65,6 +68,7 @@ func copy() -> EconomyContext:
 	catalog.road_footprint = road_footprint
 	catalog.classes.assign(classes)
 	catalog.missions.assign(missions)
+	catalog.factions.assign(factions)
 	return EconomyContext.new(catalog, map)
 
 
