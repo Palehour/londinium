@@ -26,7 +26,7 @@
     }
   },
   "affinity": {
-    "worker": { "ratepayers": 1, "reformers": 1, "vestrymen": 1 },
-    "artisan": { "ratepayers": 1, "reformers": 1, "vestrymen": 1 }
+    "worker": { "ratepayers": 0.15, "reformers": 0.6, "vestrymen": 0.25 },
+    "artisan": { "ratepayers": 0.35, "reformers": 0.45, "vestrymen": 0.2 }
   }
 }

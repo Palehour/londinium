@@ -231,8 +231,8 @@ londinium/
    state without factions has no legitimacy and gets the base rate.
    Then the factions (`FactionSystem`, issue #84, D-116, D-139): each faction's support moves to its engine's target at
    `factions.support_drift_per_min` (ratepayers 80 − 100 × gasto_tasas / max(R, `factions.ratio_income_floor`), with
-   gasto_tasas the loan installment per minute, or R under the receiver; reformers 20 + 60 × the share of houses every
-   service of its `coverage` reaches; vestrymen 30 + 50 × the mean satisfaction / 100). The ceiling P weighs the
+   gasto_tasas the loan installment per minute, or R under the receiver; reformers 20 + 60 × the mean over the houses of
+   the share of its `coverage` services that reach each one, all weighing the same; vestrymen 30 + 50 × the mean satisfaction / 100). The ceiling P weighs the
    supports by w_f = Σ pop_c × affinity_c,f / pop_total; the reserve adds `legitimacy_gain_tick` and fills to P at
    `factions.legitimacy_fill_per_min`, or falls to it `legitimacy_drain_multiplier` times faster. `FactionSystem.spend`
    refuses any cost above the reserve (never negative), and `decree_cost` is ready for #71. No defeat comes from it.

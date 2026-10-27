@@ -767,8 +767,10 @@ func _load_faction(raw: Variant, path: String, id: StringName, catalog: DataCata
 	_number(raw["target_scale"], "number", path + ".target_scale", faction.target_scale_key, catalog)
 	if fields.has("coverage"):
 		var attributes: Array[String] = []
+		# Any attribute a service building of the data covers, so a new service needs no code here.
+		var known: Array[StringName] = _service_attributes(catalog)
 		if not _strings(raw["coverage"], path + ".coverage", attributes) or attributes.is_empty() \
-				or not attributes.all(func(name: String) -> bool: return StringName(name) in ServiceSystem.ATTRIBUTES):
+				or not attributes.all(func(name: String) -> bool: return StringName(name) in known):
 			_errors.append("%s.coverage: expected service attributes" % path)
 			return
 		faction.coverage.assign(attributes.map(func(name: String) -> StringName: return StringName(name)))
@@ -784,6 +786,14 @@ func _load_faction(raw: Variant, path: String, id: StringName, catalog: DataCata
 		last_year = int(entry["from_year"])
 		faction.names.append({"from_year": last_year, "key": StringName(entry["key"])})
 	catalog.factions[id] = faction
+
+
+func _service_attributes(catalog: DataCatalog) -> Array[StringName]:
+	var found: Array[StringName] = []
+	for building: BuildingDef in catalog.buildings.values():
+		if building.service_attribute != &"" and building.service_attribute not in found:
+			found.append(building.service_attribute)
+	return found
 
 
 # Every class splits its support among every faction (D-115): relative weights of 0 or more, not all 0.

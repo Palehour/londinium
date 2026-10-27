@@ -6,7 +6,7 @@ extends RefCounted
 
 # Ratepayers: the target falls with the rates spending over the rates income (D-139, point 4).
 const RATES_RATIO: StringName = &"rates_ratio"
-# Reformers: the target rises with the share of houses that have every service of `coverage` within reach.
+# Reformers: the target rises with the mean share of the services of `coverage` that reach each house.
 const SERVICE_COVERAGE: StringName = &"service_coverage"
 # Vestrymen: the target rises with the mean satisfaction.
 const STABILITY: StringName = &"stability"
@@ -14,7 +14,7 @@ const ENGINES: Array[StringName] = [RATES_RATIO, SERVICE_COVERAGE, STABILITY]
 
 var id: StringName
 var engine: StringName
-# The service attributes a house needs for SERVICE_COVERAGE; empty for the other engines.
+# The service attributes SERVICE_COVERAGE averages, all weighing the same; empty for the other engines.
 var coverage: Array[StringName] = []
 # {from_year, key}, by ascending from_year: the name changes with the year (Toynbee Hall opened in 1884, D-139).
 var names: Array[Dictionary] = []

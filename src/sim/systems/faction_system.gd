@@ -99,10 +99,12 @@ static func coverages(state: EconomyState, context: EconomyContext) -> Dictionar
 	return result
 
 
-# Share of the houses, 0 to 1, that every service in `attributes` reaches (D-141). No houses: 0.
+# The reformers' coverage, 0 to 1 (D-141): each house is worth the share of the services in `attributes` that reach it,
+# all of them weighing the same, and the coverage is the mean over the houses. The list lives in data/, so a new service
+# (schools) is one more entry there. No houses or no services: 0.
 static func coverage(state: EconomyState, context: EconomyContext, attributes: Array[StringName]) -> float:
 	var houses: int = 0
-	var covered: int = 0
+	var covered: float = 0.0
 	for building: Dictionary in state.buildings:
 		var definition: BuildingDef = context.buildings.get(StringName(building["definition_id"]))
 		if definition == null or WaterSystem.HOUSING_TAG not in definition.tags:
@@ -111,16 +113,18 @@ static func coverage(state: EconomyState, context: EconomyContext, attributes: A
 		# A building of an old save may have no cell yet: nothing covers it.
 		var cover: Dictionary = state.service_cover.get(RoadNetwork.cell_of(building), {}) \
 			if building.has("cell") else {}
-		if _covers(cover, attributes):
-			covered += 1
-	return float(covered) / houses if houses > 0 else 0.0
+		covered += _covered_share(cover, attributes)
+	return covered / houses if houses > 0 else 0.0
 
 
-static func _covers(cover: Dictionary, attributes: Array[StringName]) -> bool:
+static func _covered_share(cover: Dictionary, attributes: Array[StringName]) -> float:
+	if attributes.is_empty():
+		return 0.0
+	var reached: int = 0
 	for attribute: StringName in attributes:
-		if cover.get(attribute, []).is_empty():
-			return false
-	return true
+		if not cover.get(attribute, []).is_empty():
+			reached += 1
+	return float(reached) / attributes.size()
 
 
 # The mean satisfaction over 100, every class weighed by its people (D-141). An empty city: the base class's.

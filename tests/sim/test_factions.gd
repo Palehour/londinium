@@ -90,6 +90,21 @@ func test_the_values_are_those_of_d_140_and_d_141() -> void:
 		assert_almost_eq(_value(key), expected[key], EPSILON, str(key))
 
 
+# D-143: each class's affinities to the factions, and each row adds up to 1.
+func test_the_affinities_are_those_of_d_143_and_each_row_adds_up_to_1() -> void:
+	var expected: Dictionary[StringName, Dictionary] = {
+		&"worker": {REFORMERS: 0.6, RATEPAYERS: 0.15, VESTRYMEN: 0.25},
+		&"artisan": {REFORMERS: 0.45, RATEPAYERS: 0.35, VESTRYMEN: 0.2}}
+	assert_eq(_strip.classes.keys().size(), expected.size(), "Every class of the era has a row")
+	for class_id: StringName in _strip.classes:
+		var total: float = 0.0
+		for faction_id: StringName in _strip.factions:
+			var value: float = _value(FactionDef.affinity_key(class_id, faction_id))
+			assert_almost_eq(value, float(expected[class_id][faction_id]), EPSILON, "%s, %s" % [class_id, faction_id])
+			total += value
+		assert_almost_eq(total, 1.0, EPSILON, "The row of %s adds up to 1" % class_id)
+
+
 func test_the_three_factions_of_d_139_have_fixed_engines() -> void:
 	assert_eq(_strip.factions.keys(), [RATEPAYERS, REFORMERS, VESTRYMEN])
 	assert_eq(_faction(RATEPAYERS).engine, FactionDef.RATES_RATIO)
@@ -154,8 +169,8 @@ func test_the_floor_only_matters_below_it() -> void:
 	assert_almost_eq(high, 20.0 / (_r() * 2), EPSILON, "The floor is above R")
 
 
-# D-141: 20 + 60 x the share of houses with every service within reach.
-func test_the_reformers_target_rises_with_the_houses_every_service_reaches() -> void:
+# D-141: 20 + 60 x the coverage, each house worth the share of the services that reach it (all weigh the same).
+func test_the_reformers_target_rises_with_the_services_that_reach_each_house() -> void:
 	var state: EconomyState = _state()
 	assert_almost_eq(_target(state, REFORMERS), 20.0, EPSILON, "No houses")
 	var all: Array[StringName] = [ServiceSystem.HEALTH, ServiceSystem.SAFETY, ServiceSystem.ORDER]
@@ -163,11 +178,43 @@ func test_the_reformers_target_rises_with_the_houses_every_service_reaches() -> 
 	_house(state, Vector2i(4, 0), [ServiceSystem.HEALTH, ServiceSystem.SAFETY] as Array[StringName])
 	_house(state, Vector2i(6, 0), [] as Array[StringName])
 	_house(state, Vector2i(8, 0), all)
-	assert_almost_eq(FactionSystem.coverage(state, _strip, _faction(REFORMERS).coverage), 0.5, EPSILON)
-	assert_almost_eq(_target(state, REFORMERS), 50.0, EPSILON)
+	# (1 + 2/3 + 0 + 1) / 4.
+	assert_almost_eq(FactionSystem.coverage(state, _strip, _faction(REFORMERS).coverage), 2.0 / 3.0, EPSILON)
+	assert_almost_eq(_target(state, REFORMERS), 60.0, EPSILON)
 	for cell: Vector2i in state.service_cover:
 		_house(state, cell, all)
 	assert_almost_eq(_target(state, REFORMERS), 80.0, EPSILON, "Never 100")
+
+
+func test_one_service_of_the_list_gives_a_partial_coverage() -> void:
+	var state: EconomyState = _state()
+	var services: Array[StringName] = _faction(REFORMERS).coverage
+	_house(state, Vector2i(2, 0), [ServiceSystem.HEALTH] as Array[StringName])
+	_house(state, Vector2i(4, 0), [ServiceSystem.HEALTH] as Array[StringName])
+	var partial: float = FactionSystem.coverage(state, _strip, services)
+	assert_almost_eq(partial, 1.0 / services.size(), EPSILON, "One service of the list, at every house")
+	assert_gt(partial, 0.0)
+	assert_lt(partial, 1.0)
+
+
+func test_every_service_of_the_list_gives_a_coverage_of_1() -> void:
+	var state: EconomyState = _state()
+	var services: Array[StringName] = _faction(REFORMERS).coverage
+	_house(state, Vector2i(2, 0), services)
+	_house(state, Vector2i(4, 0), services)
+	assert_almost_eq(FactionSystem.coverage(state, _strip, services), 1.0, EPSILON)
+	assert_almost_eq(_target(state, REFORMERS), 80.0, EPSILON)
+
+
+# The list is data: the services weigh the same however many there are, so a fourth (schools) needs no code.
+func test_the_services_of_the_list_weigh_the_same_whatever_their_number() -> void:
+	var state: EconomyState = _state()
+	_house(state, Vector2i(2, 0), [ServiceSystem.HEALTH] as Array[StringName])
+	assert_almost_eq(FactionSystem.coverage(state, _strip, [ServiceSystem.HEALTH] as Array[StringName]), 1.0, EPSILON)
+	assert_almost_eq(FactionSystem.coverage(state, _strip,
+		[ServiceSystem.HEALTH, ServiceSystem.ORDER] as Array[StringName]), 0.5, EPSILON)
+	assert_almost_eq(FactionSystem.coverage(state, _strip, [&"health", &"safety", &"order", &"schools"]
+		as Array[StringName]), 0.25, EPSILON)
 
 
 # D-141: 30 + 50 x the mean satisfaction over 100, every class weighed by its people.
@@ -218,9 +265,11 @@ func test_spending_on_the_rates_moves_the_ratepayers_support_down() -> void:
 # D-116: w_f = sum of pop_c x affinity_c,f / pop_total, each class's affinities taken as shares.
 func test_the_weights_follow_each_class_population_and_affinity() -> void:
 	var state: EconomyState = _state()
-	var equal: Dictionary[StringName, float] = FactionSystem.weights(state, _params, _strip)
-	for id: StringName in equal:
-		assert_almost_eq(equal[id], 1.0 / 3.0, EPSILON, "Equal affinities: %s" % id)
+	# An empty city weighs both classes the same: the mean of their rows of D-143.
+	var empty: Dictionary[StringName, float] = FactionSystem.weights(state, _params, _strip)
+	assert_almost_eq(empty[RATEPAYERS], (0.15 + 0.35) / 2.0, EPSILON)
+	assert_almost_eq(empty[REFORMERS], (0.6 + 0.45) / 2.0, EPSILON)
+	assert_almost_eq(empty[VESTRYMEN], (0.25 + 0.2) / 2.0, EPSILON)
 	var params: Params = _with({&"factions.affinity.worker.ratepayers": 0, &"factions.affinity.worker.reformers": 1,
 		&"factions.affinity.worker.vestrymen": 1, &"factions.affinity.artisan.ratepayers": 3,
 		&"factions.affinity.artisan.reformers": 1, &"factions.affinity.artisan.vestrymen": 0})
@@ -240,7 +289,8 @@ func test_the_ceiling_is_the_weighted_support() -> void:
 	state.faction_support[RATEPAYERS] = 90.0
 	state.faction_support[REFORMERS] = 30.0
 	state.faction_support[VESTRYMEN] = 60.0
-	assert_almost_eq(FactionSystem.ceiling(state, _params, _strip), 60.0, EPSILON)
+	# An empty city with the weights of D-143: 0.25 x 90 + 0.525 x 30 + 0.225 x 60.
+	assert_almost_eq(FactionSystem.ceiling(state, _params, _strip), 51.75, EPSILON)
 
 
 # D-116 and D-141: the reserve fills to P at 2 a minute and falls to it at 4 a minute.
@@ -412,13 +462,13 @@ func test_the_reformers_coverage_follows_building_and_demolishing() -> void:
 	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "A house and no services")
 	_apply(sim, BuildCommand.new(context, &"health_post", RoadTestMap.land(1)))
 	_apply(sim, BuildCommand.new(context, &"fire_station", RoadTestMap.land(2)))
-	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Still no order")
+	assert_almost_eq(_reformers_target(sim), 60.0, EPSILON, "Two services of three: 20 + 60 x 2/3")
 	_apply(sim, BuildCommand.new(context, &"police_station", RoadTestMap.land(3)))
 	assert_almost_eq(_reformers_target(sim), 80.0, EPSILON, "Every service reaches the one house")
 	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(20)))
 	assert_almost_eq(_reformers_target(sim), 50.0, EPSILON, "A second house beyond the services' reach")
 	_apply(sim, DemolishCommand.new(RoadTestMap.land(3)))
-	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Demolishing the police station")
+	assert_almost_eq(_reformers_target(sim), 40.0, EPSILON, "Demolishing the police station: (2/3 + 0) / 2")
 	for index: int in range(5):
 		sim.tick()
-	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "Unchanged while the layout is")
+	assert_almost_eq(_reformers_target(sim), 40.0, EPSILON, "Unchanged while the layout is")

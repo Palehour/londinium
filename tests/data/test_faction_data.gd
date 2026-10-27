@@ -65,6 +65,19 @@ func test_an_unknown_engine_is_rejected() -> void:
 	_assert_invalid("%s.factions.vestrymen.engine: unknown engine elections" % FACTIONS)
 
 
+# The list is every service of the game, read from the data.
+func test_the_reformers_average_every_service_of_the_data() -> void:
+	var loaded: DataLoadResult = _load()
+	var services: Array[StringName] = []
+	for building: BuildingDef in loaded.catalog.buildings.values():
+		if building.service_attribute != &"" and building.service_attribute not in services:
+			services.append(building.service_attribute)
+	var listed: Array[StringName] = loaded.catalog.factions[&"reformers"].coverage.duplicate()
+	services.sort()
+	listed.sort()
+	assert_eq(listed, services)
+
+
 func test_the_coverage_must_name_service_attributes() -> void:
 	_documents[FACTIONS]["factions"]["reformers"]["coverage"] = ["schools"]
 	_assert_invalid("%s.factions.reformers.coverage: expected service attributes" % FACTIONS)
