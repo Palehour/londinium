@@ -51,6 +51,9 @@ var incidents_enabled: bool = false
 var incident_pressure: Dictionary[StringName, Dictionary] = {}
 var incident_counts: Dictionary[StringName, Dictionary] = {}
 var defeat_causes: Array[StringName] = []
+# The active loan (issue #72), null without one, and the installments that ever fell due unpaid (its rating, D-127).
+var loan: LoanState = null
+var loan_late_installments: int = 0
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
 # data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).
@@ -127,6 +130,10 @@ var demotions_by_class_tick: Dictionary[StringName, int] = {}
 # The share of upkeep_tick that administration added (issue #118), and what demolitions gave back.
 var administration_tick: float = 0.0
 var refunds_tick: int = 0
+# What went to the loan this tick (installments, the receiver, an early payoff): the rates spending of D-127 that
+# lowers the Mercaderes' support once issue #84 brings it. And the legitimacy an early payoff earned (D-129), for #84.
+var loan_paid_tick: int = 0
+var legitimacy_gain_tick: float = 0.0
 # Distance model (issue #67, D-080). The player's streets ({cell, built_at, paid}) and the transport owed below a
 # penny are saved; a save from before the streets loads with none.
 var player_roads: Array[Dictionary] = []
@@ -175,6 +182,8 @@ func reset_flows() -> void:
 	demotions_by_class_tick.clear()
 	administration_tick = 0.0
 	refunds_tick = 0
+	loan_paid_tick = 0
+	legitimacy_gain_tick = 0.0
 	transport_units_tick.clear()
 
 
@@ -275,6 +284,11 @@ func to_dict() -> Dictionary:
 		values["incident_pressure"] = incident_pressure.duplicate(true)
 	if not incident_counts.is_empty():
 		values["incident_counts"] = incident_counts.duplicate(true)
+	# Only once a loan was taken, so a game without one saves exactly as before them (issue #72).
+	if loan != null:
+		values["loan"] = loan.to_dict()
+	if loan_late_installments > 0:
+		values["loan_late_installments"] = loan_late_installments
 	return values
 
 
@@ -369,6 +383,9 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))
+	if values.has("loan"):
+		result.loan = LoanState.from_dict(values["loan"])
+	result.loan_late_installments = int(values.get("loan_late_installments", 0))
 	return result
 
 

@@ -40,7 +40,8 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true, dep
 	if not params.get_value(&"defeat.enabled"):
 		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
-	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
+	# With a loan unpaid its only way to bankruptcy is the receiver (D-128, D-013, D-131), in arrears or not.
+	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold")) and state.loan == null
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
 		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
 	var hungry: bool = state.population > 0 and state.hunger_coverage() \

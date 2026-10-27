@@ -117,6 +117,12 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"chapter": {"bucket_seconds": "positive_integer"},
 		"causes": {"max_events": "positive_integer", "min_duration_seconds": "integer"},
 	},
+	# Loans on the rates (issue #72, D-127, D-128, D-129; values of D-138). Legitimacy and ratings run from 0 to 100.
+	"loan": {"cap_multiple": "positive", "base_interest": "number", "rate_by_rating": "number",
+		"sanction_min_legitimacy": "percent", "rate_full_legitimacy": "percent", "rating_arrears_penalty": "number",
+		"term_installments": "positive_integer", "installment_interval_s": "positive_integer",
+		"early_payoff_surcharge": "number", "early_payoff_legitimacy_gain": "percent",
+		"default_after_s": "positive_integer", "receiver_window_s": "positive_integer"},
 	"defeat": {
 		# Off only through the defeats knob (D-065): the city can no longer lose, but the timers' inputs still run.
 		"enabled": "boolean",
@@ -308,6 +314,12 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	if catalog.base_values.has(bucket_key) and catalog.base_values.has(span_key) \
 			and int(catalog.base_values[span_key]) % int(catalog.base_values[bucket_key]) != 0:
 		_errors.append("economy/stats.json: stats.medium.span_seconds must be a multiple of stats.medium.bucket_seconds")
+	# The rate climbs between the two (D-127), so the sanction minimum must sit below the full legitimacy.
+	var minimum_key: StringName = &"loan.sanction_min_legitimacy"
+	var full_key: StringName = &"loan.rate_full_legitimacy"
+	if catalog.base_values.has(minimum_key) and catalog.base_values.has(full_key) \
+			and float(catalog.base_values[minimum_key]) >= float(catalog.base_values[full_key]):
+		_errors.append("economy/loan.json: loan.sanction_min_legitimacy must be < loan.rate_full_legitimacy")
 	# Presets and knobs name Params keys, so they load once every key is registered.
 	_load_presets(documents.get(PRESETS_PATH, {}), catalog)
 	_load_knobs(documents.get(KNOBS_PATH, {}), catalog)

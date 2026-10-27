@@ -41,6 +41,20 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	# Above 0, or a repair would be free, and at most 1, or a new wharf would be cheaper (issue #177, D-083).
 	&"repair.wharf_cost_ratio": {
 		"min": 0.0, "max": 1.0, "min_inclusive": false, "max_inclusive": true},
+	# Loans (issue #72): a cap above 0 or no loan could be taken; interests and surcharges of 0 or more; legitimacy and
+	# ratings in points from 0 to 100.
+	&"loan.cap_multiple": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"loan.base_interest": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"loan.rate_by_rating": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"loan.early_payoff_surcharge": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"loan.sanction_min_legitimacy": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"loan.rate_full_legitimacy": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"loan.rating_arrears_penalty": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"loan.early_payoff_legitimacy_gain": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"loan.term_installments": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"loan.installment_interval_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"loan.default_after_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"loan.receiver_window_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"demolish.refund_grace_seconds": {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.grace_seconds": {
@@ -311,7 +325,9 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"needs.housing_bonus_per_category", &"economy.administration.free_buildings",
 				&"economy.construction_escalation.free_copies", &"stats.fine.span_seconds",
 				&"stats.medium.bucket_seconds", &"stats.medium.span_seconds", &"stats.chapter.bucket_seconds",
-				&"stats.causes.max_events", &"stats.causes.min_duration_seconds", &"transport.expensive_m", &"map.cell_size_m"] \
+				&"stats.causes.max_events", &"stats.causes.min_duration_seconds", &"transport.expensive_m", &"map.cell_size_m",
+				&"loan.term_installments", &"loan.installment_interval_s", &"loan.default_after_s",
+				&"loan.receiver_window_s"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):
