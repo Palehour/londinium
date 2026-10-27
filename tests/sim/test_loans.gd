@@ -302,6 +302,22 @@ func test_a_loan_in_default_holds_the_bankruptcy_without_a_loan() -> void:
 	assert_eq(state.defeat_causes, [&"bankruptcy"], "Without the loan D-013 runs as before")
 
 
+# D-013 and D-131: "con préstamo impago", so a loan up to date between installments holds it too (Bailey, PR #279).
+func test_a_loan_up_to_date_holds_the_bankruptcy_without_a_loan() -> void:
+	var params: Params = _with({&"defeat.grace_seconds": 0, &"defeat.bankruptcy.duration_seconds": 180})
+	var defeat: DefeatSystem = DefeatSystem.new()
+	var state: EconomyState = _state(0)
+	state.population = 100
+	assert_true(_request(state, 547).accepted)
+	state.money = -1000
+	for index: int in range(299):
+		LoanSystem.tick(state, params)
+		defeat.tick(state, params)
+	assert_eq(state.loan.overdue, 0, "No installment fell due yet")
+	assert_eq(state.bankruptcy.elapsed_seconds, 0)
+	assert_true(state.defeat_causes.is_empty())
+
+
 func test_a_saved_state_keeps_the_loan_and_a_game_without_one_saves_as_before() -> void:
 	var state: EconomyState = _state(0)
 	assert_false(state.to_dict().has("loan"))

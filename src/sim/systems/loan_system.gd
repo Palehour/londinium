@@ -47,7 +47,7 @@ static func payoff_cost(loan: LoanState, params: Params) -> int:
 	return loan.balance() + floori(loan.balance() * float(params.get_value(&"loan.early_payoff_surcharge")))
 
 
-# With installments in arrears or the receiver in, the loan's default (D-128) is the only way to bankruptcy (D-131).
+# Installments in arrears or the receiver in: the loan's default (D-128).
 static func in_default(state: EconomyState) -> bool:
 	return state.loan != null and (state.loan.overdue > 0 or state.loan.receiver)
 

@@ -224,7 +224,7 @@ londinium/
    cover stays overdue and is paid, oldest first, as soon as it can; after `loan.default_after_s` in arrears the
    receiver takes every tax of the tick until the debt is paid, or after `loan.receiver_window_s` the game is lost
    (`loan_bankruptcy`, D-128). `RepayLoanEarlyCommand` pays the balance plus `loan.early_payoff_surcharge` (D-129).
-   While the loan is in default the bankruptcy of step 10 does not run. Legitimacy (D-116), the Mercaderes' support and
+   While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). Legitimacy (D-116), the Mercaderes' support and
    the decrees arrive with #84 and #71: until then the rate is `loan.base_interest`, and `loan_paid_tick` and
    `legitimacy_gain_tick` are the hooks they will read.
 9b. Missions (`MissionSystem`, issue #63, D-090): `MissionCommand` starts one (once per game) or abandons an active one
