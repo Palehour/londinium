@@ -206,6 +206,7 @@ func tick() -> void:
 		_growth.tick(_state, _params, _context)
 		_mobility.tick(_state, _params, _context)
 		_money.tick(_state, _params, _context)
+		LoanSystem.tick(_state, _params)
 		MissionSystem.tick(_state, _params, _context, _tick_count)
 		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context))
 		if not _state.defeat_causes.is_empty():
@@ -316,6 +317,7 @@ func snapshot() -> Dictionary:
 		"crisis": CrisisSystem.snapshot(_state, _params, _context),
 		"services": ServiceSystem.snapshot(_state, _params, _context),
 		"incidents": IncidentSystem.snapshot(_state, _params, _context),
+		"loan": LoanSystem.snapshot(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,

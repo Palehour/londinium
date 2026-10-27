@@ -1,0 +1,5 @@
+{ "cap_multiple": 20, "base_interest": 0.10, "rate_by_rating": 0.10,
+  "sanction_min_legitimacy": 30, "rate_full_legitimacy": 70, "rating_arrears_penalty": 10,
+  "term_installments": 10, "installment_interval_s": 300,
+  "early_payoff_surcharge": 0.05, "early_payoff_legitimacy_gain": 5,
+  "default_after_s": 600, "receiver_window_s": 1500 }

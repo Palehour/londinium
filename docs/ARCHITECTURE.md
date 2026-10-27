@@ -50,6 +50,7 @@ londinium/
 │   │   ├── market.json       # wheat base price, fluctuation range, warehouse capacity, spoilage, accumulate factor; barley market (same walk as wheat, own parameters); malt and beer warehouse cap and spoilage; imported flour/tea prices (D-026/D-025)
 │   │   ├── policy.json       # defaults of the player's wheat purchase policy (accumulate price, max price, target stock, `reserve_minutes`) and the default barley share of the wharf's unloading (`unloading.default_barley_percent`) and the notch of its on-screen control (`unloading.step_percent`)
 │   │   ├── defeat.json       # warning/defeat thresholds and durations (GDD "Derrota"); `enabled` is the defeats switch (D-065)
+│   │   ├── loan.json         # loans on the rates (#72, D-127 to D-129, values of D-138): cap as a multiple of R, interest and rating, installments, early payoff, arrears and receiver
 │   │   └── events.json       # historical events (#63): `cholera.defeat_pause`, the switch a mission names to pause the depopulation timer (D-090)
 │   ├── services/             # one file per service building of buildings.json (tag `service`, #87, D-118): attribute
 │   │                         #   (safety, health or order), service_radius_m (D-086), availability_max, recovery_per_min,
@@ -217,6 +218,15 @@ londinium/
    leg's metres times `transport.cost_per_unit_per_m` (worked out per piece, the order of the sums on cells of 50 m,
    issue #186), plus `roads.upkeep_per_minute` per player street, added to
    the upkeep in whole pence with the fraction carried, outside the administration multiplier (D-063).
+   Then the loan (`LoanSystem`, issue #72). `RequestLoanCommand` opens one (one at a time, up to `loan.cap_multiple` × R,
+   R = `MoneySystem.tax_per_minute`) with total = principal + interest in whole pence, paid in `loan.term_installments`
+   installments (the last takes the remainder) every `loan.installment_interval_s`. An installment the treasury cannot
+   cover stays overdue and is paid, oldest first, as soon as it can; after `loan.default_after_s` in arrears the
+   receiver takes every tax of the tick until the debt is paid, or after `loan.receiver_window_s` the game is lost
+   (`loan_bankruptcy`, D-128). `RepayLoanEarlyCommand` pays the balance plus `loan.early_payoff_surcharge` (D-129).
+   While the loan is in default the bankruptcy of step 10 does not run. Legitimacy (D-116), the Mercaderes' support and
+   the decrees arrive with #84 and #71: until then the rate is `loan.base_interest`, and `loan_paid_tick` and
+   `legitimacy_gain_tick` are the hooks they will read.
 9b. Missions (`MissionSystem`, issue #63, D-090): `MissionCommand` starts one (once per game) or abandons an active one
    in step 1; its effects run then. Each active mission counts down `mission.<id>.duration_min`, turned into ticks only
    by `SimTime.minutes_to_ticks`, the start tick included; on its last tick `goal_met` checks the goal once, on the state

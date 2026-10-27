@@ -572,6 +572,32 @@ func test_repair_cost_ratio_is_required_and_above_0_and_at_most_1() -> void:
 		assert_true(DataLoader.new().load_documents(_documents).is_ok(), str(valid))
 
 
+# Issue #72 (D-138): every loan value is required and in its range, and the rate climbs from the full legitimacy
+# down to the sanction minimum, so the minimum must sit below.
+func test_loan_values_are_required_and_validated() -> void:
+	before_each()
+	_documents.erase("economy/loan.json")
+	_assert_invalid("economy/loan.json: missing file")
+	before_each()
+	_documents["economy/loan.json"].erase("receiver_window_s")
+	_assert_invalid("receiver_window_s: missing field")
+	var invalid: Dictionary[String, Array] = {"cap_multiple": [0.0, -1.0], "base_interest": [-0.1],
+		"sanction_min_legitimacy": [-1.0, 101.0], "rate_full_legitimacy": [101.0], "term_installments": [0.0, 2.5],
+		"installment_interval_s": [0.0, 1.5], "default_after_s": [0.0], "receiver_window_s": [-1.0],
+		"early_payoff_surcharge": [-0.05], "early_payoff_legitimacy_gain": [101.0], "rating_arrears_penalty": [-1.0]}
+	for field: String in invalid:
+		for value: float in invalid[field]:
+			before_each()
+			_documents["economy/loan.json"][field] = value
+			_assert_invalid("loan.json.%s: invalid" % field)
+	before_each()
+	_documents["economy/loan.json"]["sanction_min_legitimacy"] = 70
+	_assert_invalid("loan.sanction_min_legitimacy must be < loan.rate_full_legitimacy")
+	before_each()
+	_set_modifier({"key": "loan.term_installments", "op": "set", "value": 2.5})
+	_assert_invalid("Params: invalid range for 'loan.term_installments'")
+
+
 func test_barley_and_unloading_parameters_are_required_and_validate_ranges() -> void:
 	for field: String in ["base_price", "min_price", "max_price", "price_update_seconds", "max_step", "reversion",
 			"storage_capacity", "decay_fraction_per_minute"]:

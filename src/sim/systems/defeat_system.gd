@@ -40,7 +40,9 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true, dep
 	if not params.get_value(&"defeat.enabled"):
 		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
-	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold"))
+	# A loan in default has its own way to bankruptcy, the receiver (D-128), so this one waits (D-131).
+	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold")) \
+		and not LoanSystem.in_default(state)
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
 		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
 	var hungry: bool = state.population > 0 and state.hunger_coverage() \

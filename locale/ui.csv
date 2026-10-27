@@ -158,6 +158,7 @@ ui.good.tea,té,tea
 ui.condition.bankruptcy,Quiebra,Bankruptcy
 ui.condition.hunger,Motín de hambre,Hunger riot
 ui.condition.depopulation,Despoblación,Depopulation
+ui.condition.loan_bankruptcy,Quiebra con préstamo,Bankruptcy with a loan
 ui.status.ok,estable,stable
 ui.status.warning,aviso,warning
 ui.status.defeat,derrota,defeat
@@ -183,6 +184,11 @@ ui.reason.not_buildable,Este edificio no se construye: solo viene del mapa.,This
 ui.reason.events_disabled,Disponible con los eventos históricos.,Available with the historic events.
 ui.reason.water_source_cap,Esa fuente de agua no da para más edificios.,That water source cannot feed more buildings.
 ui.reason.insufficient_money,No hay dinero suficiente.,There is not enough money.
+ui.reason.loan_active,Ya hay un préstamo activo.,There is already an active loan.
+ui.reason.invalid_loan_amount,El monto del préstamo tiene que ser mayor que 0.,The loan amount must be above 0.
+ui.reason.loan_over_cap,El monto supera el tope del préstamo.,The amount is above the loan cap.
+ui.reason.loan_not_sanctioned,El Metropolitan Board no sanciona el préstamo.,The Metropolitan Board does not sanction the loan.
+ui.reason.no_active_loan,No hay un préstamo activo.,There is no active loan.
 ui.reason.no_money_for_wheat,Sin dinero para comprar trigo.,No money to buy wheat.
 ui.reason.no_building,No hay edificio para demoler.,There is no building to demolish.
 ui.reason.simulation_defeated,La partida terminó: no se aceptan comandos.,The game is over: commands are not accepted.

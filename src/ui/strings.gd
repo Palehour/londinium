@@ -203,7 +203,7 @@ const LOT_STYLE_LABELS: Dictionary[StringName, StringName] = {
 }
 const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 	&"bankruptcy": &"ui.condition.bankruptcy", &"hunger": &"ui.condition.hunger",
-	&"depopulation": &"ui.condition.depopulation",
+	&"depopulation": &"ui.condition.depopulation", &"loan_bankruptcy": &"ui.condition.loan_bankruptcy",
 }
 const STATUS_LABELS: Dictionary[StringName, StringName] = {
 	&"ok": &"ui.status.ok", &"warning": &"ui.status.warning", &"defeat": &"ui.status.defeat",
@@ -341,6 +341,11 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"events_disabled": &"ui.reason.events_disabled",
 	&"water_source_cap": &"ui.reason.water_source_cap",
 	&"insufficient_money": &"ui.reason.insufficient_money",
+	&"loan_active": &"ui.reason.loan_active",
+	&"invalid_loan_amount": &"ui.reason.invalid_loan_amount",
+	&"loan_over_cap": &"ui.reason.loan_over_cap",
+	&"loan_not_sanctioned": &"ui.reason.loan_not_sanctioned",
+	&"no_active_loan": &"ui.reason.no_active_loan",
 	&"no_money_for_wheat": &"ui.reason.no_money_for_wheat",
 	&"no_building": &"ui.reason.no_building",
 	&"simulation_defeated": &"ui.reason.simulation_defeated",
