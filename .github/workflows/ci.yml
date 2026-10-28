@@ -19,8 +19,9 @@ concurrency:
 env:
   GODOT_VERSION: 4.7.2
   # The slow suite runs in three parts of 10 min each (#287, D-144, which extends D-132). Parts 1 and 2 run only
-  # the tests listed here (the longest ones, measured in CI); part 3 runs every other test of tests/slow/, so a new
-  # slow test lands there without touching this file. A name that matches no test fails the run (tools/gut_shard.gd).
+  # the tests listed here (the longest ones, measured in CI), and part 1 also the balance report; part 3 runs every
+  # other test of tests/slow/, so a new slow test lands there without touching this file. A name that matches no test
+  # fails the run (tools/gut_shard.gd).
   SLOW_PART_1_TESTS: >-
     test_net_worth_levers_one_at_a_time
   SLOW_PART_2_TESTS: >-
@@ -122,14 +123,14 @@ jobs:
           fi
 
       # Per-minute CSV of the scripted scenarios (tests/scenarios/) so Mason can tune data/ without Godot.
-      # It never fails on values; the scenario tests do that. It runs in part 3, the one with the shortest tests.
+      # It never fails on values; the scenario tests do that. It runs in part 1, the one with the shortest tests in CI.
       - name: Balance report
-        if: always() && matrix.part == 3 && steps.setup.outputs.docs_only != 'true'
+        if: always() && matrix.part == 1 && steps.setup.outputs.docs_only != 'true'
         run: godot --headless --path . -s tools/balance_report.gd -- --out build/balance
         timeout-minutes: 3
 
       - name: Balance summary
-        if: always() && matrix.part == 3 && steps.setup.outputs.docs_only != 'true'
+        if: always() && matrix.part == 1 && steps.setup.outputs.docs_only != 'true'
         run: |
           {
             echo "### Balance report (minute 15 of each scenario)"
@@ -140,7 +141,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload balance report
-        if: always() && matrix.part == 3
+        if: always() && matrix.part == 1
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (pinned by SHA)
         with:
           name: balance-report

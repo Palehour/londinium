@@ -111,7 +111,7 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
   Los jobs corren en paralelo, de 10 min como máximo cada uno (#268, D-132): **unit** corre todos los `test_*.gd` de `tests/`
   fuera de `tests/slow/`, y `tests/slow/` (los juegos guionados de `tests/scenarios/`) se divide en tres partes (#287, D-144).
   Las partes 1 y 2 corren solo los tests más largos, listados por nombre en `SLOW_PART_1_TESTS` y `SLOW_PART_2_TESTS`
-  (arriba de `ci.yml`); la parte 3 corre todos los demás y el balance report. El hook `tools/gut_shard.gd` hace el
+  (arriba de `ci.yml`), y la 1 además el balance report; la parte 3 corre todos los demás. El hook `tools/gut_shard.gd` hace el
   filtro. Un test nuevo de `tests/slow/` cae solo en la parte 3; si una parte se acerca a los 10 min, mové un test largo a la
   lista de la 1 o la 2. El job final `tests (slow)` (el check requerido) solo pasa si las tres partes pasan y entre todas
   corrieron cada test de `tests/slow/` una vez. Entre unit y slow corren los mismos tests que `tools/run_tests`. Un test que
