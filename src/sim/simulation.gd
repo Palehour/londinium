@@ -294,6 +294,28 @@ func stats_events(from_second: int = 0) -> Array[Dictionary]:
 	return _history.events(from_second) if _history != null else [] as Array[Dictionary]
 
 
+# The cause log read by serial and by subject, for the "why?" and the narrator (issue #73, D-137).
+func stats_cause_entries(from_serial: int = 0) -> Array[Dictionary]:
+	return _history.cause_entries(from_serial) if _history != null else [] as Array[Dictionary]
+
+
+func stats_cause_chain(kind: StringName, subject: StringName) -> Array[Dictionary]:
+	return _history.cause_chain(kind, subject) if _history != null else [] as Array[Dictionary]
+
+
+func stats_cause_first_serial() -> int:
+	return _history.cause_first_serial() if _history != null else 0
+
+
+func stats_cause_count() -> int:
+	return _history.cause_logged_count() if _history != null else 0
+
+
+# The history's clock: the second its last events were logged at.
+func stats_seconds() -> int:
+	return _history.seconds() if _history != null else 0
+
+
 func stats_history_to_dict() -> Dictionary:
 	return _history.to_dict() if _history != null else {}
 

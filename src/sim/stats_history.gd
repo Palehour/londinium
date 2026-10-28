@@ -243,7 +243,7 @@ func _note_causes(state: EconomyState) -> void:
 		var id: StringName = StringName(building["definition_id"])
 		if WorkersSystem.job_capacity(_params, id) <= 0:
 			continue
-		var subject: StringName = StringName("%s@%d,%d" % [id, int(building["cell"][0]), int(building["cell"][1])])
+		var subject: StringName = building_subject(building)
 		present.append(subject)
 		_causes.note(_seconds, &"building", subject, BreadDiagnostics.building_reason(state, _context, building, _params))
 	_causes.forget_missing(_seconds, &"building", present, GONE)
@@ -305,6 +305,27 @@ func events(from_second: int = 0) -> Array[Dictionary]:
 
 func seconds() -> int:
 	return _seconds
+
+
+# The subject a building's causes are logged under: its id and its cell, the same while it stands.
+static func building_subject(building: Dictionary) -> StringName:
+	return StringName("%s@%d,%d" % [building["definition_id"], int(building["cell"][0]), int(building["cell"][1])])
+
+
+func cause_entries(from_serial: int = 0) -> Array[Dictionary]:
+	return _causes.entries(from_serial)
+
+
+func cause_chain(kind: StringName, subject: StringName) -> Array[Dictionary]:
+	return _causes.chain(kind, subject)
+
+
+func cause_first_serial() -> int:
+	return _causes.first_serial()
+
+
+func cause_logged_count() -> int:
+	return _causes.logged_count()
 
 
 # What a save keeps: the medium and chapter levels and the cause log; the fine level is rebuilt by playing.

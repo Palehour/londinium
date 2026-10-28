@@ -354,7 +354,9 @@ func _world_signature() -> Array:
 	var warnings: Array = []
 	for district: StringName in WaterSystem.districts(session.context):
 		warnings.append(_warnings(district))
-	return [buildings, _snapshot["distance"]["player_roads"].duplicate(true), houses, wharves, warnings, TranslationServer.get_locale()]
+	# The need layer too (issue #73): which good, and which of its houses go without.
+	var layer: Array = [_overlay_bar.selected, NeedOverlay.houses(_snapshot, _overlay_bar.selected)]
+	return [buildings, _snapshot["distance"]["player_roads"].duplicate(true), houses, wharves, warnings, layer, TranslationServer.get_locale()]
 
 
 func _sync_world(force: bool) -> void:
@@ -414,6 +416,12 @@ func _sync_world(force: bool) -> void:
 		if not warned.is_empty():
 			var area: Rect2i = session.context.area_of(house)
 			_add_block(_metres(area).get_center(), tops.get(area.position, land) + style.marks["mark_size_m"], presentation.service_colors[warned[0]])
+	# The need layer (issue #73, D-038): a block over each house that needs the good, in the alert colour when it goes
+	# without, above the warning's. A mark like the others: never under the fog nor the ink.
+	for house: Dictionary in NeedOverlay.houses(_snapshot, _overlay_bar.selected):
+		var area: Rect2i = session.context.area_of(house)
+		_add_block(_metres(area).get_center(), tops.get(area.position, land) + 2.0 * style.marks["mark_size_m"],
+			presentation.ui_colors["selection" if house["served"] else "alert"])
 
 
 func _metres(area: Rect2i) -> Rect2:
@@ -422,6 +430,10 @@ func _metres(area: Rect2i) -> Rect2:
 
 func _add_label(ground: Vector2, top: float, text: String) -> void:
 	_label_items.append({"point": Vector3(ground.x, top + style.marks["mark_size_m"], ground.y), "text": text})
+
+
+func _overlay_changed() -> void:
+	_sync_world(false)
 
 
 # Only when close enough to read them, and only those in front of the camera and inside the view.

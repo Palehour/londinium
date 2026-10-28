@@ -80,6 +80,34 @@ func events(from_second: int = 0) -> Array[Dictionary]:
 	return found
 
 
+# Every event ever logged has a serial below this one; the views (#73) read the new ones from the last they saw.
+func logged_count() -> int:
+	return _logged
+
+
+# The serial of the oldest event held: above 0 once the ring has dropped some, so the "why?" can say so.
+func first_serial() -> int:
+	return _logged - _events.size()
+
+
+# The events held from a serial on, each {"serial", "event"}, the event as stored.
+func entries(from_serial: int = 0) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for index: int in range(maxi(0, from_serial - first_serial()), _events.size()):
+		found.append({"serial": first_serial() + index, "event": _at(index).duplicate()})
+	return found
+
+
+# The "why?" of #73 (D-137): every event held for one kind|subject, newest first, as stored, with no filter.
+func chain(kind: StringName, subject: StringName) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for index: int in range(_events.size() - 1, -1, -1):
+		var event: Dictionary = _at(index)
+		if event["kind"] == kind and event["subject"] == subject:
+			found.append(event.duplicate())
+	return found
+
+
 func _log(key: String, second: int, kind: StringName, subject: StringName, cause: StringName) -> bool:
 	if _current.get(key) == cause:
 		return false

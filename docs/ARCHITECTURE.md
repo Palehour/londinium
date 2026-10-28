@@ -119,6 +119,7 @@ londinium/
 │   │                         #   city_view/ (the 3D greybox, #65, and its ink.gdshader) with city_camera.gd, city_layout.gd,
 │   │                         #   city_fog.gd and city_ink.gd
 │   └── ui/                   # stats_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
+│                             #   overlay_bar/, why_panel/, need_overlay.gd (#73),
 │                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
 │   ├── main.tscn             # composes the 2D map view + UI; no logic. The tests of tests/game drive it
@@ -349,8 +350,12 @@ a subject, `gone`, and the `command`, `defeat` and `victory` kinds skip that fil
 reasons), `emigration` (`hungry_leaving`, `unhappy_leaving` or `none` per class), `policy` (tax, wheat purchases
 and policy, unloading split, imports), `defeat` (each condition's status) and `victory` (each stage).
 
-`Simulation` exposes it read-only: `stats_series_defs()`, `stats_series(id, tier)`, `stats_events(from_second)` and
-`stats_history_to_dict()`; its constructor takes the saved dictionary as its last argument. A missing history starts
+`Simulation` exposes it read-only: `stats_series_defs()`, `stats_series(id, tier)`, `stats_events(from_second)`,
+`stats_seconds()` and `stats_history_to_dict()`, and for the "why?" and the narrator (#73, D-137) the cause log by
+serial and by subject: every event ever logged has a serial (`stats_cause_count()` is the next one,
+`stats_cause_first_serial()` the oldest still held), `stats_cause_entries(from_serial)` returns `{serial, event}`
+from a serial on, and `stats_cause_chain(kind, subject)` the events of one `kind|subject`, newest first, as stored. A
+building's subject is `StatsHistory.building_subject(building)` (`<id>@x,y`); its constructor takes the saved dictionary as its last argument. A missing history starts
 empty; a malformed one (other version, sizes that do not match, buckets of another length) starts empty with a
 warning. A series the save lacks reads as NaN for the saved buckets. The saved form uses packed arrays per series and
 is meant for `var_to_bytes` + compression (`StatsHistory.compressed_size`, the measure of the 5 MB criterion).
@@ -398,6 +403,16 @@ The Archive (issue #64, D-110) is a panel in the game, opened by the stats panel
 (`src/ui/archive_catalog.gd`) loads `data/eras/victorian/archive/` and `ArchivePanel` (`src/ui/archive_panel/`) only
 reads `snapshot()["economy"]["missions"]`: a card opens once its mission is completed, failed or abandoned
 (`ArchiveCatalog.is_unlocked`), and until then shows only its kind. It sends no command.
+
+Legibility (issue #73, D-038, D-137): the need layers and the "why?" only read; they send no command. `OverlayBar`
+(`src/ui/overlay_bar/`, under the header on the right of the map; O or L3 go to the next layer) picks none or one of
+the goods some class needs (`NeedOverlay.goods`). `NeedOverlay.houses(snapshot, good)` lists each house whose class
+needs it and whether it is served, straight from `snapshot()["distance"]["houses"]` (RoadSystem): the 2D map frames
+each one in `selection` when served and in `alert` when not; the 3D city puts a block of those colours over it, a
+mark like the others (`_flat_material`: no fog, after the ink). `WhyPanel` (`src/ui/why_panel/`, on the left) shows,
+for the selected building with jobs, `stats_cause_chain(&"building", subject)` line by line in the same order, each
+cause as its translated reason or its id; I or R3 open and fold it, and it says so when the log has dropped older
+events.
 
 ## Input: mouse, keyboard and gamepad (D-048, issue #68)
 `GamepadBindings.install()` (called by the map view) adds the gamepad actions to the `InputMap` in code, and A and B

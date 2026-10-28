@@ -168,6 +168,15 @@ const NEEDS_TITLE: StringName = &"ui.needs_title"
 const CLASS_HEADER: StringName = &"ui.class_header"
 const COVERAGE_ROW: StringName = &"ui.coverage_row"
 const GOOD_COVERAGE: StringName = &"ui.good_coverage"
+# The need layers and the "why?" of the map (issue #73, D-038, D-137).
+const OVERLAY_CAPTION: StringName = &"ui.overlay_caption"
+const OVERLAY_NONE: StringName = &"ui.overlay_none"
+const WHY_TITLE: StringName = &"ui.why_title"
+const WHY_BUTTON: StringName = &"ui.why_button"
+const WHY_BUTTON_GAMEPAD: StringName = &"ui.why_button_gamepad"
+const WHY_ROW: StringName = &"ui.why_row"
+const WHY_INTERMITTENT: StringName = &"ui.why_intermittent"
+const WHY_PRUNED: StringName = &"ui.why_pruned"
 const PROMOTION_ACTIVE: StringName = &"ui.promotion_active"
 const PROMOTION_BLOCKED: StringName = &"ui.promotion_blocked"
 const PROMOTION_BLOCKER: StringName = &"ui.promotion_blocker"
@@ -372,6 +381,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"insufficient_capacity": &"ui.reason.insufficient_capacity",
 	&"invalid_tax_rate": &"ui.reason.invalid_tax_rate",
 	&"ok": &"ui.reason.ok",
+	# A building the cause log has seen demolished (issue #82).
+	&"gone": &"ui.reason.gone",
 	# Streets of the distance model (issue #67).
 	&"no_road_access": &"ui.reason.no_road_access",
 	&"no_route": &"ui.reason.no_route",
@@ -510,6 +521,7 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
+		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
 	]
 	for attribute: StringName in SERVICE_ATTRIBUTES:
 		_append_unique(keys, SERVICE_ATTRIBUTES[attribute])

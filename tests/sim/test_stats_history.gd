@@ -297,3 +297,23 @@ func test_simulation_records_real_series_every_tick() -> void:
 	assert_eq(chapter["total"][0], float(sim.treasury()))
 	assert_eq(sim.stats_series(&"unknown", StatsHistory.TIER_CHAPTER), {})
 	assert_eq(sim.stats_series(&"money", &"weekly"), {})
+
+
+# Issue #73 (D-137): the views read the cause log only through these, read-only.
+func test_the_simulation_exposes_the_cause_chain_entries_and_seconds() -> void:
+	var simulation: Simulation = _simulation()
+	for second: int in 5:
+		simulation.tick()
+	assert_eq(simulation.stats_seconds(), 5)
+	var entries: Array[Dictionary] = simulation.stats_cause_entries(0)
+	assert_eq(entries.size(), simulation.stats_events().size())
+	assert_eq(simulation.stats_cause_count(), entries.size())
+	assert_eq(simulation.stats_cause_first_serial(), 0)
+	var mill: StringName = StatsHistory.building_subject({"definition_id": &"mill", "cell": [3, 3]})
+	var chain: Array[Dictionary] = simulation.stats_cause_chain(&"building", mill)
+	assert_false(chain.is_empty(), "the mill has its starting cause")
+	assert_eq(chain[-1]["subject"], mill)
+	var bare: Simulation = Simulation.new(_params(), EconomyState.new(), 7)
+	assert_eq(bare.stats_cause_chain(&"building", mill), [] as Array[Dictionary], "no context, no history")
+	assert_eq(bare.stats_cause_entries(0), [] as Array[Dictionary])
+	assert_eq(bare.stats_seconds(), 0)

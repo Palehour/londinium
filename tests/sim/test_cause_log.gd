@@ -283,3 +283,76 @@ func _logged_causes(log_: CauseLog) -> Array[StringName]:
 	for event: Dictionary in log_.events():
 		found.append(event["cause"])
 	return found
+
+
+# Issue #73 (D-137): the "why?" opens the chain of a kind|subject as stored, and a reader finds the new events by
+# their serial.
+func test_entries_number_every_event_from_a_serial() -> void:
+	var log_: CauseLog = CauseLog.new(100)
+	log_.note(1, &"building", &"mill@1,1", &"no_workers")
+	log_.note(2, &"import", &"tea", &"ok")
+	log_.note(3, &"building", &"mill@1,1", &"ok")
+	assert_eq(log_.logged_count(), 3)
+	var entries: Array[Dictionary] = log_.entries(1)
+	assert_eq(entries.size(), 2, "entries from serial 1 on")
+	assert_eq(entries[0], {"serial": 1, "event": {"second": 2, "kind": &"import", "subject": &"tea", "cause": &"ok"}})
+	assert_eq(entries[1]["serial"], 2)
+	assert_eq(log_.entries(3), [] as Array[Dictionary], "nothing past the last serial")
+
+
+func test_serials_go_on_past_the_cap_and_a_restore() -> void:
+	var log_: CauseLog = CauseLog.new(3)
+	for second: int in range(1, 6):
+		log_.note(second, &"policy", &"tax_rate", StringName(str(second)))
+	assert_eq(log_.first_serial(), 2, "two events were dropped")
+	var serials: Array[int] = []
+	for entry: Dictionary in log_.entries():
+		serials.append(int(entry["serial"]))
+	assert_eq(serials, [2, 3, 4] as Array[int])
+	assert_eq(log_.entries(3)[0]["event"]["second"], 4)
+	var restored: CauseLog = CauseLog.new(3)
+	assert_true(restored.restore(log_.to_dict()))
+	assert_eq(restored.entries(), log_.entries())
+	assert_eq(restored.first_serial(), 2)
+
+
+func test_the_chain_is_the_stored_events_of_a_subject_newest_first() -> void:
+	var log_: CauseLog = CauseLog.new(100)
+	log_.note(1, &"building", &"mill@1,1", &"no_workers")
+	log_.note(2, &"building", &"mill@2,2", &"ok")
+	log_.note(3, &"import", &"mill@1,1", &"ok")
+	log_.note(4, &"building", &"mill@1,1", &"ok")
+	var chain: Array[Dictionary] = log_.chain(&"building", &"mill@1,1")
+	var stored: Array[Dictionary] = log_.events().filter(func(event: Dictionary) -> bool:
+		return event["kind"] == &"building" and event["subject"] == &"mill@1,1")
+	stored.reverse()
+	assert_eq(chain, stored, "exactly the stored events of that kind and subject, newest first")
+	assert_eq(chain.size(), 2)
+	assert_eq(chain[0]["cause"], &"ok")
+	chain[0]["cause"] = &"changed"
+	assert_eq(log_.chain(&"building", &"mill@1,1")[0]["cause"], &"ok", "a copy: the log does not change")
+	assert_eq(log_.chain(&"building", &"nothing@0,0"), [] as Array[Dictionary])
+
+
+func test_the_chain_keeps_an_intermittent_event_with_its_count() -> void:
+	var log_: CauseLog = CauseLog.new(100, 5)
+	log_.note(1, &"building", &"mill@1,1", &"ok")
+	for second: int in range(2, 8):
+		log_.note(second, &"building", &"mill@1,1", &"no_input" if second % 2 == 0 else &"ok")
+	var chain: Array[Dictionary] = log_.chain(&"building", &"mill@1,1")
+	assert_eq(chain[0]["cause"], CauseLog.INTERMITTENT)
+	assert_eq(chain[0]["count"], log_.events()[1]["count"])
+	assert_gt(int(chain[0]["count"]), 1)
+
+
+func test_the_simulation_reads_the_chain_and_the_entries_of_its_history() -> void:
+	var history: StatsHistory = _history()
+	var state: EconomyState = _state()
+	state.buildings.append({"definition_id": &"mill", "cell": [4, 2], "workers": 0})
+	history.record(state)
+	var subject: StringName = StatsHistory.building_subject(state.buildings[0])
+	assert_eq(subject, &"mill@4,2")
+	assert_eq(history.cause_chain(&"building", subject).size(), 1)
+	assert_eq(history.cause_entries(0).size(), history.events().size())
+	assert_eq(history.cause_first_serial(), 0)
+	assert_eq(history.cause_logged_count(), history.events().size())
