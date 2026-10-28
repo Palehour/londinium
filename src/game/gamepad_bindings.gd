@@ -17,6 +17,9 @@ const BUTTONS: Dictionary[StringName, JoyButton] = {
 	&"map_build_next": JOY_BUTTON_RIGHT_SHOULDER,
 	&"gamepad_panel": JOY_BUTTON_START,
 	&"gamepad_pause": JOY_BUTTON_BACK,
+	# The need layers and the "why?" of the selection (issue #73), on the two stick clicks no other action takes.
+	&"map_overlay_next": JOY_BUTTON_LEFT_STICK,
+	&"map_why": JOY_BUTTON_RIGHT_STICK,
 	# Godot 4.7 has no gamepad button on these two; the panel needs them to press and to go back.
 	&"ui_accept": JOY_BUTTON_A,
 	&"ui_cancel": JOY_BUTTON_B,

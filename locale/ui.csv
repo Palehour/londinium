@@ -215,6 +215,7 @@ ui.reason.understaffed,Faltan trabajadores para cubrir los puestos.,Not enough w
 ui.reason.insufficient_capacity,La cadena hace menos pan del que se come: hacen falta más edificios.,The chain makes less bread than is eaten: more buildings are needed.
 ui.reason.invalid_tax_rate,Tasa de impuestos inválida.,Invalid tax rate.
 ui.reason.ok,Operativo.,Operating.
+ui.reason.gone,Demolido.,Demolished.
 ui.reason.no_road_access,Sin acceso a calle.,No street access.
 ui.reason.no_route,Sin ruta: ninguna calle lo une con quien le trae el insumo.,No route: no street joins it to whoever brings its input.
 ui.reason.road_cell,La casilla es una calle.,The cell is a street.
@@ -344,3 +345,11 @@ archive.inquiry.date,1866–1868,1866–1868
 archive.inquiry.body,"En el verano de 1866 el cólera golpeó el East End, y Whitechapel estuvo entre los distritos más castigados. William Farr, del Registro General, comparó las muertes distrito por distrito y vio que se concentraban donde llegaba el agua de la East London Water Company. Sospechó del agua sin filtrar que salía de Old Ford, aunque la compañía lo negó y la causa se discutió durante años. Ese mismo año, la Sanitary Act obligó a limpiar y desinfectar las casas cuando un médico lo certificaba. Farr publicó su informe completo en 1868.","In the summer of 1866 cholera struck the East End, and Whitechapel was among the districts hit hardest. William Farr, of the General Register Office, compared deaths district by district and saw them gather where the East London Water Company's water reached. He suspected unfiltered water sent out from Old Ford, though the company denied it and the cause was argued for years. That same year the Sanitary Act required houses to be cleansed and disinfected when a doctor certified it. Farr published his full report in 1868."
 archive.inquiry.sources,"Farr, Report on the Cholera Epidemic of 1866 in England (1868) · Sanitary Act 1866 (29 & 30 Vict. c.90), art. 22 · Informes del Medical Officer of Health de Whitechapel, Wellcome","Farr, Report on the Cholera Epidemic of 1866 in England (1868) · Sanitary Act 1866 (29 & 30 Vict. c.90), s.22 · Whitechapel Medical Officer of Health reports, Wellcome"
 archive.oldford.image_context,[Pendiente de Chronicler] ARC OLDFORD: por qué la imagen es de contexto,[Pending from Chronicler] ARC OLDFORD: why the image is a context one
+ui.overlay_caption,Capa (O · L3):,Layer (O · L3):
+ui.overlay_none,Ninguna,None
+ui.why_title,¿Por qué? · %s,Why? · %s
+ui.why_button,Ver causas (I),See causes (I)
+ui.why_button_gamepad,Ver causas (R3),See causes (R3)
+ui.why_row,%s · %s,%s · %s
+ui.why_intermittent,"Intermitente (%d cambios que no duraron).","Intermittent (%d changes that did not last)."
+ui.why_pruned,Registro anterior no disponible.,Earlier record not available.

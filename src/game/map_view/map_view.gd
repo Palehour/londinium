@@ -16,6 +16,9 @@ const SCENARIO_FLAG: String = "--scenario="
 # Repairs the damaged wharf under the selection (issue #178, D-083), or disinfects the house in a crisis (issue #222);
 # Y on the gamepad.
 const REPAIR_KEY: Key = KEY_R
+# The next need layer and the "why?" of the selected building (issue #73); L3 and R3 on the gamepad.
+const OVERLAY_KEY: Key = KEY_O
+const WHY_KEY: Key = KEY_I
 # Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
 const DEMOLISH_RING_POINTS: int = 32
 
@@ -72,6 +75,9 @@ var _service_tip: PanelContainer
 var _service_title: Label
 var _service_bar: ProgressBar
 var _service_text: Label
+# The need layer drawn over the houses and the cause chain of the selected building (issue #73, D-038, D-137).
+var _overlay_bar: OverlayBar
+var _why_panel: WhyPanel
 
 
 func _ready() -> void:
@@ -151,6 +157,7 @@ func _ready() -> void:
 	layer.add_child(_crisis_tip)
 	_service_tip = _service_tooltip()
 	layer.add_child(_service_tip)
+	_mount_legibility(layer)
 	# Mount last so issue #9 draws and receives input above the header and help.
 	var panel_mount: Control = Control.new()
 	panel_mount.name = "PanelMount"
@@ -199,6 +206,7 @@ func _ready() -> void:
 	_stats_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel_mount.add_child(_stats_screen)
 	get_viewport().size_changed.connect(_resized)
+	_overlay_bar.setup(NeedOverlay.goods(session.context))
 	_view_ready()
 	_update_mode()
 	queue_redraw()
@@ -222,6 +230,7 @@ func _notification(what: int) -> void:
 	for kind: String in _terrain_labels:
 		_terrain_labels[kind].text = Strings.text(Strings.TERRAIN_LABELS[kind])
 	_lots_caption.text = Strings.text(Strings.LOTS_LEGEND)
+	_overlay_bar.refresh_labels()
 	for style: StringName in _lot_labels:
 		_lot_labels[style].text = presentation.lot_labels[style]
 	_damaged_wharf_label.text = Strings.text(Strings.DAMAGED_WHARF)
@@ -230,6 +239,53 @@ func _notification(what: int) -> void:
 		_update_mode()
 	_apply_status()
 	queue_redraw()
+
+
+# Below the header: the layer picker on the right of the map, the "why?" on its left. Neither takes the focus.
+func _mount_legibility(layer: CanvasLayer) -> void:
+	var top: float = presentation.layout["header_height"] + presentation.layout["help_x"]
+	_overlay_bar = OverlayBar.new()
+	_overlay_bar.name = "OverlayBar"
+	_overlay_bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_overlay_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_overlay_bar.offset_top = top
+	_overlay_bar.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
+	_overlay_bar.overlay_changed.connect(func(_good: StringName) -> void: _overlay_changed())
+	layer.add_child(_overlay_bar)
+	_why_panel = WhyPanel.new()
+	_why_panel.name = "WhyPanel"
+	_why_panel.setup()
+	_why_panel.apply_style(presentation.ui_colors["header"], presentation.layout["panel_margin"])
+	_why_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_why_panel.offset_left = presentation.layout["help_x"]
+	_why_panel.offset_top = top
+	_why_panel.custom_minimum_size.x = presentation.layout["panel_width"]
+	layer.add_child(_why_panel)
+
+
+# The 3D city rebuilds its marks; the map only draws again.
+func _overlay_changed() -> void:
+	queue_redraw()
+
+
+# The building under the selection, if the cause log follows it (one with jobs), with its chain as stored.
+func _update_why() -> void:
+	var building: Dictionary = _building_at(geometry.selected)
+	var subject: StringName = StatsHistory.building_subject(building) if not building.is_empty() else &""
+	var chain: Array[Dictionary] = []
+	if subject != &"":
+		chain = session.simulation.stats_cause_chain(&"building", subject)
+	var title: String = Strings.text(Strings.WHY_TITLE) % presentation.labels.get(
+		StringName(building.get("definition_id", "")), "")
+	_why_panel.show_chain(subject, title, chain, session.simulation.stats_cause_first_serial() > 0, _gamepad)
+
+
+# The building of the snapshot whose footprint covers the cell, or {} when none does.
+func _building_at(cell: Vector2i) -> Dictionary:
+	for building: Dictionary in _snapshot["economy"]["buildings"]:
+		if session.context.area_of(building).has_point(cell):
+			return building
+	return {}
 
 
 # Same shape as the terrain legend: a sample square and its name for each lot style, then the damaged wharf.
@@ -381,6 +437,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_show_result(false, reason_id)
 		elif event.keycode == SERVICE_KEY:
 			_next_service()
+		elif event.keycode == OVERLAY_KEY:
+			_overlay_bar.cycle()
+		elif event.keycode == WHY_KEY:
+			_why_panel.toggle()
 		elif event.keycode == KEY_ESCAPE:
 			_building_type = &""
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
@@ -459,6 +519,10 @@ func _gamepad_command(event: InputEvent) -> void:
 		_submit(_place_command(geometry.selected))
 	elif event.is_action_pressed(&"map_repair") and geometry.selected != Vector2i(-1, -1):
 		_submit(_action_command(geometry.selected))
+	elif event.is_action_pressed(&"map_overlay_next"):
+		_overlay_bar.cycle()
+	elif event.is_action_pressed(&"map_why"):
+		_why_panel.toggle()
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
@@ -921,6 +985,8 @@ func _reset_view() -> void:
 	clock.reset()
 	_building_type = &""
 	geometry.selected = Vector2i(-1, -1)
+	# Other data can bring other classes, and so other needs.
+	_overlay_bar.setup(NeedOverlay.goods(session.context))
 	_clear_status()
 	_snapshot = session.get_snapshot()
 	_stats_panel.update_snapshot(_snapshot)
@@ -941,6 +1007,7 @@ func _update_mode() -> void:
 	_mode.text = " · ".join(parts)
 	_update_crisis_tip()
 	_update_service_tip()
+	_update_why()
 
 
 func _draw() -> void:
@@ -966,6 +1033,11 @@ func _draw() -> void:
 		var rect: Rect2 = geometry.area_rect(session.context.area_of(building)).grow(-presentation.layout["building_inset"])
 		draw_rect(rect, presentation.colors[id])
 		_draw_label(rect.get_center(), presentation.labels[id])
+	# The need layer (issue #73, D-038): a frame around each house that needs the good, in the alert colour when it
+	# goes without.
+	for house: Dictionary in NeedOverlay.houses(_snapshot, _overlay_bar.selected):
+		var frame: Rect2 = geometry.area_rect(session.context.area_of(house)).grow(-presentation.layout["building_inset"])
+		draw_rect(frame, presentation.ui_colors["selection" if house["served"] else "alert"], false, presentation.layout["selection_width"])
 	# A house in a crisis carries a mark in its corner (issue #222, D-108): filled while it has sick people, an outline in
 	# quarantine. Not a red cross: the building is locked, not the people (D-104).
 	for house: Dictionary in _snapshot["crisis"]["houses"]:
