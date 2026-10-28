@@ -15,6 +15,8 @@ var difficulties: Dictionary[StringName, DifficultyDef] = {}
 var knobs: Dictionary[StringName, KnobDef] = {}
 # Chronicler's texts of each crisis (issue #222): the tooltip note and the card, text and never a rule.
 var crisis_texts: Dictionary[StringName, Dictionary] = {}
+# The era's factions (issue #84, D-139), in declaration order; none without a factions file.
+var factions: Dictionary[StringName, FactionDef] = {}
 var categories: Array[StringName] = []
 var base_values: Dictionary[StringName, Variant] = {}
 # Keys read through another key (issue #202): a building priced as another has no numbers of its own.

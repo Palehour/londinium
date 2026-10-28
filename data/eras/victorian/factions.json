@@ -1,0 +1,32 @@
+{
+  "legitimacy_start": 50,
+  "legitimacy_fill_per_min": 2,
+  "legitimacy_drain_multiplier": 2,
+  "support_drift_per_min": 5,
+  "ratio_income_floor": 1,
+  "decree_legitimacy_cost": 15,
+  "low_legitimacy_threshold": 30,
+  "low_legitimacy_cost_multiplier": 1.5,
+  "factions": {
+    "ratepayers": {
+      "engine": "rates_ratio", "target_base": 80, "target_scale": 100,
+      "names": [{ "from_year": 0, "key": "ui.faction.ratepayers" }]
+    },
+    "reformers": {
+      "engine": "service_coverage", "target_base": 20, "target_scale": 60,
+      "coverage": ["health", "safety", "order"],
+      "names": [
+        { "from_year": 0, "key": "ui.faction.sanitary_reformers" },
+        { "from_year": 1884, "key": "ui.faction.toynbee_hall" }
+      ]
+    },
+    "vestrymen": {
+      "engine": "stability", "target_base": 30, "target_scale": 50,
+      "names": [{ "from_year": 0, "key": "ui.faction.vestrymen" }]
+    }
+  },
+  "affinity": {
+    "worker": { "ratepayers": 0.15, "reformers": 0.6, "vestrymen": 0.25 },
+    "artisan": { "ratepayers": 0.35, "reformers": 0.45, "vestrymen": 0.2 }
+  }
+}

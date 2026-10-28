@@ -66,6 +66,7 @@ londinium/
 │   │   └── victorian/        # one folder per era, same engine (D-027, D-032)
 │   │       ├── needs.json    # need categories with their threshold, and the housing bonus per met category
 │   │       ├── classes.json  # per class (worker, artisan): base class and whether it takes jobs, housing building, maximum housing bonus, satisfaction weights, growth thresholds and rates (and, optionally, `served_categories`: the need categories a house must have within reach for immigrants to count it, D-085), head tax, needs (good → category, value, satisfaction and consumption keys), and optionally `mobility` (the class people rise from, the minimum category scores and source satisfaction to rise, the category, score and seconds to fall back, and both rates); a field is a Params key that exists or a number that becomes class.<class>.*
+│   │       ├── factions.json # factions and legitimacy (#84, D-115, D-116, D-139 to D-141): the reserve (start, fill per minute, drain multiplier), support_drift_per_min, ratio_income_floor (the floor of R, D-140), the decree cost and its low-legitimacy multiplier; per faction its fixed engine (rates_ratio, service_coverage with its `coverage` attributes, stability), target_base, target_scale and its name keys by year; and each class's affinity to each faction (relative weights). Optional: an era without it has no factions; numbers are Params keys factions.*
 │   │       └── missions/     # optional, one mission per file (#63, D-090): duration_min, goal (metric `population` or `water`; at_least a number or a Params key), the effects of on_completed, on_failed and on_abandoned (`money`, `source_risk` with the `source` whose districts it sets, `cholera`), and optionally defeat_pause (a boolean Params key), on_started, trigger (its id and the minute key it closes at, #202) and card (Chronicler's year, location, tag, sources and liberties; never [A VERIFICAR]); every number becomes mission.<id>.*. oldford.json is the 1866 cholera (#202)
 │   │       ├── archive/      # the Archive's read-only cards (#64, D-096/D-097/D-099/D-103), one per file, never loaded by the sim: order, kind (moment, character, finding), unlock.mission_closed (the mission whose close, met or not, opens it) and image (null, or its full credit: title, author, publication, date, held_at, license, url, and context; a context image needs archive.<id>.image_context in locale/ui.csv). Words in locale/ui.csv as archive.<id>.title/date/body/sources (D-100)
 │   │       └── crisis.json   # optional: Chronicler's texts per crisis type, the tooltip note and a card (year, title, text, sources); placeholders until Chronicler writes them (#222)
@@ -224,9 +225,21 @@ londinium/
    cover stays overdue and is paid, oldest first, as soon as it can; after `loan.default_after_s` in arrears the
    receiver takes every tax of the tick until the debt is paid, or after `loan.receiver_window_s` the game is lost
    (`loan_bankruptcy`, D-128). `RepayLoanEarlyCommand` pays the balance plus `loan.early_payoff_surcharge` (D-129).
-   While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). Legitimacy (D-116), the Mercaderes' support and
-   the decrees arrive with #84 and #71: until then the rate is `loan.base_interest`, and `loan_paid_tick` and
-   `legitimacy_gain_tick` are the hooks they will read.
+   While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). The sanction and the rate read the
+   legitimacy reserve of #84 (`LoanSystem.legitimacy_of`, D-139 point 3): from `loan.base_interest` at
+   `loan.rate_full_legitimacy` up to + `loan.rate_by_rating` at `loan.sanction_min_legitimacy`, and refused below it; a
+   state without factions has no legitimacy and gets the base rate.
+   Then the factions (`FactionSystem`, issue #84, D-116, D-139): each faction's support moves to its engine's target at
+   `factions.support_drift_per_min` (ratepayers 80 − 100 × gasto_tasas / max(R, `factions.ratio_income_floor`), with
+   gasto_tasas the loan installment per minute, or R under the receiver; reformers 20 + 60 × the mean over the houses of
+   the share of its `coverage` services that reach each one, all weighing the same; vestrymen 30 + 50 × the mean satisfaction / 100). The ceiling P weighs the
+   supports by w_f = Σ pop_c × affinity_c,f / pop_total; the reserve adds `legitimacy_gain_tick` and fills to P at
+   `factions.legitimacy_fill_per_min`, or falls to it `legitimacy_drain_multiplier` times faster. `FactionSystem.spend`
+   refuses any cost above the reserve (never negative), and `decree_cost` is ready for #71. No defeat comes from it.
+   The supports and the reserve live on `EconomyState` but outside `to_dict()`: the save carries them in
+   `to_save()["factions"]`, so the economy of a v0.3.0 save plays on and compares as before (a save without it starts them anew).
+   The reformers' coverage only changes with the layout, so `Simulation` keeps `FactionSystem.coverages()` and works it
+   out again only when `RoadSystem.evaluations` or the number of buildings moves; the tick and the snapshot reuse it.
 9b. Missions (`MissionSystem`, issue #63, D-090): `MissionCommand` starts one (once per game) or abandons an active one
    in step 1; its effects run then. Each active mission counts down `mission.<id>.duration_min`, turned into ticks only
    by `SimTime.minutes_to_ticks`, the start tick included; on its last tick `goal_met` checks the goal once, on the state

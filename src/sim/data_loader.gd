@@ -171,6 +171,15 @@ const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existin
 const GRID_MAP_FIELDS: Array[String] = ["id", "size", "cell_size_m", "cells", "districts", "district_by_cell", "zones"]
 const GRID_MAP_OPTIONAL_FIELDS: Array[String] = ["roads_enabled", "road_diagonals", "named_sites", "history_notes"]
 const DISTRICT_FIELDS: Array[String] = ["id", "name", "symbol", "water_source"]
+# Factions and legitimacy (issue #84, D-116, D-139, D-140; values of D-141), optional per era: the numbers of the
+# reserve and of the decree cost (factions.*), each faction's engine and target, and each class's affinity to each.
+const FACTIONS_FILE: String = "factions.json"
+const FACTION_SCHEMA: Dictionary = {"legitimacy_start": "percent", "legitimacy_fill_per_min": "positive",
+	"legitimacy_drain_multiplier": "positive", "support_drift_per_min": "positive", "ratio_income_floor": "positive",
+	"decree_legitimacy_cost": "percent", "low_legitimacy_threshold": "percent",
+	"low_legitimacy_cost_multiplier": "positive"}
+const FACTION_FIELDS: Array[String] = ["engine", "target_base", "target_scale", "names"]
+const FACTION_NAME_FIELDS: Array[String] = ["from_year", "key"]
 
 var _errors: Array[String] = []
 # Keys whose value was rejected: their error already names the culprit, so a preset, knob or role that
@@ -260,7 +269,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_role(raw, path, catalog)
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
-		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), _crisis_texts_path(), PRESETS_PATH, KNOBS_PATH]:
+		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), _crisis_texts_path(), _factions_path(),
+					PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif path.begins_with(SERVICES_FOLDER + "/"):
 			_load_service(raw, path, catalog)
@@ -286,6 +296,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	# Needs and classes refer to goods, buildings and Params keys, so they load after all of those.
 	_load_needs(documents.get(_needs_path(), {}), catalog)
 	_load_classes(documents.get(_classes_path(), {}), catalog)
+	# The affinities name the classes, so the factions load after them.
+	if documents.has(_factions_path()):
+		_load_factions(documents[_factions_path()], catalog)
 	# A mission names the boolean key that pauses the defeat, so it loads once the economy keys exist.
 	for path: String in documents:
 		if path.begins_with(_missions_folder() + "/"):
@@ -714,6 +727,95 @@ func _classes_path() -> String:
 
 func _crisis_texts_path() -> String:
 	return "eras".path_join(_era).path_join(CRISIS_TEXTS_FILE)
+
+
+func _factions_path() -> String:
+	return "eras".path_join(_era).path_join(FACTIONS_FILE)
+
+
+func _load_factions(raw: Dictionary, catalog: DataCatalog) -> void:
+	var path: String = _factions_path()
+	var fields: Array[String] = []
+	fields.assign(FACTION_SCHEMA.keys() + ["factions", "affinity"])
+	if not _object(raw, fields, path):
+		return
+	var numbers: Dictionary = raw.duplicate()
+	numbers.erase("factions")
+	numbers.erase("affinity")
+	_numbers(numbers, FACTION_SCHEMA, path, "factions", catalog)
+	if raw["factions"] is not Dictionary or raw["factions"].is_empty():
+		_errors.append("%s.factions: expected factions" % path)
+		return
+	for id: String in raw["factions"]:
+		_load_faction(raw["factions"][id], "%s.factions.%s" % [path, id], StringName(id), catalog)
+	_load_affinity(raw["affinity"], path + ".affinity", catalog)
+
+
+func _load_faction(raw: Variant, path: String, id: StringName, catalog: DataCatalog) -> void:
+	var fields: Array[String] = FACTION_FIELDS.duplicate()
+	if raw is Dictionary and raw.get("engine") == String(FactionDef.SERVICE_COVERAGE):
+		fields.append("coverage")
+	if not _object(raw, fields, path):
+		return
+	var faction: FactionDef = FactionDef.new()
+	faction.use_id(id)
+	faction.engine = StringName(str(raw["engine"]))
+	if faction.engine not in FactionDef.ENGINES:
+		_errors.append("%s.engine: unknown engine %s" % [path, raw["engine"]])
+		return
+	_number(raw["target_base"], "percent", path + ".target_base", faction.target_base_key, catalog)
+	_number(raw["target_scale"], "number", path + ".target_scale", faction.target_scale_key, catalog)
+	if fields.has("coverage"):
+		var attributes: Array[String] = []
+		# Any attribute a service building of the data covers, so a new service needs no code here.
+		var known: Array[StringName] = _service_attributes(catalog)
+		if not _strings(raw["coverage"], path + ".coverage", attributes) or attributes.is_empty() \
+				or not attributes.all(func(name: String) -> bool: return StringName(name) in known):
+			_errors.append("%s.coverage: expected service attributes" % path)
+			return
+		faction.coverage.assign(attributes.map(func(name: String) -> StringName: return StringName(name)))
+	if raw["names"] is not Array or raw["names"].is_empty():
+		_errors.append("%s.names: expected names" % path)
+		return
+	var last_year: int = -1
+	for entry: Variant in raw["names"]:
+		if not _object(entry, FACTION_NAME_FIELDS, path + ".names") or not _is_whole_number(entry["from_year"]) \
+				or int(entry["from_year"]) <= last_year or entry["key"] is not String or entry["key"].is_empty():
+			_errors.append("%s.names: expected a translation key from each year, by ascending year" % path)
+			return
+		last_year = int(entry["from_year"])
+		faction.names.append({"from_year": last_year, "key": StringName(entry["key"])})
+	catalog.factions[id] = faction
+
+
+func _service_attributes(catalog: DataCatalog) -> Array[StringName]:
+	var found: Array[StringName] = []
+	for building: BuildingDef in catalog.buildings.values():
+		if building.service_attribute != &"" and building.service_attribute not in found:
+			found.append(building.service_attribute)
+	return found
+
+
+# Every class splits its support among every faction (D-115): relative weights of 0 or more, not all 0.
+func _load_affinity(raw: Variant, path: String, catalog: DataCatalog) -> void:
+	var classes: Array[String] = []
+	classes.assign(catalog.classes.keys().map(func(id: StringName) -> String: return String(id)))
+	if not _object(raw, classes, path):
+		return
+	var factions: Array[String] = []
+	factions.assign(catalog.factions.keys().map(func(id: StringName) -> String: return String(id)))
+	for class_id: String in classes:
+		var location: String = "%s.%s" % [path, class_id]
+		if not _object(raw[class_id], factions, location):
+			continue
+		var total: float = 0.0
+		for faction_id: String in factions:
+			var key: StringName = FactionDef.affinity_key(StringName(class_id), StringName(faction_id))
+			if _number(raw[class_id][faction_id], "number", "%s.%s" % [location, faction_id], key, catalog):
+				total += float(raw[class_id][faction_id])
+				catalog.factions[StringName(faction_id)].affinity_keys[StringName(class_id)] = key
+		if total <= 0.0:
+			_errors.append("%s: expected an affinity above 0" % location)
 
 
 # The quarantine within the post's radius is the shorter one (D-107).

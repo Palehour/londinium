@@ -159,6 +159,10 @@ ui.condition.bankruptcy,Quiebra,Bankruptcy
 ui.condition.hunger,Motín de hambre,Hunger riot
 ui.condition.depopulation,Despoblación,Depopulation
 ui.condition.loan_bankruptcy,Quiebra con préstamo,Bankruptcy with a loan
+ui.faction.ratepayers,Los contribuyentes,The ratepayers
+ui.faction.sanitary_reformers,Reformadores sanitarios,Sanitary reformers
+ui.faction.toynbee_hall,Los de Toynbee Hall,The Toynbee Hall set
+ui.faction.vestrymen,Los Vestrymen,The Vestrymen
 ui.status.ok,estable,stable
 ui.status.warning,aviso,warning
 ui.status.defeat,derrota,defeat

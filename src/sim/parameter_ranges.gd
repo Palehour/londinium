@@ -55,6 +55,17 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	&"loan.installment_interval_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"loan.default_after_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"loan.receiver_window_s": {"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# Factions and legitimacy (issue #84): points from 0 to 100, rates and multipliers above 0, and a floor of R above 0
+	# so the ratepayers' ratio never divides by zero (D-140), whatever a role or a mod does to it.
+	&"factions.legitimacy_start": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"factions.legitimacy_fill_per_min": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"factions.legitimacy_drain_multiplier": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"factions.support_drift_per_min": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"factions.ratio_income_floor": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
+	&"factions.decree_legitimacy_cost": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"factions.low_legitimacy_threshold": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	&"factions.low_legitimacy_cost_multiplier": {"min": 0.0, "max": INF, "min_inclusive": false,
+		"max_inclusive": false},
 	&"demolish.refund_grace_seconds": {
 		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.grace_seconds": {
@@ -280,6 +291,10 @@ const PATTERNS: Array[Dictionary] = [
 	{"prefix": "incident.", "suffix": ".cause.overcrowding", "min": 0.0, "max": 50.0, "integer": false},
 	{"prefix": "incident.", "suffix": ".cause.taverns", "min": 0.0, "max": 50.0, "integer": false},
 	{"prefix": "incident.", "suffix": ".cause.sick_houses", "min": 0.0, "max": 50.0, "integer": false},
+	# Each faction's target (issue #84): a base in points and the points its engine moves it; affinities are weights.
+	{"prefix": "factions.", "suffix": ".target_base", "min": 0.0, "max": 100.0, "integer": false},
+	{"prefix": "factions.", "suffix": ".target_scale", "min": 0.0, "max": INF, "integer": false},
+	{"prefix": "factions.affinity.", "suffix": "", "min": 0.0, "max": INF, "integer": false},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},

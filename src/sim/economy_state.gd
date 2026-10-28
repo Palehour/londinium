@@ -54,6 +54,11 @@ var defeat_causes: Array[StringName] = []
 # The active loan (issue #72), null without one, and the installments that ever fell due unpaid (its rating, D-127).
 var loan: LoanState = null
 var loan_late_installments: int = 0
+# Factions (issue #84, D-116): each faction's support, 0 to 100, and the legitimacy reserve, 0 to 100. The reserve is
+# -1 until the simulation loads the start from data. Kept out of to_dict(), so the economy saves and compares as
+# before them: the save carries them apart (factions_to_dict()).
+var faction_support: Dictionary[StringName, float] = {}
+var legitimacy: float = -1.0
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
 # data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).
@@ -387,6 +392,18 @@ static func from_dict(values: Dictionary) -> EconomyState:
 		result.loan = LoanState.from_dict(values["loan"])
 	result.loan_late_installments = int(values.get("loan_late_installments", 0))
 	return result
+
+
+func factions_to_dict() -> Dictionary:
+	return {"legitimacy": legitimacy, "support": faction_support.duplicate()}
+
+
+func restore_factions(values: Dictionary) -> void:
+	legitimacy = float(values.get("legitimacy", -1.0))
+	faction_support.clear()
+	var saved: Dictionary = values.get("support", {})
+	for id: Variant in saved:
+		faction_support[StringName(id)] = float(saved[id])
 
 
 # A saved {district: {attribute: value}} with its keys as StringName again (a save's JSON gives them back as String).

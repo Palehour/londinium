@@ -205,6 +205,9 @@ const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 	&"bankruptcy": &"ui.condition.bankruptcy", &"hunger": &"ui.condition.hunger",
 	&"depopulation": &"ui.condition.depopulation", &"loan_bankruptcy": &"ui.condition.loan_bankruptcy",
 }
+# The names of the era's factions (issue #84, D-139): data/eras/<era>/factions.json picks one by year from these.
+const FACTION_NAMES: Array[StringName] = [&"ui.faction.ratepayers", &"ui.faction.sanitary_reformers",
+	&"ui.faction.toynbee_hall", &"ui.faction.vestrymen"]
 const STATUS_LABELS: Dictionary[StringName, StringName] = {
 	&"ok": &"ui.status.ok", &"warning": &"ui.status.warning", &"defeat": &"ui.status.defeat",
 }
@@ -536,6 +539,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, CONDITION_LABELS[condition_id])
 	for status_id: StringName in STATUS_LABELS:
 		_append_unique(keys, STATUS_LABELS[status_id])
+	for faction_key: StringName in FACTION_NAMES:
+		_append_unique(keys, faction_key)
 	for reason_id: StringName in REASONS:
 		_append_unique(keys, REASONS[reason_id])
 	for kind_id: StringName in SAVE_KIND_LABELS:
