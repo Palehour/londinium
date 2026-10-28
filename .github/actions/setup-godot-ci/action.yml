@@ -1,0 +1,57 @@
+# Steps every CI test job runs before GUT (unit and each slow part, #287): docs-only check, Godot (from cache),
+# Godot 3 rename check, import and parse check. The caller checks out the repo first, with fetch-depth 2.
+name: setup-godot-ci
+description: Detect a docs-only PR, install Godot from cache, import the project and check GDScript.
+
+inputs:
+  godot-version:
+    description: Godot version to install (e.g. 4.7.2).
+    required: true
+
+outputs:
+  docs_only:
+    description: '"true" when the PR only touches docs/.'
+    value: ${{ steps.scope.outputs.docs_only }}
+
+runs:
+  using: composite
+  steps:
+    # A PR that only touches docs/ skips the long GUT run and the balance report, but the job still runs (and
+    # still reports the required check) with the tests that read docs/. Cristian's decision, 2026-10-24 (#226).
+    - name: Detect docs-only PR
+      id: scope
+      shell: bash
+      run: |
+        docs_only=false
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          echo "$changed"
+          if [ -n "$changed" ] && ! grep -qv '^docs/' <<< "$changed"; then
+            docs_only=true
+          fi
+        fi
+        echo "docs_only=$docs_only" | tee -a "$GITHUB_OUTPUT"
+
+    # cache: setup-godot saves the extracted Godot with actions/cache under a key built from the download URL, so
+    # it changes with the Godot version; every part restores it instead of downloading it again (#287). No export
+    # templates: the tests never export.
+    - uses: chickensoft-games/setup-godot@ac93246ea68518a384c1c280a496e5989341f2f6 # v2.4.3 (pinned by SHA)
+      with:
+        version: ${{ inputs.godot-version }}
+        use-dotnet: false     # GDScript only
+        include-templates: false
+        cache: true
+
+    # Renames do not need Godot. Parse runs after import so class_name is already cached.
+    # Cristian approved adding both steps here on 2026-10-17 (issue #114).
+    - name: Check Godot 3 API renames
+      shell: bash
+      run: bash tools/check_gdscript.sh --renames-only
+
+    - name: Import project (builds .godot cache / class_name list)
+      shell: bash
+      run: timeout 5m godot --headless --path . --import
+
+    - name: Check GDScript parse
+      shell: bash
+      run: timeout 5m bash tools/check_gdscript.sh --parse-only

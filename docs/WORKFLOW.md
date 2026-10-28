@@ -26,7 +26,7 @@ Un dev solo (Cristian) que no escribe código + agentes que sí. Simple a propó
    Para tareas chicas, directo.
 3. **Tests primero** en la simulación: test que falla → implementación → verde.
 4. **PR chica** a `develop` con el template (qué cambió, cómo verificarlo en ≤ 3 pasos, dudas de docs).
-5. **CI** (`ci.yml`, jobs `tests (unit)` y `tests (slow)`, en paralelo): cada uno corre el chequeo de APIs de Godot 3, importa el proyecto, chequea el parseo de GDScript y corre su parte de GUT headless en Linux. Los dos tienen que estar verdes.
+5. **CI** (`ci.yml`, jobs `tests (unit)` y `tests (slow 1/3)` a `tests (slow 3/3)`, en paralelo): cada uno corre el chequeo de APIs de Godot 3, importa el proyecto, chequea el parseo de GDScript y corre su parte de GUT headless en Linux. El check `tests (slow)` junta las tres partes. `tests (unit)` y `tests (slow)` tienen que estar verdes.
 6. **Revisión de Cristian**: lee el resumen, prueba los 3 pasos en el PC si toca pantalla, mergea con
    *squash merge* (él o Chief en su nombre). Bailey revisa la PR antes (ver la skill `revisar-pr`) y confirma con Cristian, a través de Chief, las autorizaciones de edición de
    `GDD.md`/`DECISIONS.md`. Opcional: pedirle además a un segundo agente que revise.
@@ -106,13 +106,17 @@ worktree con el import de Godot y hace que el agente espere a que termine (`setu
 
 ## CI y builds multiplataforma (gratis)
 - **`ci.yml`** — en cada PR y push a `develop` o `main`: `chickensoft-games/setup-godot` v2.4.3 (fijado por SHA) instala Godot 4.7.2 (sin .NET),
-  el chequeo de APIs de Godot 3, `--import`, el chequeo de parseo y GUT headless. Solo Linux: es el runner más barato. Con el repo público los minutos de Actions son gratis
-  (si pasa a privado: 2.000 min/mes en Free).
-  Son dos jobs en paralelo de 10 min como máximo cada uno (#268, D-132): **slow** corre `tests/slow/` (los juegos
-  guionados de `tests/scenarios/`, casi la mitad del tiempo de GUT) y el balance report; **unit** corre todos los
-  demás `test_*.gd` de `tests/`. Entre los dos corren los mismos tests que `tools/run_tests`. Un test que juega
-  partidas enteras va en `tests/slow/`.
-  En una PR que solo toca `docs/` (#226) los dos jobs corren igual y reportan el check, pero sin GUT entero ni balance
+  el chequeo de APIs de Godot 3, `--import`, el chequeo de parseo y GUT headless. Solo Linux: es el runner más barato. El repo es
+  privado en GitHub Free: 2.000 min/mes, y cada job cuenta aparte. Godot sale de la caché de Actions (la clave cambia con la versión).
+  Los jobs corren en paralelo, de 10 min como máximo cada uno (#268, D-132): **unit** corre todos los `test_*.gd` de `tests/`
+  fuera de `tests/slow/`, y `tests/slow/` (los juegos guionados de `tests/scenarios/`) se divide en tres partes (#287, D-144).
+  Las partes 1 y 2 corren solo los tests más largos, listados por nombre en `SLOW_PART_1_TESTS` y `SLOW_PART_2_TESTS`
+  (arriba de `ci.yml`); la parte 3 corre todos los demás y el balance report. El hook `tools/gut_shard.gd` hace el
+  filtro. Un test nuevo de `tests/slow/` cae solo en la parte 3; si una parte se acerca a los 10 min, mové un test largo a la
+  lista de la 1 o la 2. El job final `tests (slow)` (el check requerido) solo pasa si las tres partes pasan y entre todas
+  corrieron cada test de `tests/slow/` una vez. Entre unit y slow corren los mismos tests que `tools/run_tests`. Un test que
+  juega partidas enteras va en `tests/slow/`.
+  En una PR que solo toca `docs/` (#226) los jobs corren igual y reportan el check, pero sin GUT entero ni balance
   report: unit corre solo los `test_*.gd` que leen `res://docs/`. Si toca cualquier otra cosa, corre todo.
 - **`export.yml`** — solo con tag `v*` o a mano: el mismo action con `include-templates: true` exporta
   **Windows, macOS y Linux desde un único runner Linux** (Godot exporta cruzado con las plantillas oficiales;
