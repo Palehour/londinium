@@ -65,7 +65,7 @@ func test_the_same_chain_far_from_the_river_has_a_smaller_surplus() -> void:
 func test_a_house_beyond_the_radius_is_reported_unserved() -> void:
 	var houses: Array = _result("strip_out_of_radius").final_distance["houses"]
 	assert_false(_entry(houses, [30, 2])["served"][&"bread"])
-	assert_true(_entry(houses, [26, 12])["served"][&"bread"])
+	assert_true(_entry(houses, [20, 8])["served"][&"bread"])
 
 
 # (c) Cutting the player's street breaks the chain, and the diagnostics name why.

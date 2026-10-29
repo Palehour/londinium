@@ -81,12 +81,15 @@ func _building_at(view: Node2D, cell: Vector2i) -> StringName:
 	return &""
 
 
-# A land cell with nothing on it, so a house can go there.
+# A land cell with nothing on it where a house may stand (housing is firm ground only, D-149).
 func _free_land_cell(view: Node2D) -> Vector2i:
-	var map: MapDef = _session(view).context.map
+	var context: EconomyContext = _session(view).context
+	var map: MapDef = context.map
 	for y: int in range(map.height):
 		for x: int in range(map.width):
 			var cell: Vector2i = Vector2i(x, y)
+			if context.terrain_placement_reason(&"housing", cell) != &"":
+				continue
 			if _geometry(view).terrain_at(cell, map) == "land" and _building_at(view, cell) == &"":
 				return cell
 	return Vector2i(-1, -1)

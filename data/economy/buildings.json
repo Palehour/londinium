@@ -2,6 +2,7 @@
   "wharf": {
     "cost": 240, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
     "jobs": 4, "tags": ["river", "source", "basic_infrastructure"], "footprint": [2, 2], "terrain": ["riverbank"],
+    "terrain_mask": [["riverbank", "riverbank"], ["river", "river"]],
     "service_radius_m": 200, "distributes": ["tea"], "supplies": ["barley", "flour"],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
   },

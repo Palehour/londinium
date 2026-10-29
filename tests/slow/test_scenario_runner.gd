@@ -18,7 +18,7 @@ func _scenario(commands: Array, seed_value: int = 42, duration: int = 900) -> Di
 
 func _chain() -> Array:
 	return [
-		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 13]},
 		{"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
 		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
 	]
@@ -66,8 +66,8 @@ func test_rejected_command_is_reported_unless_expected() -> void:
 	var script: Array = [{"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 10]}]
 	var result: ScenarioResult = _runner.run(_scenario(script, 42, 60))
 	assert_eq(result.unexpected_rejections().size(), 1)
-	assert_eq(result.unexpected_rejections()[0]["reason"], &"requires_river")
-	script[0]["expect_reject"] = "requires_river"
+	assert_eq(result.unexpected_rejections()[0]["reason"], &"requires_riverbank")
+	script[0]["expect_reject"] = "requires_riverbank"
 	assert_eq(_runner.run(_scenario(script, 42, 60)).unexpected_rejections().size(), 0)
 
 
@@ -161,7 +161,7 @@ func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner()
 
 
 func _extra_chain(first_extra: Dictionary) -> Array:
-	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 14]}
+	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 13]}
 	wharf.merge(first_extra)
 	# A high tax so the first chain's profit can pay for the second one.
 	return [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [wharf,
@@ -292,7 +292,7 @@ func test_a_wait_after_commands_of_the_same_tick_sees_what_they_spent() -> void:
 	# The first chain is queued at tick 0 and has not touched the treasury yet. A wait for 540 behind
 	# it must not be released by the 1050 of the starting treasury: after the chain only 510 is left.
 	var commands: Array = [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [
-		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [8, 14], "wait_for_money": 540},
+		{"tick": 0, "cmd": "build", "building": "wharf", "cell": [8, 13], "wait_for_money": 540},
 		{"tick": 0, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
 		{"tick": 0, "cmd": "build", "building": "bakery", "cell": [10, 10], "with_previous": true}]
 	var result: ScenarioResult = _runner.run(_scenario(commands))
@@ -321,9 +321,9 @@ func test_a_wait_is_not_postponed_by_a_set_wheat_purchases_in_the_same_tick() ->
 
 
 func test_a_wait_is_not_postponed_by_a_refused_command_in_the_same_tick() -> void:
-	# A wharf on a land cell is refused (requires_river), so it spends nothing.
+	# A wharf on a land cell is refused (requires_riverbank), so it spends nothing.
 	var refused: Dictionary = {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 10],
-		"expect_reject": "requires_river"}
+		"expect_reject": "requires_riverbank"}
 	assert_eq(_wait_executed_tick(refused, 0, 60), 0)
 
 

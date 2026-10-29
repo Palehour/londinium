@@ -16,7 +16,7 @@
       "building": "wharf",
       "cell": [
         4,
-        14
+        13
       ]
     },
     {
@@ -52,7 +52,7 @@
       "building": "wharf",
       "cell": [
         8,
-        14
+        13
       ],
       "wait_for_money": 430
     },
@@ -92,7 +92,7 @@
       "building": "wharf",
       "cell": [
         12,
-        14
+        13
       ],
       "with_previous": true
     },
@@ -180,7 +180,7 @@
       "building": "wharf",
       "cell": [
         0,
-        14
+        13
       ],
       "wait_for_money": 240
     }

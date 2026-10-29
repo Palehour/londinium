@@ -21,6 +21,8 @@ const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes
 const BUILDING_TERRAINS: Array[StringName] = [&"firm", &"riverbank"]
 # As the JSON would write it.
 const DEFAULT_BUILDING_TERRAIN: Array[String] = ["firm"]
+# A cell of a terrain mask (issue #88, D-152) that stands on the river, like the wharf's side on the water.
+const MASK_RIVER: StringName = &"river"
 # Water buildings (issue #202, D-090): the Params section of their radius (`coverage`, required) and of their own
 # source (`water_source`, optional: without it they drink from the district's source).
 const WATER_FIELDS: Array[String] = ["coverage", "water_source"]
@@ -506,6 +508,9 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			continue
 		if not _building_terrain(raw[id].get("terrain", DEFAULT_BUILDING_TERRAIN), path + ".terrain", building):
 			continue
+		if raw[id].has("terrain_mask") \
+				and not _terrain_mask(raw[id]["terrain_mask"], path + ".terrain_mask", building):
+			continue
 		var is_housing: bool = "housing" in building.tags
 		var is_water: bool = WaterSystem.WATER_TAG in building.tags
 		var is_service: bool = ServiceSystem.SERVICE_TAG in building.tags
@@ -532,7 +537,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
-		for field: String in ["buildable", "footprint", "priced_as", "terrain"]:
+		for field: String in ["buildable", "footprint", "priced_as", "terrain", "terrain_mask"]:
 			if raw[id].has(field):
 				fields.append(field)
 		for field: String in WATER_FIELDS:
@@ -544,7 +549,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
-		for field: String in ["tags", "buildable", "footprint", "priced_as", "terrain"] + WATER_FIELDS:
+		for field: String in ["tags", "buildable", "footprint", "priced_as", "terrain", "terrain_mask"] + WATER_FIELDS:
 			numeric.erase(field)
 		if numeric.has("service_radius_m"):
 			schema["service_radius_m"] = "integer"
@@ -581,6 +586,26 @@ func _building_terrain(raw: Variant, path: String, building: BuildingDef) -> boo
 			_errors.append("%s: duplicate terrain %s" % [path, label])
 			return false
 		building.allowed_terrain.append(label)
+	return true
+
+
+# One row per row of the footprint, north to south, one label per cell (issue #88, D-152): a terrain the building
+# allows or the river. Structure like the footprint, not a balance number.
+func _terrain_mask(raw: Variant, path: String, building: BuildingDef) -> bool:
+	var size: Vector2i = building.footprint
+	if raw is not Array or raw.size() != size.y or not raw.all(func(row: Variant) -> bool:
+			return row is Array and row.size() == size.x):
+		_errors.append("%s: expected %d rows of %d cells, as the footprint" % [path, size.y, size.x])
+		return false
+	var mask: Array[StringName] = []
+	for row: Array in raw:
+		for entry: Variant in row:
+			var label: StringName = StringName(str(entry))
+			if entry is not String or (label != MASK_RIVER and label not in building.allowed_terrain):
+				_errors.append("%s: %s is neither the river nor a terrain of the building" % [path, entry])
+				return false
+			mask.append(label)
+	building.terrain_mask = mask
 	return true
 
 
@@ -1385,6 +1410,9 @@ func _load_grid_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 			_errors.append("%s.cells: [%d, %d] has unknown cell type %s" % [path, cell.x, cell.y, types[cell]])
 		elif layers.has(type):
 			layers[type].append(cell)
+		elif type in MapDef.TERRAIN_LABELS:
+			# Buildable land with its terrain label (issue #88, D-136): the riverbank where a wharf meets the water.
+			map.terrain[cell] = type
 	_check_road_pieces(path + ".cells", map, catalog.road_footprint)
 	var symbols: Dictionary[String, StringName] = _load_districts(raw["districts"], path + ".districts", map)
 	var districts: Dictionary[Vector2i, String] = _grid_rows(raw["district_by_cell"], path + ".district_by_cell", map)

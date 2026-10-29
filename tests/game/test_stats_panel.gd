@@ -163,7 +163,7 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	_use_game_without_anchors([Modifier.new(&"population.initial_bread", &"set", 0)])
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
 		# Cells of 25 m, each building on its own 2x2 block (D-086).
-		var cell: Vector2i = Vector2i(0, 14) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
+		var cell: Vector2i = Vector2i(0, 13) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
 		_session.submit_command(BuildCommand.new(_session.context, id, cell))
 		_session.simulation.tick()
 	_session.submit_command(SetWheatPurchasesCommand.new(false))
@@ -172,7 +172,7 @@ func test_panel_explains_missing_bread_from_diagnostics() -> void:
 	assert_string_contains(bread, Strings.text(Strings.BREAD_SHORT))
 	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("wharf"), Strings.reason(&"wheat_purchases_disabled")])
 	assert_string_contains(bread, Strings.text(Strings.BREAD_CAUSE) % [Strings.building_label("mill"), Strings.reason(&"no_input")])
-	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 14, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
+	assert_string_contains(_text("_buildings"), Strings.text(Strings.BUILDING_STATUS) % [Strings.building_label("wharf"), 0, 13, 4, 4, Strings.reason(&"wheat_purchases_disabled")])
 
 
 # Issue #106: one staffed wharf at 30 % barley brings 7 of the 10 wheat a staffed mill grinds.
@@ -181,7 +181,7 @@ func _bread_chain_with_split(barley_percent: int) -> void:
 	_session.submit_command(SetUnloadingSplitCommand.new(barley_percent))
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
 		# Cells of 25 m, each building on its own 2x2 block (D-086).
-		var cell: Vector2i = Vector2i(0, 14) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
+		var cell: Vector2i = Vector2i(0, 13) if id == &"wharf" else Vector2i(_session.get_snapshot()["economy"]["buildings"].size() * 2, 2)
 		_session.submit_command(BuildCommand.new(_session.context, id, cell))
 		_session.simulation.tick()
 	_tick()

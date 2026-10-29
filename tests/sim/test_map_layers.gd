@@ -50,9 +50,19 @@ func test_the_strip_river_comes_from_the_traced_sources() -> void:
 func test_the_wharf_goes_only_on_the_river() -> void:
 	for map_id: StringName in [STRIP, SMALL]:
 		var context: EconomyContext = _context(map_id)
-		for cell: Vector2i in _all_cells(context.map):
-			var expected: StringName = &"" if cell in context.map.river_cells else &"requires_river"
-			assert_eq(context.terrain_placement_reason(&"wharf", cell), expected, "%s %s" % [map_id, cell])
+		var map: MapDef = context.map
+		for cell: Vector2i in _all_cells(map):
+			# The south row of the wharf is the water; the north row is riverbank land (D-149).
+			var south: StringName = &"" if cell in map.river_cells else &"requires_river"
+			assert_eq(context.terrain_placement_reason(&"wharf", cell, Vector2i(0, 1)), south, "%s %s" % [map_id, cell])
+			var north: StringName = &"requires_riverbank"
+			if cell in map.river_cells or cell in map.dock_cells or cell in map.stairs_cells:
+				north = &"requires_land"
+			elif cell in map.existing_cells:
+				north = &"existing_building"
+			elif map.terrain.get(cell, &"firm") == &"riverbank":
+				north = &""
+			assert_eq(context.terrain_placement_reason(&"wharf", cell), north, "%s %s" % [map_id, cell])
 
 
 # Dock basins are water that is not a grain source (D-020): nothing is built on them.
@@ -63,7 +73,7 @@ func test_nothing_is_built_on_a_dock_basin() -> void:
 			assert_eq(context.terrain_placement_reason(id, cell), &"requires_land", "%s %s" % [id, cell])
 
 
-# Streets and terrain labels carry no rule yet (#67, #88).
+# Streets carry no rule (#67); a terrain label does since #88: housing goes on firm ground only (D-149).
 func test_streets_and_terrain_labels_do_not_block_building() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
 	var context: EconomyContext = _context(STRIP)
@@ -73,7 +83,8 @@ func test_streets_and_terrain_labels_do_not_block_building() -> void:
 	for cell: Vector2i in dry:
 		if cell in map.river_cells or cell in map.dock_cells or cell in map.existing_cells:
 			continue
-		assert_eq(context.terrain_placement_reason(&"housing", cell), &"", str(cell))
+		var expected: StringName = &"" if map.terrain.get(cell, &"firm") == &"firm" else &"requires_firm"
+		assert_eq(context.terrain_placement_reason(&"housing", cell), expected, str(cell))
 
 
 # Standing buildings block building (issue #154, D-075); on the traced strip they are the anchors of #152.
@@ -87,7 +98,11 @@ func test_the_small_map_has_no_new_layers() -> void:
 	var map: MapDef = _catalog.maps[SMALL]
 	assert_eq(Vector2i(map.width, map.height), Vector2i(16, 16), "The 8x8 in cells of 25 m (D-086)")
 	assert_true(map.dock_cells.is_empty() and map.road_cells.is_empty() and map.existing_cells.is_empty())
-	assert_true(map.terrain.is_empty())
+	# Its only label is the riverbank beside the river, where the wharf stands (#88, D-149): one row of 2x2 blocks.
+	assert_eq(map.terrain.size(), map.width * 2)
+	for cell: Vector2i in map.terrain:
+		assert_eq(map.terrain[cell], &"riverbank", str(cell))
+		assert_true(cell.y in [12, 13], str(cell))
 
 
 func test_a_copied_context_keeps_the_layers() -> void:

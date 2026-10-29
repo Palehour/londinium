@@ -156,6 +156,8 @@ func test_beer_buildings_availability_comes_from_the_catalog_tags_not_their_ids(
 				var path: String = folder.path_join(file_name)
 				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
 	documents["economy/buildings.json"]["brewery"]["tags"].append("river")
+	# The river tag only explains the reason; where it stands now comes from the mask (D-149).
+	documents["economy/buildings.json"]["brewery"]["terrain_mask"] = [["river", "river"], ["river", "river"]]
 	documents["maps/whitechapel_1850s.json"]["river_cells"] = []
 	var loaded: DataLoadResult = DataLoader.new().load_documents(documents)
 	assert_true(loaded.is_ok(), str(loaded.errors))

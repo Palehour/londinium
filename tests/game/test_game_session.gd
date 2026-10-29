@@ -90,7 +90,7 @@ func test_terrain_reasons_are_results_of_real_commands() -> void:
 	_session.submit_command(BuildCommand.new(_session.context, &"wheat_field", Vector2i(4, 4)))
 	_session.submit_command(BuildCommand.new(_session.context, &"mill", Vector2i(-2, 0)))
 	_tick()
-	var expected: Array[StringName] = [&"requires_land", &"requires_land", &"requires_river", &"not_cultivable", &"outside_map"]
+	var expected: Array[StringName] = [&"requires_land", &"requires_land", &"requires_riverbank", &"not_cultivable", &"outside_map"]
 	for index: int in range(expected.size()):
 		assert_false(_results[index]["accepted"])
 		assert_eq(_results[index]["reason"], expected[index])

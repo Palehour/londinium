@@ -97,3 +97,44 @@ func test_allowed_terrain_defaults_to_firm() -> void:
 	var loaded: DataLoadResult = _load()
 	if loaded.is_ok():
 		assert_eq(loaded.catalog.buildings[&"bakery"].allowed_terrain, [&"firm"] as Array[StringName])
+
+
+# Task 3 (D-152): each cell of the wharf's footprint names its own terrain, row by row from the north-west corner.
+func test_the_wharf_mask_puts_the_riverbank_north_and_the_river_south() -> void:
+	var loaded: DataLoadResult = _load()
+	if not loaded.is_ok():
+		return
+	var wharf: BuildingDef = loaded.catalog.buildings[&"wharf"]
+	assert_eq(wharf.terrain_mask, [&"riverbank", &"riverbank", &"river", &"river"] as Array[StringName])
+	for id: StringName in loaded.catalog.buildings:
+		if id != &"wharf":
+			assert_true(loaded.catalog.buildings[id].terrain_mask.is_empty(), id)
+
+
+func test_terrain_mask_follows_the_footprint_and_the_building_terrains() -> void:
+	var cases: Dictionary[String, Variant] = {
+		"expected 2 rows of 2 cells": [["riverbank", "riverbank"]],
+		"firm is neither the river nor a terrain of the building": [["firm", "riverbank"], ["river", "river"]],
+		"marsh is neither the river nor a terrain of the building": [["marsh", "riverbank"], ["river", "river"]],
+	}
+	for message: String in cases:
+		before_each()
+		_documents[BUILDINGS]["wharf"]["terrain_mask"] = cases[message]
+		_assert_invalid("%s.wharf.terrain_mask: %s" % [BUILDINGS, message])
+
+
+# A map drawn as rows of text marks the riverbank with "r": buildable land with its label.
+func test_the_full_map_has_riverbank_beside_the_river() -> void:
+	var loaded: DataLoadResult = _load()
+	if not loaded.is_ok():
+		return
+	var map: MapDef = loaded.catalog.maps[&"whitechapel_full"]
+	var riverbank: Array[Vector2i] = []
+	for cell: Vector2i in map.terrain:
+		if map.terrain[cell] == &"riverbank":
+			riverbank.append(cell)
+	assert_false(riverbank.is_empty())
+	for cell: Vector2i in riverbank:
+		assert_false(cell in map.river_cells or cell in map.dock_cells or cell in map.road_cells, str(cell))
+	var context: EconomyContext = EconomyContext.new(loaded.catalog, map)
+	assert_eq(context.building_unavailable_reason(&"wharf"), &"")

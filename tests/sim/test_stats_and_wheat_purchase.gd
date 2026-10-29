@@ -115,7 +115,7 @@ func test_bread_rates_are_measured_flows_not_stock_differences() -> void:
 
 func test_money_change_equals_operating_balance_minus_construction() -> void:
 	var state: EconomyState = _state(20, 10000)
-	state.buildings.append({"definition_id": &"wharf", "cell": [0, 14]})
+	state.buildings.append({"definition_id": &"wharf", "cell": [0, 13]})
 	state.buildings.append({"definition_id": &"housing", "cell": [2, 2]})
 	var sim: Simulation = _sim(state)
 	for index: int in range(30):
@@ -208,7 +208,7 @@ func test_wheat_purchase_command_stops_buying_but_not_price_fluctuation() -> voi
 	var enabled: Simulation = _sim(_state(20, 10000), fed)
 	var disabled: Simulation = _sim(_state(20, 10000), fed)
 	for sim: Simulation in [enabled, disabled]:
-		sim.apply_command(BuildCommand.new(_context, &"wharf", Vector2i(0, 14)))
+		sim.apply_command(BuildCommand.new(_context, &"wharf", Vector2i(0, 13)))
 	var command: SetWheatPurchasesCommand = SetWheatPurchasesCommand.new(false)
 	disabled.apply_command(command)
 	var prices: Array[int] = []
@@ -277,7 +277,7 @@ func _reason(diagnostics: Dictionary, id: StringName) -> StringName:
 func _chain_state(population: int, money: int) -> EconomyState:
 	var state: EconomyState = _state(population, money)
 	for id: StringName in [&"wharf", &"mill", &"bakery"]:
-		state.buildings.append({"definition_id": id, "cell": [0, 14] if id == &"wharf" else [state.buildings.size(), 3]})
+		state.buildings.append({"definition_id": id, "cell": [0, 13] if id == &"wharf" else [state.buildings.size(), 3]})
 	state.buildings.append({"definition_id": &"housing", "cell": [10, 10]})
 	return state
 
@@ -324,7 +324,7 @@ func test_no_money_reason_uses_the_market_affordability_rule() -> void:
 	assert_eq(MarketSystem.affordable_wheat(state, 10), 0)
 	state.wheat_price = 0
 	assert_eq(MarketSystem.affordable_wheat(state, 10), 10, "free wheat is never limited by money")
-	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 14], "workers": 1}
+	var wharf: Dictionary = {"definition_id": &"wharf", "cell": [0, 13], "workers": 1}
 	state.wheat_price = 3
 	state.money = 2
 	assert_eq(BreadDiagnostics.building_reason(state, _context, wharf, _params()), &"no_money_for_wheat", "cannot buy one unit")

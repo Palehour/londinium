@@ -25,6 +25,8 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.tags.assign(definition.tags)
 		copy.buildable = definition.buildable
 		copy.footprint = definition.footprint
+		copy.allowed_terrain.assign(definition.allowed_terrain)
+		copy.terrain_mask.assign(definition.terrain_mask)
 		copy.distributes.assign(definition.distributes)
 		copy.supplies.assign(definition.supplies)
 		copy.coverage = definition.coverage
@@ -98,7 +100,7 @@ func placement_reason(id: StringName, origin: Vector2i) -> StringName:
 	if not Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area):
 		return &"outside_map"
 	for cell: Vector2i in cells_of(area):
-		var reason: StringName = terrain_placement_reason(id, cell)
+		var reason: StringName = terrain_placement_reason(id, cell, cell - origin)
 		if reason != &"":
 			return reason
 	return &""
@@ -146,20 +148,41 @@ static func cells_of(area: Rect2i) -> Array[Vector2i]:
 	return cells
 
 
-func terrain_placement_reason(id: StringName, cell: Vector2i) -> StringName:
-	var tags: Array[String] = buildings[id].tags
-	if "cultivable" in tags and cell not in map.cultivable_cells:
+# Whether the cell suits the cell of the footprint at offset from its north-west corner (issue #88, D-152): the river
+# where the terrain mask says so, otherwise land of a terrain the building allows (D-149, D-151).
+func terrain_placement_reason(id: StringName, cell: Vector2i, offset: Vector2i = Vector2i.ZERO) -> StringName:
+	var definition: BuildingDef = buildings[id]
+	if "cultivable" in definition.tags and cell not in map.cultivable_cells:
 		return &"not_cultivable"
-	if "river" in tags and cell not in map.river_cells:
-		return &"requires_river"
+	var wanted: Array[StringName] = _terrains_at(definition, offset)
+	if wanted == [DataLoader.MASK_RIVER]:
+		return &"" if cell in map.river_cells else &"requires_river"
 	# A dock basin is water but not a grain source (D-020): nothing is built on it, nor on the Thames stairs (#61).
-	if "river" not in tags and (cell in map.river_cells or cell in map.dock_cells or cell in map.stairs_cells):
+	if cell in map.river_cells or cell in map.dock_cells or cell in map.stairs_cells:
 		return &"requires_land"
 	# Standing buildings, the anchors of the traced map (#152), stay a block (D-075). Only new building is stopped: a
 	# saved building on one of these cells stays and works (D-076).
 	if cell in map.existing_cells:
 		return &"existing_building"
-	return &""
+	var terrain: StringName = map.terrain.get(cell, FIRM)
+	if terrain in wanted:
+		return &""
+	# Nothing is built on a marsh until it is drained (D-136).
+	if terrain == MARSH:
+		return &"marsh"
+	return StringName("requires_%s" % wanted[0])
+
+
+# The terrains one cell of the footprint may stand on: its label in the mask, or any the building allows.
+static func _terrains_at(definition: BuildingDef, offset: Vector2i) -> Array[StringName]:
+	var terrains: Array[StringName] = []
+	if not definition.terrain_mask.is_empty():
+		terrains.append(definition.terrain_mask[offset.y * definition.footprint.x + offset.x])
+	elif definition.allowed_terrain.is_empty():
+		terrains.append(FIRM)
+	else:
+		terrains.assign(definition.allowed_terrain)
+	return terrains
 
 
 # The class whose housing building this is, or &"" when no class claims it.

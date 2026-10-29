@@ -8,7 +8,7 @@ const TERRAIN_LABELS: Array[StringName] = [&"riverbank", &"marsh"]
 const HISTORY_TAGS: Array[String] = ["[FACT", "[DEBATED]", "[LEGEND]", "[INVENTED]"]
 # A map drawn as rows of text (issue #61, D-093): one character per cell, y=0 to the north.
 const CELL_TYPES: Dictionary[String, StringName] = {"~": &"river", "D": &"dock", "s": &"stairs", "#": &"street",
-	".": &"buildable"}
+	".": &"buildable", "r": &"riverbank"}
 # A cell of district_by_cell outside every district; only land that cannot be built may be left so.
 const NO_DISTRICT: String = "."
 # The water of a district that names no source (D-088): it adds no risk.

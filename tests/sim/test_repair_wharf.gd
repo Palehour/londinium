@@ -105,8 +105,13 @@ func test_only_a_damaged_wharf_cell_can_be_repaired() -> void:
 
 
 func test_a_damaged_wharf_with_a_new_wharf_on_it_is_not_repaired() -> void:
+	# Since #88 (D-152) a new wharf stands with its north row on the riverbank, so the one over the ruin starts a row
+	# above it; on the strip that row is a street, lifted here so the ruin can be built over.
+	var over_the_ruin: Vector2i = DAMAGED_WHARF + Vector2i.UP
+	for cell: Vector2i in [over_the_ruin, over_the_ruin + Vector2i.RIGHT]:
+		_strip.map.road_cells.erase(cell)
 	var sim: Simulation = _sim(10000)
-	assert_true(_run(sim, BuildCommand.new(_strip, &"wharf", DAMAGED_WHARF)).accepted, "Building anew is still allowed")
+	assert_true(_run(sim, BuildCommand.new(_strip, &"wharf", over_the_ruin)).accepted, "Building anew is still allowed")
 	var money: int = _money(sim)
 	var command: SimulationCommand = _run(sim, RepairWharfCommand.new(DAMAGED_WHARF))
 	assert_false(command.accepted)

@@ -135,4 +135,5 @@ func test_an_anchor_with_no_use_is_neither_demolished_nor_built_over() -> void:
 
 
 func test_a_named_site_does_not_block_building() -> void:
-	assert_eq(_strip.terrain_placement_reason(&"housing", THAMES_POLICE), &"")
+	# The site is on the riverbank, where housing may not stand (D-149) but a mill may (D-151).
+	assert_eq(_strip.terrain_placement_reason(&"mill", THAMES_POLICE), &"")
