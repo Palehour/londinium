@@ -259,6 +259,11 @@ func _building_at(cell: Vector2i) -> Dictionary:
 	return {}
 
 
+# The terrain of a cell now (issue #88), or &"" without a map.
+func terrain_at(cell: Vector2i) -> StringName:
+	return _context.terrain_at(_state, cell) if _context != null else &""
+
+
 # The treasury, without building a snapshot.
 func treasury() -> int:
 	return _state.money

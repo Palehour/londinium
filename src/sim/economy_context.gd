@@ -1,6 +1,11 @@
 class_name EconomyContext
 extends RefCounted
 
+# Terrain of a dry cell (issue #88): the map leaves firm ground unlabelled (MapDef.TERRAIN_LABELS).
+const FIRM: StringName = &"firm"
+const RIVERBANK: StringName = &"riverbank"
+const MARSH: StringName = &"marsh"
+
 var buildings: Dictionary[StringName, BuildingDef] = {}
 # Cells of one street piece (issue #186, D-086).
 var road_footprint: Vector2i = Vector2i.ONE
@@ -117,6 +122,19 @@ func building_at(state: EconomyState, cell: Vector2i) -> Dictionary:
 		if area_of(building).has_point(cell):
 			return building
 	return {}
+
+
+# The terrain of a dry cell now: what the player transformed it into (issue #88, D-148), else the map's label, else
+# firm ground.
+func terrain_at(state: EconomyState, cell: Vector2i) -> StringName:
+	if state.terrain_changes.has(cell):
+		return state.terrain_changes[cell]
+	return map.terrain.get(cell, FIRM)
+
+
+# The river and the dock basins (D-020) are water.
+func is_water(cell: Vector2i) -> bool:
+	return cell in map.river_cells or cell in map.dock_cells
 
 
 # Row by row from the north-west corner, so every walk over an area goes in the same order.

@@ -142,6 +142,8 @@ var legitimacy_gain_tick: float = 0.0
 # Distance model (issue #67, D-080). The player's streets ({cell, built_at, paid}) and the transport owed below a
 # penny are saved; a save from before the streets loads with none.
 var player_roads: Array[Dictionary] = []
+# Cells the player transformed (issue #88, D-148), over the map's terrain. Saving them is #88 T4.
+var terrain_changes: Dictionary[Vector2i, StringName] = {}
 var transport_fraction: float = 0.0
 # Worked out by RoadSystem and never saved, so a loaded game recomputes its coverage: why a building does not work
 # (by cell), the room of each class's connected and served houses, each class's access to each good (the share of
