@@ -15,6 +15,12 @@ const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", 
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
+# The terrain a building may stand on (issue #88, D-149): firm ground, which the maps leave unlabelled, or the riverbank
+# label of MapDef.TERRAIN_LABELS. Never the marsh, where nothing is built until it is drained (D-136). Firm ground when
+# the field is missing, so a mod's building keeps loading.
+const BUILDING_TERRAINS: Array[StringName] = [&"firm", &"riverbank"]
+# As the JSON would write it.
+const DEFAULT_BUILDING_TERRAIN: Array[String] = ["firm"]
 # Water buildings (issue #202, D-090): the Params section of their radius (`coverage`, required) and of their own
 # source (`water_source`, optional: without it they drink from the district's source).
 const WATER_FIELDS: Array[String] = ["coverage", "water_source"]
@@ -84,6 +90,9 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"map": {"cell_size_m": "positive_integer", "min_riverside_buildable": "positive_integer"},
 	# Zones of the full map (issue #61, D-091): all open until their unlocking is decided.
 	"zones": {"all_unlocked": "boolean"},
+	# Transforming terrain (issue #88, D-150): draining a marsh costs drain_cost; turning firm ground beside water into
+	# riverbank costs that times riverbank_cost_mult.
+	"terrain": {"drain_cost": "money", "riverbank_cost_mult": "positive"},
 	# Public fountain (issue #63, D-089): the houses it covers, centre to centre, not rounded to cells.
 	"fountain": {"radius_m": "positive"},
 	# Well and Lea Bridge (issue #202, D-090): the sections a water building names in `coverage` and `water_source`.
@@ -495,6 +504,8 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			building.buildable = raw[id]["buildable"]
 		if raw[id].has("footprint") and not _footprint(raw[id]["footprint"], path + ".footprint", building):
 			continue
+		if not _building_terrain(raw[id].get("terrain", DEFAULT_BUILDING_TERRAIN), path + ".terrain", building):
+			continue
 		var is_housing: bool = "housing" in building.tags
 		var is_water: bool = WaterSystem.WATER_TAG in building.tags
 		var is_service: bool = ServiceSystem.SERVICE_TAG in building.tags
@@ -521,7 +532,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
-		for field: String in ["buildable", "footprint", "priced_as"]:
+		for field: String in ["buildable", "footprint", "priced_as", "terrain"]:
 			if raw[id].has(field):
 				fields.append(field)
 		for field: String in WATER_FIELDS:
@@ -533,7 +544,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
-		for field: String in ["tags", "buildable", "footprint", "priced_as"] + WATER_FIELDS:
+		for field: String in ["tags", "buildable", "footprint", "priced_as", "terrain"] + WATER_FIELDS:
 			numeric.erase(field)
 		if numeric.has("service_radius_m"):
 			schema["service_radius_m"] = "integer"
@@ -549,6 +560,28 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			schema.erase("recipe")
 		_numbers(numeric, schema, path, "building.%s" % id, catalog)
 		catalog.buildings[building.id] = building
+
+
+func _building_terrain(raw: Variant, path: String, building: BuildingDef) -> bool:
+	if raw is not Array:
+		_errors.append("%s: expected an array" % path)
+		return false
+	if raw.is_empty():
+		_errors.append("%s: expected at least one terrain" % path)
+		return false
+	for entry: Variant in raw:
+		var label: StringName = StringName(str(entry))
+		if label == &"marsh":
+			_errors.append("%s: nothing is built on marsh" % path)
+			return false
+		if entry is not String or label not in BUILDING_TERRAINS:
+			_errors.append("%s: unknown terrain %s" % [path, entry])
+			return false
+		if label in building.allowed_terrain:
+			_errors.append("%s: duplicate terrain %s" % [path, label])
+			return false
+		building.allowed_terrain.append(label)
+	return true
 
 
 func _water_fields(raw: Dictionary, path: String, building: BuildingDef) -> bool:
