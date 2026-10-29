@@ -35,6 +35,8 @@ londinium/
 │   │   │                     #   a water building names `coverage` (the section of its radius_m) and optionally `water_source` (the section of its own source_risk; without it, the district's source); `priced_as` another building reads that one's cost, upkeep, wage and jobs (Params aliases the keys, #202)
 │   │   │                     #   optional service_radius_m (metres along the streets) + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67, #186;
 │   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 2x2 since #186), #184, D-086
+│   │   │                     #   terrain, the ground it may stand on: firm and/or riverbank, never marsh (firm when missing; #88, D-149)
+│   │   ├── terrain.json      # drain_cost (marsh to firm) and riverbank_cost_mult (firm beside water to riverbank costs drain_cost times it), #88, D-150; values [INVENTED]
 │   │   ├── roads.json        # the player's streets: cost and upkeep per minute, per piece of `footprint` cells (2x2, the old 50 m cell) (#67, D-070, #186)
 │   │   ├── transport.json    # cost per unit and metre, and the metres from which a leg is "expensive" (#67, D-070, D-080, #186)
 │   │   ├── map.json          # cell_size_m, the side of a map cell: 25 m (#186, D-086); min_riverside_buildable, the least buildable cells beside the river of a map drawn as rows (#61, provisional)

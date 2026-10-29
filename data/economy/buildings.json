@@ -1,68 +1,68 @@
 {
   "wharf": {
     "cost": 240, "upkeep_per_minute": 4, "wage_per_worker_per_minute": 2,
-    "jobs": 4, "tags": ["river", "source", "basic_infrastructure"], "footprint": [2, 2],
+    "jobs": 4, "tags": ["river", "source", "basic_infrastructure"], "footprint": [2, 2], "terrain": ["riverbank"],
     "service_radius_m": 200, "distributes": ["tea"], "supplies": ["barley", "flour"],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 60 }
   },
   "mill": {
     "cost": 180, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["producer"], "footprint": [2, 2], "terrain": ["firm", "riverbank"],
     "recipe": { "inputs": { "wheat": 10 }, "outputs": { "flour": 10 }, "seconds": 60 }
   },
   "bakery": {
     "cost": 120, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["producer"], "footprint": [2, 2], "terrain": ["firm"],
     "recipe": { "inputs": { "flour": 10 }, "outputs": { "bread": 20 }, "seconds": 60 },
     "service_radius_m": 400, "distributes": ["bread"]
   },
   "malthouse": {
     "cost": 200, "upkeep_per_minute": 3, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["producer"], "footprint": [2, 2], "terrain": ["firm", "riverbank"],
     "recipe": { "inputs": { "barley": 4 }, "outputs": { "malt": 4 }, "seconds": 60 }
   },
   "brewery": {
     "cost": 160, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["producer", "tavern"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["producer", "tavern"], "footprint": [2, 2], "terrain": ["firm"],
     "recipe": { "inputs": { "malt": 4 }, "outputs": { "beer": 8 }, "seconds": 60 },
     "service_radius_m": 300, "distributes": ["beer"]
   },
   "wheat_field": {
     "cost": 90, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 2,
-    "jobs": 3, "tags": ["source", "cultivable"], "footprint": [2, 2],
+    "jobs": 3, "tags": ["source", "cultivable"], "footprint": [2, 2], "terrain": ["firm"],
     "recipe": { "inputs": {}, "outputs": { "wheat": 10 }, "seconds": 120 }
   },
   "housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "tags": ["housing", "basic_infrastructure"], "footprint": [2, 2]
+    "jobs": 0, "capacity": 20, "tags": ["housing", "basic_infrastructure"], "footprint": [2, 2], "terrain": ["firm"]
   },
   "artisan_housing": {
     "cost": 120, "upkeep_per_minute": 2, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 10, "tags": ["housing"], "footprint": [2, 2]
+    "jobs": 0, "capacity": 10, "tags": ["housing"], "footprint": [2, 2], "terrain": ["firm"]
   },
   "dense_housing": {
     "cost": 60, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "capacity": 20, "buildable": false, "tags": ["housing"], "footprint": [2, 2]
+    "jobs": 0, "capacity": 20, "buildable": false, "tags": ["housing"], "footprint": [2, 2], "terrain": ["firm"]
   },
   "public_fountain": {
     "cost": 400, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "tags": ["water"], "footprint": [2, 2], "coverage": "fountain"
+    "jobs": 0, "tags": ["water"], "footprint": [2, 2], "terrain": ["firm"], "coverage": "fountain"
   },
   "lea_bridge_fountain": {
-    "priced_as": "public_fountain", "tags": ["water"], "footprint": [2, 2], "coverage": "fountain",
+    "priced_as": "public_fountain", "tags": ["water"], "footprint": [2, 2], "terrain": ["firm"], "coverage": "fountain",
     "water_source": "lea_bridge"
   },
   "well": {
     "cost": 150, "upkeep_per_minute": 0, "wage_per_worker_per_minute": 0,
-    "jobs": 0, "tags": ["water"], "footprint": [1, 1], "coverage": "well", "water_source": "well"
+    "jobs": 0, "tags": ["water"], "footprint": [1, 1], "terrain": ["firm"], "coverage": "well", "water_source": "well"
   },
   "health_post": {
-    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["health", "service"], "footprint": [2, 2]
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["health", "service"], "footprint": [2, 2], "terrain": ["firm"]
   },
   "fire_station": {
-    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2]
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2], "terrain": ["firm"]
   },
   "police_station": {
-    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2]
+    "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2], "terrain": ["firm"]
   }
 }

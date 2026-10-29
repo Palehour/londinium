@@ -12,6 +12,8 @@ var distributes: Array[StringName] = []
 var supplies: Array[StringName] = []
 # Cells it covers from its cell, the north-west corner, w x h (issue #184, D-086). 1x1 unless the data says otherwise.
 var footprint: Vector2i = Vector2i.ONE
+# Terrain it may stand on (issue #88, D-149): firm ground and/or riverbank (DataLoader.BUILDING_TERRAINS).
+var allowed_terrain: Array[StringName] = []
 # Water buildings (issue #202, D-090): the Params section of its radius (`<coverage>.radius_m`) and of its own source
 # (`<water_source>.source_risk`); without a source it drinks from the district's.
 var coverage: StringName = &""
