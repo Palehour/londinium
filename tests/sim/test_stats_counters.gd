@@ -41,7 +41,7 @@ func _city() -> Simulation:
 	state.population = 30
 	state.stocks.assign({&"wheat": 20, &"flour": 0, &"bread": 40, &"barley": 0, &"malt": 0, &"beer": 0, &"tea": 0})
 	var sim: Simulation = Simulation.new(_params(), state, 11, _context)
-	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"wharf", Vector2i(8, 14)], [&"mill", Vector2i(4, 10)],
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"wharf", Vector2i(8, 13)], [&"mill", Vector2i(4, 10)],
 		[&"bakery", Vector2i(6, 10)], [&"bakery", Vector2i(8, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
 		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 6)], [&"artisan_housing", Vector2i(12, 6)]]
 	for build: Array in builds:

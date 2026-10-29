@@ -32,8 +32,14 @@ static func blocks(catalog: DataCatalog, size: Vector2i, roads: Array[Vector2i],
 	map.roads_enabled = true
 	for road: Vector2i in roads:
 		map.road_cells.append_array(_block(road))
+	# The first row of the river block is riverbank and its second row is water, so a wharf (riverbank over river,
+	# D-149) stands on the block of the old river cell, as before.
 	for x: int in range(size.x):
-		map.river_cells.append_array(_block(Vector2i(x, size.y - 1)))
+		for cell_in_block: Vector2i in _block(Vector2i(x, size.y - 1)):
+			if cell_in_block.y == cell(Vector2i(0, size.y - 1)).y:
+				map.terrain[cell_in_block] = &"riverbank"
+			else:
+				map.river_cells.append(cell_in_block)
 	for edge: Vector4i in diagonals:
 		var from: Vector2i = Vector2i(edge.x, edge.y)
 		var to: Vector2i = Vector2i(edge.z, edge.w)

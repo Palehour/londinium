@@ -259,7 +259,7 @@ func test_completed_command_cannot_mutate_simulation_map_or_catalog() -> void:
 	accessible.map.river_cells.clear()
 	accessible.map.cultivable_cells.append_array(EconomyContext.cells_of(Rect2i(6, 2, 2, 2)))
 	accessible.buildings[&"mill"].tags.append("river")
-	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 14))
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 13))
 	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(2, 2))
 	var field: BuildCommand = BuildCommand.new(context, &"wheat_field", Vector2i(6, 2))
 	sim.apply_command(wharf)

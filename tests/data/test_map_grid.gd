@@ -206,7 +206,8 @@ func test_nothing_is_built_on_stairs() -> void:
 	var context: EconomyContext = EconomyContext.new(_load().catalog, map)
 	for id: StringName in [&"housing", &"mill", &"bakery"]:
 		assert_eq(context.terrain_placement_reason(id, Vector2i(4, 1)), &"requires_land", id)
-	assert_eq(context.terrain_placement_reason(&"wharf", Vector2i(4, 1)), &"requires_river")
+	# The wharf's north row must be land (riverbank), so stairs there are refused as non-land.
+	assert_eq(context.terrain_placement_reason(&"wharf", Vector2i(4, 1)), &"requires_land")
 	assert_eq(context.copy().map.stairs_cells, map.stairs_cells)
 	assert_eq(context.copy().map.district_by_cell, map.district_by_cell)
 

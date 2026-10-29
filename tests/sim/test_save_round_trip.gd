@@ -33,7 +33,7 @@ func _new_game(params: Params) -> Simulation:
 	state.money = 1000000
 	state.population = 30
 	var sim: Simulation = Simulation.create_new(params, state, 7, _context, _stages)
-	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"wharf", Vector2i(8, 14)], [&"mill", Vector2i(4, 10)],
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"wharf", Vector2i(8, 13)], [&"mill", Vector2i(4, 10)],
 		[&"bakery", Vector2i(6, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
 		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 6)], [&"artisan_housing", Vector2i(12, 6)]]
 	for build: Array in builds:
@@ -120,7 +120,7 @@ func _strip_game() -> Array:
 	state.money = 1000000
 	state.population = 30
 	var sim: Simulation = Simulation.create_new(_params(), state, 7, context, _stages)
-	var builds: Array[Array] = [[&"wharf", Vector2i(4, 14)], [&"mill", Vector2i(6, 10)], [&"bakery", Vector2i(12, 10)],
+	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"mill", Vector2i(6, 10)], [&"bakery", Vector2i(12, 10)],
 		[&"housing", Vector2i(14, 10)], [&"housing", Vector2i(18, 10)]]
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(context, build[0], build[1]))

@@ -7,10 +7,10 @@
   "duration_ticks": 900,
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [22, 16]},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [24, 15]},
     {"tick": 0, "cmd": "build", "building": "mill", "cell": [18, 14]},
     {"tick": 0, "cmd": "build", "building": "bakery", "cell": [18, 12]},
-    {"tick": 0, "cmd": "build", "building": "housing", "cell": [26, 12]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [20, 8]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [30, 2]}
   ]
 }

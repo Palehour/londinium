@@ -7,13 +7,13 @@
   "commands": [
     {"tick": 0, "cmd": "set_tax", "rate": 0.6},
     {"tick": 0, "cmd": "set_unloading_split", "barley_percent": 30},
-    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 14]},
+    {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 13]},
     {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
     {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
     {"tick": 0, "cmd": "build", "building": "malthouse", "cell": [4, 6], "wait_for_money": 360},
     {"tick": 0, "cmd": "build", "building": "brewery", "cell": [6, 6], "with_previous": true},
-    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 14], "wait_for_money": 300},
+    {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 13], "wait_for_money": 300},
     {"tick": 60, "cmd": "build", "building": "housing", "cell": [12, 6], "with_previous": true}
   ]
 }

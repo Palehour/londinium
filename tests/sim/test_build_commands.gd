@@ -127,13 +127,21 @@ func test_map_availability_uses_the_same_terrain_rules_as_build_commands() -> vo
 	_context.map.river_cells.clear()
 	assert_eq(_context.building_unavailable_reason(&"wharf"), &"requires_river")
 	assert_eq(_context.building_unavailable_reason(&"mill"), &"")
-	_reject(&"wharf", Vector2i(2, 2), &"requires_river")
+	# The wharf's north row is riverbank, so firm land at its corner is refused on that row first (D-149).
+	_reject(&"wharf", Vector2i(2, 2), &"requires_riverbank")
 	for x: int in range(_context.map.width):
 		for y: int in range(_context.map.height):
 			_context.map.river_cells.append(Vector2i(x, y))
-	assert_eq(_context.building_unavailable_reason(&"wharf"), &"")
+	# All river and no bank: there is nowhere for the wharf's north row.
+	assert_eq(_context.building_unavailable_reason(&"wharf"), &"requires_river")
 	assert_eq(_context.building_unavailable_reason(&"mill"), &"requires_land")
 	_reject(&"mill", Vector2i(2, 2), &"requires_land")
+	# A strip of bank beside the river makes the wharf available again.
+	for x: int in range(2, 4):
+		_context.map.river_cells.erase(Vector2i(x, 2))
+		_context.map.terrain[Vector2i(x, 2)] = &"riverbank"
+	assert_eq(_context.building_unavailable_reason(&"wharf"), &"")
+	assert_eq(_context.placement_reason(&"wharf", Vector2i(2, 2)), &"")
 
 
 func test_availability_queries_the_simulation_owned_map_copy() -> void:
@@ -149,10 +157,10 @@ func test_availability_queries_the_simulation_owned_map_copy() -> void:
 
 
 func test_wharf_requires_river_and_land_buildings_cannot_use_river() -> void:
-	_reject(&"wharf", Vector2i(2, 2), &"requires_river")
+	_reject(&"wharf", Vector2i(2, 2), &"requires_riverbank")
 	_reject(&"mill", Vector2i(0, 14), &"requires_land")
 	var sim: Simulation = _sim()
-	var command: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 14))
+	var command: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 13))
 	sim.apply_command(command)
 	sim.tick()
 	assert_true(command.accepted)
@@ -291,7 +299,7 @@ func test_build_cost_applies_all_modifiers_and_rounds_only_at_end() -> void:
 
 func test_context_and_queued_build_copy_structural_data() -> void:
 	var sim: Simulation = _sim()
-	var command: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 14))
+	var command: BuildCommand = BuildCommand.new(_context, &"wharf", Vector2i(0, 13))
 	_context.map.river_cells.clear()
 	_context.buildings[&"wharf"].tags.clear()
 	sim.apply_command(command)
@@ -305,7 +313,7 @@ func test_build_commands_share_simulation_context_without_per_command_copies() -
 		_catalog.maps[&"whitechapel_1850s"])
 	var sim: Simulation = Simulation.new(_params, _initial, 123, context)
 	assert_eq(context.copies, 1, "Simulation owns one detached structural context")
-	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 14))
+	var wharf: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(0, 13))
 	var mill: BuildCommand = BuildCommand.new(context, &"mill", Vector2i(2, 2))
 	assert_eq(context.copies, 1, "Creating commands must not copy the context")
 	# Both commands must use the simulation's protected copy, not caller mutations.
@@ -335,7 +343,7 @@ func test_completed_build_releases_context_on_success_and_rejection() -> void:
 	accessible.map.river_cells.clear()
 	accessible.buildings[&"mill"].tags.append("river")
 	var wharf: InspectingBuildCommand = InspectingBuildCommand.new(context,
-		&"wharf", Vector2i(0, 14))
+		&"wharf", Vector2i(0, 13))
 	var mill: InspectingBuildCommand = InspectingBuildCommand.new(context,
 		&"mill", Vector2i(4, 2))
 	var rejected: InspectingBuildCommand = InspectingBuildCommand.new(context,

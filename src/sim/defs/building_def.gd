@@ -14,6 +14,9 @@ var supplies: Array[StringName] = []
 var footprint: Vector2i = Vector2i.ONE
 # Terrain it may stand on (issue #88, D-149): firm ground and/or riverbank (DataLoader.BUILDING_TERRAINS).
 var allowed_terrain: Array[StringName] = []
+# What each cell of the footprint stands on (issue #88, D-152), row by row from the north-west corner: a terrain of
+# allowed_terrain or DataLoader.MASK_RIVER. Empty when every cell may be any allowed terrain.
+var terrain_mask: Array[StringName] = []
 # Water buildings (issue #202, D-090): the Params section of its radius (`<coverage>.radius_m`) and of its own source
 # (`<water_source>.source_risk`); without a source it drinks from the district's.
 var coverage: StringName = &""

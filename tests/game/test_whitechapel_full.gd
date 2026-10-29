@@ -18,7 +18,7 @@ const TAX_RATE: float = 0.6
 const WAPPING_ROADS: Array[Vector2i] = [Vector2i(28, 48), Vector2i(28, 50), Vector2i(28, 52), Vector2i(28, 54),
 	Vector2i(28, 56), Vector2i(28, 58), Vector2i(26, 58), Vector2i(26, 60), Vector2i(24, 60), Vector2i(24, 62),
 	Vector2i(23, 64)]
-const CHAIN: Dictionary[Vector2i, StringName] = {Vector2i(22, 66): &"wharf", Vector2i(22, 62): &"mill",
+const CHAIN: Dictionary[Vector2i, StringName] = {Vector2i(24, 66): &"wharf", Vector2i(22, 62): &"mill",
 	Vector2i(22, 60): &"bakery", Vector2i(26, 52): &"housing", Vector2i(26, 54): &"housing"}
 const WHITECHAPEL_HOUSE: Vector2i = Vector2i(12, 22)
 const ST_GEORGE_HOUSE: Vector2i = Vector2i(24, 40)
