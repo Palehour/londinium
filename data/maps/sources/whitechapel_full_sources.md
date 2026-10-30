@@ -114,3 +114,10 @@ OHM CC0. OSM ODbL (coordenadas derivadas; si la tarea 3 las usa, atribuir "© Op
 - [INVENTED] Tobacco Dock aparece recortado: solo el 9 % (406 de 4645 m²).
 - [INVENTED] Seis escaleras del este quedan afuera: Wapping New, King Henry's, Wapping Dock, New Crane, Pelican y Tower Stairs (esta última, en el oeste).
 - Todo esto pasa al parking, junto con Shadwell.
+
+## Liberty: ribera de 2 casillas (#307, D-162 y D-163)
+- [INVENTED] Escala: la ribera es una banda de 2 casillas (50 m) encima del río en cada columna y sigue la orilla de OHM, que no se mueve. A 25 m por casilla, la ribera real de Wapping era más angosta: la banda es una liberty de escala para que entre el muelle 2×2 de D-155 (ribera al norte y río al sur).
+- Excepción, junto a la esclusa de St Katharine: la fila 59 queda como estaba, así que las columnas x13 y x16 tienen una sola casilla de ribera (y 60), pegada a la dársena. En x14 y x15 la dársena toca el río y no hay ribera.
+- Se corrigió la celda de río suelta de x20, y64: pasa a ribera de Wapping. D-162 y la #307 la llaman «la celda de río suelta de la fila 63 (`r~sr`)», pero es la misma celda: es la única celda de río de todo el mapa con tierra en 3 lados, el patrón `r~sr` solo aparece en y64 (x19-22) y la #307 la da como x20 y64. No es un corrimiento de base: con el origen del mapa (y 0 al norte) es y64, y contada desde 1 sería la fila 65. En y63 no hay ninguna celda de río suelta.
+- Tramos rectos aptos para un muelle: x1-3, x4-5, x6-8, x9-12, x19-20, x24-26, x28-29, x30-31, x32-33, x34-36, x37-39, x40-43 y x45-47. Se ubicaron con la tabla de wharves de Wapping de Chronicler (comentario de la #307, [DEBATED], ±2 casillas), que es solo una referencia. Esas x/y no son datos del juego. El mapa no trae muelles puestos: el jugador construye cada muelle sobre un tramo apto (D-163).
+- No se agregó el tramo x22-23: hacerlo exigía bajar x23 a y65 [INVENTED], y no se hizo: «OK al plan, fila 59 intacta y sin x22-23» (Cristian vía Chief en su chat privado, 29/10 09:54 ART). El tramo x19-20 cubre la zona de Carron & Continental y Alderman Stairs.

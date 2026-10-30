@@ -23,6 +23,14 @@ const CHAIN: Dictionary[Vector2i, StringName] = {Vector2i(24, 66): &"wharf", Vec
 const WHITECHAPEL_HOUSE: Vector2i = Vector2i(12, 22)
 const ST_GEORGE_HOUSE: Vector2i = Vector2i(24, 40)
 const WAPPING_HOUSE: Vector2i = Vector2i(26, 52)
+# The coast of issue #307 (D-162, D-163): a band of riverbank two cells deep, with straight stretches where the player
+# may build a wharf (D-155). The stretches, x from and to, follow Chronicler's wharves of Wapping [DEBATED, ±2]; they
+# are only the reference of this test, not data of the game.
+const BAND_DEPTH: int = 2
+const STRAIGHT_STRETCHES: Array[Vector2i] = [Vector2i(1, 3), Vector2i(4, 5), Vector2i(6, 8), Vector2i(9, 12),
+	Vector2i(19, 20), Vector2i(24, 26), Vector2i(28, 29), Vector2i(30, 31), Vector2i(32, 33), Vector2i(34, 36),
+	Vector2i(37, 39), Vector2i(40, 43), Vector2i(45, 47)]
+const WHARF_MONEY: int = 100000
 
 var _catalog: DataCatalog
 var _map: MapDef
@@ -169,3 +177,56 @@ func test_twenty_minutes_on_the_new_scenario() -> void:
 	assert_eq(districts, DISTRICTS)
 	assert_eq(session.get_snapshot()["defeat"]["causes"], [], "the city lives the 20 minutes")
 	assert_gt(int(session.get_snapshot()["economy"]["population"]), 0)
+
+
+# The first river cell of a column: the coast never moves (#307), so every column meets the river.
+func _coast_row(x: int) -> int:
+	for y: int in range(_map.height):
+		if Vector2i(x, y) in _map.river_cells:
+			return y
+	return _map.height
+
+
+func _touches_dock(cell: Vector2i) -> bool:
+	return RoadNetwork.SIDES.any(func(side: Vector2i) -> bool: return cell + side in _map.dock_cells)
+
+
+# D-162: two cells of riverbank (or the stairs that cross it) above the river in every column. Only beside the St
+# Katharine lock, whose row 59 stays as it is, may a column have less.
+func test_the_riverbank_is_a_band_of_two_cells() -> void:
+	for x: int in range(_map.width):
+		var depth: int = 0
+		var cell: Vector2i = Vector2i(x, _coast_row(x) - 1)
+		while depth < BAND_DEPTH and (_map.terrain.get(cell) == &"riverbank" or cell in _map.stairs_cells):
+			depth += 1
+			cell.y -= 1
+		var bank: Vector2i = Vector2i(x, _coast_row(x) - 1)
+		if bank in _map.dock_cells or _touches_dock(bank):
+			continue
+		assert_eq(depth, BAND_DEPTH, "column %d" % x)
+
+
+# No river cell left in a notch of the shore, with land on three of its sides.
+func test_no_river_cell_is_left_alone_on_the_shore() -> void:
+	var bounds: Rect2i = Rect2i(0, 0, _map.width, _map.height)
+	for cell: Vector2i in _map.river_cells:
+		var land: int = RoadNetwork.SIDES.filter(func(side: Vector2i) -> bool:
+			return bounds.has_point(cell + side) and cell + side not in _map.river_cells \
+				and cell + side not in _map.dock_cells).size()
+		assert_lt(land, 3, str(cell))
+
+
+# D-155 and D-163: on every straight stretch the player can build a wharf, its north row on the riverbank and its
+# south row on the river, from each column but the last.
+func test_a_wharf_fits_on_every_straight_stretch() -> void:
+	var context: EconomyContext = EconomyContext.new(_catalog, _map)
+	var width: int = _catalog.buildings[&"wharf"].footprint.x
+	for stretch: Vector2i in STRAIGHT_STRETCHES:
+		for x: int in range(stretch.x, stretch.y - width + 2):
+			var initial: EconomyState = EconomyState.new()
+			initial.money = WHARF_MONEY
+			var sim: Simulation = Simulation.new(_params(), initial, 7, context)
+			var command: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(x, _coast_row(x) - 1))
+			sim.apply_command(command)
+			sim.tick()
+			assert_true(command.accepted, "wharf at x %d of %s: %s" % [x, stretch, command.reason])
