@@ -122,6 +122,18 @@ func test_save_without_stats_history_loads() -> void:
 	assert_eq(_session.get_snapshot()["tick_count"], 120)
 
 
+# Issue #88, T4: transformed cells of another shape refuse the save instead of breaking the load.
+func test_rejects_malformed_terrain_changes() -> void:
+	var saved: Dictionary = SaveFile.build(_session)
+	var economy: Dictionary = saved["simulation"]["economy"]
+	economy["terrain_changes"] = [{"cell": [3, 4], "terrain": "firm"}]
+	assert_eq(SaveFile.validate(saved)["reason"], &"")
+	for broken: Variant in ["firm", [{"cell": [3], "terrain": "firm"}], [{"cell": [3, 4]}],
+			[{"cell": [3, 4], "terrain": 2}], [{"cell": ["a", 4], "terrain": "firm"}], ["firm"]]:
+		economy["terrain_changes"] = broken
+		assert_eq(SaveFile.validate(saved)["reason"], SaveFile.INVALID_FILE, str(broken))
+
+
 # Issue #67 (D-080): a game saved before the streets loads without them and without errors.
 func test_old_save_without_roads_loads() -> void:
 	var saved: Dictionary = SaveFile.build(_session)

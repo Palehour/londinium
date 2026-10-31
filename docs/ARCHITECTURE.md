@@ -165,7 +165,10 @@ londinium/
    `terrain.drain_cost`, or turns firm ground with water (river or dock basin) on one of its four sides into riverbank
    for that times `terrain.riverbank_cost_mult`, rounded down (#88, D-148, D-150). It refuses a taken cell: any cell of
    a footprint, a street, a standing building or Thames stairs of the map. The change lives in
-   `EconomyState.terrain_changes` over the map's labels; `EconomyContext.terrain_at` reads both.
+   `EconomyState.terrain_changes` over the map's labels; `EconomyContext.terrain_at` reads both. The save carries it
+   as `terrain_changes`, a list of `{cell: [x, y], terrain}` written only once a cell changed (a save without it loads
+   the map's terrain); the next chapter inherits that same list as geography (`terrain_changes_to_list()` /
+   `restore_terrain_changes()`, D-043, D-057).
 1a. Houses in a crisis (`CrisisSystem`, #222): quarantines and disinfections count down; a finished disinfection
    leaves the house clean, and once no house is sick every quarantine ends. Nothing makes a house sick yet: the D-054
    outbreaks (#87) will call `Simulation.mark_house_sick()` / `cure_house()`, which the tests use. A cure while a

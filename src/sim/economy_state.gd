@@ -142,7 +142,8 @@ var legitimacy_gain_tick: float = 0.0
 # Distance model (issue #67, D-080). The player's streets ({cell, built_at, paid}) and the transport owed below a
 # penny are saved; a save from before the streets loads with none.
 var player_roads: Array[Dictionary] = []
-# Cells the player transformed (issue #88, D-148), over the map's terrain. Saving them is #88 T4.
+# Cells the player transformed (issue #88, D-148), over the map's terrain. Saved only when there are any (T4), and the
+# next chapter inherits the same list as geography (D-043, D-057).
 var terrain_changes: Dictionary[Vector2i, StringName] = {}
 var transport_fraction: float = 0.0
 # Worked out by RoadSystem and never saved, so a loaded game recomputes its coverage: why a building does not work
@@ -296,7 +297,24 @@ func to_dict() -> Dictionary:
 		values["loan"] = loan.to_dict()
 	if loan_late_installments > 0:
 		values["loan_late_installments"] = loan_late_installments
+	# Only once a cell was transformed, so a game without them saves exactly as before them (issue #88).
+	if not terrain_changes.is_empty():
+		values["terrain_changes"] = terrain_changes_to_list()
 	return values
+
+
+# The transformed cells as {cell: [x, y], terrain}: the save's format and what the next chapter inherits.
+func terrain_changes_to_list() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for cell: Vector2i in terrain_changes:
+		list.append({"cell": [cell.x, cell.y], "terrain": String(terrain_changes[cell])})
+	return list
+
+
+func restore_terrain_changes(list: Array) -> void:
+	terrain_changes.clear()
+	for entry: Dictionary in list:
+		terrain_changes[Vector2i(int(entry["cell"][0]), int(entry["cell"][1]))] = StringName(entry["terrain"])
 
 
 func _missions_dict() -> Dictionary:
@@ -390,6 +408,8 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))
+	# A save from before issue #88 has no transformed cells: the map's terrain stands.
+	result.restore_terrain_changes(values.get("terrain_changes", []))
 	if values.has("loan"):
 		result.loan = LoanState.from_dict(values["loan"])
 	result.loan_late_installments = int(values.get("loan_late_installments", 0))

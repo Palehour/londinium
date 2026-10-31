@@ -254,6 +254,21 @@ static func _valid_simulation(simulation: Variant) -> bool:
 			continue
 		if not economy.has(field) or not _same_kind(economy[field], expected[field]):
 			return false
+	return _valid_terrain_changes(economy.get("terrain_changes", []))
+
+
+# Transformed cells (issue #88) are optional, but each one a {cell: [x, y], terrain} EconomyState can read.
+static func _valid_terrain_changes(changes: Variant) -> bool:
+	if changes is not Array:
+		return false
+	for entry: Variant in changes:
+		if entry is not Dictionary or entry.get("cell") is not Array or entry["cell"].size() != 2:
+			return false
+		for coordinate: Variant in entry["cell"]:
+			if typeof(coordinate) not in [TYPE_INT, TYPE_FLOAT]:
+				return false
+		if typeof(entry.get("terrain")) not in [TYPE_STRING, TYPE_STRING_NAME]:
+			return false
 	return true
 
 

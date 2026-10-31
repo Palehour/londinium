@@ -186,3 +186,45 @@ func test_water_and_cells_off_the_map_are_refused() -> void:
 	var command: SimulationCommand = _run(sim, TransformTerrainCommand.new(Vector2i(8, 3), &"firm"))
 	assert_eq(command.reason, &"outside_map")
 	assert_eq(sim.treasury(), MONEY)
+
+
+# Issue #88, T4 (D-057, D-130): the transformed cells travel in the save, through var_to_bytes as the file stores
+# them, and the same list carries them into a fresh state, the way the next chapter inherits them as geography
+# (D-043) without buildings or money.
+func _transformed_sim() -> Simulation:
+	var sim: Simulation = _sim()
+	_run(sim, TransformTerrainCommand.new(MARSH_BY_RIVER, &"firm"))
+	_run(sim, TransformTerrainCommand.new(FIRM_BY_RIVER, &"riverbank"))
+	return sim
+
+
+func _load(saved: Dictionary) -> Simulation:
+	var no_stages: Array[Dictionary] = []
+	return Simulation.from_save(_params(), _context, no_stages, bytes_to_var(var_to_bytes(saved)))
+
+
+func test_transformed_terrain_survives_save() -> void:
+	var loaded: Simulation = _load(_transformed_sim().to_save())
+	assert_eq(loaded.terrain_at(MARSH_BY_RIVER), &"firm")
+	assert_eq(loaded.terrain_at(FIRM_BY_RIVER), &"riverbank")
+	assert_eq(loaded.terrain_at(MARSH_INLAND), &"marsh", "An untouched cell keeps the map's terrain")
+	assert_eq(loaded.terrain_at(RIVERBANK), &"riverbank")
+
+
+func test_a_save_without_transformed_terrain_loads_the_maps() -> void:
+	assert_false(_sim().to_save()["economy"].has("terrain_changes"), "Nothing transformed saves as before #88")
+	var saved: Dictionary = _transformed_sim().to_save()
+	saved["economy"].erase("terrain_changes")
+	var loaded: Simulation = _load(saved)
+	assert_eq(loaded.terrain_at(MARSH_BY_RIVER), &"marsh")
+	assert_eq(loaded.terrain_at(FIRM_BY_RIVER), &"firm")
+
+
+func test_transformed_terrain_carries_into_a_fresh_state() -> void:
+	var inherited: Array = _transformed_sim().to_save()["economy"]["terrain_changes"]
+	var state: EconomyState = EconomyState.new()
+	state.restore_terrain_changes(bytes_to_var(var_to_bytes(inherited)))
+	var next: Simulation = Simulation.new(_params(), state, 7, _context)
+	assert_eq(next.terrain_at(MARSH_BY_RIVER), &"firm")
+	assert_eq(next.terrain_at(FIRM_BY_RIVER), &"riverbank")
+	assert_eq(next.treasury(), 0, "Only the geography is inherited")
