@@ -67,7 +67,7 @@ func test_role_invalid_final_parameter_values_fail_cleanly_during_load() -> void
 		"defeat.depopulation.warning_fraction": -0.1,
 		"defeat.depopulation.defeat_fraction": 1.1,
 		"defeat.depopulation.minimum_population": 1.5,
-		"defeat.bankruptcy.threshold": -1.0,
+		"defeat.bankruptcy.threshold_tax_minutes": 1.0,
 		"defeat.bankruptcy.duration_seconds": 0.0,
 		"defeat.hunger.duration_seconds": 1.5,
 		"defeat.depopulation.duration_seconds": -1.0,

@@ -96,7 +96,11 @@ func test_wheat_field_loads_with_recipe_tags_and_parameters() -> void:
 			"recipe.seconds", "recipe.outputs.wheat"]:
 		var key: StringName = StringName("building.wheat_field." + suffix)
 		assert_true(result.catalog.base_values.has(key), str(key))
-		assert_true(float(params.get_value(key)) > 0.0, str(key))
+		# The field has no upkeep since D-134 (it is basic infrastructure); every other value stays positive.
+		if suffix == "upkeep_per_minute":
+			assert_eq(float(params.get_value(key)), 0.0, str(key))
+		else:
+			assert_true(float(params.get_value(key)) > 0.0, str(key))
 
 
 func test_wheat_market_walk_parameters_exist_with_their_first_values() -> void:
@@ -123,8 +127,8 @@ func test_gdd_parameter_categories_and_defeat_placeholders_exist() -> void:
 			&"population.satisfaction.overcrowding_weight", &"population.growth.immigration_threshold",
 			&"population.growth.emigration_threshold", &"market.wheat.base_price"]:
 		assert_true(result.catalog.base_values.has(key), str(key))
-	assert_eq(params.get_value(&"defeat.bankruptcy.threshold"), 0)
-	assert_eq(params.get_value(&"defeat.bankruptcy.duration_seconds"), 180)
+	assert_eq(params.get_value(&"defeat.bankruptcy.threshold_tax_minutes"), -6)
+	assert_eq(params.get_value(&"defeat.bankruptcy.duration_seconds"), 300)
 	assert_eq(params.get_value(&"defeat.hunger.threshold"), 0.5)
 	assert_eq(params.get_value(&"defeat.hunger.duration_seconds"), 180)
 	assert_eq(params.get_value(&"defeat.depopulation.warning_fraction"), 0.5)
@@ -199,7 +203,7 @@ func test_dense_housing_has_the_values_of_d075() -> void:
 	var params: Params = Params.new(catalog, catalog.roles[&"neutral_administrator"])
 	assert_eq(params.get_value(&"building.dense_housing.capacity"), 20)
 	assert_eq(params.get_value(&"building.dense_housing.cost"), 60)
-	assert_eq(params.get_value(&"building.dense_housing.upkeep_per_minute"), 1)
+	assert_eq(params.get_value(&"building.dense_housing.upkeep_per_minute"), 0, "D-134 updates D-075")
 	assert_eq(params.get_value(&"building.dense_housing.jobs"), 0)
 	assert_eq(params.get_value(&"startup.dense_housing_occupied"), 1)
 	var dense: BuildingDef = catalog.buildings[&"dense_housing"]

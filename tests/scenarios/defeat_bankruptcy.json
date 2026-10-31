@@ -5,11 +5,11 @@
   "seed": 42,
   "duration_ticks": 900,
   "commands": [
-    {"tick": 0, "cmd": "set_tax", "rate": 0.0},
     {"tick": 0, "cmd": "build", "building": "wharf", "cell": [4, 13]},
     {"tick": 0, "cmd": "build", "building": "mill", "cell": [4, 10]},
     {"tick": 0, "cmd": "build", "building": "bakery", "cell": [6, 10]},
     {"tick": 0, "cmd": "build", "building": "housing", "cell": [10, 6]},
-    {"tick": 0, "cmd": "build", "building": "mill", "cell": [6, 8]}
+    {"tick": 0, "cmd": "build", "building": "mill", "cell": [6, 8]},
+    {"tick": 0, "cmd": "set_tax", "rate": 0.0}
   ]
 }

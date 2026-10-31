@@ -382,7 +382,7 @@ func test_a_very_wide_market_keeps_its_whole_price_range_selectable() -> void:
 func test_policy_controls_are_blocked_after_defeat() -> void:
 	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
 	_panel = _new_panel(_session)
 	_tick()
 	_tick()
@@ -411,7 +411,7 @@ func test_releasing_the_unloading_slider_where_it_was_sends_nothing() -> void:
 func test_the_unloading_slider_is_blocked_after_defeat() -> void:
 	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
 	_panel = _new_panel(_session)
 	_tick()
 	_tick()
@@ -448,7 +448,7 @@ func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> voi
 func test_defeat_shows_cause_blocks_controls_and_offers_restart() -> void:
 	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
 	_panel = _new_panel(_session)
 	_tick()
 	var alert: Label = _panel.get("_alert") as Label

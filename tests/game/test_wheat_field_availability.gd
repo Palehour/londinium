@@ -41,6 +41,12 @@ func _fixture(has_cultivable_cells: bool, changed_tags: bool = false) -> Node2D:
 	return view
 
 
+# The city starts with a tax base (no building added), so the upkeep of a building that opens no jobs is allowed (D-134).
+func _fund(view: Node2D) -> void:
+	TaxBase.fund_session(view.get("session") as GameSession)
+	view.call("_update_help")
+
+
 func _press(view: Node2D, key: Key) -> void:
 	var event: InputEventKey = InputEventKey.new()
 	event.keycode = key
@@ -89,6 +95,7 @@ func test_no_cultivable_cells_disables_help_and_shortcut_with_same_reason() -> v
 
 func test_cultivable_cells_keep_normal_help_and_construction_mode() -> void:
 	var view: Node2D = _fixture(true)
+	_fund(view)
 	var help: String = (view.get("_help") as Label).text
 	assert_string_contains(help, "5 %s" % Strings.building_label("wheat_field"))
 	assert_false(help.contains(_disabled_mark("")))
@@ -120,6 +127,7 @@ func test_availability_tracks_changed_catalog_tags_instead_of_building_id() -> v
 # Issue #52: the housing of the artisans is the eighth building, so keys 1 to 7 keep their meaning.
 func test_artisan_housing_is_built_from_key_eight() -> void:
 	var view: Node2D = _fixture(false)
+	_fund(view)
 	var help: String = (view.get("_help") as Label).text
 	assert_string_contains(help, "8 %s" % Strings.building_label("artisan_housing"))
 	_press(view, KEY_8)

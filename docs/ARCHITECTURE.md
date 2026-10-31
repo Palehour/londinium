@@ -271,7 +271,11 @@ londinium/
    deaths are rounded and spread over
    the classes by the largest remainders, not as emigration, and starts the vacancy and then the recovery. The
    `defeat_pause` lasts from the start to the end of the recovery. Nothing here draws a random number.
-10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
+10. Defeat: update warning/defeat timers (bankruptcy, hunger riot, depopulation). Bankruptcy without a loan (D-131,
+    D-133): the threshold is `defeat.bankruptcy.threshold_tax_minutes` × R (negative) and the window
+    `defeat.bankruptcy.duration_seconds`; while the window runs, `BuildCommand` and `BuildRoadCommand` refuse with
+    `bankruptcy_window`. Outside it, a building with upkeep is refused with `negative_balance` when
+    `MoneySystem.projected_delta_per_minute` would end below 0 (D-134). Then evaluate victory objectives, unless this tick lost the city. Victory never blocks ticks or commands.
 11. Stats + snapshot emitted. The chapter history (`StatsHistory`, D-066) samples every series and notes the causes
     that changed; step 1 also notes each command's outcome. It only reads the state.
 

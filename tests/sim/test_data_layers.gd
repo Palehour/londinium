@@ -30,14 +30,16 @@ func _assert_values(params: Params, expected: Dictionary[StringName, Variant]) -
 
 func test_easy_preset_values() -> void:
 	_assert_values(_params(&"easy"), {&"startup.money": 1470, &"defeat.grace_seconds": 600.0,
-		&"defeat.bankruptcy.duration_seconds": 300, &"defeat.hunger.duration_seconds": 300,
+		&"defeat.bankruptcy.threshold_tax_minutes": -8, &"defeat.bankruptcy.duration_seconds": 360,
+		&"defeat.hunger.duration_seconds": 300,
 		&"defeat.depopulation.duration_seconds": 300, &"demolish.refund_ratio": 0.75,
 		&"market.wheat.max_price": 3, &"market.wheat.reversion": 0.5})
 
 
 func test_hard_preset_values() -> void:
 	_assert_values(_params(&"hard"), {&"startup.money": 800, &"defeat.grace_seconds": 180.0,
-		&"defeat.bankruptcy.duration_seconds": 120, &"defeat.hunger.duration_seconds": 120,
+		&"defeat.bankruptcy.threshold_tax_minutes": -4, &"defeat.bankruptcy.duration_seconds": 240,
+		&"defeat.hunger.duration_seconds": 120,
 		&"defeat.depopulation.duration_seconds": 120, &"market.wheat.max_price": 4,
 		&"market.wheat.reversion": 0.45, &"market.barley.reversion": 0.35, &"demolish.refund_ratio": 0.25})
 

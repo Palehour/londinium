@@ -66,7 +66,7 @@ func test_bankruptcy_warning_recovery_and_exact_deadline() -> void:
 	assert_eq(_state.bankruptcy.elapsed_seconds, 0)
 	assert_eq(_state.bankruptcy.cause, &"")
 	_state.money = -1
-	_ticks(179)
+	_ticks(int(_params.get_value(&"defeat.bankruptcy.duration_seconds")) - 1)
 	assert_eq(_state.bankruptcy.status, &"warning")
 	_ticks(1)
 	assert_eq(_state.bankruptcy.status, &"defeat")

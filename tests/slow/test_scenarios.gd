@@ -108,7 +108,9 @@ func test_big_tight_r06_buys_chain_and_housing_together_and_ends_far_larger() ->
 	assert_true(result.survived())
 	var final: Dictionary = result.final_row()
 	assert_eq([final["n_wharf"], final["n_mill"], final["n_bakery"], final["n_housing"]], [2, 2, 2, 2])
-	assert_eq(result.row(1)["tax_rate"], 0.6)
+	# D-134 quitó el mantenimiento de lo básico; con r = 0,6 la segunda cadena se compra antes de rango.
+	# Cristian aprobó 0,55 en #280 (2026-10-31); #39 fijaba 0,6.
+	assert_eq(result.row(1)["tax_rate"], 0.55)
 	var bought: Array[int] = []
 	for entry: Dictionary in result.commands:
 		if entry["tick"] == 60:
@@ -303,7 +305,8 @@ func test_hunger_riot_defeat() -> void:
 # F5: with the treasury empty the wharf stops buying wheat, and the panel names it.
 func test_bankruptcy_defeat() -> void:
 	var result: ScenarioResult = _result("defeat_bankruptcy")
-	_assert_lost_only_by(result, &"bankruptcy", 480, 15)
+	# Treasury below 0 near the end of the 300 s grace, then the 300 s window of D-133 (it was 180 s): about 627 s.
+	_assert_lost_only_by(result, &"bankruptcy", 627, 15)
 	assert_lt(int(result.final_row()["money"]), 0)
 	assert_true(result.bread_cause_pairs.has("wharf:no_money_for_wheat"))
 

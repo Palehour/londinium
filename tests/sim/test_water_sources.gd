@@ -136,6 +136,7 @@ func test_a_lea_bridge_fountain_past_the_cap_is_refused_without_charge() -> void
 	var params: Params = _events_on()
 	var cap: int = int(params.get_value(CAP_KEY))
 	var state: EconomyState = _rich_state()
+	TaxBase.fund(state, params)
 	for index: int in range(cap):
 		assert_true(_build(state, params, LEA_BRIDGE).accepted, "fountain %d" % index)
 	var money: int = state.money

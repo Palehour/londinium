@@ -171,14 +171,27 @@ func has_queued_commands() -> bool:
 	return not _commands.is_empty()
 
 
+func is_bankruptcy_window_running() -> bool:
+	return DefeatSystem.bankruptcy_window_running(_state)
+
+
+# The projected change of the treasury per minute if this building were built now (D-134); the UI shows it.
+func get_projected_delta_per_minute(id: StringName) -> float:
+	return MoneySystem.projected_delta_per_minute(_state, _params, _context, id)
+
+
 func get_building_unavailable_reason(id: StringName) -> StringName:
 	if _context == null:
 		return &"unknown_building"
 	if _context.buildings.has(id):
+		if is_bankruptcy_window_running():
+			return &"bankruptcy_window"
 		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _state, _context,
 			_context.buildings[id])
 		if events_reason != &"":
 			return events_reason
+		if MoneySystem.blocks_negative_balance(_state, _params, _context, id):
+			return &"negative_balance"
 	return _context.building_unavailable_reason(id)
 
 
@@ -221,7 +234,7 @@ func tick() -> void:
 		LoanSystem.tick(_state, _params)
 		FactionSystem.tick(_state, _params, _context, _coverages())
 		MissionSystem.tick(_state, _params, _context, _tick_count)
-		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context))
+		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context), _context)
 		if not _state.defeat_causes.is_empty():
 			for command: SimulationCommand in _commands:
 				_reject_after_defeat(command)
@@ -385,7 +398,7 @@ func _defeat_snapshot() -> Dictionary:
 		"grace_remaining_seconds": maxi(0, grace - _state.defeat_elapsed_seconds),
 		"causes": _state.defeat_causes.duplicate(),
 		"bankruptcy": _condition_snapshot(_state.bankruptcy, &"bankruptcy",
-			{"money": _state.money, "threshold": int(_params.get_value(&"defeat.bankruptcy.threshold"))}),
+			{"money": _state.money, "threshold": DefeatSystem.bankruptcy_threshold(_state, _params, _context)}),
 		"hunger": _condition_snapshot(_state.hunger, &"hunger",
 			{"coverage": _state.hunger_coverage(), "threshold": float(_params.get_value(&"defeat.hunger.threshold"))}),
 		"depopulation": _condition_snapshot(_state.depopulation, &"depopulation",

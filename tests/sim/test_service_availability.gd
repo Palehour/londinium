@@ -49,6 +49,7 @@ func _recovery_per_minute(service: StringName = FIRE) -> float:
 func _sim(builds: Array) -> Simulation:
 	var initial: EconomyState = EconomyState.new()
 	initial.money = 100000
+	TaxBase.fund(initial, _params())
 	var sim: Simulation = Simulation.new(_params(), initial, SEED, _context)
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(_context, build[0], RoadTestMap.land(build[1])))

@@ -60,6 +60,8 @@ func _build(view: Node2D, id: StringName) -> Vector2i:
 
 func test_key_0_goes_through_the_services() -> void:
 	var view: Node2D = await _view()
+	# The services open no jobs, so the city needs a tax base for their upkeep (D-134).
+	TaxBase.fund_session(_session(view))
 	for expected: StringName in [&"fire_station", &"health_post", &"police_station", &"fire_station"]:
 		_key(KEY_0)
 		assert_eq(view.get("_building_type"), expected)

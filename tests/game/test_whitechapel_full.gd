@@ -31,6 +31,7 @@ const STRAIGHT_STRETCHES: Array[Vector2i] = [Vector2i(1, 3), Vector2i(4, 5), Vec
 	Vector2i(19, 20), Vector2i(24, 26), Vector2i(28, 29), Vector2i(30, 31), Vector2i(32, 33), Vector2i(34, 36),
 	Vector2i(37, 39), Vector2i(40, 43), Vector2i(45, 47)]
 const WHARF_MONEY: int = 100000
+const JOBLESS: int = 10
 
 var _catalog: DataCatalog
 var _map: MapDef
@@ -225,6 +226,8 @@ func test_a_wharf_fits_on_every_straight_stretch() -> void:
 		for x: int in range(stretch.x, stretch.y - width + 2):
 			var initial: EconomyState = EconomyState.new()
 			initial.money = WHARF_MONEY
+			# People without work: the wharf's jobs pay the head tax that covers its upkeep (D-134).
+			initial.population = JOBLESS
 			var sim: Simulation = Simulation.new(_params(), initial, 7, context)
 			var command: BuildCommand = BuildCommand.new(context, &"wharf", Vector2i(x, _coast_row(x) - 1))
 			sim.apply_command(command)

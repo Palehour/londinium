@@ -25,7 +25,8 @@ func update_hunger_coverage(state: EconomyState, params: Params) -> void:
 
 
 # `depopulation_paused` (a mission's defeat_pause, issue #63, D-090) freezes the depopulation timer, not resets it.
-func tick(state: EconomyState, params: Params, update_coverage: bool = true, depopulation_paused: bool = false) -> void:
+func tick(state: EconomyState, params: Params, update_coverage: bool = true, depopulation_paused: bool = false,
+		context: EconomyContext = null) -> void:
 	if not state.defeat_causes.is_empty():
 		return
 	initialize(state, params)
@@ -41,7 +42,7 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true, dep
 		return
 	var counting: bool = state.defeat_elapsed_seconds > float(params.get_value(&"defeat.grace_seconds"))
 	# With a loan unpaid its only way to bankruptcy is the receiver (D-128, D-013, D-131), in arrears or not.
-	var bankrupt: bool = state.money < int(params.get_value(&"defeat.bankruptcy.threshold")) and state.loan == null
+	var bankrupt: bool = state.money < bankruptcy_threshold(state, params, context) and state.loan == null
 	_update(state.bankruptcy, &"bankruptcy", bankrupt, bankrupt, counting,
 		float(params.get_value(&"defeat.bankruptcy.duration_seconds")))
 	var hungry: bool = state.population > 0 and state.hunger_coverage() \
@@ -63,6 +64,19 @@ func tick(state: EconomyState, params: Params, update_coverage: bool = true, dep
 	for condition: DefeatState in [state.bankruptcy, state.hunger, state.depopulation]:
 		if condition.status == &"defeat":
 			state.defeat_causes.append(condition.cause)
+
+
+# The treasury below which the bankruptcy window opens (D-131, D-133): a multiple of R, the head tax per minute at
+# today's rate, in whole pence rounded to the nearest (the multiple of a hard or easy preset is not exact).
+static func bankruptcy_threshold(state: EconomyState, params: Params, context: EconomyContext) -> int:
+	var multiple: float = float(params.get_value(&"defeat.bankruptcy.threshold_tax_minutes"))
+	return roundi(multiple * MoneySystem.tax_per_minute(state, params, context))
+
+
+# The window of D-133 is running: the treasury is under the threshold, no loan is open and the grace is over, so the
+# timer counts. Building is blocked meanwhile. Warning during the grace does not count: nothing is ticking.
+static func bankruptcy_window_running(state: EconomyState) -> bool:
+	return state.bankruptcy.status == &"warning" and state.bankruptcy.elapsed_seconds > 0
 
 
 func _update_population_history(state: EconomyState, params: Params) -> void:

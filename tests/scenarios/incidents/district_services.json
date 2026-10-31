@@ -25,33 +25,6 @@
     {
       "tick": 0,
       "cmd": "build",
-      "building": "fire_station",
-      "cell": [
-        30,
-        40
-      ]
-    },
-    {
-      "tick": 0,
-      "cmd": "build",
-      "building": "health_post",
-      "cell": [
-        32,
-        40
-      ]
-    },
-    {
-      "tick": 0,
-      "cmd": "build",
-      "building": "police_station",
-      "cell": [
-        34,
-        40
-      ]
-    },
-    {
-      "tick": 0,
-      "cmd": "build",
       "building": "housing",
       "cell": [
         36,
@@ -101,6 +74,60 @@
       "cell": [
         30,
         18
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "mill",
+      "cell": [
+        40,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "mill",
+      "cell": [
+        42,
+        40
+      ]
+    },
+    {
+      "tick": 0,
+      "cmd": "build",
+      "building": "mill",
+      "cell": [
+        44,
+        40
+      ]
+    },
+    {
+      "tick": 1,
+      "cmd": "build",
+      "building": "fire_station",
+      "cell": [
+        30,
+        40
+      ]
+    },
+    {
+      "tick": 1,
+      "cmd": "build",
+      "building": "health_post",
+      "cell": [
+        32,
+        40
+      ]
+    },
+    {
+      "tick": 1,
+      "cmd": "build",
+      "building": "police_station",
+      "cell": [
+        34,
+        40
       ]
     }
   ]

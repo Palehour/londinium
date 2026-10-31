@@ -40,6 +40,8 @@ func _city() -> Simulation:
 	state.money = 1000000
 	state.population = 30
 	state.stocks.assign({&"wheat": 20, &"flour": 0, &"bread": 40, &"barley": 0, &"malt": 0, &"beer": 0, &"tea": 0})
+	# Nobody is employed at tick 0, so the city starts with a tax base for the upkeep of the malthouse (D-134).
+	TaxBase.fund(state, _params())
 	var sim: Simulation = Simulation.new(_params(), state, 11, _context)
 	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"wharf", Vector2i(8, 13)], [&"mill", Vector2i(4, 10)],
 		[&"bakery", Vector2i(6, 10)], [&"bakery", Vector2i(8, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
@@ -299,7 +301,8 @@ func test_administration_is_split_from_upkeep() -> void:
 	var params: Params = _params()
 	var state: EconomyState = EconomyState.new()
 	for index: int in 30:
-		state.buildings.append({"definition_id": &"bakery", "cell": [index, 0]})
+		# The wharf pays upkeep; the bakery pays none since D-131 and would leave nothing to split.
+		state.buildings.append({"definition_id": &"wharf", "cell": [index, 0]})
 	var multiplier: float = BuildingCosts.administration_multiplier(params, state.buildings.size())
 	assert_gt(multiplier, 1.0, "thirty buildings pay administration")
 	var money: MoneySystem = MoneySystem.new()

@@ -5,9 +5,11 @@ extends GutTest
 # (tools/run_long_tests); test_scenario_runner.gd checks the files. This one keeps the short finding of #128.
 
 const PRESET: StringName = &"hard"
-# The finding behind the 0.6 of crisis_recovery_hard (Cristian's decision in #128): at 0.4 the one-chain city
-# runs out of money on Hard and empties. Seed 5 is the one that loses soonest (tick 1077), so the game is cut there.
-const LOW_TAX: float = 0.4
+# The finding behind the 0.6 of crisis_recovery_hard (Cristian's decision in #128): at a low tax the one-chain city
+# runs out of money on Hard and empties. It was 0.4 until D-134 took the upkeep off the basics; since then 0.4 holds
+# (14 people left at tick 1200) and 0.3 is the tax that shows the finding. Of the 20 seeds seed 5 is still the one
+# that loses soonest (tick 896, then seed 6 at 923), so the game is cut at 1200.
+const LOW_TAX: float = 0.3
 const LOW_TAX_SEED: int = 5
 const LOW_TAX_TICKS: int = 1200
 

@@ -398,7 +398,13 @@ func test_the_reserve_buying_is_limited_by_space_and_by_the_treasury() -> void:
 	assert_lte(_wheat(tight), 10, "a full warehouse buys nothing")
 	var poor_state: EconomyState = _state(3, [-1, 2, 0, 2], 0, true)
 	poor_state.money = 4
-	var poor: Simulation = _sim(poor_state)
+	# The market spends the treasury down to exactly 0 and the same tick's wage (a whole unit, charged after the
+	# purchase) then takes it below 0. With D-134 (no upkeep for the mill and bakery) the rounding lands there, so the
+	# chain works for free here: the only thing that spends is the purchase, and it can reach 0 but never go under.
+	var free_work: Array[Modifier] = []
+	for building: String in ["wharf", "mill", "bakery"]:
+		free_work.append(Modifier.new(StringName("building.%s.wage_per_worker_per_minute" % building), &"set", 0))
+	var poor: Simulation = _sim(poor_state, _params(free_work))
 	_run(poor, 30)
 	assert_gte(int(poor.snapshot()["economy"]["money"]), 0)
 

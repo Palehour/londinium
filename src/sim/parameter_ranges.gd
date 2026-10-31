@@ -20,8 +20,10 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"population.growth.hunger_emigration_recovery": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
-	&"defeat.bankruptcy.threshold": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	# Multiple of R (the head tax per minute) below which the treasury starts the bankruptcy window (D-131, D-133):
+	# negative or zero, so a debt is never "below" a positive balance.
+	&"defeat.bankruptcy.threshold_tax_minutes": {
+		"min": -INF, "max": 0.0, "min_inclusive": false, "max_inclusive": true},
 	&"defeat.hunger.threshold": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"defeat.depopulation.warning_fraction": {

@@ -19,7 +19,8 @@ func before_each() -> void:
 
 func test_unemployed_do_not_pay_and_minute_fractional_payments_are_preserved() -> void:
 	_state.population = 100
-	_state.buildings.append({"definition_id": &"bakery", "workers": 3})
+	# The malthouse (upkeep 3) stands in for the bakery, which has none since D-134.
+	_state.buildings.append({"definition_id": &"malthouse", "workers": 3})
 	_state.buildings.append({"definition_id": &"housing", "workers": 0})
 	for index: int in range(60):
 		MoneySystem.new().tick(_state, _params)
@@ -41,7 +42,7 @@ func test_full_wages_and_upkeep_are_paid_into_negative_treasury() -> void:
 	_state.buildings.append({"definition_id": &"housing", "workers": 0})
 	for index: int in range(60):
 		MoneySystem.new().tick(_state, _params)
-	assert_eq(_state.money, -13)
+	assert_eq(_state.money, -12, "8 wages + 4 upkeep of the wharf; the housing has none since D-134")
 
 
 func test_role_modifiers_control_tax_base_wages_and_upkeep() -> void:
