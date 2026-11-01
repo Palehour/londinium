@@ -1,8 +1,8 @@
 extends GutTest
 
-# Statistics screen, history view (issue #83, D-052): one metric over 10 min, 1 h or the whole chapter, read from
-# the series of #82 (D-066) without adding any, with markers from the cause log. The D-pad walks the buckets and
-# picks the metric, and the triggers change the range.
+# Statistics screen, history view (issue #316, D-168): one series of the D-066 registry over 10 min, 1 h or the
+# chapter. LB/RB change the series. Markers are only kinds the simulation has already emitted. The D-pad walks
+# the buckets and the triggers change the range.
 
 const ROOT: String = "user://test_stats_timeline"
 # Seven minutes: 42 closed buckets of the medium level and 7 of the chapter's. The demo, left alone, is lost to
@@ -41,9 +41,15 @@ func _ranges() -> Array[Dictionary]:
 	return look.history_ranges
 
 
-func _build(simulation: Simulation, metric: StringName, range_index: int) -> Dictionary:
+func _look() -> StatsPresentation:
+	var look: StatsPresentation = StatsPresentation.new()
+	look.load_data()
+	return look
+
+
+func _chart(simulation: Simulation, series_id: StringName, range_index: int) -> Dictionary:
 	var entry: Dictionary = _ranges()[range_index]
-	return StatsTimeline.build(simulation, metric, entry["tier"], entry["span_seconds"])
+	return StatsTimeline.chart(simulation, series_id, entry["tier"], entry["span_seconds"], _look().history_markers)
 
 
 func _bucket_count(chart: Dictionary) -> int:
@@ -75,22 +81,25 @@ func test_presentation_rejects_bad_ranges() -> void:
 
 
 func test_history_draws_every_summary_metric_that_has_series() -> void:
-	var expected: Array[StringName] = StatsSummary.CARDS.duplicate()
-	expected.erase(&"fear")
-	expected.erase(&"debt")
-	assert_eq(StatsTimeline.METRICS, expected)
+	var simulation: Simulation = _simulation(0)
+	var expected: Array[StringName] = []
+	for def: Dictionary in simulation.stats_series_defs():
+		expected.append(def["id"])
+	expected.append(&"fear")
+	expected.append(&"debt")
+	assert_eq(_look().history_series, expected, "stats.json follows the registry, then fear and debt")
 
 
 func test_each_range_reads_its_level_over_its_span() -> void:
 	var simulation: Simulation = _simulation(TICKS)
 	var medium: Dictionary = simulation.stats_series(&"money", StatsHistory.TIER_MEDIUM)
-	var chapter: Dictionary = simulation.stats_series(&"money", StatsHistory.TIER_CHAPTER)
-	var five: Dictionary = StatsTimeline.build(simulation, &"population", StatsHistory.TIER_MEDIUM, 300)
+	var chapter: Dictionary = simulation.stats_series(&"population:worker", StatsHistory.TIER_CHAPTER)
+	var five: Dictionary = StatsTimeline.chart(simulation, &"money", StatsHistory.TIER_MEDIUM, 300, _look().history_markers)
 	assert_eq(_bucket_count(five), 30, "5 min of 10 s buckets")
-	assert_eq(int(five["first_bucket"]) + 30, int(medium["first_bucket"]) + medium["mean"].size(), "Ends on the newest")
-	assert_eq(_bucket_count(_build(simulation, &"population", 0)), 42, "7 min of the 10 so far")
-	assert_eq(_bucket_count(_build(simulation, &"population", 1)), 42, "7 min of the hour so far")
-	var whole: Dictionary = _build(simulation, &"population", 2)
+	assert_eq(int(five["first_bucket"]) + 30, int(medium["first_bucket"]) + medium["total"].size(), "Ends on the newest")
+	assert_eq(_bucket_count(_chart(simulation, &"money", 0)), 42, "7 min of the 10 so far")
+	assert_eq(_bucket_count(_chart(simulation, &"money", 1)), 42, "7 min of the hour, not 360 padded buckets")
+	var whole: Dictionary = _chart(simulation, &"population:worker", 2)
 	assert_eq(_bucket_count(whole), chapter["mean"].size())
 	assert_eq(whole["bucket_seconds"], 60)
 	assert_eq(whole["first_bucket"], 0, "The chapter from its first minute")
@@ -98,14 +107,12 @@ func test_each_range_reads_its_level_over_its_span() -> void:
 
 func test_the_chapter_range_reads_the_minute_level() -> void:
 	var simulation: Simulation = _simulation(TICKS)
-	var expected: float = 0.0
-	for def: Dictionary in simulation.stats_series_defs():
-		if def["metric"] == &"population":
-			expected += simulation.stats_series(def["id"], StatsHistory.TIER_CHAPTER)["mean"][-1]
-	var chart: Dictionary = _build(simulation, &"population", 2)
-	assert_almost_eq(chart["lines"][0]["values"][-1], expected, 0.01)
-	assert_eq(StatsSummary.reading(&"population", chart["lines"], 0),
-		str(roundi(chart["lines"][0]["values"][0])), "Reads any bucket, not only the newest")
+	var series: Dictionary = simulation.stats_series(&"population:worker", StatsHistory.TIER_CHAPTER)
+	var chart: Dictionary = _chart(simulation, &"population:worker", 2)
+	assert_almost_eq(chart["lines"][0]["values"][-1], series["mean"][-1], 0.01, "The registry mean, not a sum")
+	assert_eq(StatsTimeline.format_value(chart["lines"][0]["values"][0], &"people"),
+		Strings.text(Strings.STATS_SCREEN_HISTORY_VALUE) % chart["lines"][0]["values"][0],
+		"Reads any bucket, not only the newest")
 
 
 func test_a_policy_change_is_marked_on_its_bucket() -> void:
@@ -113,33 +120,15 @@ func test_a_policy_change_is_marked_on_its_bucket() -> void:
 	simulation.apply_command(SetTaxCommand.new(TAX_RATE))
 	for tick: int in 120 - TAX_TICK + 1:
 		simulation.tick()
-	var chart: Dictionary = _build(simulation, &"population", 0)
-	var policies: Array[Dictionary] = []
-	for marker: Dictionary in chart["markers"]:
-		if marker["text"] == Strings.text(Strings.STATS_SCREEN_MARKER_POLICY) % Strings.text(&"ui.stats_screen.policy.tax_rate"):
-			policies.append(marker)
-	assert_eq(policies.size(), 1, "One marker for the new tax")
-	@warning_ignore("integer_division")
-	assert_eq(policies[0]["bucket"], (TAX_TICK - 1) / 10 - int(chart["first_bucket"]))
+	_assert_history_hides(simulation, 0, "A tax change is logged, and Historia does not mark it")
 
 
 func test_starting_policies_are_not_markers() -> void:
-	var chart: Dictionary = _build(_simulation(120), &"population", 0)
-	var policy: String = Strings.text(Strings.STATS_SCREEN_MARKER_POLICY).split("%s")[0]
-	for marker: Dictionary in chart["markers"]:
-		assert_false(String(marker["text"]).begins_with(policy), "Every policy starts logged: %s" % marker)
+	_assert_history_hides(_simulation(120), 0, "Starting policies are logged, and Historia does not mark them")
 
 
 func test_the_lost_demo_marks_its_warnings_and_defeat() -> void:
-	var chart: Dictionary = _build(_simulation(DEFEAT_TICKS), &"population", 2)
-	var depopulation: String = Strings.label(Strings.CONDITION_LABELS, &"depopulation")
-	var found: Array[String] = []
-	for marker: Dictionary in chart["markers"]:
-		found.append("%d %s" % [marker["bucket"], marker["text"]])
-	assert_has(found, "0 " + Strings.text(Strings.STATS_SCREEN_MARKER_WARNING) % Strings.label(Strings.CONDITION_LABELS,
-		&"hunger"), "The demo starts without bread")
-	assert_has(found, "5 " + Strings.text(Strings.STATS_SCREEN_MARKER_WARNING) % depopulation, "301 s: minute 6")
-	assert_has(found, "7 " + Strings.text(Strings.STATS_SCREEN_MARKER_DEFEAT) % depopulation, "480 s: minute 8")
+	_assert_history_hides(_simulation(DEFEAT_TICKS), 2, "The lost demo logs warnings and a defeat; Historia does not mark them")
 
 
 func test_marks_warnings_defeats_and_completed_stages_only() -> void:
@@ -164,9 +153,9 @@ func test_building_the_history_leaves_the_game_unchanged() -> void:
 	var simulation: Simulation = _simulation(120)
 	# Compared as bytes: an empty bucket holds NaN, which is never equal to itself.
 	var before: PackedByteArray = var_to_bytes(simulation.to_save())
-	for metric: StringName in StatsTimeline.METRICS:
+	for series_id: StringName in _look().history_series:
 		for range_index: int in _ranges().size():
-			_build(simulation, metric, range_index)
+			_chart(simulation, series_id, range_index)
 	assert_eq(var_to_bytes(simulation.to_save()), before)
 
 
@@ -221,10 +210,11 @@ func test_rb_goes_to_the_history_and_the_dpad_walks_the_buckets() -> void:
 	_pad(JOY_BUTTON_DPAD_LEFT)
 	_pad(JOY_BUTTON_DPAD_LEFT)
 	assert_eq(history.cursor_index(), 9)
-	var lines: Array[Dictionary] = (history.get("_chart") as Dictionary)["lines"]
-	assert_eq((history.get("_reading") as Label).text, Strings.text(Strings.STATS_SCREEN_HISTORY_READING)
-		% ["1:40", StatsSummary.reading(&"population", lines, 9)], "Reads the bucket that ends at 1:40")
 	var session: GameSession = view.get("session") as GameSession
+	var money: PackedFloat32Array = StatsSummary.window(session.simulation.stats_series(&"money",
+		StatsHistory.TIER_MEDIUM), "total", 600)
+	assert_eq((history.get("_reading") as Label).text, Strings.text(Strings.STATS_SCREEN_HISTORY_READING)
+		% ["1:40", StatsTimeline.format_value(money[9], &"pence")], "Reads money at the bucket that ends at 1:40")
 	for tick: int in 10:
 		session.simulation.tick()
 	session.publish_tick()
@@ -238,11 +228,24 @@ func test_rb_goes_to_the_history_and_the_dpad_walks_the_buckets() -> void:
 func test_dpad_up_and_down_change_the_metric() -> void:
 	var view: Node2D = await _view()
 	var history: TimelineTab = _history(view)
+	var screen: StatsScreen = view.get("_stats_screen") as StatsScreen
+	var tabs: TabContainer = screen.get("_tabs") as TabContainer
+	var first: StringName = (history.get("_chart") as Dictionary)["id"]
 	_pad(JOY_BUTTON_DPAD_DOWN)
-	assert_eq((history.get("_chart") as Dictionary)["id"], StatsTimeline.METRICS[1])
 	_pad(JOY_BUTTON_DPAD_UP)
-	_pad(JOY_BUTTON_DPAD_UP)
-	assert_eq((history.get("_chart") as Dictionary)["id"], StatsTimeline.METRICS[-1], "Wraps around")
+	assert_eq((history.get("_chart") as Dictionary)["id"], first, "Up and down no longer change the series")
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq(tabs.current_tab, StatsScreen.HISTORY_TAB, "RB stays on Historia")
+	assert_eq((history.get("_chart") as Dictionary)["id"], &"income:tax:worker")
+	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	assert_eq((history.get("_chart") as Dictionary)["id"], first)
+	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	assert_eq((history.get("_chart") as Dictionary)["id"], &"debt", "LB wraps to the last series")
+	assert_eq(tabs.current_tab, StatsScreen.HISTORY_TAB)
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq((history.get("_chart") as Dictionary)["id"], first, "RB wraps back to the first")
+	assert_eq((screen.get("_hint") as Label).text, Strings.text(Strings.STATS_SCREEN_HISTORY_HEADER))
+	assert_false((history.get("_hint") as Label).text.contains("métrica"))
 
 
 func test_a_trigger_pull_changes_the_range_once() -> void:
@@ -264,11 +267,124 @@ func test_history_fits_the_steam_deck_screen() -> void:
 	var view: Node2D = await _view()
 	var screen: StatsScreen = view.get("_stats_screen") as StatsScreen
 	var history: TimelineTab = _history(view)
-	for metric: int in StatsTimeline.METRICS.size():
+	assert_gte(screen.theme.default_font_size, 16)
+	var series: Array[StringName] = history.presentation.history_series
+	var shown: StringName = (history.get("_chart") as Dictionary)["id"]
+	for series_id: StringName in [&"need_score:artisan:comunidad", &"expense:imported_flour", &"fear", &"debt"]:
+		history.change_series(series.find(series_id) - series.find(shown))
+		shown = series_id
+		if series_id == &"fear" or series_id == &"debt":
+			assert_true((history.get("_chart") as Dictionary)["lines"].is_empty())
+			assert_eq((history.get("_reading") as Label).text, Strings.text(Strings.STATS_SCREEN_NO_DATA))
 		for locale: String in ["es", "en"]:
 			Strings.set_locale(locale)
 			await get_tree().process_frame
-			assert_lte(screen.get_combined_minimum_size().x, 1280.0, "Width (%s, %d)" % [locale, metric])
-			assert_lte(screen.get_combined_minimum_size().y, 800.0, "Height (%s, %d)" % [locale, metric])
-		_pad(JOY_BUTTON_DPAD_DOWN)
+			assert_lte(screen.get_combined_minimum_size().x, 1280.0, "Width (%s, %s)" % [locale, series_id])
+			assert_lte(screen.get_combined_minimum_size().y, 800.0, "Height (%s, %s)" % [locale, series_id])
 	assert_true(history.visible)
+
+
+# D-168: the cursor reads the registry field of one series (mean when the series averages, total otherwise).
+func test_the_cursor_reads_the_registry_field_not_a_derived_metric() -> void:
+	var simulation: Simulation = _simulation(TICKS)
+	var look: StatsPresentation = StatsPresentation.new()
+	look.load_data()
+	for sample: StringName in [&"money", &"income:tax:worker", &"population:worker", &"coverage:bread"]:
+		var def: Dictionary = _def(simulation, sample)
+		var field: String = "mean" if def["aggregation"] == &"mean" else "total"
+		for range_index: int in _ranges().size():
+			var entry: Dictionary = _ranges()[range_index]
+			var chart: Dictionary = StatsTimeline.chart(simulation, sample, entry["tier"], entry["span_seconds"],
+				look.history_markers)
+			var expected: PackedFloat32Array = StatsSummary.window(simulation.stats_series(sample, entry["tier"]),
+				field, entry["span_seconds"])
+			var got: PackedFloat32Array = (chart["lines"][0]["values"] as PackedFloat32Array)
+			assert_eq(got.size(), expected.size(), "%s %s" % [sample, entry["id"]])
+			assert_ne(got.size(), 360, "An hour with 7 min of play is not padded to 360 buckets")
+			for index: int in got.size():
+				if is_nan(expected[index]):
+					assert_true(is_nan(got[index]), "%s[%d]" % [sample, index])
+				else:
+					assert_almost_eq(got[index], expected[index], 0.001, "%s %s [%d]" % [sample, field, index])
+
+
+func test_an_unregistered_marker_kind_is_not_drawn_and_two_stack() -> void:
+	var candidates: Array[Dictionary] = [
+		{"kind": &"crisis", "icon": "!", "label_key": &"ui.stats_screen.marker.crisis"},
+		{"kind": &"invented", "icon": "?", "label_key": &"ui.stats_screen.marker.crisis"},
+		{"kind": &"decree", "icon": "D", "label_key": &"ui.stats_screen.marker.decree"},
+	]
+	var events: Array[Dictionary] = [
+		{"second": 15, "kind": &"invented", "subject": &"x", "cause": &"y"},
+		{"second": 21, "kind": &"crisis", "subject": &"bread", "cause": &"started"},
+		{"second": 25, "kind": &"decree", "subject": &"tea", "cause": &"issued"},
+	]
+	var markers: Array[Dictionary] = StatsTimeline.history_markers(events, 0, 5, 10, candidates, [&"crisis", &"decree"])
+	var kinds: Array = []
+	for marker: Dictionary in markers:
+		kinds.append_array(marker["kinds"])
+	assert_false(kinds.has(&"invented"), "A candidate the simulation never emitted is not drawn")
+	assert_true(kinds.has(&"crisis"), "A candidate that was emitted is drawn")
+	assert_eq(markers.size(), 1, "Both land in bucket 2 and stack")
+	assert_eq(markers[0]["count"], 2)
+	var crisis: String = Strings.text(Strings.STATS_SCREEN_MARKER_LINE) % ["!", Strings.text(&"ui.stats_screen.marker.crisis")]
+	var decree: String = Strings.text(Strings.STATS_SCREEN_MARKER_LINE) % ["D", Strings.text(&"ui.stats_screen.marker.decree")]
+	assert_eq(markers[0]["text"], Strings.text(Strings.STATS_SCREEN_MARKER_STACK) % [" · ".join([crisis, decree]), 2])
+
+
+func test_fear_and_debt_have_no_line() -> void:
+	var simulation: Simulation = _simulation(TICKS)
+	for series_id: StringName in [&"fear", &"debt"]:
+		var chart: Dictionary = _chart(simulation, series_id, 0)
+		assert_eq(chart["lines"], [] as Array[Dictionary], String(series_id))
+		assert_eq(chart["label"], Strings.text(Strings.STATS_SCREEN_CARDS[series_id]))
+
+
+func test_strokes_are_one_unique_pair_per_series() -> void:
+	var look: StatsPresentation = _look()
+	assert_eq(look.errors, [] as Array[String])
+	assert_eq(look.stroke_colors[0], Color.html("#e69f00"))
+	assert_almost_eq(look.stroke_dashes[0], 0.0, 0.001)
+	assert_eq(look.stroke_colors[1], Color.html("#56b4e9"))
+	assert_almost_eq(look.stroke_dashes[1], 8.0, 0.001)
+	assert_eq(look.stroke_colors[2], Color.html("#009e73"))
+	assert_almost_eq(look.stroke_dashes[2], 3.0, 0.001)
+	assert_eq(look.stroke_colors[3], Color.html("#cc79a7"))
+	assert_almost_eq(look.stroke_dashes[3], 14.0, 0.001)
+	assert_eq(look.stroke_colors.size(), look.history_series.size(), "One stroke per series")
+	var pairs: Dictionary = {}
+	for index: int in look.stroke_colors.size():
+		var color: Color = look.stroke_colors[index]
+		assert_ne(color, Color.html("#f0e442"), "Yellow is the cursor")
+		assert_ne(color, Color.html("#000000"), "Black disappears on the background")
+		var pair: String = "%s|%s" % [color.to_html(false), look.stroke_dashes[index]]
+		assert_false(pairs.has(pair), pair)
+		pairs[pair] = true
+
+
+func test_series_labels_do_not_show_raw_ids() -> void:
+	var simulation: Simulation = _simulation(0)
+	for series_id: StringName in _look().history_series:
+		var label: String = StatsTimeline.series_label(series_id, _def(simulation, series_id))
+		assert_false(label.contains("imported_flour"), label)
+		assert_false(label.contains("upkeep"), label)
+		assert_false(label.contains("hunger"), label)
+		assert_false(label.contains(":"), label)
+	var hunger: String = StatsTimeline.series_label(&"emigration:worker:hunger",
+		_def(simulation, &"emigration:worker:hunger"))
+	assert_false(hunger.contains(Strings.text(Strings.CONDITION_LABELS[&"hunger"])), "Not the riot")
+
+
+func _assert_history_hides(simulation: Simulation, range_index: int, message: String) -> void:
+	var chart: Dictionary = _chart(simulation, &"money", range_index)
+	assert_false(chart["lines"].is_empty(), message)
+	for marker: Dictionary in chart["markers"]:
+		for kind: StringName in marker["kinds"]:
+			assert_false(StatsTimeline.HIDDEN_KINDS.has(kind), "%s: %s" % [message, kind])
+
+
+func _def(simulation: Simulation, id: StringName) -> Dictionary:
+	for def: Dictionary in simulation.stats_series_defs():
+		if def["id"] == id:
+			return def
+	return {}

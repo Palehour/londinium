@@ -212,8 +212,11 @@ func test_the_summary_opens_on_its_newest_bucket() -> void:
 	((view.get("_stats_panel") as StatsPanel).get("_stats_button") as Button).pressed.emit()
 	assert_eq(tab.cursor_index(), newest, "Reopened on the newest bucket")
 	_pad(JOY_BUTTON_DPAD_LEFT)
-	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	# Historia keeps LB/RB for the series, so the return is through Classes: LB wraps there, RB comes back.
 	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	var tabs: TabContainer = (view.get("_stats_screen") as StatsScreen).get("_tabs") as TabContainer
+	assert_eq(tabs.current_tab, StatsScreen.SUMMARY_TAB)
 	assert_eq(tab.cursor_index(), newest, "Back on the summary, on the newest bucket")
 
 

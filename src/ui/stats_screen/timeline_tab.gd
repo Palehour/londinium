@@ -1,13 +1,12 @@
 class_name TimelineTab
 extends ChartTab
 
-# The history tab of the statistics screen (issue #83, D-052): one metric over a range, picked by buttons or with
-# the D-pad or the arrows ↑/↓, with a marker on each bucket where something happened. The range and the cursor
-# work like every chart tab (ChartTab). With the incidents on, the lessons of each district and the severity the cholera
-# had there go under the chart (issue #87, D-120), read from the snapshot.
+# The history tab (issue #316, D-168): one series at a time, in the order of data/ui/stats.json. LB/RB change the
+# series; the D-pad walks the buckets. The range buttons and the district lessons stay. Fear and debt have no
+# series, so the chart says there is no data instead of inventing a line.
 
-var _metric: int = 0
-var _metric_buttons: Array[Button] = []
+var _series: int = 0
+var _name: Label
 var _plot: Sparkline
 var _legend: HBoxContainer
 var _markers: Label
@@ -18,7 +17,7 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	session = game_session
 	presentation = look
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_metric_buttons = _choices(StatsTimeline.METRICS.size(), _pick_metric)
+	_name = _wrapped_label()
 	_add_range_buttons()
 	_plot = Sparkline.new()
 	_plot.custom_minimum_size.y = look.layout["history_chart_height"]
@@ -34,36 +33,52 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 
 
 func apply_texts() -> void:
-	for index: int in _metric_buttons.size():
-		_metric_buttons[index].text = Strings.text(Strings.STATS_SCREEN_CARDS[StatsTimeline.METRICS[index]])
 	_apply_range_texts()
 	_hint.text = Strings.text(Strings.STATS_SCREEN_HISTORY_HINT)
+	if not _chart.is_empty():
+		_name.text = _chart["label"]
+
+
+# Wraps. The cursor stays on its bucket: the series share the chapter's time.
+func change_series(step: int) -> void:
+	var count: int = presentation.history_series.size()
+	if count == 0:
+		return
+	_series = posmod(_series + step, count)
+	refresh()
 
 
 func refresh() -> void:
+	var count: int = presentation.history_series.size()
+	if count == 0:
+		return
+	_series = posmod(_series, count)
 	var range_entry: Dictionary = _range_entry()
-	_chart = StatsTimeline.build(session.simulation, StatsTimeline.METRICS[_metric], range_entry["tier"],
-		range_entry["span_seconds"])
-	_metric_buttons[_metric].set_pressed_no_signal(true)
+	var series_id: StringName = presentation.history_series[_series]
+	_chart = StatsTimeline.chart(session.simulation, series_id, range_entry["tier"], range_entry["span_seconds"],
+		presentation.history_markers)
+	_name.text = _chart["label"]
 	_lessons.text = "\n".join(DistrictLessons.lines(session.get_snapshot()["incidents"], session.context.map.district_names))
 	_lessons.visible = not _lessons.text.is_empty()
 	_show()
 
 
-func _handle_other(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_up") or event.is_action_pressed(&"ui_down"):
-		_pick_metric(posmod(_metric + (1 if event.is_action_pressed(&"ui_down") else -1), _metric_buttons.size()))
-
-
-func _pick_metric(index: int) -> void:
-	_metric = index
-	refresh()
-
-
 func _show() -> void:
-	var strokes: Dictionary = _strokes()
-	_plot.show_lines(strokes["lines"], strokes["colors"], strokes["dashes"], presentation.layout["line_width"])
+	var width: float = presentation.layout["line_width"]
+	if _chart["lines"].is_empty():
+		_plot.show_lines([] as Array[PackedFloat32Array], [] as Array[Color], PackedFloat32Array(), width)
+		_markers.text = ""
+		_reading.text = Strings.text(Strings.STATS_SCREEN_NO_DATA)
+		StatsScreen.show_legend(_legend, [] as Array[Dictionary], presentation)
+		return
+	var values: PackedFloat32Array = _chart["lines"][0]["values"]
+	var lines: Array[PackedFloat32Array] = [values]
+	var colors: Array[Color] = [presentation.stroke_color(_series)]
+	_plot.show_lines(lines, colors, PackedFloat32Array([presentation.stroke_dash(_series)]), width)
 	_markers.text = " · ".join(_show_marks(_plot))
 	var index: int = cursor_index()
-	_show_reading(StatsSummary.reading(_chart["id"], _chart["lines"], index) if index >= 0 else "")
+	var value: String = ""
+	if index >= 0 and index < values.size():
+		value = StatsTimeline.format_value(values[index], _chart["unit"])
+	_show_reading(value)
 	StatsScreen.show_legend(_legend, _chart["lines"], presentation)
