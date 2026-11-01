@@ -96,12 +96,14 @@ func test_player_street_away_from_the_network_does_not_connect() -> void:
 
 func test_no_route_stops_building() -> void:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(5, 1), Vector2i(6, 1)]
-	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(8, 4), roads)
+	# One more block of land so the 3x3 brewery (D-156) can stand south of the street without covering it.
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(8, 5), roads)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"malthouse", RoadTestMap.cell(Vector2i(1, 0)))
-	_build(sim, context, &"brewery", RoadTestMap.cell(Vector2i(6, 0)))
+	_build(sim, context, &"malthouse", RoadTestMap.on_street(context.buildings[&"malthouse"].footprint, 2))
+	var brewery_cell: Vector2i = RoadTestMap.cell(Vector2i(6, 2))
+	_build(sim, context, &"brewery", brewery_cell)
 	sim.tick()
-	var brewery: Dictionary = _diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))
+	var brewery: Dictionary = _diagnostic(sim, brewery_cell)
 	assert_eq(brewery["reason"], &"no_route")
 	assert_eq(brewery["workers"], 0)
 	for index: int in 60:
@@ -110,10 +112,10 @@ func test_no_route_stops_building() -> void:
 	for x: int in [3, 4]:
 		sim.apply_command(BuildRoadCommand.new(context, RoadTestMap.cell(Vector2i(x, 1))))
 	sim.tick()
-	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))["reason"], &"ok")
+	assert_eq(_diagnostic(sim, brewery_cell)["reason"], &"ok")
 	sim.apply_command(DemolishCommand.new(RoadTestMap.cell(Vector2i(3, 1))))
 	sim.tick()
-	assert_eq(_diagnostic(sim, RoadTestMap.cell(Vector2i(6, 0)))["reason"], &"no_route", "cutting the street breaks the chain")
+	assert_eq(_diagnostic(sim, brewery_cell)["reason"], &"no_route", "cutting the street breaks the chain")
 
 
 func test_empty_diagonals_do_not_connect() -> void:
@@ -131,9 +133,10 @@ func test_loaded_diagonal_edge_connects() -> void:
 # Two historic streets that only meet corner to corner: the malthouse on one, the brewery on the other.
 func _diagonal_sim(diagonals: Array[Vector4i]) -> Simulation:
 	var roads: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 2), Vector2i(3, 2)]
-	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), roads, diagonals)
+	# One more block so the 3x3 brewery stands on firm ground south of its street (D-156).
+	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 6), roads, diagonals)
 	var sim: Simulation = _sim(context)
-	_build(sim, context, &"malthouse", RoadTestMap.cell(Vector2i(0, 0)))
+	_build(sim, context, &"malthouse", RoadTestMap.on_street(context.buildings[&"malthouse"].footprint, 1))
 	_build(sim, context, &"brewery", RoadTestMap.cell(Vector2i(3, 3)))
 	sim.tick()
 	return sim

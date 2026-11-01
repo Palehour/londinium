@@ -119,8 +119,10 @@ func test_brewery_houses_and_services_go_only_on_firm_ground() -> void:
 
 
 func test_one_riverbank_cell_of_the_footprint_is_enough_to_refuse_a_house() -> void:
-	# Rows 11 and 12: only the south row is riverbank.
-	_assert_refused(&"housing", ON_THE_SHORE + Vector2i.UP * 2, &"requires_firm")
+	# Rows 11 and 12: only the south row is riverbank. Housing is 1x1 since D-153, so the 2x2 that still
+	# stands only on firm ground (the police station, D-156) is what this cell pair refuses.
+	_assert_refused(&"police_station", ON_THE_SHORE + Vector2i.UP * 2, &"requires_firm")
+	_assert_built(&"housing", ON_THE_SHORE + Vector2i.UP * 2)
 	_assert_built(&"mill", ON_THE_SHORE + Vector2i.UP * 2)
 
 

@@ -25,6 +25,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		copy.tags.assign(definition.tags)
 		copy.buildable = definition.buildable
 		copy.footprint = definition.footprint
+		copy.rotates = definition.rotates
 		copy.allowed_terrain.assign(definition.allowed_terrain)
 		copy.terrain_mask.assign(definition.terrain_mask)
 		copy.distributes.assign(definition.distributes)
@@ -93,24 +94,65 @@ func building_unavailable_reason(id: StringName) -> StringName:
 	return &"requires_river" if "river" in buildings[id].tags else &"requires_land"
 
 
+# Quarter turns, clockwise (issue #296, D-157). 1 turns a 2x1 into a 1x2; the north-west corner stays the origin.
+const QUARTER_TURNS: int = 4
+
+
+static func rotation_of(building: Dictionary) -> int:
+	var raw: Variant = building.get("rotation", 0)
+	if typeof(raw) != TYPE_INT and typeof(raw) != TYPE_FLOAT:
+		return 0
+	var rotation: int = int(raw)
+	if rotation < 0 or rotation >= QUARTER_TURNS:
+		return 0
+	return rotation
+
+
+static func rotated_size(footprint: Vector2i, rotation: int) -> Vector2i:
+	if posmod(rotation, 2) == 1:
+		return Vector2i(footprint.y, footprint.x)
+	return footprint
+
+
+# Where a cell of the rotated footprint sits in the unrotated mask. Rotation 1 is 90° clockwise.
+static func unrotated_offset(footprint: Vector2i, rotation: int, rotated: Vector2i) -> Vector2i:
+	match posmod(rotation, QUARTER_TURNS):
+		1:
+			return Vector2i(rotated.y, footprint.y - 1 - rotated.x)
+		2:
+			return Vector2i(footprint.x - 1 - rotated.x, footprint.y - 1 - rotated.y)
+		3:
+			return Vector2i(footprint.x - 1 - rotated.y, rotated.x)
+		_:
+			return rotated
+
+
 # Whether the map lets the whole footprint stand from this cell (issue #184, D-086): inside the map and every cell it
-# covers fit for the building. Taken cells and streets are the state's, so BuildCommand checks them.
-func placement_reason(id: StringName, origin: Vector2i) -> StringName:
-	var area: Rect2i = Rect2i(origin, buildings[id].footprint)
+# covers fit for the building. Taken cells and streets are the state's, so BuildCommand checks them. `rotation` is a
+# quarter turn clockwise (issue #296, D-157); the wharf refuses any turn.
+func placement_reason(id: StringName, origin: Vector2i, rotation: int = 0) -> StringName:
+	var definition: BuildingDef = buildings[id]
+	if rotation < 0 or rotation >= QUARTER_TURNS or (not definition.rotates and rotation != 0):
+		return &"cannot_rotate"
+	var area: Rect2i = Rect2i(origin, rotated_size(definition.footprint, rotation))
 	if not Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area):
 		return &"outside_map"
 	for cell: Vector2i in cells_of(area):
-		var reason: StringName = terrain_placement_reason(id, cell, cell - origin)
+		var reason: StringName = terrain_placement_reason(id, cell,
+			unrotated_offset(definition.footprint, rotation, cell - origin))
 		if reason != &"":
 			return reason
 	return &""
 
 
-# The cells a building of the state covers: its cell is the north-west corner of its footprint (D-086). A saved building
-# whose type the data no longer has keeps the one cell it always had.
+# The cells a building of the state covers: its cell is the north-west corner of its footprint (D-086), turned by the
+# rotation it was built with (D-157). A saved building whose type the data no longer has keeps the one cell it always had.
 func area_of(building: Dictionary) -> Rect2i:
 	var definition: BuildingDef = buildings.get(StringName(building["definition_id"]))
-	return Rect2i(RoadNetwork.cell_of(building), definition.footprint if definition != null else Vector2i.ONE)
+	if definition == null:
+		return Rect2i(RoadNetwork.cell_of(building), Vector2i.ONE)
+	var rotation: int = 0 if not definition.rotates else rotation_of(building)
+	return Rect2i(RoadNetwork.cell_of(building), rotated_size(definition.footprint, rotation))
 
 
 # The cells a street of the player covers: a whole piece from its cell, the north-west corner (issue #186, D-086).

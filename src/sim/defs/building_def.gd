@@ -12,6 +12,8 @@ var distributes: Array[StringName] = []
 var supplies: Array[StringName] = []
 # Cells it covers from its cell, the north-west corner, w x h (issue #184, D-086). 1x1 unless the data says otherwise.
 var footprint: Vector2i = Vector2i.ONE
+# Quarter turns at placement (issue #296, D-157). False only for the wharf, which keeps the mask of D-155.
+var rotates: bool = true
 # Terrain it may stand on (issue #88, D-149): firm ground and/or riverbank (DataLoader.BUILDING_TERRAINS).
 var allowed_terrain: Array[StringName] = []
 # What each cell of the footprint stands on (issue #88, D-152), row by row from the north-west corner: a terrain of

@@ -79,6 +79,15 @@ static func land(steps: int) -> Vector2i:
 	return cell(Vector2i(steps - 1, LAND_ROW))
 
 
+# A building shorter than the old 2x2 block stands on its south row, the cells that touch the street.
+# A 2x2 stays on the corner. Taller than the block does not fit; the caller keeps the corner.
+static func on_street(footprint: Vector2i, steps: int) -> Vector2i:
+	var origin: Vector2i = land(steps)
+	if footprint.y > BLOCK:
+		return origin
+	return Vector2i(origin.x, origin.y + BLOCK - footprint.y)
+
+
 static func river(steps: int) -> Vector2i:
 	return cell(Vector2i(steps - 1, RIVER_ROW))
 

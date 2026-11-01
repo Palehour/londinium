@@ -46,7 +46,8 @@ func _fountain_at_origin() -> Array[Dictionary]:
 	return found
 
 
-# The cells east of the fountain at which a house's centre is exactly fountain.radius_m away.
+# Cells east of the fountain by the data radius. A 2x2 house used to sit with its centre exactly there;
+# housing is 1x1 (D-153), so the boundary test measures the centre and sets the radius to that distance.
 func _cells_at_radius(params: Params) -> int:
 	var radius: float = float(params.get_value(RADIUS_KEY))
 	var cell_size: float = float(params.get_value(&"map.cell_size_m"))
@@ -77,10 +78,12 @@ func test_a_radius_outside_its_range_is_rejected() -> void:
 func test_a_house_at_exactly_the_radius_is_covered_and_a_hundredth_beyond_is_not() -> void:
 	var params: Params = _params()
 	var houses: Array[Dictionary] = _houses([Vector2i(_cells_at_radius(params), 0)])
-	assert_eq(WaterSystem.coverage(params, _context, houses, _fountain_at_origin(), NEUTRAL), 1.0)
-	var radius: float = float(params.get_value(RADIUS_KEY))
-	var shorter: Params = _params([Modifier.new(RADIUS_KEY, &"set", radius - 0.01)])
-	assert_eq(WaterSystem.coverage(shorter, _context, houses, _fountain_at_origin(), NEUTRAL), 0.0)
+	var fountains: Array[Dictionary] = _fountain_at_origin()
+	var distance: float = WaterSystem.distance_m(params, _context, houses[0], fountains[0])
+	var exact: Params = _params([Modifier.new(RADIUS_KEY, &"set", distance)])
+	assert_eq(WaterSystem.coverage(exact, _context, houses, fountains, NEUTRAL), 1.0)
+	var shorter: Params = _params([Modifier.new(RADIUS_KEY, &"set", distance - 0.01)])
+	assert_eq(WaterSystem.coverage(shorter, _context, houses, fountains, NEUTRAL), 0.0)
 
 
 func test_none_half_or_all_houses_in_the_radius_give_zero_half_or_one() -> void:

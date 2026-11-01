@@ -66,6 +66,39 @@ func has_access(area: Rect2i) -> bool:
 	return not access_cells(area).is_empty()
 
 
+# A house saved when it was 2x2 (D-086) is 1x1 now (D-153). If its corner no longer touches a street but another
+# cell of that old block does, it moves there, the closest to the corner. Other buildings stay. Returns the moves.
+func keep_shrunken_houses_on_their_street(buildings: Array) -> Dictionary:
+	var moves: Dictionary = {}
+	for building: Variant in buildings:
+		if building is not Dictionary:
+			continue
+		var id: StringName = StringName(building.get("definition_id", &""))
+		if id != &"housing" and id != &"artisan_housing":
+			continue
+		var cell: Variant = building.get("cell", [])
+		if cell is not Array or cell.size() < 2:
+			continue
+		var origin: Vector2i = Vector2i(int(cell[0]), int(cell[1]))
+		if has_access(Rect2i(origin, Vector2i.ONE)):
+			continue
+		var chosen: Vector2i = origin
+		var best: int = 99
+		for offset: Vector2i in [Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+			var candidate: Vector2i = origin + offset
+			if not has_access(Rect2i(candidate, Vector2i.ONE)):
+				continue
+			var distance: int = offset.x + offset.y
+			if distance < best:
+				best = distance
+				chosen = candidate
+		if chosen == origin:
+			continue
+		building["cell"] = [chosen.x, chosen.y]
+		moves[origin] = chosen
+	return moves
+
+
 # Streets of the network beside the footprint: on a side of one of its cells, outside it. Each street once, in the
 # order of the cells (EconomyContext.cells_of) and of SIDES.
 func access_cells(area: Rect2i) -> Array[Vector2i]:

@@ -52,7 +52,11 @@ func _sim(builds: Array) -> Simulation:
 	TaxBase.fund(initial, _params())
 	var sim: Simulation = Simulation.new(_params(), initial, SEED, _context)
 	for build: Array in builds:
-		sim.apply_command(BuildCommand.new(_context, build[0], RoadTestMap.land(build[1])))
+		var id: StringName = build[0]
+		var cell: Vector2i = RoadTestMap.land(build[1])
+		if id == &"housing":
+			cell = RoadTestMap.on_street(_context.buildings[id].footprint, build[1])
+		sim.apply_command(BuildCommand.new(_context, id, cell))
 	sim.tick()
 	return sim
 
@@ -70,8 +74,9 @@ func _service(sim: Simulation, steps: int) -> Dictionary:
 
 
 func _house(sim: Simulation, steps: int, attribute: StringName = ServiceSystem.SAFETY) -> float:
+	var cell: Vector2i = RoadTestMap.on_street(_context.buildings[HOUSE].footprint, steps)
 	for house: Dictionary in sim.snapshot()["services"]["houses"]:
-		if house["cell"] == _cell(steps):
+		if house["cell"] == [cell.x, cell.y]:
 			return float(house["values"][attribute])
 	return -1.0
 

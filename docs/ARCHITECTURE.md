@@ -34,9 +34,10 @@ londinium/
 │   │   ├── buildings.json    # wharf, mill, bakery, malthouse, brewery, housing, artisan_housing, wheat_field, public_fountain, lea_bridge_fountain and well (tag `water`, no recipe, #63, #202), health_post, fire_station and police_station (tag `service`, no recipe, cost and upkeep in data/services/, #87): cost, upkeep, jobs, recipe, tags (the brewery's `tavern` raises the riot pressure of its district, #87, D-119);
 │   │   │                     #   a water building names `coverage` (the section of its radius_m) and optionally `water_source` (the section of its own source_risk; without it, the district's source); `priced_as` another building reads that one's cost, upkeep, wage and jobs (Params aliases the keys, #202)
 │   │   │                     #   optional service_radius_m (metres along the streets) + distributes (goods handed out to houses) and supplies (the wharf's barley and imported flour), #67, #186;
-│   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; all 2x2 since #186), #184, D-086
+│   │   │                     #   optional footprint [w, h], the cells it covers from its north-west corner (1x1 when missing; #296, D-156), #184, D-086
 │   │   │                     #   terrain, the ground it may stand on: firm and/or riverbank, never marsh (firm when missing; #88, D-149)
 │   │   │                     #   optional terrain_mask, one row per footprint row, one label per cell: a terrain of the building or `river`; the wharf's north row on riverbank, south row on river (#88, D-152)
+│   │   │                     #   rotates, false only on the wharf (D-157): placement stores rotation 0 to 3, a clockwise quarter turn of the footprint and the mask
 │   │   ├── terrain.json      # drain_cost (marsh to firm) and riverbank_cost_mult (firm beside water to riverbank costs drain_cost times it), #88, D-150; values [INVENTED]
 │   │   ├── roads.json        # the player's streets: cost and upkeep per minute, per piece of `footprint` cells (2x2, the old 50 m cell) (#67, D-070, #186)
 │   │   ├── transport.json    # cost per unit and metre, and the metres from which a leg is "expensive" (#67, D-070, D-080, #186)
@@ -149,7 +150,7 @@ londinium/
 
 ## Tick order (one place, `simulation.gd`)
 1. Apply queued commands. A build is checked against the map over its whole footprint (`EconomyContext.placement_reason`,
-   issue #184, D-086: the building's `cell` is the north-west corner of `footprint` w x h cells, all inside the map and
+   issue #184, D-086, turned by the command's `rotation` 0 to 3, clockwise, #296, D-157: the building's `cell` is the north-west corner of `footprint` w x h cells, all inside the map and
    none taken by another footprint or a street; any of its cells demolishes it, and a street cannot go on one): the
    standing buildings (`existing_cells`) block new building (D-075), but a saved building on one of them stays and
    works (D-076). Before tick 0, `Simulation.create_new` puts down the map's starting dense housing
@@ -460,9 +461,11 @@ hatching only below `ink.hatch_luminance` (at most `CityInk.MAX_HATCH_LUMINANCE`
 Tierra de época (issue #178, D-083): free land is drawn in the colour of its lot style (`lot_styles` of the map,
 colours in `data/ui/map.json`, a second legend row), and each damaged wharf the snapshot lists as repairable
 (`snapshot()["repair"]["wharves"]`: cell and cost, from `RepairWharfCommand.snapshot`) is drawn over its footprint with
-its price. The mode line names the selected lot and, on any cell of a damaged wharf, the repair and its cost; R (Y on
-the gamepad) sends a `RepairWharfCommand` for that wharf. Elsewhere it goes for the selected cell and the simulation
-answers `not_damaged_wharf`.
+its price. The mode line names the selected lot and, on any cell of a damaged wharf, the repair and its cost. While a
+building that rotates is selected, R cycles its quarter turn and the outline follows the footprint; the wharf does not.
+Otherwise R (Y on the gamepad; Y always repairs) sends a `RepairWharfCommand` for that wharf. Elsewhere it goes for the
+selected cell and the simulation answers `not_damaged_wharf`. Each saved building stores `rotation` (format 3; older
+saves load as 0).
 **Panel**: Menu calls `StatsPanel.enter_focus()`, which makes buttons, switches and sliders focusable and focuses the
 first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
 map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys

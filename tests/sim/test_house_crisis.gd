@@ -12,12 +12,12 @@ const SHAPE_KEY: StringName = &"crisis.health.exposure_diamond"
 const TILES_KEY: StringName = &"crisis.health.exposure_tiles"
 const RADIUS_KEY: StringName = &"building.health_post.service_radius_m"
 const STREET_WIDTH: int = 12
-# A 3x3 block of 2x2 houses whose middle one falls sick; ORIGIN is its north-west corner.
+# A 3x3 block of 1x1 houses (D-153) whose middle one falls sick; ORIGIN is its north-west corner.
 const ORIGIN: Vector2i = Vector2i(2, 2)
-const CENTRE: Vector2i = ORIGIN + Vector2i(2, 2)
-# The middle house of the block's east column, and a house one empty column east of it: two tiles apart.
-const EAST: Vector2i = ORIGIN + Vector2i(4, 2)
-const BEYOND: Vector2i = ORIGIN + Vector2i(7, 2)
+const CENTRE: Vector2i = ORIGIN + Vector2i(1, 1)
+# The middle house of the block's east column, and a house one empty cell east of it.
+const EAST: Vector2i = ORIGIN + Vector2i(2, 1)
+const BEYOND: Vector2i = ORIGIN + Vector2i(4, 1)
 
 var _catalog: DataCatalog
 var _context: EconomyContext
@@ -51,6 +51,10 @@ func _on_street() -> void:
 	_context = RoadTestMap.street(_catalog, STREET_WIDTH)
 
 
+func _house(steps: int) -> Vector2i:
+	return RoadTestMap.on_street(_catalog.buildings[HOUSE].footprint, steps)
+
+
 func _place(id: StringName, cell: Vector2i) -> void:
 	_initial.buildings.append({"definition_id": id, "cell": [cell.x, cell.y]})
 
@@ -59,7 +63,7 @@ func _block() -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	for y: int in range(3):
 		for x: int in range(3):
-			cells.append(ORIGIN + Vector2i(x, y) * 2)
+			cells.append(ORIGIN + Vector2i(x, y))
 	return cells
 
 
@@ -133,7 +137,7 @@ func test_a_diamond_at_one_tile_exposes_only_the_four_houses_sharing_a_side() ->
 	sim.mark_house_sick(CENTRE)
 	var locks: Dictionary[Vector2i, StringName] = _locks(sim)
 	assert_eq(locks.size(), 5, str(locks))
-	for offset: Vector2i in [Vector2i(0, -2), Vector2i(0, 2), Vector2i(-2, 0), Vector2i(2, 0)]:
+	for offset: Vector2i in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
 		assert_eq(locks.get(CENTRE + offset), CrisisSystem.HOUSE_QUARANTINE, str(offset))
 
 
@@ -154,7 +158,7 @@ func test_a_sick_house_is_never_demolished_outside_the_post_radius() -> void:
 	var params: Params = _params()
 	# Long after any quarantine or disinfection would have ended, the crisis still holds it.
 	_ticks(sim, _minutes(params, &"crisis.health.quarantine_min") * 3)
-	var command: DemolishCommand = _demolish(sim, CENTRE + Vector2i.ONE)
+	var command: DemolishCommand = _demolish(sim, CENTRE)
 	assert_false(command.accepted)
 	assert_eq(command.reason, CrisisSystem.HOUSE_SICK)
 	assert_eq(_disinfect(sim, CENTRE).reason, CrisisSystem.OUTSIDE_POST)
@@ -163,12 +167,12 @@ func test_a_sick_house_is_never_demolished_outside_the_post_radius() -> void:
 
 func test_the_quarantine_is_shorter_within_the_post_radius() -> void:
 	var params: Params = _params([Modifier.new(RADIUS_KEY, &"set", 100)])
-	# Along the street the west neighbour is two pieces (100 m) from the post and the east one four (200 m): the post
-	# covers the west neighbour, not the east one.
+	# The post covers 100 m along the street. The sick house's west neighbour is inside that, the east one is not.
+	# Both share a side with the sick house: a 1x1 no longer reaches the next block at one tile (D-153).
 	_on_street()
-	var sick: Vector2i = RoadTestMap.land(3)
-	var west: Vector2i = RoadTestMap.land(2)
-	var east: Vector2i = RoadTestMap.land(4)
+	var sick: Vector2i = _house(3)
+	var west: Vector2i = sick + Vector2i(-1, 0)
+	var east: Vector2i = sick + Vector2i(1, 0)
 	_place(HOUSE, sick)
 	_place(HOUSE, west)
 	_place(HOUSE, east)
@@ -187,7 +191,7 @@ func test_the_quarantine_is_shorter_within_the_post_radius() -> void:
 
 func test_an_exposed_house_that_falls_sick_stays_locked_until_the_crisis_ends() -> void:
 	_place_block()
-	var neighbour: Vector2i = CENTRE + Vector2i(2, 0)
+	var neighbour: Vector2i = CENTRE + Vector2i(1, 0)
 	var sim: Simulation = _sim()
 	sim.mark_house_sick(CENTRE)
 	sim.mark_house_sick(neighbour)
@@ -209,7 +213,7 @@ func test_a_new_case_does_not_restart_a_running_quarantine() -> void:
 	sim.mark_house_sick(CENTRE)
 	_ticks(sim, full / 2)
 	# The corner's other neighbour falls sick halfway through; its term still ends when it was due.
-	sim.mark_house_sick(ORIGIN + Vector2i(2, 0))
+	sim.mark_house_sick(ORIGIN + Vector2i(1, 0))
 	_ticks(sim, full - full / 2)
 	assert_true(_demolish(sim, corner).accepted)
 
@@ -228,7 +232,7 @@ func test_the_end_of_the_crisis_lifts_every_quarantine() -> void:
 
 func test_a_disinfection_within_the_radius_frees_the_house_once_it_is_done() -> void:
 	_on_street()
-	var house: Vector2i = RoadTestMap.land(2)
+	var house: Vector2i = _house(2)
 	_place(HOUSE, house)
 	_place(POST, RoadTestMap.land(1))
 	var params: Params = _params()
@@ -246,7 +250,7 @@ func test_a_disinfection_within_the_radius_frees_the_house_once_it_is_done() -> 
 
 func test_a_crisis_that_ends_before_the_disinfection_refunds_it() -> void:
 	_on_street()
-	var house: Vector2i = RoadTestMap.land(2)
+	var house: Vector2i = _house(2)
 	_place(HOUSE, house)
 	_place(POST, RoadTestMap.land(1))
 	var sim: Simulation = _sim()
@@ -259,7 +263,7 @@ func test_a_crisis_that_ends_before_the_disinfection_refunds_it() -> void:
 
 func test_without_money_the_disinfection_does_not_start_and_leaves_no_debt() -> void:
 	_on_street()
-	var house: Vector2i = RoadTestMap.land(2)
+	var house: Vector2i = _house(2)
 	_initial.money = int(_params().get_value(&"crisis.health.response_cost")) - 1
 	_place(HOUSE, house)
 	_place(POST, RoadTestMap.land(1))
@@ -285,8 +289,9 @@ func test_only_a_sick_house_can_be_disinfected() -> void:
 
 func test_the_snapshot_gives_the_map_the_price_the_duration_and_whether_it_can_disinfect() -> void:
 	_on_street()
-	var sick: Vector2i = RoadTestMap.land(2)
-	var neighbour: Vector2i = RoadTestMap.land(3)
+	var sick: Vector2i = _house(2)
+	# The next block is two cells away now that a house is 1x1; the exposed neighbour is the next cell.
+	var neighbour: Vector2i = sick + Vector2i(1, 0)
 	_place(HOUSE, sick)
 	_place(HOUSE, neighbour)
 	_place(POST, RoadTestMap.land(1))

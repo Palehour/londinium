@@ -36,6 +36,8 @@ var scenario_id: StringName = &"victorian_demo"
 var _catalog: DataCatalog
 var _snapshot: Dictionary
 var _building_type: StringName = &""
+# Quarter turns of the building about to be placed (issue #296, D-157). 0 until R, and back to 0 on a new type.
+var _rotation: int = 0
 var _status: Label
 var _mode: Label
 var _help: Label
@@ -423,6 +425,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var previous_zoom: float = geometry.zoom
 	var previous_selection: Vector2i = geometry.selected
 	var previous_type: StringName = _building_type
+	var previous_rotation: int = _rotation
 	var header_offset: Vector2 = Vector2(0, presentation.layout["header_height"])
 	var zoom_step: float = presentation.camera["zoom_step"]
 	if GamepadBindings.is_gamepad(event):
@@ -432,7 +435,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			var type: StringName = ROAD if event.keycode == ROAD_KEY else TYPES[event.keycode - KEY_1]
 			var reason_id: StringName = session.get_building_unavailable_reason(type)
 			var reason: String = presentation.building_unavailable_reason(reason_id)
-			_building_type = type if reason.is_empty() else &""
+			_set_building_type(type if reason.is_empty() else &"")
 			if not reason.is_empty():
 				_show_result(false, reason_id)
 		elif event.keycode == SERVICE_KEY:
@@ -442,11 +445,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == WHY_KEY:
 			_why_panel.toggle()
 		elif event.keycode == KEY_ESCAPE:
-			_building_type = &""
+			_set_building_type(&"")
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
 			_submit(DemolishCommand.new(geometry.selected))
 		elif event.keycode == REPAIR_KEY and geometry.selected != Vector2i(-1, -1):
-			_submit(_action_command(geometry.selected))
+			# R rotates only while a building that can turn is selected (D-157). Otherwise it still repairs or
+			# disinfects, and the wharf never turns.
+			if _placing() and session.context.buildings[_building_type].rotates:
+				_rotation = (_rotation + 1) % EconomyContext.QUARTER_TURNS
+			else:
+				_submit(_action_command(geometry.selected))
 		elif event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD, KEY_MINUS, KEY_KP_SUBTRACT]:
 			_zoom_by(1.0 / zoom_step if event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT] else zoom_step)
 	if event is InputEventMouseButton:
@@ -464,9 +472,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_drag_camera(event.relative)
 	geometry.constrain()
-	if geometry.selected != previous_selection or _building_type != previous_type:
+	if geometry.selected != previous_selection or _building_type != previous_type or _rotation != previous_rotation:
 		_update_mode()
-	if geometry.center != previous_center or geometry.zoom != previous_zoom or geometry.selected != previous_selection or _building_type != previous_type:
+	if geometry.center != previous_center or geometry.zoom != previous_zoom or geometry.selected != previous_selection or _building_type != previous_type or _rotation != previous_rotation:
 		queue_redraw()
 
 
@@ -512,7 +520,7 @@ func _gamepad_command(event: InputEvent) -> void:
 		if event.is_action_pressed(&"ui_cancel"):
 			_stats_panel.leave_focus()
 	elif event.is_action_pressed(&"ui_cancel"):
-		_building_type = &""
+		_set_building_type(&"")
 	elif event.is_action_pressed(&"map_build_next") or event.is_action_pressed(&"map_build_prev"):
 		_cycle_building(1 if event.is_action_pressed(&"map_build_next") else -1)
 	elif event.is_action_pressed(&"map_place") and _building_type != &"" and geometry.selected != Vector2i(-1, -1):
@@ -599,7 +607,7 @@ func _cycle_building(step: int) -> void:
 	for type: StringName in TYPES + [ROAD]:
 		if session.get_building_unavailable_reason(type) == &"":
 			choices.append(type)
-	_building_type = choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())]
+	_set_building_type(choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())])
 
 
 # The service buildings of the data, safety first, then health and order.
@@ -619,15 +627,37 @@ func _next_service() -> void:
 		return
 	var next: StringName = services[(services.find(_building_type) + 1) % services.size()]
 	var reason_id: StringName = session.get_building_unavailable_reason(next)
-	_building_type = next if reason_id == &"" else &""
+	_set_building_type(next if reason_id == &"" else &"")
 	if reason_id != &"":
 		_show_result(false, reason_id)
+
+
+func _set_building_type(type: StringName) -> void:
+	if type != _building_type:
+		_rotation = 0
+	_building_type = type
+
+
+# A building is selected to place, not a street and not the empty selection.
+func _placing() -> bool:
+	return _building_type != &"" and _building_type != ROAD and session != null \
+		and session.context.buildings.has(_building_type)
+
+
+# The cells the selected building would cover from this north-west corner, turned by R.
+func _placement_area(origin: Vector2i) -> Rect2i:
+	if not _placing():
+		return Rect2i(origin, Vector2i.ONE)
+	var definition: BuildingDef = session.context.buildings[_building_type]
+	var rotation: int = _rotation if definition.rotates else 0
+	return Rect2i(origin, EconomyContext.rotated_size(definition.footprint, rotation))
 
 
 func _place_command(cell: Vector2i) -> SimulationCommand:
 	if _building_type == ROAD:
 		return BuildRoadCommand.new(session.context, cell)
-	return BuildCommand.new(session.context, _building_type, cell)
+	var rotation: int = _rotation if session.context.buildings[_building_type].rotates else 0
+	return BuildCommand.new(session.context, _building_type, cell, rotation)
 
 
 # R / Y disinfect a house in a crisis (issue #222) and repair a damaged wharf anywhere else.
@@ -983,7 +1013,7 @@ func _reset_view() -> void:
 	_autosave.reset()
 	clock.simulation = session.simulation
 	clock.reset()
-	_building_type = &""
+	_set_building_type(&"")
 	geometry.selected = Vector2i(-1, -1)
 	# Other data can bring other classes, and so other needs.
 	_overlay_bar.setup(NeedOverlay.goods(session.context))
@@ -1003,6 +1033,8 @@ func _update_mode() -> void:
 		parts.append(presentation.lot_labels[style])
 	if _building_type != ROAD and presentation.labels.has(_building_type):
 		parts.append(Strings.text(Strings.PROJECTED_DELTA) % Strings.money(roundi(session.get_projected_delta_per_minute(_building_type))))
+		if session.context.buildings[_building_type].rotates:
+			parts.append(Strings.text(Strings.BUILD_ROTATION) % (_rotation + 1))
 	var wharf: Dictionary = _damaged_wharf_at(geometry.selected)
 	if not wharf.is_empty():
 		parts.append(Strings.text(Strings.REPAIR_HINT_GAMEPAD if _gamepad else Strings.REPAIR_HINT) % Strings.money(wharf["cost"]))
@@ -1078,7 +1110,8 @@ func _draw() -> void:
 		# Only the price fits the footprint; the mode line says which button repairs.
 		_draw_label(rect.get_center() + line, Strings.money(wharf["cost"]))
 	if geometry.selected != Vector2i(-1, -1):
-		draw_rect(Rect2(Vector2(geometry.selected) * cell_size, Vector2.ONE * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
+		var selected_area: Rect2i = _placement_area(geometry.selected) if _placing() else Rect2i(geometry.selected, Vector2i.ONE)
+		draw_rect(Rect2(Vector2(selected_area.position) * cell_size, Vector2(selected_area.size) * cell_size).grow(-presentation.layout["selection_inset"]), presentation.ui_colors["selection"], false, presentation.layout["selection_width"])
 	_draw_demolish_ring(cell_size)
 
 

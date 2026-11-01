@@ -89,8 +89,9 @@ func test_mill_pays_leg_from_the_wheat_field() -> void:
 
 
 func test_malthouse_pays_leg_from_wharf() -> void:
-	var sim: Simulation = _sim([[&"wharf", RoadTestMap.river(1)], [&"malthouse", RoadTestMap.land(4)]] as Array[Array])
-	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", RoadTestMap.land(4), &"barley")
+	var malthouse: Vector2i = RoadTestMap.on_street(_context.buildings[&"malthouse"].footprint, 4)
+	var sim: Simulation = _sim([[&"wharf", RoadTestMap.river(1)], [&"malthouse", malthouse]] as Array[Array])
+	var leg: Dictionary = RoadTestMap.entry(sim.snapshot(), "legs", malthouse, &"barley")
 	assert_eq(leg["supplier_cell"], RoadTestMap.at(Vector2i(0, RoadTestMap.RIVER_ROW)))
 	assert_eq(leg["steps"], 4)
 

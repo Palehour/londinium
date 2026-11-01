@@ -4,12 +4,14 @@ extends SimulationCommand
 var _context: EconomyContext
 var _definition_id: StringName
 var _cell: Vector2i
+var _rotation: int
 
 
-func _init(context: EconomyContext, definition_id: StringName, cell: Vector2i) -> void:
+func _init(context: EconomyContext, definition_id: StringName, cell: Vector2i, rotation: int = 0) -> void:
 	_context = context
 	_definition_id = definition_id
 	_cell = cell
+	_rotation = rotation
 
 
 func use_context(context: EconomyContext) -> void:
@@ -32,7 +34,7 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 	# Game-second clock, so demolition can tell a fresh building from an established one. The price paid is kept
 	# because it grows with each copy (issue #118) and demolition refunds on it.
 	state.buildings.append({"definition_id": _definition_id, "cell": [_cell.x, _cell.y],
-		"built_at": state.defeat_elapsed_seconds, "paid": cost})
+		"built_at": state.defeat_elapsed_seconds, "paid": cost, "rotation": _rotation})
 	accepted = true
 
 
@@ -49,14 +51,18 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 	if events_reason != &"":
 		return events_reason
 	var map: MapDef = _context.map
+	var definition: BuildingDef = _context.buildings[_definition_id]
+	# 0 to 3, clockwise (issue #296, D-157). The wharf keeps the mask of D-155 and refuses a turn.
+	if _rotation < 0 or _rotation >= EconomyContext.QUARTER_TURNS or (not definition.rotates and _rotation != 0):
+		return &"cannot_rotate"
 	# The whole footprint counts, its cell being the north-west corner (issue #184, D-086).
-	var area: Rect2i = Rect2i(_cell, _context.buildings[_definition_id].footprint)
+	var area: Rect2i = Rect2i(_cell, EconomyContext.rotated_size(definition.footprint, _rotation))
 	if not Rect2i(Vector2i.ZERO, Vector2i(map.width, map.height)).encloses(area):
 		return &"outside_map"
 	for building: Dictionary in state.buildings:
 		if _context.area_of(building).intersects(area):
 			return &"occupied_cell"
-	var terrain_reason: StringName = _context.placement_reason(_definition_id, _cell)
+	var terrain_reason: StringName = _context.placement_reason(_definition_id, _cell, _rotation)
 	if terrain_reason != &"":
 		return terrain_reason
 	# On a map with streets (issue #67) a street cell stays a street.

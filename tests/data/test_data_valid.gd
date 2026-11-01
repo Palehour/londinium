@@ -37,13 +37,19 @@ func test_every_json_loads_into_typed_definitions() -> void:
 		assert_typeof(catalog.base_values[key], TYPE_INT, str(key))
 
 
-# Task 1 of D-086 (issue #184) changed no scale and kept every building in one cell. Task 3 (issue #186) makes every
-# building 2x2 cells of 25 m, the cell of 50 m it had, written out in the data. Which buildings change size is decided
-# later, building by building: the well is 1x1 (D-090, issue #202), and only it.
-const DECIDED_FOOTPRINTS: Dictionary[StringName, Vector2i] = {&"well": Vector2i.ONE}
+# Task 1 of D-086 (issue #184) changed no scale and kept every building in one cell. Task 3 (issue #186) made every
+# building 2x2 cells of 25 m. #296 (D-156) replaces that with a fixed table; anything not listed stays 2x2, including
+# dense_housing. The well was already 1x1 (D-090).
+const DECIDED_FOOTPRINTS: Dictionary[StringName, Vector2i] = {
+	&"housing": Vector2i.ONE,
+	&"artisan_housing": Vector2i.ONE,
+	&"malthouse": Vector2i(2, 1),
+	&"brewery": Vector2i(3, 3),
+	&"well": Vector2i.ONE,
+}
 
 
-func test_every_building_is_two_by_two() -> void:
+func test_footprints_match_d156() -> void:
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy/buildings.json"))
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), str(result.errors))

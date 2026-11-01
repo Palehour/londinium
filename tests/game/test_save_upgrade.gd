@@ -57,6 +57,44 @@ func _scaled_entries(entries: Array, fields: Array[String]) -> Array:
 	return scaled
 
 
+# The same move load_save makes, so the expected state names the cell the house now stands on.
+func _keep_houses_on_their_street(session: GameSession, buildings: Array, roads: Array) -> Dictionary:
+	var typed: Array[Dictionary] = []
+	typed.assign(roads)
+	var network: RoadNetwork = RoadNetwork.build(session.context.map, typed, session.context.road_footprint)
+	return network.keep_shrunken_houses_on_their_street(buildings)
+
+
+func _shift_cells(entries: Array, fields: Array[String], moves: Dictionary) -> void:
+	for entry: Dictionary in entries:
+		for field: String in fields:
+			var cell: Array = entry[field]
+			var origin: Vector2i = Vector2i(int(cell[0]), int(cell[1]))
+			if moves.has(origin):
+				var next: Vector2i = moves[origin]
+				entry[field] = [next.x, next.y]
+
+
+# Moves from the fixture's own houses, not from the game after it has already moved them.
+func _fixture_moves(session: GameSession) -> Dictionary:
+	var buildings: Array = _scaled_entries(_expected["economy"]["buildings"], ["cell"])
+	var roads: Array = _scaled_entries(_expected["economy"]["player_roads"], ["cell"])
+	return _keep_houses_on_their_street(session, buildings, roads)
+
+
+func _moved_subject(subject: String, moves: Dictionary) -> String:
+	if not subject.contains("@"):
+		return subject
+	var cell: PackedStringArray = subject.get_slice("@", 1).split(",")
+	if cell.size() != 2:
+		return subject
+	var origin: Vector2i = Vector2i(cell[0].to_int(), cell[1].to_int())
+	if not moves.has(origin):
+		return subject
+	var next: Vector2i = moves[origin]
+	return "%s@%d,%d" % [subject.get_slice("@", 0), next.x, next.y]
+
+
 func _scaled_subject(subject: String) -> String:
 	if not subject.contains("@"):
 		return subject
@@ -70,7 +108,10 @@ func test_an_old_save_plays_on_to_the_same_state() -> void:
 	var economy: Dictionary = session.simulation.to_save()["economy"]
 	var expected: Dictionary = _expected["economy"].duplicate(true)
 	expected["buildings"] = _scaled_entries(expected["buildings"], ["cell"])
+	for building: Dictionary in expected["buildings"]:
+		building["rotation"] = 0
 	expected["player_roads"] = _scaled_entries(expected["player_roads"], ["cell"])
+	_keep_houses_on_their_street(session, expected["buildings"], expected["player_roads"])
 	assert_eq(economy, expected, "Money, people, stocks, buildings and streets as in v0.3.0")
 	assert_eq(session.simulation.get_rng_state(), int(_expected["rng_state"]))
 	assert_eq(session.simulation.get_barley_rng_state(), int(_expected["barley_rng_state"]))
@@ -84,9 +125,14 @@ func test_the_transport_and_the_houses_served_are_the_same() -> void:
 	assert_false(legs.is_empty(), "The fixture pays transport")
 	for leg: Dictionary in legs:
 		leg["metres"] = int(leg["steps"]) * OLD_STEP_M
+	var houses: Array = _scaled_entries(_expected["houses"], ["cell"])
+	var blocked: Array = _scaled_entries(_expected["blocked"], ["cell"])
+	var moves: Dictionary = _fixture_moves(session)
+	_shift_cells(houses, ["cell"], moves)
+	_shift_cells(legs, ["cell", "supplier_cell"], moves)
 	assert_eq(distance["legs"], legs)
-	assert_eq(distance["houses"], _scaled_entries(_expected["houses"], ["cell"]))
-	assert_eq(distance["blocked"], _scaled_entries(_expected["blocked"], ["cell"]))
+	assert_eq(distance["houses"], houses)
+	assert_eq(distance["blocked"], blocked)
 
 
 func test_the_causes_keep_their_buildings() -> void:
@@ -95,7 +141,7 @@ func test_the_causes_keep_their_buildings() -> void:
 	var expected: Array = []
 	for event: Dictionary in _expected["events"]:
 		var copy: Dictionary = event.duplicate()
-		copy["subject"] = StringName(_scaled_subject(String(event["subject"])))
+		copy["subject"] = StringName(_moved_subject(_scaled_subject(String(event["subject"])), _fixture_moves(session)))
 		expected.append(copy)
 	assert_eq(session.simulation.stats_events(), expected)
 
