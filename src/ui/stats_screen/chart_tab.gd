@@ -123,11 +123,16 @@ func _bucket_count() -> int:
 
 # Strokes of a chart's lines, in order: {"lines", "colors", "dashes"} for Sparkline.show_lines().
 func _strokes() -> Dictionary:
+	return _strokes_of(_chart["lines"])
+
+
+# Strokes of any list of {"label", "values"} lines, in order.
+func _strokes_of(chart_lines: Array) -> Dictionary:
 	var lines: Array[PackedFloat32Array] = []
 	var colors: Array[Color] = []
 	var dashes: PackedFloat32Array = []
-	for line: int in _chart["lines"].size():
-		lines.append(_chart["lines"][line]["values"])
+	for line: int in chart_lines.size():
+		lines.append(chart_lines[line]["values"])
 		colors.append(presentation.stroke_color(line))
 		dashes.append(presentation.stroke_dash(line))
 	return {"lines": lines, "colors": colors, "dashes": dashes}

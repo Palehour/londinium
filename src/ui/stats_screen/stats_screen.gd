@@ -4,7 +4,7 @@ extends PanelContainer
 # The statistics screen (issue #83, D-052): views of the chapter's history over the whole window, one tab each.
 # It only reads the history the simulation keeps (#82, D-066) and never sends a command. While it shows, the map
 # gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back; the
-# chart tabs (history and classes) take the rest.
+# chart tabs (summary, history and classes) take the rest.
 
 signal closed
 
@@ -15,16 +15,14 @@ const CLASSES_TAB: int = 2
 var session: GameSession
 var presentation: StatsPresentation
 var _tabs: TabContainer
-var _summary: GridContainer
+var _summary: SummaryTab
 var _history: TimelineTab
 var _classes: ClassesTab
 var _hint: Label
 var _back: Button
-# Per summary card, in StatsSummary.CARDS order: its title, reading, chart and legend row.
-var _titles: Array[Label] = []
+# The summary's no-data lines and charts, per card in StatsSummary.CARDS order (the same arrays SummaryTab fills).
 var _values: Array[Label] = []
 var _charts: Array[Sparkline] = []
-var _legends: Array[HBoxContainer] = []
 
 
 func setup(game_session: GameSession, look: StatsPresentation) -> void:
@@ -54,24 +52,26 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tabs.focus_mode = Control.FOCUS_NONE
 	root.add_child(_tabs)
-	_summary = GridContainer.new()
-	_summary.columns = int(look.layout["card_columns"])
+	_summary = SummaryTab.new()
 	_tabs.add_child(_summary)
-	for id: StringName in StatsSummary.CARDS:
-		_summary.add_child(_card())
+	_summary.setup(session, look)
+	_values = _summary.values
+	_charts = _summary.charts
 	_history = TimelineTab.new()
 	_tabs.add_child(_history)
 	_history.setup(session, look)
 	_classes = ClassesTab.new()
 	_tabs.add_child(_classes)
 	_classes.setup(session, look)
-	_tabs.tab_changed.connect(func(_tab: int) -> void: refresh())
+	_tabs.tab_changed.connect(_on_tab_changed)
 	session.snapshot_changed.connect(func(_snapshot: Dictionary) -> void: refresh())
 	hide()
 	_apply_texts()
 
 
 func open() -> void:
+	# D-170: the summary opens on its newest bucket.
+	_summary.reset_cursor()
 	show()
 	refresh()
 
@@ -97,12 +97,13 @@ func handle(event: InputEvent) -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	if _tabs.get_current_tab_control() is ChartTab:
-		(_tabs.get_current_tab_control() as ChartTab).refresh()
-		return
-	var cards: Array[Dictionary] = StatsSummary.build(session.simulation, presentation.summary_span_seconds)
-	for index: int in cards.size():
-		_show_card(index, cards[index])
+	(_tabs.get_current_tab_control() as ChartTab).refresh()
+
+
+func _on_tab_changed(tab: int) -> void:
+	if tab == SUMMARY_TAB:
+		_summary.reset_cursor()
+	refresh()
 
 
 func _notification(what: int) -> void:
@@ -117,46 +118,9 @@ func _apply_texts() -> void:
 	_tabs.set_tab_title(SUMMARY_TAB, Strings.text(Strings.STATS_SCREEN_SUMMARY))
 	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
 	_tabs.set_tab_title(CLASSES_TAB, Strings.text(Strings.STATS_SCREEN_CLASSES))
+	_summary.apply_texts()
 	_history.apply_texts()
 	_classes.apply_texts()
-	for index: int in StatsSummary.CARDS.size():
-		_titles[index].text = Strings.text(Strings.STATS_SCREEN_CARDS[StatsSummary.CARDS[index]])
-
-
-func _card() -> PanelContainer:
-	var card: PanelContainer = PanelContainer.new()
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = presentation.colors["card"]
-	style.set_content_margin_all(presentation.layout["margin"])
-	card.add_theme_stylebox_override("panel", style)
-	var column: VBoxContainer = VBoxContainer.new()
-	card.add_child(column)
-	_titles.append(Label.new())
-	_values.append(_wrapped_label())
-	var chart: Sparkline = Sparkline.new()
-	chart.custom_minimum_size.y = presentation.layout["chart_height"]
-	_charts.append(chart)
-	_legends.append(HBoxContainer.new())
-	for part: Control in [_titles[-1], _values[-1], chart, _legends[-1]]:
-		column.add_child(part)
-	return card
-
-
-func _show_card(index: int, card: Dictionary) -> void:
-	var lines: Array[PackedFloat32Array] = []
-	var colors: Array[Color] = []
-	var dashes: PackedFloat32Array = []
-	for line: int in card["lines"].size():
-		lines.append(card["lines"][line]["values"])
-		colors.append(presentation.stroke_color(line))
-		dashes.append(presentation.stroke_dash(line))
-	_charts[index].show_lines(lines, colors, dashes, presentation.layout["line_width"])
-	var no_data: bool = card["lines"].is_empty()
-	_charts[index].visible = not no_data
-	_values[index].text = Strings.text(Strings.STATS_SCREEN_NO_DATA) if no_data else card["value"]
-	show_legend(_legends[index], card["lines"], presentation)
 
 
 # Only a chart with more than one line needs a legend: a short sample of each stroke beside its name.
@@ -182,9 +146,3 @@ static func show_legend(row: HBoxContainer, lines: Array[Dictionary], look: Stat
 		var name_label: Label = Label.new()
 		name_label.text = lines[line]["label"]
 		row.add_child(name_label)
-
-
-func _wrapped_label() -> Label:
-	var label: Label = Label.new()
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return label

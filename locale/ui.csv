@@ -273,6 +273,9 @@ ui.stats_screen.back,Volver,Back
 ui.stats_screen.summary,Resumen,Summary
 ui.stats_screen.no_data,Sin datos,No data
 ui.stats_screen.class_value,"%s %.0f","%s %.0f"
+ui.stats_screen.summary.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: ventana","D-pad or arrows ←/→: browse · LT/RT or +/-: window"
+ui.stats_screen.summary.cursor,Minuto %s,Minute %s
+ui.stats_screen.no_reading,—,—
 ui.stats_screen.card.balance,Balance por minuto,Balance per minute
 ui.stats_screen.card.satisfaction,Satisfacción por clase,Satisfaction by class
 ui.stats_screen.card.coverage,Cobertura de pan y cerveza,Bread and beer coverage
