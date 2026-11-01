@@ -82,6 +82,14 @@ func load_save(saved: Dictionary, params: Params, catalog: DataCatalog = null) -
 		_use_catalog(catalog)
 	_start(params, StringName(saved["difficulty"]))
 	var upgraded: Dictionary = SaveFile.upgraded(saved, int(params.get_value(&"map.cell_size_m")))
+	# A house saved as 2x2 is 1x1 now (D-153). Keep it on the street that block touched, so an old
+	# game still plays as it did (D-087).
+	var economy: Dictionary = upgraded["simulation"]["economy"]
+	var roads: Array[Dictionary] = []
+	roads.assign(economy.get("player_roads", []))
+	var network: RoadNetwork = RoadNetwork.build(context.map, roads, context.road_footprint)
+	var moves: Dictionary = network.keep_shrunken_houses_on_their_street(economy.get("buildings", []))
+	SaveFile.follow_moved_houses(upgraded, moves)
 	simulation = Simulation.from_save(params, context, _victory_stages, upgraded["simulation"])
 
 

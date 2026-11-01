@@ -34,6 +34,8 @@ var _quality_caption: Label
 var _quality_buttons: Dictionary[StringName, Button] = {}
 var _selection: Node3D
 var _selection_cell: Vector2i = NONE
+var _selection_rotation: int = -1
+var _selection_type: StringName = &""
 # What the world shows now, to rebuild it only when the buildings, streets, crises or ruins change.
 var _drawn: Array = []
 # The box around each building and its footprint, so a click on a roof picks that building and not the ground behind.
@@ -540,14 +542,17 @@ func _place_frame(frame: Node3D, area: Rect2, height: float) -> void:
 
 
 func _place_selection() -> void:
-	if geometry.selected == _selection_cell:
+	if geometry.selected == _selection_cell and _rotation == _selection_rotation and _building_type == _selection_type:
 		return
 	_selection_cell = geometry.selected
+	_selection_rotation = _rotation
+	_selection_type = _building_type
 	if geometry.selected == NONE:
 		_selection.visible = false
 		return
-	var cell: Vector2 = Vector2(geometry.selected) * camera.cell_size
-	_place_frame(_selection, Rect2(cell, Vector2.ONE * camera.cell_size), style.elevation["land"])
+	var area: Rect2i = _placement_area(geometry.selected) if _placing() else Rect2i(geometry.selected, Vector2i.ONE)
+	var cell: Vector2 = Vector2(area.position) * camera.cell_size
+	_place_frame(_selection, Rect2(cell, Vector2(area.size) * camera.cell_size), style.elevation["land"])
 
 
 func _flat_material(color: Color) -> StandardMaterial3D:

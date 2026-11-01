@@ -118,10 +118,11 @@ func test_the_rest_of_the_standing_buildings_block_building() -> void:
 	var taken: Array = _new_game(_params()).snapshot()["economy"]["buildings"]
 	for cell: Vector2i in map.existing_cells:
 		# A footprint that would cover a building of the start is refused for that first (D-086).
-		if taken.any(func(building: Dictionary) -> bool:
-				return _strip.area_of(building).intersects(Rect2i(cell, _strip.buildings[&"housing"].footprint))):
-			continue
 		for id: StringName in [&"housing", &"bakery", &"mill"]:
+			# A footprint that would cover a building of the start is refused for that first (D-086).
+			if taken.any(func(building: Dictionary) -> bool:
+					return _strip.area_of(building).intersects(Rect2i(cell, _strip.buildings[id].footprint))):
+				continue
 			var sim: Simulation = _new_game(_params())
 			var command: BuildCommand = _build(sim, _strip, id, cell)
 			assert_false(command.accepted, "%s %s" % [id, cell])

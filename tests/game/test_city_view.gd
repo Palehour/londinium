@@ -128,7 +128,8 @@ func test_a_click_builds_on_the_cell_under_the_mouse_and_draws_its_boxes() -> vo
 	assert_eq(view.geometry.selected, HOUSE)
 	await _tick(view)
 	assert_eq(_building_at(view, HOUSE), &"housing")
-	assert_gt(_instances(view, "_boxes"), 1, "The house and its filler houses")
+	# Housing is 1x1 (D-153): the leading block fills the cell, so there is no room for filler houses.
+	assert_gt(_instances(view, "_boxes"), 0, "The house is drawn")
 	assert_eq(_instances(view, "_roofs"), 1)
 
 

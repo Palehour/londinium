@@ -64,10 +64,13 @@ func test_the_maps_and_the_buildings_take_the_new_scale() -> void:
 	assert_eq(int(_params.get_value(&"map.cell_size_m")), OLD_STEP_M / BLOCK)
 	assert_eq(Vector2i(_catalog.maps[STRIP].width, _catalog.maps[STRIP].height), Vector2i(32, 24))
 	assert_eq(Vector2i(_catalog.maps[DEFAULT_MAP].width, _catalog.maps[DEFAULT_MAP].height), Vector2i(16, 16))
-	# The well is the one building decided at another size: 1x1 (D-090, issue #202).
+	# #296 (D-156) replaces the 2x2 of #186 for the buildings it names. The well was already 1x1 (D-090).
+	var decided: Dictionary[StringName, Vector2i] = {
+		&"housing": Vector2i.ONE, &"artisan_housing": Vector2i.ONE, &"malthouse": Vector2i(2, 1),
+		&"brewery": Vector2i(3, 3), &"well": Vector2i.ONE,
+	}
 	for id: StringName in _catalog.buildings:
-		var expected: Vector2i = Vector2i.ONE if id == &"well" else Vector2i(BLOCK, BLOCK)
-		assert_eq(_catalog.buildings[id].footprint, expected, String(id))
+		assert_eq(_catalog.buildings[id].footprint, decided.get(id, Vector2i(BLOCK, BLOCK)), String(id))
 	assert_eq(_catalog.road_footprint, Vector2i(BLOCK, BLOCK), "A street is a 2x2 piece")
 
 

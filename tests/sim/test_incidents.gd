@@ -71,8 +71,9 @@ func _certain(attribute: StringName) -> Array[Modifier]:
 	return modifiers
 
 
+# Housing is 1x1 (D-153): it stands on the south cell of the old block, the one that touches the street.
 func _place(id: StringName, steps: int) -> void:
-	var cell: Vector2i = RoadTestMap.land(steps)
+	var cell: Vector2i = RoadTestMap.on_street(_context.buildings[id].footprint, steps)
 	_initial.buildings.append({"definition_id": id, "cell": [cell.x, cell.y]})
 
 
@@ -108,9 +109,14 @@ func _availability(sim: Simulation, steps: int) -> float:
 	return -1.0
 
 
+func _house(steps: int) -> Vector2i:
+	return RoadTestMap.on_street(_context.buildings[HOUSE].footprint, steps)
+
+
 func _sick(sim: Simulation, steps: int) -> bool:
+	var cell: Vector2i = _house(steps)
 	for building: Dictionary in sim.snapshot()["economy"]["buildings"]:
-		if building["cell"] == RoadTestMap.at(Vector2i(steps - 1, RoadTestMap.LAND_ROW)):
+		if building["cell"] == [cell.x, cell.y]:
 			return building.get(CrisisSystem.SICK, false)
 	return false
 
@@ -170,8 +176,8 @@ func test_each_sick_house_of_the_district_raises_the_health_pressure_by_its_rate
 	_place(HOUSE, 2)
 	_place(HOUSE, 3)
 	var sim: Simulation = _sim(_calm())
-	sim.mark_house_sick(RoadTestMap.land(2))
-	sim.mark_house_sick(RoadTestMap.land(3))
+	sim.mark_house_sick(_house(2))
+	sim.mark_house_sick(_house(3))
 	_ticks(sim, SimTime.TICKS_PER_MINUTE)
 	assert_almost_eq(_pressure(sim, HEALTH), 2.0 * _value(HEALTH, "cause.sick_houses"), 0.0001)
 

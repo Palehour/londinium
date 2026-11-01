@@ -47,6 +47,8 @@ const LOTS_LEGEND: StringName = &"ui.lots_legend"
 const DAMAGED_WHARF: StringName = &"ui.damaged_wharf"
 const REPAIR_HINT: StringName = &"ui.repair_hint"
 const REPAIR_HINT_GAMEPAD: StringName = &"ui.repair_hint_gamepad"
+# Quarter turn of the building about to be placed (issue #296, D-157).
+const BUILD_ROTATION: StringName = &"ui.build_rotation"
 # A house in a crisis (issue #222, D-108): the tooltip's price and length of a disinfection, the time left, its button.
 const CRISIS_DISINFECTION: StringName = &"ui.crisis.disinfection"
 const CRISIS_SECONDS_LEFT: StringName = &"ui.crisis.seconds_left"
@@ -383,6 +385,7 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"marsh": &"ui.reason.marsh",
 	&"existing_building": &"ui.reason.existing_building",
 	&"not_buildable": &"ui.reason.not_buildable",
+	&"cannot_rotate": &"ui.reason.cannot_rotate",
 	&"events_disabled": &"ui.reason.events_disabled",
 	&"water_source_cap": &"ui.reason.water_source_cap",
 	&"insufficient_money": &"ui.reason.insufficient_money",
@@ -532,7 +535,7 @@ static func all_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		OBJECTIVES, OBJECTIVE_POPULATION, OBJECTIVE_CLASS, OBJECTIVE_REVENUE, OBJECTIVE_MET, OBJECTIVE_PENDING, VICTORY_WHY, VICTORY_NO_BREAK, VICTORY_MESSAGE, VICTORY_DISMISS, ALERT_DEFEAT_AFTER_VICTORY,
 		HELP, HELP_GAMEPAD, HELP_CITY, HELP_CITY_GAMEPAD, GRAPHICS, GRAPHICS_HIGH, GRAPHICS_LOW, LOADING, LEGEND, MAP_CREDITS, NO_CULTIVABLE_CELLS, DISABLED_BUILDING, SELECT, MODE, ROAD, TRANSPORT_EXPENSIVE,
-		LOTS_LEGEND, DAMAGED_WHARF, REPAIR_HINT, REPAIR_HINT_GAMEPAD, CRISIS_DISINFECTION, CRISIS_SECONDS_LEFT,
+		LOTS_LEGEND, DAMAGED_WHARF, REPAIR_HINT, REPAIR_HINT_GAMEPAD, BUILD_ROTATION, CRISIS_DISINFECTION, CRISIS_SECONDS_LEFT,
 		CRISIS_DISINFECT, CRISIS_DISINFECT_GAMEPAD, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,

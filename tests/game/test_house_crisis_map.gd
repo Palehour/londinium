@@ -70,7 +70,8 @@ func test_a_sick_house_shows_its_tooltip_with_the_price_the_duration_and_the_but
 	var cell: Vector2i = _sick_house(view)
 	var tip: PanelContainer = view.get("_crisis_tip") as PanelContainer
 	assert_false(tip.visible, "Nothing is selected yet")
-	_select(view, cell + Vector2i.ONE)
+	# The house is 1x1 (D-153): the tooltip is on the cell it stands on.
+	_select(view, cell)
 	assert_true(tip.visible)
 	var crisis: Dictionary = _session(view).get_snapshot()["crisis"]
 	var text: String = (view.get("_crisis_text") as Label).text

@@ -20,7 +20,7 @@
     {"tick": 30, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "bakery", "cell": [8, 8], "wait_for_money": 198},
     {"tick": 30, "cmd": "build", "building": "malthouse", "cell": [4, 6], "wait_for_money": 620},
-    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [6, 6], "with_previous": true},
+    {"tick": 30, "cmd": "build", "building": "brewery", "cell": [6, 4], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [12, 6], "with_previous": true},
     {"tick": 30, "cmd": "build", "building": "artisan_housing", "cell": [14, 6], "with_previous": true},
     {"tick": 30, "cmd": "set_unloading_split", "barley_percent": 15, "with_previous": true},

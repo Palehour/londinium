@@ -19,10 +19,10 @@ const WAPPING_ROADS: Array[Vector2i] = [Vector2i(28, 48), Vector2i(28, 50), Vect
 	Vector2i(28, 56), Vector2i(28, 58), Vector2i(26, 58), Vector2i(26, 60), Vector2i(24, 60), Vector2i(24, 62),
 	Vector2i(23, 64)]
 const CHAIN: Dictionary[Vector2i, StringName] = {Vector2i(24, 66): &"wharf", Vector2i(22, 62): &"mill",
-	Vector2i(22, 60): &"bakery", Vector2i(26, 52): &"housing", Vector2i(26, 54): &"housing"}
+	Vector2i(22, 60): &"bakery", Vector2i(27, 52): &"housing", Vector2i(27, 54): &"housing"}
 const WHITECHAPEL_HOUSE: Vector2i = Vector2i(12, 22)
 const ST_GEORGE_HOUSE: Vector2i = Vector2i(24, 40)
-const WAPPING_HOUSE: Vector2i = Vector2i(26, 52)
+const WAPPING_HOUSE: Vector2i = Vector2i(27, 52)
 # The coast of issue #307 (D-162, D-163): a band of riverbank two cells deep, with straight stretches where the player
 # may build a wharf (D-155). The stretches, x from and to, follow Chronicler's wharves of Wapping [DEBATED, ±2]; they
 # are only the reference of this test, not data of the game.

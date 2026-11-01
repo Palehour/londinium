@@ -37,7 +37,7 @@ func _new_game(params: Params) -> Simulation:
 	var sim: Simulation = Simulation.create_new(params, state, 7, _context, _stages)
 	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"wharf", Vector2i(8, 13)], [&"mill", Vector2i(4, 10)],
 		[&"bakery", Vector2i(6, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
-		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 6)], [&"artisan_housing", Vector2i(12, 6)]]
+		[&"malthouse", Vector2i(4, 6)], [&"brewery", Vector2i(6, 4)], [&"artisan_housing", Vector2i(12, 6)]]
 	for build: Array in builds:
 		sim.apply_command(BuildCommand.new(_context, build[0], build[1]))
 	sim.apply_command(SetUnloadingSplitCommand.new(15))

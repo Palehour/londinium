@@ -6,7 +6,9 @@ extends RefCounted
 # Simulation.to_save(). The statistics history keeps its packed arrays as they are.
 
 const FORMAT: String = "londinium-save"
-const VERSION: int = 2
+const VERSION: int = 3
+# Format 2 is the 25 m grid before buildings stored a rotation (issue #296, D-157). It still loads: rotation 0.
+const BEFORE_ROTATION_VERSION: int = 2
 # Format 1 was played on cells of 50 m, before issue #186 (D-086). It still loads, converted (D-087).
 const CELLS_OF_50_M_VERSION: int = 1
 const CELLS_OF_50_M: int = 50
@@ -68,7 +70,7 @@ static func read(path: String) -> Dictionary:
 static func validate(raw: Variant) -> Dictionary:
 	if raw is not Dictionary or raw.get("format") != FORMAT or typeof(raw.get("version")) != TYPE_INT:
 		return _refusal(INVALID_FILE)
-	if raw["version"] not in [VERSION, CELLS_OF_50_M_VERSION]:
+	if raw["version"] not in [VERSION, BEFORE_ROTATION_VERSION, CELLS_OF_50_M_VERSION]:
 		return _refusal(OTHER_VERSION, [raw["version"], VERSION])
 	for field: String in ENVELOPE_NAMES:
 		if typeof(raw.get(field)) not in [TYPE_STRING, TYPE_STRING_NAME]:
@@ -144,21 +146,26 @@ static func _hashes(mods: Array) -> Array:
 	return mods.map(func(mod: Dictionary) -> String: return mod["hash"])
 
 
-# A save in this format: one of format 1 converted to cells of `cell_size_m` (D-087). Every old cell (x, y) becomes its
+# A save in this format. Format 1 is converted to cells of `cell_size_m` (D-087): every old cell (x, y) becomes its
 # block from (x, y) times the scale, so the buildings, the player's streets and the buildings the causes of the
-# statistics name stand where they stood. The rest of the game is the same.
+# statistics name stand where they stood. Format 2 is already on that grid. Either way a building without `rotation`
+# loads as 0 (issue #296, D-157). The rest of the game is the same.
 static func upgraded(data: Dictionary, cell_size_m: int) -> Dictionary:
 	if data["version"] == VERSION:
 		return data
-	var scale: int = CELLS_OF_50_M / cell_size_m
 	var copy: Dictionary = data.duplicate(true)
-	var economy: Dictionary = copy["simulation"]["economy"]
-	for field: String in ["buildings", "player_roads"]:
-		for entry: Dictionary in economy.get(field, []):
-			entry["cell"] = [int(entry["cell"][0]) * scale, int(entry["cell"][1]) * scale]
-	var causes: Variant = copy["simulation"].get("stats_history", {}).get("causes")
-	if causes is Dictionary:
-		_scale_causes(causes, scale)
+	if data["version"] == CELLS_OF_50_M_VERSION:
+		var scale: int = CELLS_OF_50_M / cell_size_m
+		var economy: Dictionary = copy["simulation"]["economy"]
+		for field: String in ["buildings", "player_roads"]:
+			for entry: Dictionary in economy.get(field, []):
+				entry["cell"] = [int(entry["cell"][0]) * scale, int(entry["cell"][1]) * scale]
+		var causes: Variant = copy["simulation"].get("stats_history", {}).get("causes")
+		if causes is Dictionary:
+			_scale_causes(causes, scale)
+	for building: Dictionary in copy["simulation"]["economy"].get("buildings", []):
+		if not building.has("rotation"):
+			building["rotation"] = 0
 	copy["version"] = VERSION
 	return copy
 
@@ -182,6 +189,47 @@ static func _scale_causes(causes: Dictionary, scale: int) -> void:
 			if keys[index].begins_with(prefix):
 				keys[index] = prefix + _scaled_subject(keys[index].trim_prefix(prefix), scale)
 		causes[field] = keys
+
+
+# Cause subjects that name a house follow it when D-153 moves that house onto its old street.
+static func follow_moved_houses(data: Dictionary, moves: Dictionary) -> void:
+	if moves.is_empty():
+		return
+	var causes: Variant = data.get("simulation", {}).get("stats_history", {}).get("causes")
+	if causes is Dictionary:
+		_move_causes(causes, moves)
+
+
+static func _move_causes(causes: Dictionary, moves: Dictionary) -> void:
+	var kinds: Variant = causes.get("kinds")
+	var subjects: Variant = causes.get("subjects")
+	if kinds is PackedStringArray and subjects is PackedStringArray and kinds.size() == subjects.size():
+		for index: int in kinds.size():
+			if kinds[index] == BUILDING_CAUSE:
+				subjects[index] = _moved_subject(subjects[index], moves)
+		causes["subjects"] = subjects
+	var prefix: String = BUILDING_CAUSE + CauseLog.SEPARATOR
+	for field: String in ["current_keys", "pending_keys", "flicker_keys"]:
+		var keys: Variant = causes.get(field)
+		if keys is not PackedStringArray:
+			continue
+		for index: int in keys.size():
+			if keys[index].begins_with(prefix):
+				keys[index] = prefix + _moved_subject(keys[index].trim_prefix(prefix), moves)
+		causes[field] = keys
+
+
+static func _moved_subject(subject: String, moves: Dictionary) -> String:
+	if not subject.contains("@"):
+		return subject
+	var cell: PackedStringArray = subject.get_slice("@", 1).split(",")
+	if cell.size() != 2:
+		return subject
+	var origin: Vector2i = Vector2i(cell[0].to_int(), cell[1].to_int())
+	if not moves.has(origin):
+		return subject
+	var next: Vector2i = moves[origin]
+	return "%s@%d,%d" % [subject.get_slice("@", 0), next.x, next.y]
 
 
 static func _scaled_subject(subject: String, scale: int) -> String:

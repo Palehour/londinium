@@ -46,7 +46,8 @@ func _sim(house_steps: Array[int], population: int, served_only: bool = true) ->
 	var sim: Simulation = Simulation.new(_params(served_only), _initial, 7, _context)
 	sim.apply_command(BuildCommand.new(_context, &"bakery", RoadTestMap.land(1)))
 	for steps: int in house_steps:
-		sim.apply_command(BuildCommand.new(_context, &"housing", RoadTestMap.land(steps)))
+		sim.apply_command(BuildCommand.new(_context, &"housing",
+			RoadTestMap.on_street(_context.buildings[&"housing"].footprint, steps)))
 	sim.tick()
 	return sim
 

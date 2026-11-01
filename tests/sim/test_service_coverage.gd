@@ -34,13 +34,15 @@ func _sim(house_steps: Array[int], role: RoleDef = null) -> Simulation:
 	var sim: Simulation = Simulation.new(_params(role), _initial, 7, _context)
 	sim.apply_command(BuildCommand.new(_context, &"bakery", RoadTestMap.land(1)))
 	for steps: int in house_steps:
-		sim.apply_command(BuildCommand.new(_context, &"housing", RoadTestMap.land(steps)))
+		sim.apply_command(BuildCommand.new(_context, &"housing",
+			RoadTestMap.on_street(_context.buildings[&"housing"].footprint, steps)))
 	sim.tick()
 	return sim
 
 
 func _served(sim: Simulation, steps: int) -> bool:
-	return RoadTestMap.entry(sim.snapshot(), "houses", RoadTestMap.land(steps))["served"][&"bread"]
+	return RoadTestMap.entry(sim.snapshot(), "houses",
+		RoadTestMap.on_street(_context.buildings[&"housing"].footprint, steps))["served"][&"bread"]
 
 
 func _bread_term(sim: Simulation) -> float:
@@ -116,7 +118,8 @@ func _fire_sim(house_steps: int, role: RoleDef = null) -> Simulation:
 	TaxBase.fund(_initial, _params(role))
 	var sim: Simulation = Simulation.new(_params(role), _initial, 7, _context)
 	sim.apply_command(BuildCommand.new(_context, &"fire_station", RoadTestMap.land(1)))
-	sim.apply_command(BuildCommand.new(_context, &"housing", RoadTestMap.land(house_steps)))
+	sim.apply_command(BuildCommand.new(_context, &"housing",
+		RoadTestMap.on_street(_context.buildings[&"housing"].footprint, house_steps)))
 	sim.tick()
 	return sim
 
@@ -126,7 +129,7 @@ func _fire_steps() -> int:
 
 
 func _safety(sim: Simulation, steps: int) -> float:
-	var cell: Vector2i = RoadTestMap.land(steps)
+	var cell: Vector2i = RoadTestMap.on_street(_context.buildings[&"housing"].footprint, steps)
 	for house: Dictionary in sim.snapshot()["services"]["houses"]:
 		if house["cell"] == [cell.x, cell.y]:
 			return float(house["values"][ServiceSystem.SAFETY])

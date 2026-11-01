@@ -507,6 +507,11 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 			building.buildable = raw[id]["buildable"]
 		if raw[id].has("footprint") and not _footprint(raw[id]["footprint"], path + ".footprint", building):
 			continue
+		if raw[id].has("rotates"):
+			if raw[id]["rotates"] is not bool:
+				_errors.append("%s.rotates: expected a boolean" % path)
+				continue
+			building.rotates = raw[id]["rotates"]
 		if not _building_terrain(raw[id].get("terrain", DEFAULT_BUILDING_TERRAIN), path + ".terrain", building):
 			continue
 		if raw[id].has("terrain_mask") \
@@ -538,7 +543,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var fields: Array[String] = []
 		fields.assign(schema.keys())
 		fields.append("tags")
-		for field: String in ["buildable", "footprint", "priced_as", "terrain", "terrain_mask"]:
+		for field: String in ["buildable", "footprint", "rotates", "priced_as", "terrain", "terrain_mask"]:
 			if raw[id].has(field):
 				fields.append(field)
 		for field: String in WATER_FIELDS:
@@ -550,7 +555,7 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		if not _object(raw[id], fields, path):
 			continue
 		var numeric: Dictionary = raw[id].duplicate()
-		for field: String in ["tags", "buildable", "footprint", "priced_as", "terrain", "terrain_mask"] + WATER_FIELDS:
+		for field: String in ["tags", "buildable", "footprint", "rotates", "priced_as", "terrain", "terrain_mask"] + WATER_FIELDS:
 			numeric.erase(field)
 		if numeric.has("service_radius_m"):
 			schema["service_radius_m"] = "integer"

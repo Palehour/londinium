@@ -68,8 +68,9 @@ func _value(key: String) -> float:
 	return float(_params().get_value(StringName(key)))
 
 
+# Housing is 1x1 (D-153): it stands on the south cell of the old block, the one that touches the street.
 func _place(id: StringName, steps: int) -> void:
-	var cell: Vector2i = RoadTestMap.land(steps)
+	var cell: Vector2i = RoadTestMap.on_street(_context.buildings[id].footprint, steps)
 	_initial.buildings.append({"definition_id": id, "cell": [cell.x, cell.y]})
 
 

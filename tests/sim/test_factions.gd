@@ -459,14 +459,16 @@ func test_the_reformers_coverage_follows_building_and_demolishing() -> void:
 	initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 1000})
 	TaxBase.fund_with_artisans(initial, _params, context)
 	var sim: Simulation = Simulation.new(_params, initial, 7, context)
-	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(4)))
+	_apply(sim, BuildCommand.new(context, &"housing",
+		RoadTestMap.on_street(context.buildings[&"housing"].footprint, 4)))
 	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "A house and no services")
 	_apply(sim, BuildCommand.new(context, &"health_post", RoadTestMap.land(1)))
 	_apply(sim, BuildCommand.new(context, &"fire_station", RoadTestMap.land(2)))
 	assert_almost_eq(_reformers_target(sim), 60.0, EPSILON, "Two services of three: 20 + 60 x 2/3")
 	_apply(sim, BuildCommand.new(context, &"police_station", RoadTestMap.land(3)))
 	assert_almost_eq(_reformers_target(sim), 80.0, EPSILON, "Every service reaches the one house")
-	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(20)))
+	_apply(sim, BuildCommand.new(context, &"housing",
+		RoadTestMap.on_street(context.buildings[&"housing"].footprint, 20)))
 	assert_almost_eq(_reformers_target(sim), 50.0, EPSILON, "A second house beyond the services' reach")
 	_apply(sim, DemolishCommand.new(RoadTestMap.land(3)))
 	assert_almost_eq(_reformers_target(sim), 40.0, EPSILON, "Demolishing the police station: (2/3 + 0) / 2")
