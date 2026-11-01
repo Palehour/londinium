@@ -7,6 +7,11 @@ on:
     branches: [develop, main]
   push:
     branches: [develop, main]
+    # A push that only touches docs skips the whole run (#327); the docs PR already ran its own short check, and a push
+    # that also changes any other file runs as before.
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 permissions:
