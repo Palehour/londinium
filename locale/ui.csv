@@ -267,6 +267,16 @@ ui.stats.demotions,Descensos,Demotions
 ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
 ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
 ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.stats.source.tax,Impuestos,Tax
+ui.stats.source.refund,Reembolso,Refund
+ui.stats.source.upkeep,Mantenimiento,Upkeep
+ui.stats.source.administration,Administración,Administration
+ui.stats.source.wages,Salarios,Wages
+ui.stats.source.construction,Construcción,Construction
+ui.stats.source.imported_flour,Harina importada,Imported flour
+ui.stats.cause.hunger,Hambre,Hunger
+ui.stats.cause.satisfaction,Baja satisfacción,Low satisfaction
+ui.stats.stage.revenue,Recaudación,Revenue
 ui.stats_screen.open,Estadísticas,Statistics
 ui.stats_screen.hint,"LB/RB: cambiar de vista · B o Esc: volver","LB/RB: switch view · B or Esc: back"
 ui.stats_screen.back,Volver,Back
@@ -282,7 +292,10 @@ ui.stats_screen.card.coverage,Cobertura de pan y cerveza,Bread and beer coverage
 ui.stats_screen.card.fear,Miedo,Fear
 ui.stats_screen.card.debt,Deuda,Debt
 ui.stats_screen.history,Historia,History
-ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · ↑/↓: métrica · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · ↑/↓: metric · LT/RT or +/-: range"
+ui.stats_screen.history.header,"LB/RB: cambiar de serie · B o Esc: volver","LB/RB: switch series · B or Esc: back"
+ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · LT/RT or +/-: range"
+ui.stats_screen.history.value,%.0f,%.0f
+ui.stats_screen.history.value.ratio,%.2f,%.2f
 ui.stats_screen.history.reading,Minuto %s · %s,Minute %s · %s
 ui.stats_screen.lessons,Lecciones por distrito (duran el capítulo),Lessons by district (they last the chapter)
 ui.stats_screen.lessons.row,%s · lecciones: %s · %s,%s · lessons: %s · %s
@@ -296,6 +309,12 @@ ui.stats_screen.marker.policy,Política: %s,Policy: %s
 ui.stats_screen.marker.warning,Aviso: %s,Warning: %s
 ui.stats_screen.marker.defeat,Derrota: %s,Defeat: %s
 ui.stats_screen.marker.stage,Objetivo cumplido,Objective completed
+ui.stats_screen.marker.line,"%s %s","%s %s"
+ui.stats_screen.marker.stack,"%s × %d","%s × %d"
+ui.stats_screen.marker.crisis,Crisis,Crisis
+ui.stats_screen.marker.decree,Decreto,Decree
+ui.stats_screen.marker.patron,Patrono,Patron
+ui.stats_screen.marker.large_construction,Gran construcción,Large construction
 ui.stats_screen.range.ten_minutes,10 min,10 min
 ui.stats_screen.range.hour,1 h,1 h
 ui.stats_screen.range.chapter,Todo,All

@@ -1,20 +1,468 @@
 {
-  "summary": { "span_seconds": 600 },
+  "summary": {
+    "span_seconds": 600
+  },
   "history": {
     "ranges": [
-      { "id": "ten_minutes", "tier": "medium", "span_seconds": 600 },
-      { "id": "hour", "tier": "medium", "span_seconds": 3600 },
-      { "id": "chapter", "tier": "chapter", "span_seconds": 0 }
+      {
+        "id": "ten_minutes",
+        "tier": "medium",
+        "span_seconds": 600
+      },
+      {
+        "id": "hour",
+        "tier": "medium",
+        "span_seconds": 3600
+      },
+      {
+        "id": "chapter",
+        "tier": "chapter",
+        "span_seconds": 0
+      }
+    ],
+    "series": [
+      "money",
+      "income:tax:worker",
+      "income:tax:artisan",
+      "income:refund",
+      "expense:upkeep",
+      "expense:administration",
+      "expense:wages",
+      "expense:construction",
+      "expense:wheat",
+      "expense:barley",
+      "expense:imported_flour",
+      "expense:tea",
+      "stock:barley",
+      "stock:beer",
+      "coverage:beer",
+      "stock:bread",
+      "coverage:bread",
+      "stock:flour",
+      "stock:malt",
+      "stock:tea",
+      "coverage:tea",
+      "stock:wheat",
+      "consumed:barley",
+      "spoiled:barley",
+      "bought:barley",
+      "produced:beer",
+      "consumed:beer",
+      "spoiled:beer",
+      "produced:bread",
+      "consumed:bread",
+      "spoiled:bread",
+      "produced:flour",
+      "consumed:flour",
+      "bought:flour",
+      "produced:malt",
+      "consumed:malt",
+      "spoiled:malt",
+      "consumed:tea",
+      "bought:tea",
+      "consumed:wheat",
+      "spoiled:wheat",
+      "bought:wheat",
+      "price:wheat",
+      "price:barley",
+      "price:flour",
+      "price:tea",
+      "population:worker",
+      "immigration:worker",
+      "emigration:worker:hunger",
+      "emigration:worker:satisfaction",
+      "satisfaction:worker",
+      "housing_capacity:worker",
+      "housing_occupancy:worker",
+      "need_score:worker:sustento",
+      "need_score:worker:comunidad",
+      "population:artisan",
+      "immigration:artisan",
+      "emigration:artisan:hunger",
+      "emigration:artisan:satisfaction",
+      "promotions:artisan",
+      "demotions:artisan",
+      "satisfaction:artisan",
+      "housing_capacity:artisan",
+      "housing_occupancy:artisan",
+      "need_score:artisan:sustento",
+      "need_score:artisan:comunidad",
+      "jobs_filled:bakery",
+      "jobs_filled:brewery",
+      "jobs_filled:malthouse",
+      "jobs_filled:mill",
+      "jobs_filled:wharf",
+      "jobs_filled:wheat_field",
+      "defeat_timer:bankruptcy",
+      "defeat_timer:hunger",
+      "defeat_timer:depopulation",
+      "victory_progress:population",
+      "victory_progress:artisans",
+      "victory_progress:revenue",
+      "fear",
+      "debt"
+    ],
+    "markers": [
+      {
+        "kind": "crisis",
+        "icon": "!",
+        "label_key": "ui.stats_screen.marker.crisis"
+      },
+      {
+        "kind": "decree",
+        "icon": "+",
+        "label_key": "ui.stats_screen.marker.decree"
+      },
+      {
+        "kind": "patron",
+        "icon": "*",
+        "label_key": "ui.stats_screen.marker.patron"
+      },
+      {
+        "kind": "large_construction",
+        "icon": "#",
+        "label_key": "ui.stats_screen.marker.large_construction"
+      }
     ]
   },
-  "classes": { "fill_alpha": 0.35 },
-  "layout": { "font_size": 16, "margin": 16, "card_columns": 3, "chart_height": 120, "legend_width": 32,
-    "line_width": 2, "history_chart_height": 360 },
-  "colors": { "background": "#20242b", "card": "#2b3038", "marker": "#8a919c", "cursor": "#f0e442" },
+  "classes": {
+    "fill_alpha": 0.35
+  },
+  "layout": {
+    "font_size": 16,
+    "margin": 16,
+    "card_columns": 3,
+    "chart_height": 120,
+    "legend_width": 32,
+    "line_width": 2,
+    "history_chart_height": 360
+  },
+  "colors": {
+    "background": "#20242b",
+    "card": "#2b3038",
+    "marker": "#8a919c",
+    "cursor": "#f0e442"
+  },
   "strokes": [
-    { "color": "#e69f00", "dash": 0 },
-    { "color": "#56b4e9", "dash": 8 },
-    { "color": "#009e73", "dash": 3 },
-    { "color": "#cc79a7", "dash": 14 }
+    {
+      "color": "#e69f00",
+      "dash": 0
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 8
+    },
+    {
+      "color": "#009e73",
+      "dash": 3
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 14
+    },
+    {
+      "color": "#0072b2",
+      "dash": 0
+    },
+    {
+      "color": "#d55e00",
+      "dash": 0
+    },
+    {
+      "color": "#e69f00",
+      "dash": 1
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 0
+    },
+    {
+      "color": "#009e73",
+      "dash": 0
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 0
+    },
+    {
+      "color": "#0072b2",
+      "dash": 1
+    },
+    {
+      "color": "#d55e00",
+      "dash": 1
+    },
+    {
+      "color": "#e69f00",
+      "dash": 2
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 1
+    },
+    {
+      "color": "#009e73",
+      "dash": 1
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 1
+    },
+    {
+      "color": "#0072b2",
+      "dash": 2
+    },
+    {
+      "color": "#d55e00",
+      "dash": 2
+    },
+    {
+      "color": "#e69f00",
+      "dash": 3
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 2
+    },
+    {
+      "color": "#009e73",
+      "dash": 2
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 2
+    },
+    {
+      "color": "#0072b2",
+      "dash": 3
+    },
+    {
+      "color": "#d55e00",
+      "dash": 3
+    },
+    {
+      "color": "#e69f00",
+      "dash": 4
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 3
+    },
+    {
+      "color": "#009e73",
+      "dash": 4
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 3
+    },
+    {
+      "color": "#0072b2",
+      "dash": 4
+    },
+    {
+      "color": "#d55e00",
+      "dash": 4
+    },
+    {
+      "color": "#e69f00",
+      "dash": 5
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 4
+    },
+    {
+      "color": "#009e73",
+      "dash": 5
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 4
+    },
+    {
+      "color": "#0072b2",
+      "dash": 5
+    },
+    {
+      "color": "#d55e00",
+      "dash": 5
+    },
+    {
+      "color": "#e69f00",
+      "dash": 6
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 5
+    },
+    {
+      "color": "#009e73",
+      "dash": 6
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 5
+    },
+    {
+      "color": "#0072b2",
+      "dash": 6
+    },
+    {
+      "color": "#d55e00",
+      "dash": 6
+    },
+    {
+      "color": "#e69f00",
+      "dash": 7
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 6
+    },
+    {
+      "color": "#009e73",
+      "dash": 7
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 6
+    },
+    {
+      "color": "#0072b2",
+      "dash": 7
+    },
+    {
+      "color": "#d55e00",
+      "dash": 7
+    },
+    {
+      "color": "#e69f00",
+      "dash": 8
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 7
+    },
+    {
+      "color": "#009e73",
+      "dash": 8
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 7
+    },
+    {
+      "color": "#0072b2",
+      "dash": 8
+    },
+    {
+      "color": "#d55e00",
+      "dash": 8
+    },
+    {
+      "color": "#e69f00",
+      "dash": 9
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 9
+    },
+    {
+      "color": "#009e73",
+      "dash": 9
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 8
+    },
+    {
+      "color": "#0072b2",
+      "dash": 9
+    },
+    {
+      "color": "#d55e00",
+      "dash": 9
+    },
+    {
+      "color": "#e69f00",
+      "dash": 10
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 10
+    },
+    {
+      "color": "#009e73",
+      "dash": 10
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 9
+    },
+    {
+      "color": "#0072b2",
+      "dash": 10
+    },
+    {
+      "color": "#d55e00",
+      "dash": 10
+    },
+    {
+      "color": "#e69f00",
+      "dash": 11
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 11
+    },
+    {
+      "color": "#009e73",
+      "dash": 11
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 10
+    },
+    {
+      "color": "#0072b2",
+      "dash": 11
+    },
+    {
+      "color": "#d55e00",
+      "dash": 11
+    },
+    {
+      "color": "#e69f00",
+      "dash": 12
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 12
+    },
+    {
+      "color": "#009e73",
+      "dash": 12
+    },
+    {
+      "color": "#cc79a7",
+      "dash": 11
+    },
+    {
+      "color": "#0072b2",
+      "dash": 12
+    },
+    {
+      "color": "#d55e00",
+      "dash": 12
+    },
+    {
+      "color": "#e69f00",
+      "dash": 13
+    },
+    {
+      "color": "#56b4e9",
+      "dash": 13
+    }
   ]
 }

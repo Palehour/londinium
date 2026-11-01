@@ -16,6 +16,9 @@ const RANGE_TIERS: Array[StringName] = [StatsHistory.TIER_MEDIUM, StatsHistory.T
 var summary_span_seconds: int = 0
 # {"id", "tier", "span_seconds"}, in the order the triggers go through them.
 var history_ranges: Array[Dictionary] = []
+# Series order and marker candidates of the history view (D-168). Empty until load_data().
+var history_series: Array[StringName] = []
+var history_markers: Array[Dictionary] = []
 var layout: Dictionary[String, float] = {}
 var colors: Dictionary[String, Color] = {}
 var stroke_colors: Array[Color] = []
@@ -34,6 +37,8 @@ func load_data() -> void:
 
 
 func validate(raw: Variant) -> void:
+	history_series.clear()
+	history_markers.clear()
 	if raw is not Dictionary or raw.get("summary") is not Dictionary or raw.get("layout") is not Dictionary \
 			or raw.get("colors") is not Dictionary or raw.get("strokes") is not Array or raw["strokes"].is_empty():
 		errors.append("data/ui/stats.json: expected summary, layout, colors and strokes")
@@ -52,6 +57,9 @@ func validate(raw: Variant) -> void:
 		stroke_colors.append(_color(stroke.get("color"), "strokes.%d.color" % index))
 		stroke_dashes.append(float(dash))
 	_validate_ranges(raw.get("history"))
+	# After the ranges, so a partial dict still reports range errors (test_presentation_rejects_bad_ranges).
+	_validate_series(raw.get("history"))
+	_validate_markers(raw.get("history"))
 	_validate_fill(raw.get("classes"))
 
 
@@ -81,6 +89,36 @@ func _validate_ranges(history: Variant) -> void:
 			continue
 		history_ranges.append({"id": StringName(entry["id"]), "tier": StringName(entry["tier"]),
 			"span_seconds": int(span)})
+
+
+func _validate_series(history: Variant) -> void:
+	var series: Variant = history.get("series") if history is Dictionary else null
+	if series is not Array or series.is_empty():
+		errors.append("data/ui/stats.json.history.series: expected a list of series")
+		return
+	for index: int in series.size():
+		var id: Variant = series[index]
+		if id is not String or id.is_empty():
+			errors.append("data/ui/stats.json.history.series.%d: expected an id" % index)
+			continue
+		history_series.append(StringName(id))
+
+
+func _validate_markers(history: Variant) -> void:
+	var markers: Variant = history.get("markers") if history is Dictionary else null
+	if markers is not Array:
+		errors.append("data/ui/stats.json.history.markers: expected a list of markers")
+		return
+	for index: int in markers.size():
+		var entry: Variant = markers[index]
+		var key: String = "data/ui/stats.json.history.markers.%d" % index
+		if entry is not Dictionary or entry.get("kind") is not String or entry.get("icon") is not String \
+				or entry.get("label_key") is not String or entry["kind"].is_empty() or entry["icon"].is_empty() \
+				or entry["label_key"].is_empty():
+			errors.append(key + ": expected a kind, an icon and a label_key")
+			continue
+		history_markers.append({"kind": StringName(entry["kind"]), "icon": String(entry["icon"]),
+			"label_key": StringName(entry["label_key"])})
 
 
 func _validate_fill(classes: Variant) -> void:

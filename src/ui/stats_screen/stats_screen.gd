@@ -87,9 +87,18 @@ func handle(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel"):
 		close()
 	elif event.is_action_pressed(&"map_build_next"):
-		_tabs.select_next_available()
+		# On Historia, LB/RB change the series. The other tabs keep the shoulders for the tabs. Godot's
+		# select_previous_available stays on the first tab, so the index wraps here: LB from the summary opens
+		# Classes. B leaves Historia. There is no extra tab control.
+		if _tabs.current_tab == HISTORY_TAB:
+			_history.change_series(1)
+		else:
+			_tabs.current_tab = posmod(_tabs.current_tab + 1, _tabs.get_tab_count())
 	elif event.is_action_pressed(&"map_build_prev"):
-		_tabs.select_previous_available()
+		if _tabs.current_tab == HISTORY_TAB:
+			_history.change_series(-1)
+		else:
+			_tabs.current_tab = posmod(_tabs.current_tab - 1, _tabs.get_tab_count())
 	elif _tabs.get_current_tab_control() is ChartTab:
 		(_tabs.get_current_tab_control() as ChartTab).handle(event)
 
@@ -103,6 +112,7 @@ func refresh() -> void:
 func _on_tab_changed(tab: int) -> void:
 	if tab == SUMMARY_TAB:
 		_summary.reset_cursor()
+	_apply_header()
 	refresh()
 
 
@@ -113,7 +123,7 @@ func _notification(what: int) -> void:
 
 
 func _apply_texts() -> void:
-	_hint.text = Strings.text(Strings.STATS_SCREEN_HINT)
+	_apply_header()
 	_back.text = Strings.text(Strings.STATS_SCREEN_BACK)
 	_tabs.set_tab_title(SUMMARY_TAB, Strings.text(Strings.STATS_SCREEN_SUMMARY))
 	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
@@ -121,6 +131,11 @@ func _apply_texts() -> void:
 	_summary.apply_texts()
 	_history.apply_texts()
 	_classes.apply_texts()
+
+
+func _apply_header() -> void:
+	var on_history: bool = _tabs.current_tab == HISTORY_TAB
+	_hint.text = Strings.text(Strings.STATS_SCREEN_HISTORY_HEADER if on_history else Strings.STATS_SCREEN_HINT)
 
 
 # Only a chart with more than one line needs a legend: a short sample of each stroke beside its name.

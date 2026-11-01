@@ -278,6 +278,20 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"defeat_timer": &"ui.stats.defeat_timer",
 	&"victory_progress": &"ui.stats.victory_progress",
 }
+# Dimension members the history series name needs and that no other label covers. Wheat, barley and tea reuse
+# ui.good.*. Hunger here is why someone left, not the riot (ui.condition.hunger).
+const STATS_SOURCE_LABELS: Dictionary[StringName, StringName] = {
+	&"tax": &"ui.stats.source.tax", &"refund": &"ui.stats.source.refund", &"upkeep": &"ui.stats.source.upkeep",
+	&"administration": &"ui.stats.source.administration", &"wages": &"ui.stats.source.wages",
+	&"construction": &"ui.stats.source.construction", &"imported_flour": &"ui.stats.source.imported_flour",
+	&"wheat": &"ui.good.wheat", &"barley": &"ui.good.barley", &"tea": &"ui.good.tea",
+}
+const STATS_CAUSE_LABELS: Dictionary[StringName, StringName] = {
+	&"hunger": &"ui.stats.cause.hunger", &"satisfaction": &"ui.stats.cause.satisfaction",
+}
+const STATS_STAGE_LABELS: Dictionary[StringName, StringName] = {
+	&"population": &"ui.stats.population", &"artisans": &"ui.class.artisan", &"revenue": &"ui.stats.stage.revenue",
+}
 # The statistics screen (issue #83): the panel's button that opens it, its hint, back button and summary tab.
 const STATS_SCREEN_OPEN: StringName = &"ui.stats_screen.open"
 const STATS_SCREEN_HINT: StringName = &"ui.stats_screen.hint"
@@ -295,14 +309,25 @@ const STATS_SCREEN_CARDS: Dictionary[StringName, StringName] = {
 	&"satisfaction": &"ui.stats_screen.card.satisfaction", &"coverage": &"ui.stats_screen.card.coverage",
 	&"fear": &"ui.stats_screen.card.fear", &"debt": &"ui.stats_screen.card.debt",
 }
-# The history view (issue #83): its tab, hint, reading at the cursor, the markers and the ranges of data/ui/stats.json.
+# The history view (issue #316, D-168): header while that tab shows, the tab hint, the cursor reading, and how a
+# bucket value is written when it is not money.
 const STATS_SCREEN_HISTORY: StringName = &"ui.stats_screen.history"
+const STATS_SCREEN_HISTORY_HEADER: StringName = &"ui.stats_screen.history.header"
 const STATS_SCREEN_HISTORY_HINT: StringName = &"ui.stats_screen.history.hint"
 const STATS_SCREEN_HISTORY_READING: StringName = &"ui.stats_screen.history.reading"
+const STATS_SCREEN_HISTORY_VALUE: StringName = &"ui.stats_screen.history.value"
+const STATS_SCREEN_HISTORY_VALUE_RATIO: StringName = &"ui.stats_screen.history.value.ratio"
 const STATS_SCREEN_MARKER_POLICY: StringName = &"ui.stats_screen.marker.policy"
 const STATS_SCREEN_MARKER_WARNING: StringName = &"ui.stats_screen.marker.warning"
 const STATS_SCREEN_MARKER_DEFEAT: StringName = &"ui.stats_screen.marker.defeat"
 const STATS_SCREEN_MARKER_STAGE: StringName = &"ui.stats_screen.marker.stage"
+const STATS_SCREEN_MARKER_LINE: StringName = &"ui.stats_screen.marker.line"
+const STATS_SCREEN_MARKER_STACK: StringName = &"ui.stats_screen.marker.stack"
+const STATS_SCREEN_MARKER_KINDS: Dictionary[StringName, StringName] = {
+	&"crisis": &"ui.stats_screen.marker.crisis", &"decree": &"ui.stats_screen.marker.decree",
+	&"patron": &"ui.stats_screen.marker.patron",
+	&"large_construction": &"ui.stats_screen.marker.large_construction",
+}
 # The classes view (issue #83): its tab, hint and reading at the cursor, the city's and each class's.
 # The lessons of each district under the history chart (issue #87, D-120): the title, a district's line, and the
 # cholera's severity and deaths there, or that it has not come yet.
@@ -526,8 +551,10 @@ static func all_keys() -> Array[StringName]:
 		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
 		STATS_SCREEN_CLASS_VALUE, STATS_SCREEN_SUMMARY_HINT, STATS_SCREEN_SUMMARY_CURSOR, STATS_SCREEN_NO_READING,
-		STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
+		STATS_SCREEN_HISTORY, STATS_SCREEN_HISTORY_HEADER, STATS_SCREEN_HISTORY_HINT, STATS_SCREEN_HISTORY_READING,
+		STATS_SCREEN_HISTORY_VALUE, STATS_SCREEN_HISTORY_VALUE_RATIO,
 		STATS_SCREEN_MARKER_POLICY, STATS_SCREEN_MARKER_WARNING, STATS_SCREEN_MARKER_DEFEAT, STATS_SCREEN_MARKER_STAGE,
+		STATS_SCREEN_MARKER_LINE, STATS_SCREEN_MARKER_STACK,
 		STATS_SCREEN_LESSONS, STATS_SCREEN_LESSONS_ROW, STATS_SCREEN_LESSONS_CRISIS, STATS_SCREEN_LESSONS_NO_CRISIS,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
@@ -572,6 +599,14 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, SAVE_REFUSALS[refusal_id])
 	for metric_id: StringName in STATS_SERIES_LABELS:
 		_append_unique(keys, STATS_SERIES_LABELS[metric_id])
+	for source_id: StringName in STATS_SOURCE_LABELS:
+		_append_unique(keys, STATS_SOURCE_LABELS[source_id])
+	for cause_id: StringName in STATS_CAUSE_LABELS:
+		_append_unique(keys, STATS_CAUSE_LABELS[cause_id])
+	for stage_id: StringName in STATS_STAGE_LABELS:
+		_append_unique(keys, STATS_STAGE_LABELS[stage_id])
+	for marker_id: StringName in STATS_SCREEN_MARKER_KINDS:
+		_append_unique(keys, STATS_SCREEN_MARKER_KINDS[marker_id])
 	for card_id: StringName in STATS_SCREEN_CARDS:
 		_append_unique(keys, STATS_SCREEN_CARDS[card_id])
 	for range_id: StringName in STATS_SCREEN_RANGES:

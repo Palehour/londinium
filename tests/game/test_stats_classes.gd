@@ -190,8 +190,8 @@ func _classes(view: Node2D) -> ClassesTab:
 	for tick: int in 120:
 		session.simulation.tick()
 	session.publish_tick()
-	_pad(JOY_BUTTON_RIGHT_SHOULDER)
-	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	# LB from the summary wraps to Classes. RB now changes the series while Historia is open.
+	_pad(JOY_BUTTON_LEFT_SHOULDER)
 	return (view.get("_stats_screen") as StatsScreen).get("_classes") as ClassesTab
 
 
