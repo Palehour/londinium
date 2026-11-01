@@ -13,11 +13,13 @@ const PERCENT: float = 100.0
 
 
 # One {"id", "lines", "value"} per card, in CARDS order. A line is {"label", "values"}, oldest bucket first over the
-# last span_seconds; "value" is the latest reading as text, empty while the card has no data.
-static func build(simulation: Simulation, span_seconds: int) -> Array[Dictionary]:
+# last span_seconds of a level (the medium one unless told); "value" is the latest reading as text, empty while the
+# card has no data.
+static func build(simulation: Simulation, span_seconds: int,
+		tier: StringName = StatsHistory.TIER_MEDIUM) -> Array[Dictionary]:
 	var cards: Array[Dictionary] = []
 	for id: StringName in CARDS:
-		cards.append(card(simulation, id, StatsHistory.TIER_MEDIUM, span_seconds))
+		cards.append(card(simulation, id, tier, span_seconds))
 	return cards
 
 
