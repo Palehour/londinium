@@ -49,7 +49,7 @@ func test_provisional_startup_uses_params_and_existing_initial_bread() -> void:
 	# Only the anchors of the strip with a use: the dense housing of Pier Head (issue #154, D-075) and Oliver's Wharf
 	# (issue #152), and the 1870 houses (issue #180, D-085).
 	assert_eq(state["buildings"], [{"definition_id": &"dense_housing", "cell": [16, 12]}] + PERIOD_HOUSES
-		+ [{"definition_id": &"wharf", "cell": [20, 16]}])
+		+ [{"definition_id": &"wharf", "cell": [18, 15]}])
 	assert_eq(_session.get_snapshot()["seed"], 42)
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1234), Modifier.new(&"startup.population", &"set", 12), Modifier.new(&"population.initial_bread", &"set", 55)])

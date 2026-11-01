@@ -6,8 +6,10 @@ extends GutTest
 # Issue #186 (D-086): the cells below are the corners (2x, 2y) of the 2x2 blocks of the old cells of 50 m.
 
 const STRIP: StringName = &"riverside_strip"
-const DAMAGED_WHARF: Vector2i = Vector2i(28, 14)
-const PLAIN_RIVER: Vector2i = Vector2i(26, 14)
+# On the mask of D-155 since D-169: its north row on the riverbank and its south row on the river.
+const DAMAGED_WHARF: Vector2i = Vector2i(26, 13)
+# Where the damaged wharf stood before D-169, now plain river.
+const PLAIN_RIVER: Vector2i = Vector2i(28, 14)
 const LAND: Vector2i = Vector2i(26, 12)
 const RATIO_KEY: StringName = &"repair.wharf_cost_ratio"
 
@@ -105,11 +107,8 @@ func test_only_a_damaged_wharf_cell_can_be_repaired() -> void:
 
 
 func test_a_damaged_wharf_with_a_new_wharf_on_it_is_not_repaired() -> void:
-	# Since #88 (D-152) a new wharf stands with its north row on the riverbank, so the one over the ruin starts a row
-	# above it; on the strip that row is a street, lifted here so the ruin can be built over.
-	var over_the_ruin: Vector2i = DAMAGED_WHARF + Vector2i.UP
-	for cell: Vector2i in [over_the_ruin, over_the_ruin + Vector2i.RIGHT]:
-		_strip.map.road_cells.erase(cell)
+	# Since D-169 the ruin stands on the mask of D-155 (D-152), so a new wharf fits right over it.
+	var over_the_ruin: Vector2i = DAMAGED_WHARF
 	var sim: Simulation = _sim(10000)
 	assert_true(_run(sim, BuildCommand.new(_strip, &"wharf", over_the_ruin)).accepted, "Building anew is still allowed")
 	var money: int = _money(sim)

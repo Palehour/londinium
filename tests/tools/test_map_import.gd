@@ -207,6 +207,23 @@ func test_overrides_list_the_anchors_and_named_sites() -> void:
 		assert_false(bad.errors.is_empty(), str(broken))
 
 
+# Issue #321 (D-155, D-169): a wharf anchor on the edge has its north row on land and its south row on the river; its
+# block is not a standing building, so the land row keeps its terrain for the mask. An anchor wholly on land still is.
+func test_an_anchor_on_the_edge_of_the_river_keeps_its_terrain() -> void:
+	var config: Dictionary = _config(4, 4)
+	config["raster_block"] = 2
+	var layers: Dictionary = {"river": _polygons([[_rect(config, 0, 2, 4, 4)]])}
+	var wharf: Dictionary = {"name": "Wharf", "cell": [0, 1], "building": "wharf", "source": "Sheet A",
+		"history": "[INVENTED] Game cell."}
+	var map: Dictionary = _import(config, layers, {"areas": [], "anchors": [wharf]})
+	assert_eq(map["existing_cells"], [], "The wharf on the edge is not a standing building")
+	assert_true([0, 2] in map["river_cells"] and [1, 2] in map["river_cells"], "Its south row stays on the river")
+	assert_false([0, 1] in map["river_cells"] or [1, 1] in map["river_cells"], "Its north row stays on land")
+	var land: Dictionary = _import(config, {}, {"areas": [], "anchors": [wharf]})
+	assert_eq(_cells(land["existing_cells"]), [Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2), Vector2i(1, 2)]
+		as Array[Vector2i], "An anchor wholly on land is a standing building")
+
+
 # Issue #176 (D-083): period houses, damaged wharves and lot styles are listed by hand and travel to the map unchanged;
 # a period house stays free land (only data for now) and a damaged wharf stays water.
 func test_overrides_list_period_houses_damaged_wharves_and_lot_styles() -> void:

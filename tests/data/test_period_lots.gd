@@ -10,14 +10,16 @@ const STRIP: StringName = &"riverside_strip"
 const HOUSES: Array[Vector2i] = [Vector2i(8, 6), Vector2i(6, 8), Vector2i(10, 8), Vector2i(10, 10)]
 # Only (8,6) is in the corner of sheet VII.77; the other three cells are on sheet VII.87 (review of PR #179).
 const HOUSES_ON_VII_87: Array[Vector2i] = [Vector2i(6, 8), Vector2i(10, 8), Vector2i(10, 10)]
-const DAMAGED_WHARF: Vector2i = Vector2i(28, 14)
+# On the mask of D-155 since D-169: its north row on the riverbank and its south row on the river.
+const DAMAGED_WHARF: Vector2i = Vector2i(26, 13)
 # Cells of a real place of the sheets ([FACT]): their lot style says nothing about a use (review of PR #179).
 const FACT_CELLS: Array[Vector2i] = [Vector2i(16, 14), Vector2i(24, 14), Vector2i(12, 12), Vector2i(14, 14)]
 const NEUTRAL_STYLE: StringName = &"plain"
 # The count of #152, which D-083 keeps: free cells in total and without the corner with no sheet (VII.77). Four cells of
-# 25 m for each one of 50 m (D-086): 65 and 47 then.
-const FREE_TOTAL: int = 260
-const FREE_WITHOUT_CORNER: int = 188
+# 25 m for each one of 50 m (D-086): 65 and 47 then, 260 and 188. Oliver's Wharf at [18,15] (D-169) takes 2 free cells
+# of riverbank, so 258 and 186 (D-171).
+const FREE_TOTAL: int = 258
+const FREE_WITHOUT_CORNER: int = 186
 const NO_SHEET_CORNER: Rect2i = Rect2i(0, 0, 12, 8)
 
 var _catalog: DataCatalog
@@ -93,12 +95,18 @@ func test_the_period_houses_start_empty() -> void:
 		assert_eq(map.period_house_population.get(cell), 0, str(cell))
 
 
-func test_the_damaged_wharf_is_an_invented_river_cell() -> void:
+# Issue #321 (D-155, D-169): the ruin stands on the wharf's mask, its north row on the riverbank and its south row on
+# the river.
+func test_the_damaged_wharf_is_an_invented_cell_on_the_wharf_mask() -> void:
 	var map: MapDef = _catalog.maps[STRIP]
 	assert_eq(map.damaged_wharves, [DAMAGED_WHARF] as Array[Vector2i])
 	var area: Rect2i = _area(RepairWharfCommand.WHARF, DAMAGED_WHARF)
 	for cell: Vector2i in EconomyContext.cells_of(area):
-		assert_true(cell in map.river_cells, "Water, like the cells of a wharf: %s" % cell)
+		if cell.y == DAMAGED_WHARF.y:
+			assert_eq(map.terrain.get(cell), &"riverbank", "The north row is on the riverbank: %s" % cell)
+			assert_false(cell in map.river_cells or cell in map.road_cells, "Free land: %s" % cell)
+		else:
+			assert_true(cell in map.river_cells, "The south row is on the river: %s" % cell)
 	assert_true(map.beside_road(area), "A wharf works only beside a street")
 	assert_false(map.anchors.has(DAMAGED_WHARF), "Nothing stands there yet")
 	var entry: Dictionary = _raw["damaged_wharves"][0]

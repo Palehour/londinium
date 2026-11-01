@@ -9,9 +9,10 @@ extends GutTest
 
 const STRIP: StringName = &"riverside_strip"
 const PIER_HEAD: Vector2i = Vector2i(16, 12)
-# The warehouse is at (16,14), but no street reaches the river there: the wharf stands on the nearest river cell beside
-# one, Well Alley, the rule Cristian set for Pier Head (2026-10-18).
-const OLIVERS_WHARF: Vector2i = Vector2i(20, 16)
+# The warehouse is at (16,14), but no street reaches the river there: the wharf stands beside the nearest one, Well
+# Alley, the rule Cristian set for Pier Head (2026-10-18), its north row on the riverbank and its south row on the river
+# (D-155, D-169).
+const OLIVERS_WHARF: Vector2i = Vector2i(18, 15)
 const ST_JOHNS: Vector2i = Vector2i(18, 10)
 const THAMES_POLICE: Vector2i = Vector2i(24, 14)
 # The corner of sheet VII.77, which has no 1862-74 edition (option A of 2026-10-18), as Mason counted it.
