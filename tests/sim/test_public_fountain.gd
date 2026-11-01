@@ -136,10 +136,13 @@ func test_with_events_on_the_fountain_is_built() -> void:
 	var params: Params = _params([Modifier.new(&"events.enabled", &"set", 1.0)])
 	var state: EconomyState = EconomyState.new()
 	state.money = int(params.get_value(&"building.public_fountain.cost"))
+	TaxBase.fund(state, params)
 	var command: BuildCommand = BuildCommand.new(_context, FOUNTAIN, _free_cell())
 	command.execute(state, params, RandomNumberGenerator.new())
 	assert_true(command.accepted, str(command.reason))
-	var sim: Simulation = Simulation.new(params, EconomyState.new(), 1, _context)
+	var funded: EconomyState = EconomyState.new()
+	TaxBase.fund(funded, params)
+	var sim: Simulation = Simulation.new(params, funded, 1, _context)
 	assert_eq(sim.get_building_unavailable_reason(FOUNTAIN), &"")
 
 

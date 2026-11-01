@@ -163,8 +163,9 @@ func test_pinned_wheat_price_holds_for_every_draw_and_changes_only_that_runner()
 func _extra_chain(first_extra: Dictionary) -> Array:
 	var wharf: Dictionary = {"tick": 60, "cmd": "build", "building": "wharf", "cell": [8, 13]}
 	wharf.merge(first_extra)
-	# A high tax so the first chain's profit can pay for the second one.
-	return [{"tick": 0, "cmd": "set_tax", "rate": 0.7}] + _chain() + [wharf,
+	# A tax high enough for the first chain's profit to pay for the second one, but low enough that the treasury is still
+	# short of the 540 at tick 60: with 0.7 and D-134 (no upkeep for the basics) it already had 542, so nothing waited.
+	return [{"tick": 0, "cmd": "set_tax", "rate": 0.6}] + _chain() + [wharf,
 		{"tick": 60, "cmd": "build", "building": "mill", "cell": [8, 10], "with_previous": true},
 		{"tick": 60, "cmd": "build", "building": "bakery", "cell": [10, 10], "with_previous": true}]
 

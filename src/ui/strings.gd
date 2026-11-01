@@ -144,6 +144,7 @@ const UNLOADING_SPLIT_SHORT: StringName = &"ui.unloading_split_short"
 const STOCKS: StringName = &"ui.stocks"
 const TREASURY: StringName = &"ui.treasury"
 const OPERATING_BALANCE: StringName = &"ui.operating_balance"
+const PROJECTED_DELTA: StringName = &"ui.projected_delta"
 const BALANCE_BREAKDOWN: StringName = &"ui.balance_breakdown"
 const CONSTRUCTION: StringName = &"ui.construction"
 const WHEAT_PRICE: StringName = &"ui.wheat_price"
@@ -356,6 +357,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"events_disabled": &"ui.reason.events_disabled",
 	&"water_source_cap": &"ui.reason.water_source_cap",
 	&"insufficient_money": &"ui.reason.insufficient_money",
+	&"bankruptcy_window": &"ui.reason.bankruptcy_window",
+	&"negative_balance": &"ui.reason.negative_balance",
 	&"loan_active": &"ui.reason.loan_active",
 	&"invalid_loan_amount": &"ui.reason.invalid_loan_amount",
 	&"loan_over_cap": &"ui.reason.loan_over_cap",
@@ -505,7 +508,7 @@ static func all_keys() -> Array[StringName]:
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,
-		BREAD_CAUSE, BREAD_CHAIN_CAUSE, STOCKS, TREASURY, OPERATING_BALANCE, BALANCE_BREAKDOWN, CONSTRUCTION,
+		BREAD_CAUSE, BREAD_CHAIN_CAUSE, STOCKS, TREASURY, OPERATING_BALANCE, PROJECTED_DELTA, BALANCE_BREAKDOWN, CONSTRUCTION,
 		WHEAT_PRICE, TEA_IMPORTS, FLOUR_IMPORTS, TEA_ROW, FLOUR_ROW, WINDOW_PARTIAL, BUILDINGS, NO_BUILDINGS,
 		BUILDING_STATUS, CRISES, CONDITION, TIMER, GRACE, ALERT_WARNING, ALERT_DEFEAT, METRIC_BANKRUPTCY,
 		METRIC_HUNGER, METRIC_DEPOPULATION, NEEDS_TITLE, CLASS_HEADER, COVERAGE_ROW, GOOD_COVERAGE,

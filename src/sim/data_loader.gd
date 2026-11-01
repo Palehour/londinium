@@ -137,7 +137,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	"defeat": {
 		# Off only through the defeats knob (D-065): the city can no longer lose, but the timers' inputs still run.
 		"enabled": "boolean",
-		"bankruptcy": {"threshold": "money", "duration_seconds": "positive_integer"},
+		"bankruptcy": {"threshold_tax_minutes": "non_positive", "duration_seconds": "positive_integer"},
 		"hunger": {"threshold": "fraction", "duration_seconds": "positive_integer", "smoothing": "number"},
 		"depopulation": {"warning_fraction": "fraction", "defeat_fraction": "fraction",
 			"minimum_population": "integer", "duration_seconds": "positive_integer",
@@ -417,8 +417,9 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	var value: float = float(raw)
 	# JSON numbers arrive as doubles; reject values outside int64 before conversion.
 	# An optional price may be -1: "none" (see WheatPolicy), outside the price domain.
-	var lowest: float = -1.0 if kind == "optional_price" else 0.0
-	if value < lowest or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
+	# A non-positive number is a multiple of R below zero (bankruptcy threshold, D-131), so it runs from -INF to 0.
+	var lowest: float = -INF if kind == "non_positive" else (-1.0 if kind == "optional_price" else 0.0)
+	if value < lowest or (kind == "non_positive" and value > 0) or (integral and (value != floor(value) or value >= 9223372036854775808.0)) \
 			or (kind.begins_with("positive") and value <= 0) \
 			or (kind == "fraction" and value > 1) or (kind == "percent" and value > 100) \
 			or not ParameterRanges.is_valid(StringName(key), value):

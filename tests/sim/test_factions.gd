@@ -457,6 +457,7 @@ func test_the_reformers_coverage_follows_building_and_demolishing() -> void:
 	initial.money = 100000
 	initial.population = 10
 	initial.stocks.assign({&"wheat": 0, &"flour": 0, &"bread": 1000})
+	TaxBase.fund_with_artisans(initial, _params, context)
 	var sim: Simulation = Simulation.new(_params, initial, 7, context)
 	_apply(sim, BuildCommand.new(context, &"housing", RoadTestMap.land(4)))
 	assert_almost_eq(_reformers_target(sim), 20.0, EPSILON, "A house and no services")

@@ -263,7 +263,7 @@ func test_even_failed_it_is_never_a_defeat_and_the_depopulation_waits() -> void:
 func test_only_bankruptcy_still_defeats_during_the_mission() -> void:
 	var params: Params = _defeats_on()
 	var state: EconomyState = _city(80)
-	state.money = int(params.get_value(&"defeat.bankruptcy.threshold")) - 1
+	state.money = DefeatSystem.bankruptcy_threshold(state, params, _context) - 1
 	var sim: Simulation = _sim(params, state)
 	_start(sim)
 	_ticks(sim, _ticks_of(params, "mission.oldford.duration_min") + int(params.get_value(

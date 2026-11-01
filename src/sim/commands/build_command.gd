@@ -39,6 +39,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 func _validate(state: EconomyState, params: Params) -> StringName:
 	if not _context.buildings.has(_definition_id):
 		return &"unknown_building"
+	# The bankruptcy window (D-133) beats everything else, the basics included.
+	if DefeatSystem.bankruptcy_window_running(state):
+		return &"bankruptcy_window"
 	if not _context.buildings[_definition_id].buildable:
 		return &"not_buildable"
 	var events_reason: StringName = WaterSystem.unavailable_reason(params, state, _context,
@@ -62,4 +65,6 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 		return &"road_cell"
 	if state.money < BuildingCosts.construction_cost(params, state, _context.buildings[_definition_id]):
 		return &"insufficient_money"
+	if MoneySystem.blocks_negative_balance(state, params, _context, _definition_id):
+		return &"negative_balance"
 	return &""

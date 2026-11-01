@@ -30,7 +30,8 @@ func test_money_step_triggers_terminal_defeat_and_rejects_queued_commands() -> v
 	var state: EconomyState = EconomyState.new()
 	state.population = 20
 	state.stocks[&"bread"] = 100
-	state.buildings.append({"definition_id": &"housing", "cell": [1, 1]})
+	# Artisan housing has upkeep (the workers' housing has none since D-134), so the fraction carried tips over a penny.
+	state.buildings.append({"definition_id": &"artisan_housing", "cell": [1, 1]})
 	state.upkeep_fraction = 0.99
 	var sim: Simulation = Simulation.new(_params(loaded.catalog), state, 42, context)
 	var enqueue: EnqueueAtDefeatCommand = EnqueueAtDefeatCommand.new()

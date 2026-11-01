@@ -113,6 +113,7 @@ func test_house_without_street_adds_no_capacity() -> void:
 # A fire station at the first street cell and a house at the given steps; the house is worth the station's
 # availability when covered and 0 when not.
 func _fire_sim(house_steps: int, role: RoleDef = null) -> Simulation:
+	TaxBase.fund(_initial, _params(role))
 	var sim: Simulation = Simulation.new(_params(role), _initial, 7, _context)
 	sim.apply_command(BuildCommand.new(_context, &"fire_station", RoadTestMap.land(1)))
 	sim.apply_command(BuildCommand.new(_context, &"housing", RoadTestMap.land(house_steps)))
@@ -153,6 +154,7 @@ func test_service_radius_zero_still_needs_a_street_to_the_house() -> void:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"building.fire_station.service_radius_m", &"set", 0))
 	var context: EconomyContext = RoadTestMap.blocks(_catalog, Vector2i(6, 5), [Vector2i(0, 1)] as Array[Vector2i])
+	TaxBase.fund(_initial, _params(role))
 	var sim: Simulation = Simulation.new(_params(role), _initial, 7, context)
 	sim.apply_command(BuildCommand.new(context, &"fire_station", RoadTestMap.cell(Vector2i(0, 0))))
 	sim.apply_command(BuildCommand.new(context, &"housing", RoadTestMap.cell(Vector2i(4, 2))))

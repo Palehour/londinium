@@ -148,7 +148,7 @@ func test_modified_defeat_thresholds_match_schema_ranges() -> void:
 		&"defeat.depopulation.warning_fraction": [-0.1, 1.1],
 		&"defeat.depopulation.defeat_fraction": [-0.1, 1.1],
 		&"defeat.depopulation.minimum_population": [-1.0, 1.5, 1e30],
-		&"defeat.bankruptcy.threshold": [-1.0, 1e30],
+		&"defeat.bankruptcy.threshold_tax_minutes": [1.0, 1e30],
 		&"defeat.bankruptcy.duration_seconds": [1e30],
 		&"defeat.hunger.duration_seconds": [1e30],
 		&"defeat.depopulation.duration_seconds": [1e30],
@@ -195,10 +195,11 @@ func test_modified_defeat_schema_boundaries_and_money_rounding() -> void:
 		for modifier: Modifier in role.modifiers:
 			assert_eq(params.get_value(modifier.key), boundary)
 	var money_role: RoleDef = RoleDef.new()
-	money_role.modifiers.assign([Modifier.new(&"defeat.bankruptcy.threshold", &"set", 1),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"mul", 0.5),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"mul", 3)])
-	var money: Variant = Params.new(_catalog, money_role).get_value(&"defeat.bankruptcy.threshold")
+	# The bankruptcy threshold is no longer money (it is a multiple of R), so the rounding is checked on another money key.
+	money_role.modifiers.assign([Modifier.new(&"startup.money", &"set", 1),
+		Modifier.new(&"startup.money", &"mul", 0.5),
+		Modifier.new(&"startup.money", &"mul", 3)])
+	var money: Variant = Params.new(_catalog, money_role).get_value(&"startup.money")
 	assert_eq(money, 2)
 	assert_typeof(money, TYPE_INT)
 

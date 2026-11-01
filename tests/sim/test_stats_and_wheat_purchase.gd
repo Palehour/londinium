@@ -417,7 +417,7 @@ func test_defeat_snapshot_exposes_warning_timer_cause_and_metrics() -> void:
 func test_restart_creates_a_fresh_game_with_the_same_startup_and_seed() -> void:
 	var params: Params = _params([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 1),
-		Modifier.new(&"defeat.bankruptcy.threshold", &"set", 20000)])
+		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
 	var session: GameSession = GameSession.new(_catalog, params)
 	var fresh: Dictionary = session.get_snapshot()
 	session.submit_command(BuildCommand.new(session.context, &"housing", Vector2i(2, 2)))

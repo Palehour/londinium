@@ -100,8 +100,15 @@ func get_snapshot() -> Dictionary:
 
 func get_building_unavailable_reason(id: StringName) -> StringName:
 	if id == ROAD:
+		if simulation.is_bankruptcy_window_running():
+			return &"bankruptcy_window"
 		return &"" if context.map.roads_enabled else &"roads_disabled"
 	return simulation.get_building_unavailable_reason(id)
+
+
+# Taxes minus upkeep per minute, in pence, once the building is up (D-134); the tooltip shows it.
+func get_projected_delta_per_minute(id: StringName) -> float:
+	return simulation.get_projected_delta_per_minute(id)
 
 
 func submit_command(command: SimulationCommand) -> void:

@@ -75,15 +75,18 @@ func test_small_peak_empty_city_recovers_and_restarts_full_timer() -> void:
 	assert_eq(state.population_peak, 9.0)
 
 
-func test_bankruptcy_earliest_defeat_remains_480() -> void:
+func test_bankruptcy_earliest_defeat_is_the_grace_plus_the_window() -> void:
+	# Grace 300 s + window 300 s (D-133); an empty city would lose to depopulation at 480 s, so people live here.
 	var state: EconomyState = EconomyState.new()
 	state.money = -1
+	state.population = 100
+	state.bread_coverage = 1.0
 	var system: DefeatSystem = DefeatSystem.new()
-	for index: int in range(479):
+	for index: int in range(599):
 		system.tick(state, _params)
 	assert_true(state.defeat_causes.is_empty())
 	system.tick(state, _params)
-	assert_eq(state.defeat_causes, [&"bankruptcy", &"depopulation"])
+	assert_eq(state.defeat_causes, [&"bankruptcy"])
 
 
 func test_hunger_overrides_high_and_neutral_satisfaction_and_immigration() -> void:

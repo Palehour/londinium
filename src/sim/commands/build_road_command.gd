@@ -37,6 +37,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 
 
 func _validate(state: EconomyState, params: Params) -> StringName:
+	# The bankruptcy window (D-133) beats everything else.
+	if DefeatSystem.bankruptcy_window_running(state):
+		return &"bankruptcy_window"
 	var map: MapDef = _context.map
 	if not map.roads_enabled:
 		return &"roads_disabled"

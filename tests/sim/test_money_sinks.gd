@@ -67,11 +67,12 @@ func test_administration_starts_after_the_twelfth_building_and_stops_at_twice() 
 
 
 func test_upkeep_is_multiplied_by_administration() -> void:
-	# Housing has no jobs, so the minute's bill is upkeep alone: 12 x 1 at x1, then 22 x 1 at x1.3.
-	assert_eq(_upkeep_paid_in_a_minute(_state_with(&"housing", 12), _params), 12)
-	var bigger: EconomyState = _state_with(&"housing", 22)
-	assert_eq(_upkeep_paid_in_a_minute(bigger, _params), 28, "22 x 1.3 = 28.6: 28 paid, the fraction kept")
-	assert_almost_eq(bigger.upkeep_fraction, 0.6, 1e-6)
+	# Artisan housing has no jobs, so the minute's bill is upkeep alone (2 each; the workers' housing has none since
+	# D-134): 12 x 2 at x1, then 22 x 2 at x1.3.
+	assert_eq(_upkeep_paid_in_a_minute(_state_with(&"artisan_housing", 12), _params), 24)
+	var bigger: EconomyState = _state_with(&"artisan_housing", 22)
+	assert_eq(_upkeep_paid_in_a_minute(bigger, _params), 57, "44 x 1.3 = 57.2: 57 paid, the fraction kept")
+	assert_almost_eq(bigger.upkeep_fraction, 0.2, 1e-6)
 
 
 func test_a_role_modifier_changes_administration() -> void:
@@ -151,6 +152,9 @@ func test_demolition_after_grace_refunds_the_ratio_of_what_was_paid() -> void:
 	# A jobless building, so the ratio applies (an idle bakery would be refunded in full); the third artisan housing
 	# paid 120 x 1.15.
 	var state: EconomyState = _state_with(&"artisan_housing", 2)
+	# A staffed mill pays the head tax, so the new housing's upkeep does not leave the delta below 0 (D-134).
+	state.tax_rate = float(_params.get_value(&"population.tax.rate"))
+	state.buildings.append({"definition_id": &"mill", "cell": [14, 14], "workers": 10})
 	_build(state, &"artisan_housing", Vector2i(6, 6))
 	state.defeat_elapsed_seconds += int(_params.get_value(&"demolish.refund_grace_seconds")) + 1
 	var ratio: float = float(_params.get_value(&"demolish.no_jobs_refund_ratio"))
@@ -188,8 +192,12 @@ func test_artisan_housing_still_escalates() -> void:
 
 
 func test_basic_infrastructure_still_counts_for_administration() -> void:
-	# 22 housings: upkeep 22 x 1 at x1.3, as in test_upkeep_is_multiplied_by_administration.
-	assert_eq(_upkeep_paid_in_a_minute(_state_with(&"housing", 22), _params), 28)
+	# 21 housings (no upkeep since D-134) and one artisan housing: it still pays 2 x 1.3 for 22 buildings, as in
+	# test_upkeep_is_multiplied_by_administration, so the housings count although they pay nothing.
+	var state: EconomyState = _state_with(&"housing", 21)
+	state.buildings.append({"definition_id": &"artisan_housing", "cell": [14, 14]})
+	assert_eq(_upkeep_paid_in_a_minute(state, _params), 2)
+	assert_almost_eq(state.upkeep_fraction, 0.6, 1e-6, "2 x 1.3 = 2.6")
 
 
 func test_a_building_without_a_recorded_price_refunds_on_the_base_cost() -> void:

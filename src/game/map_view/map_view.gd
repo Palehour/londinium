@@ -1001,6 +1001,8 @@ func _update_mode() -> void:
 	var style: StringName = session.context.map.lot_styles.get(geometry.selected, &"")
 	if style != &"":
 		parts.append(presentation.lot_labels[style])
+	if _building_type != ROAD and presentation.labels.has(_building_type):
+		parts.append(Strings.text(Strings.PROJECTED_DELTA) % Strings.money(roundi(session.get_projected_delta_per_minute(_building_type))))
 	var wharf: Dictionary = _damaged_wharf_at(geometry.selected)
 	if not wharf.is_empty():
 		parts.append(Strings.text(Strings.REPAIR_HINT_GAMEPAD if _gamepad else Strings.REPAIR_HINT) % Strings.money(wharf["cost"]))

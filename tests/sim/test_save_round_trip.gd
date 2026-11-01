@@ -32,6 +32,8 @@ func _new_game(params: Params) -> Simulation:
 	var state: EconomyState = EconomyState.new()
 	state.money = 1000000
 	state.population = 30
+	# The artisan housing opens no jobs and nobody is employed yet at tick 0: the city starts with a tax base (D-134).
+	TaxBase.fund(state, params)
 	var sim: Simulation = Simulation.create_new(params, state, 7, _context, _stages)
 	var builds: Array[Array] = [[&"wharf", Vector2i(4, 13)], [&"wharf", Vector2i(8, 13)], [&"mill", Vector2i(4, 10)],
 		[&"bakery", Vector2i(6, 10)], [&"housing", Vector2i(10, 6)], [&"housing", Vector2i(10, 8)],
