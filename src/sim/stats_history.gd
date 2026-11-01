@@ -247,8 +247,8 @@ func _note_causes(state: EconomyState) -> void:
 		present.append(subject)
 		_causes.note(_seconds, &"building", subject, BreadDiagnostics.building_reason(state, _context, building, _params))
 	_causes.forget_missing(_seconds, &"building", present, GONE)
-	_causes.note(_seconds, &"import", &"tea", ImportSystem.tea_reason(state, _params))
-	_causes.note(_seconds, &"import", &"flour", ImportSystem.flour_reason(state, _params))
+	_causes.note(_seconds, &"import", &"tea", ImportSystem.tea_reason(state, _params, _context))
+	_causes.note(_seconds, &"import", &"flour", ImportSystem.flour_reason(state, _params, _context))
 	for def: ClassDef in ClassStates.defs(_context):
 		_causes.note(_seconds, &"emigration", SeriesRegistry.member_of(def), _emigration_cause(state, def))
 	_causes.note(_seconds, &"policy", &"tax_rate", StringName(str(state.tax_rate)))

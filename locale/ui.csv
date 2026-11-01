@@ -128,6 +128,7 @@ ui.building.lea_bridge_fountain,Fuente de Lea Bridge,Lea Bridge fountain
 ui.building.health_post,Puesto sanitario,Health post
 ui.building.fire_station,Cuartel de bomberos,Fire station
 ui.building.police_station,Comisaría,Police station
+ui.building.border,Borde,Map edge
 ui.service.safety,Seguridad,Safety
 ui.service.health,Salud,Health
 ui.service.order,Orden,Order

@@ -61,13 +61,14 @@ static func evaluate(state: EconomyState, params: Params, context: EconomyContex
 # Transport of this tick: every leg's units taken out of the store times its metres times k, in pence. Worked out as
 # units x pieces x (k x metres of a piece), the order of the sums on cells of 50 m, so the pence come out the same.
 static func transport_cost(state: EconomyState, params: Params, context: EconomyContext) -> float:
-	if state.transport_legs.is_empty():
-		return 0.0
 	var rate: float = _piece_rate(params, context)
 	var cost: float = 0.0
 	for leg: Dictionary in state.transport_legs:
+		if StringName(leg["good"]) == &"tea":
+			continue
 		var cell: Vector2i = Vector2i(int(leg["cell"][0]), int(leg["cell"][1]))
 		cost += float(state.transport_units_tick.get(cell, 0)) * int(leg["steps"]) * rate
+	cost += _border_tea_cost(state, params, context, rate)
 	return cost
 
 
@@ -79,6 +80,86 @@ static func metres(params: Params, context: EconomyContext, steps: int) -> int:
 # Transport per unit for each piece walked.
 static func _piece_rate(params: Params, context: EconomyContext) -> float:
 	return float(params.get_value(&"transport.cost_per_unit_per_m")) * metres(params, context, 1)
+
+
+# Flour from the edge only while the import is on (D-026). Tea is listed, so stock already in the store still travels.
+static func _border_supplies_now(state: EconomyState, context: EconomyContext, good: StringName) -> bool:
+	if not context.border_supplies(good):
+		return false
+	return good != &"flour" or state.flour_imports_enabled
+
+
+static func _nearest_entry(network: RoadNetwork, context: EconomyContext, area: Rect2i) -> Dictionary:
+	var best_steps: int = RoadNetwork.NO_ROUTE
+	var best: Vector2i = Vector2i.ZERO
+	for cell: Vector2i in context.import_entries:
+		var steps: int = network.steps_from_cell(cell, area)
+		if steps != RoadNetwork.NO_ROUTE and (best_steps == RoadNetwork.NO_ROUTE or steps < best_steps):
+			best_steps = steps
+			best = cell
+	if best_steps == RoadNetwork.NO_ROUTE:
+		return {}
+	return {"cell": best, "steps": best_steps}
+
+
+static func _border_tea_leg(params: Params, context: EconomyContext, house: Dictionary, entry: Vector2i,
+		steps: int) -> Dictionary:
+	var length: int = metres(params, context, steps)
+	return {"cell": house["cell"].duplicate(), "definition_id": house["definition_id"], "good": &"tea",
+		"supplier_cell": [entry.x, entry.y], "supplier_id": EconomyContext.BORDER_SUPPLIER, "steps": steps,
+		"cost_per_minute": 0.0, "expensive": length >= int(params.get_value(&"transport.expensive_m")),
+		"metres": length}
+
+
+# Tea drunk by people in served houses travels each house's leg. People fill those houses first (D-081).
+# Unserved people still eat (consumption does not change) but their share did not travel.
+static func _border_tea_cost(state: EconomyState, params: Params, context: EconomyContext, rate: float) -> float:
+	if context == null or not context.border_supplies(&"tea") or state.tea_consumed <= 0.0:
+		return 0.0
+	var drinkers: int = 0
+	for def: ClassDef in ClassStates.defs(context):
+		if def.needs.any(func(need: NeedDef) -> bool: return need.good == &"tea"):
+			drinkers += ClassStates.population_of(state, def)
+	if drinkers <= 0:
+		return 0.0
+	var assigned: Dictionary[Vector2i, int] = {}
+	var remaining: int = drinkers
+	var served_people: int = 0
+	for building: Dictionary in state.buildings:
+		if remaining <= 0:
+			break
+		var cell: Vector2i = RoadNetwork.cell_of(building)
+		var has_leg: bool = false
+		for leg: Dictionary in state.transport_legs:
+			if StringName(leg["good"]) == &"tea" and leg["cell"] == building["cell"] \
+					and StringName(leg["supplier_id"]) == EconomyContext.BORDER_SUPPLIER:
+				has_leg = true
+				break
+		if not has_leg:
+			continue
+		var class_id: StringName = context.class_of_housing(building["definition_id"])
+		if class_id == &"" or not context.classes[class_id].needs.any(func(need: NeedDef) -> bool:
+				return need.good == &"tea"):
+			continue
+		var capacity: int = int(params.get_value(StringName("building.%s.capacity" % building["definition_id"])))
+		capacity += NeedsSystem.housing_bonus(state, params, class_id)
+		var held: int = mini(remaining, maxi(0, capacity))
+		assigned[cell] = held
+		served_people += held
+		remaining -= held
+	if served_people <= 0:
+		return 0.0
+	var traveled: float = state.tea_consumed * float(served_people) / float(drinkers)
+	var cost: float = 0.0
+	for leg: Dictionary in state.transport_legs:
+		if StringName(leg["good"]) != &"tea" or StringName(leg["supplier_id"]) != EconomyContext.BORDER_SUPPLIER:
+			continue
+		var cell: Vector2i = Vector2i(int(leg["cell"][0]), int(leg["cell"][1]))
+		var people: int = int(assigned.get(cell, 0))
+		if people <= 0:
+			continue
+		cost += traveled * float(people) / float(served_people) * float(leg["steps"]) * rate
+	return cost
 
 
 # What the views read: the player's streets, the buildings that do not work and why, every leg and every house.
@@ -114,18 +195,26 @@ static func _add_legs(state: EconomyState, params: Params, context: EconomyConte
 	if definition.recipe == null:
 		return
 	var cell: Vector2i = RoadNetwork.cell_of(building)
+	var area: Rect2i = context.area_of(building)
 	var legs: Array[Dictionary] = []
 	for good: StringName in definition.recipe.inputs:
 		var any_supplier: bool = false
 		var nearest: Dictionary = {}
 		var nearest_steps: int = RoadNetwork.NO_ROUTE
+		# The edge is a supplier only while that import is on, the same gate the wharf uses for flour (D-026).
+		if _border_supplies_now(state, context, good):
+			any_supplier = true
+			var entry: Dictionary = _nearest_entry(network, context, area)
+			if not entry.is_empty():
+				nearest = {"cell": [entry["cell"].x, entry["cell"].y], "definition_id": EconomyContext.BORDER_SUPPLIER}
+				nearest_steps = int(entry["steps"])
 		for other: Dictionary in state.buildings:
 			if other == building or not supplies(state, context.buildings[other["definition_id"]], good):
 				continue
 			any_supplier = true
 			if other not in connected:
 				continue
-			var steps: int = network.steps(context.area_of(other), context.area_of(building))
+			var steps: int = network.steps(context.area_of(other), area)
 			if steps != RoadNetwork.NO_ROUTE and (nearest_steps == RoadNetwork.NO_ROUTE or steps < nearest_steps):
 				nearest = other
 				nearest_steps = steps
@@ -176,6 +265,10 @@ static func _add_service(state: EconomyState, params: Params, context: EconomyCo
 		if reachable and def.needs.all(func(need: NeedDef) -> bool:
 				return need.category not in def.served_categories or served[need.good]):
 			rooms[SERVED] = _add_room(rooms.get(SERVED, Vector2.ZERO), capacity)
+		if served.get(&"tea", false) and context.border_supplies(&"tea"):
+			var entry: Dictionary = _nearest_entry(network, context, context.area_of(building))
+			if not entry.is_empty():
+				state.transport_legs.append(_border_tea_leg(params, context, building, entry["cell"], int(entry["steps"])))
 		state.house_service.append({"cell": building["cell"].duplicate(), "definition_id": id, "class_id": def.id,
 			"connected": reachable, "served": served})
 	if houses == 0:
@@ -233,6 +326,9 @@ static func _room(room: Vector2, bonus: float) -> float:
 
 static func _is_served(params: Params, context: EconomyContext, network: RoadNetwork, house: Dictionary,
 		good: StringName, connected: Array[Dictionary]) -> bool:
+	# Tea from the edge arrives along any street, not inside the wharf's radius (D-164).
+	if good == &"tea" and context.border_supplies(&"tea"):
+		return not _nearest_entry(network, context, context.area_of(house)).is_empty()
 	if not _hands_out(context, good):
 		return true
 	for building: Dictionary in connected:

@@ -239,6 +239,7 @@ const BUILDING_LABELS: Dictionary[String, StringName] = {
 	"health_post": &"ui.building.health_post",
 	"fire_station": &"ui.building.fire_station",
 	"police_station": &"ui.building.police_station",
+	"border": &"ui.building.border",
 }
 const CLASS_LABELS: Dictionary[StringName, StringName] = {
 	&"worker": &"ui.class.worker", &"artisan": &"ui.class.artisan",

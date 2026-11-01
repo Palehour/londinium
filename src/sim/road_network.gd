@@ -123,6 +123,30 @@ func steps(from_area: Rect2i, to_area: Rect2i) -> int:
 	return best
 
 
+# Pieces from a street cell (an import entry, #306) to a building. The entry piece counts, as a building's access does.
+func steps_from_cell(cell: Vector2i, to_area: Rect2i) -> int:
+	if not _pieces.has(cell) or not _network.has(_pieces[cell]):
+		return NO_ROUTE
+	var distances: Dictionary = {}
+	var queue: Array[Rect2i] = []
+	distances[_pieces[cell]] = 1
+	queue.append(_pieces[cell])
+	var next: int = 0
+	while next < queue.size():
+		var current: Rect2i = queue[next]
+		for neighbour: Rect2i in _neighbours(current):
+			if _network.has(neighbour) and not distances.has(neighbour):
+				distances[neighbour] = int(distances[current]) + 1
+				queue.append(neighbour)
+		next += 1
+	var best: int = NO_ROUTE
+	for access: Vector2i in access_cells(to_area):
+		var piece: Rect2i = _pieces[access]
+		if distances.has(piece) and (best == NO_ROUTE or int(distances[piece]) < best):
+			best = int(distances[piece])
+	return best
+
+
 func _distances_from(area: Rect2i) -> Dictionary:
 	if _distances.has(area):
 		return _distances[area]

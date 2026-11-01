@@ -1793,9 +1793,10 @@ func _load_terrain(raw: Variant, location: String, map: MapDef) -> void:
 func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
 	var id: StringName = StringName(path.get_file().get_basename())
 	var stages: Array[Dictionary] = []
-	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID, "incidents_enabled": false}
+	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID, "incidents_enabled": false,
+		"import_entries": [] as Array[Vector2i], "import_goods": [] as Array[StringName]}
 	var scenario_fields: Array[String] = []
-	for field: String in ["victory", "map", "incidents_enabled"]:
+	for field: String in ["victory", "map", "incidents_enabled", "import_entries", "import_goods"]:
 		if raw.has(field):
 			scenario_fields.append(field)
 	if not _object(raw, scenario_fields, path):
@@ -1811,6 +1812,7 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 			_errors.append("%s.map: unknown map %s" % [path, raw["map"]])
 		else:
 			catalog.scenarios[id]["map"] = StringName(raw["map"])
+	_load_border_imports(raw, path, catalog, id)
 	if not raw.has("victory"):
 		return
 	if not _object(raw["victory"], ["stages"], path + ".victory"):
@@ -1854,6 +1856,29 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 		_number(entry["threshold"], "money" if metric == "revenue" else "integer", where + ".threshold", prefix + ".threshold", catalog)
 		_number(entry[duration], "positive_integer", where + "." + duration, prefix + "." + duration, catalog)
 		stages.append(def)
+
+
+# Entry cells and goods of a scenario without a river (issue #306, D-164). Wheat and barley stay on the wharf.
+func _load_border_imports(raw: Dictionary, path: String, catalog: DataCatalog, id: StringName) -> void:
+	if raw.has("import_entries"):
+		var map_id: StringName = catalog.scenarios[id]["map"]
+		if catalog.maps.has(map_id):
+			var taken: Array[Vector2i] = []
+			var cells: Array[Vector2i] = _map_cells(raw["import_entries"], "%s.import_entries" % path,
+				catalog.maps[map_id], taken)
+			catalog.scenarios[id]["import_entries"] = cells
+	if not raw.has("import_goods"):
+		return
+	var names: Array[String] = []
+	if not _strings(raw["import_goods"], "%s.import_goods" % path, names):
+		return
+	var goods: Array[StringName] = []
+	for good: String in names:
+		if good != "tea" and good != "flour":
+			_errors.append("%s.import_goods: %s is not imported at the edge (tea or flour)" % [path, good])
+			continue
+		goods.append(StringName(good))
+	catalog.scenarios[id]["import_goods"] = goods
 
 
 func _load_presets(raw: Dictionary, catalog: DataCatalog) -> void:

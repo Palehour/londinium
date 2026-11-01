@@ -13,11 +13,15 @@ const DEFICIT_EPSILON: float = 1e-9
 
 
 func tick(state: EconomyState, params: Params, context: EconomyContext = null) -> void:
-	if not has_staffed_wharf(state):
+	var wharf: bool = has_staffed_wharf(state)
+	var flour_edge: bool = context != null and context.border_supplies(&"flour")
+	var tea_edge: bool = context != null and context.border_supplies(&"tea")
+	if not wharf and not flour_edge and not tea_edge:
 		return
-	if state.flour_imports_enabled:
-		_import_flour(state, params)
-	if state.tea_imports_enabled:
+	if state.flour_imports_enabled and (wharf or flour_edge):
+		# A staffed wharf keeps the debt of D-031. The edge has no unloading capacity.
+		_import_flour(state, params, flour_edge and not wharf)
+	if state.tea_imports_enabled and (wharf or tea_edge):
 		_import_tea(state, params, context)
 
 
@@ -85,8 +89,9 @@ static func flour_deficit(state: EconomyState, params: Params) -> float:
 
 
 # The flour comes through the wharf: the stages before the bakery are bypassed (D-026).
-static func flour_import_active(state: EconomyState) -> bool:
-	return state.flour_imports_enabled and has_staffed_wharf(state)
+static func flour_import_active(state: EconomyState, context: EconomyContext = null) -> bool:
+	return state.flour_imports_enabled and (has_staffed_wharf(state) \
+		or (context != null and context.border_supplies(&"flour")))
 
 
 static func tea_demand_per_second(state: EconomyState, params: Params, context: EconomyContext = null) -> float:
@@ -103,29 +108,32 @@ static func affordable(state: EconomyState, wanted: int, price: int) -> int:
 
 # Whole lots until the flour in store covers the units the bakeries will reserve this tick, when the
 # mills would still leave the bakeries short.
-func _import_flour(state: EconomyState, params: Params) -> void:
+func _import_flour(state: EconomyState, params: Params, edge: bool = false) -> void:
 	var stock: int = int(state.stocks.get(&"flour", 0))
 	# What the mills hand over this tick comes off the bakeries' request.
 	var needed: int = bakery_units_needed(state, params) - int(mill_flour_credit(state, params)["units"])
 	if flour_deficit(state, params) <= DEFICIT_EPSILON or stock >= needed:
 		return
 	var lot: int = int(params.get_value(&"market.imported_flour.lot_size"))
-	if unloading_is_busy(state, lot):
+	if not edge and unloading_is_busy(state, lot):
 		return
 	var price: int = int(params.get_value(&"market.imported_flour.price_per_lot"))
 	@warning_ignore("integer_division")
 	var wanted: int = (needed - stock + lot - 1) / lot
-	# Only as many lots as keep the debt inside its bound, so the flour cannot skip the wharf's limit.
-	var max_debt: float = float(int(params.get_value(&"market.imported_flour.max_debt_lots")) * lot)
-	var allowed: int = floori((max_debt - state.flour_unloading_debt) / float(lot))
-	var lots: int = affordable(state, mini(wanted, allowed), price)
+	var lots: int = wanted
+	if not edge:
+		# Only as many lots as keep the debt inside its bound, so the flour cannot skip the wharf's limit.
+		var max_debt: float = float(int(params.get_value(&"market.imported_flour.max_debt_lots")) * lot)
+		lots = mini(wanted, floori((max_debt - state.flour_unloading_debt) / float(lot)))
+	lots = affordable(state, lots, price)
 	if lots <= 0:
 		return
 	state.money -= lots * price
 	state.imports_spent_tick += lots * price
 	state.stocks[&"flour"] = stock + lots * lot
 	state.count_bought(&"flour", lots * lot)
-	state.flour_unloading_debt += float(lots * lot)
+	if not edge:
+		state.flour_unloading_debt += float(lots * lot)
 
 
 # Keeps a small buffer of tea in store, so one empty tick does not drop the coverage. With no buffer it
@@ -152,24 +160,25 @@ static func unloading_is_busy(state: EconomyState, lot: int) -> bool:
 
 
 # Why the tea import is not (fully) working, as a panel reason; &"ok" when it is.
-static func tea_reason(state: EconomyState, params: Params) -> StringName:
+static func tea_reason(state: EconomyState, params: Params, context: EconomyContext = null) -> StringName:
 	if not state.tea_imports_enabled:
 		return &"tea_imports_disabled"
-	if not has_staffed_wharf(state):
+	if not has_staffed_wharf(state) and (context == null or not context.border_supplies(&"tea")):
 		return &"no_wharf_for_imports"
 	if state.tea_coverage < 1.0 and affordable(state, 1, int(params.get_value(&"market.tea.price"))) <= 0:
 		return &"no_money_for_imports"
 	return &"ok"
 
 
-static func flour_reason(state: EconomyState, params: Params) -> StringName:
+static func flour_reason(state: EconomyState, params: Params, context: EconomyContext = null) -> StringName:
+	var edge: bool = context != null and context.border_supplies(&"flour")
 	if not state.flour_imports_enabled:
 		return &"flour_imports_disabled"
-	if not has_staffed_wharf(state):
+	if not has_staffed_wharf(state) and not edge:
 		return &"no_wharf_for_imports"
 	if flour_deficit(state, params) <= DEFICIT_EPSILON:
 		return &"mill_covers_flour"
-	if int(state.stocks.get(&"flour", 0)) <= 0 \
+	if not edge and int(state.stocks.get(&"flour", 0)) <= 0 \
 			and unloading_is_busy(state, int(params.get_value(&"market.imported_flour.lot_size"))):
 		return &"wharf_unloading_busy"
 	if int(state.stocks.get(&"flour", 0)) <= 0 \
@@ -191,13 +200,13 @@ static func snapshot(state: EconomyState, params: Params, context: EconomyContex
 			"consumption_per_minute": demand,
 			"minutes_covered": float(stock) / demand if demand > 0.0 else -1.0,
 			"satisfaction_bonus": state.tea_coverage * float(params.get_value(&"population.tea.satisfaction_bonus")),
-			"reason": tea_reason(state, params),
+			"reason": tea_reason(state, params, context),
 		},
 		"flour": {
 			"enabled": state.flour_imports_enabled, "stock": int(state.stocks.get(&"flour", 0)),
 			"lot_size": lot, "lot_price": lot_price,
 			"unit_price": float(lot_price) / float(lot),
 			"unloading_debt": state.flour_unloading_debt,
-			"reason": flour_reason(state, params),
+			"reason": flour_reason(state, params, context),
 		},
 	}

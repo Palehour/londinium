@@ -12,8 +12,10 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	# and the health post (#222, D-106) after them; the fire station and the police station (#87, D-118) close the list.
 	assert_eq(catalog.buildings.size(), 15)
 	assert_eq(catalog.roles.size(), 1)
-	# The 8x8 map of the scripted scenarios, the strip the game plays on (D-074) and the full map (#204, D-093).
-	assert_eq(catalog.maps.keys(), [&"riverside_strip", &"whitechapel_1850s", &"whitechapel_full"] as Array[StringName])
+	# The 8x8 map of the scripted scenarios, the strip the game plays on (D-074), the full map (#204, D-093)
+	# and the riverless map of the border import (#306, D-164).
+	assert_eq(catalog.maps.keys(), [&"border_import", &"riverside_strip", &"whitechapel_1850s",
+		&"whitechapel_full"] as Array[StringName])
 	for good: GoodDef in catalog.goods.values():
 		assert_false(good.unit.is_empty())
 	var mill: RecipeDef = catalog.buildings[&"mill"].recipe
