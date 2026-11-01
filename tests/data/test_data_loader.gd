@@ -3,6 +3,10 @@ extends GutTest
 const FIXTURE_ROOT: String = "user://issue_2_invalid_data"
 # Cells of 25 m on each side of an old cell of 50 m (issue #186, D-086).
 const BLOCK: int = 2
+# Where a wharf fits the mask of D-155 on the 16x16 (issue #321): its north row on the riverbank of row 13, its south row
+# on the river of row 14.
+const WHARF_SITE: Array = [2, 13]
+const DAMAGED_SITE: Array = [4, 13]
 
 
 func test_defeat_parameters_are_required_and_validate_ranges() -> void:
@@ -709,18 +713,19 @@ func _place(name: String, cell: Array, building: Variant = null,
 	return place
 
 
-# Issue #152 (option A, 2026-10-18): each anchor stands where its building can: on the river for a wharf, on a
-# standing building otherwise, and dense housing only on a start cell (D-079).
+# Issue #152 (option A, 2026-10-18): each anchor stands where its building can: a wharf on its terrain mask (issue
+# #321, D-155), on a standing building otherwise, and dense housing only on a start cell (D-079).
 func test_anchors_must_stand_where_their_building_can() -> void:
 	var cases: Array[Array] = [
 		[_place("Church", _at([1, 1]), ""), "[2, 2] is not a standing building"],
-		[_place("Wharf", _at([1, 1]), "wharf"), "[2, 2] is not on the river"],
+		[_place("Wharf", _at([1, 1]), "wharf"), "[2, 2] does not match the terrain mask of wharf"],
 		[_place("House", _at([1, 1]), "dense_housing"), "[2, 2] is not a dense housing start cell"],
 		[_place("Mill", _at([1, 7]), "windmill"), "unknown building windmill"],
-		[_place("", _at([1, 7]), "wharf"), "needs a name, a source and a history tag"],
-		[_place("Wharf", _at([1, 7]), "wharf", "On the sheet"), "needs a name, a source and a history tag"],
-		# The whole footprint counts (D-086): half of the wharf on land.
-		[_place("Wharf", [2, 13], "wharf"), "[2, 13] is not on the river"],
+		[_place("", WHARF_SITE, "wharf"), "needs a name, a source and a history tag"],
+		[_place("Wharf", WHARF_SITE, "wharf", "On the sheet"), "needs a name, a source and a history tag"],
+		# The whole footprint counts (D-086) against the mask of D-155: all of it on the river, or all of it on the bank.
+		[_place("Wharf", [2, 14], "wharf"), "[2, 14] does not match the terrain mask of wharf"],
+		[_place("Wharf", [2, 12], "wharf"), "[2, 12] does not match the terrain mask of wharf"],
 	]
 	for entry: Array in cases:
 		before_each()
@@ -730,18 +735,50 @@ func test_anchors_must_stand_where_their_building_can() -> void:
 		_documents["maps/whitechapel_1850s.json"]["anchors"] = [entry[0]]
 		_assert_invalid(entry[1])
 	before_each()
-	_documents["maps/whitechapel_1850s.json"]["anchors"] = [_place("Wharf", _at([1, 7]), "wharf")]
+	_documents["maps/whitechapel_1850s.json"]["anchors"] = [_place("Wharf", WHARF_SITE, "wharf")]
 	_documents["maps/whitechapel_1850s.json"]["named_sites"] = [_place("Stairs", _at([2, 7]))]
 	_documents["maps/whitechapel_1850s.json"]["history_notes"] = ["[DEBATED] Undated water."]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(result.errors, [] as Array[String])
 	if result.is_ok():
 		var map: MapDef = result.catalog.maps[&"whitechapel_1850s"]
-		assert_eq(map.anchors, {Vector2i(2, 14): &"wharf"} as Dictionary[Vector2i, StringName])
+		assert_eq(map.anchors, {Vector2i(2, 13): &"wharf"} as Dictionary[Vector2i, StringName])
 		assert_eq(map.named_sites, {Vector2i(4, 14): "Stairs"} as Dictionary[Vector2i, String])
 	before_each()
 	_documents["maps/whitechapel_1850s.json"]["history_notes"] = ["Undated water"]
 	_assert_invalid("history_notes: expected notes that open with a history tag")
+
+
+# Issue #321 (D-155): an anchor wharf and a damaged wharf stand on the fixed mask [[riverbank, riverbank],
+# [river, river]], the north row on free riverbank and the south row on the river, not all of it on the river.
+func test_anchor_and_damaged_wharves_stand_on_the_terrain_mask_of_d155() -> void:
+	for field: String in ["anchors", "damaged_wharves"]:
+		var site: Array = WHARF_SITE if field == "anchors" else DAMAGED_SITE
+		before_each()
+		_wharf_map(field, site)
+		var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+		assert_eq(result.errors, [] as Array[String], "%s: the mask of D-155 is valid" % field)
+		var cases: Array[Array] = [
+			# All of it on the river, the rule before #321.
+			[[site[0], 14], {}],
+			# The north row on firm ground, the south row on the riverbank: no row on the river.
+			[[site[0], 11], {}],
+			# The north row on the riverbank but under a street, a whole piece of 2x2: not free land.
+			[site, {"road_cells": _blocks([[site[0] / BLOCK, 6]])}],
+		]
+		for entry: Array in cases:
+			before_each()
+			var map: Dictionary = _wharf_map(field, entry[0])
+			for layer: String in entry[1]:
+				map[layer] = entry[1][layer]
+			_assert_invalid("%s: [%d, %d] does not match the terrain mask of wharf" % [field, entry[0][0], entry[0][1]])
+
+
+# The 16x16 with only a wharf of field (anchors or damaged_wharves) at cell, with nothing styled as a lot.
+func _wharf_map(field: String, cell: Array) -> Dictionary:
+	var map: Dictionary = _documents["maps/whitechapel_1850s.json"]
+	map[field] = [_place("Wharf", cell, "wharf") if field == "anchors" else _damaged_wharf(cell)]
+	return map
 
 
 # The 8x8 with a standing building at (1,1) and a street at (1,0); every free cell but `house` styled as a yard. In old
@@ -769,24 +806,25 @@ func test_period_houses_damaged_wharves_and_lot_styles_stand_where_their_rule_sa
 	before_each()
 	var map: Dictionary = _period_map()
 	map["period_houses"] = [_place("Period house", _at([2, 0]), null, "[INVENTED] A house.")]
-	map["damaged_wharves"] = [_damaged_wharf(_at([2, 7]))]
+	map["damaged_wharves"] = [_damaged_wharf(DAMAGED_SITE)]
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_eq(result.errors, [] as Array[String])
 	if result.is_ok():
 		var loaded: MapDef = result.catalog.maps[&"whitechapel_1850s"]
 		assert_eq(loaded.period_houses, [Vector2i(4, 0)] as Array[Vector2i])
 		assert_true(loaded.anchors.is_empty(), "Only data: a period house is not an anchor yet")
-		assert_eq(loaded.damaged_wharves, [Vector2i(4, 14)] as Array[Vector2i])
+		assert_eq(loaded.damaged_wharves, [Vector2i(4, 13)] as Array[Vector2i])
 		assert_eq(loaded.lot_styles.size(), 53 * BLOCK * BLOCK)
 		assert_eq(loaded.lot_styles[Vector2i(0, 0)], &"yard")
 	var cases: Array[Array] = [
 		["period_houses", [_place("House", _at([1, 1]), null, "[INVENTED] A house.")], "[2, 2] is not free land"],
 		["period_houses", [_place("House", _at([2, 0]))], ""],
 		["period_houses", [_place("House", _at([2, 0]), null, "A house")], "needs a name, a source and a history tag"],
-		["damaged_wharves", [_damaged_wharf(_at([2, 2]))], "[4, 4] is not on the river"],
-		["damaged_wharves", [_damaged_wharf(_at([2, 7]), "Damaged")], "needs a name, a source and a history tag"],
-		# The whole footprint counts (D-086): half of the wharf on land.
-		["damaged_wharves", [_damaged_wharf([4, 13])], "[4, 13] is not on the river"],
+		["damaged_wharves", [_damaged_wharf(_at([2, 2]))], "[4, 4] does not match the terrain mask of wharf"],
+		["damaged_wharves", [_damaged_wharf(DAMAGED_SITE, "Damaged")], "needs a name, a source and a history tag"],
+		# The whole footprint counts (D-086) against the mask of D-155: all of it on the river, or all of it on the bank.
+		["damaged_wharves", [_damaged_wharf([4, 14])], "[4, 14] does not match the terrain mask of wharf"],
+		["damaged_wharves", [_damaged_wharf([4, 12])], "[4, 12] does not match the terrain mask of wharf"],
 	]
 	for entry: Array in cases:
 		before_each()

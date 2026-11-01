@@ -1560,8 +1560,8 @@ func _check_riverside_land(map: MapDef, land: Dictionary[Vector2i, bool], least:
 			% [location, riverside, least])
 
 
-# Historic anchors (issue #152): each stands where its building can, on the river for a wharf and on a standing
-# building otherwise; dense housing only on a start cell, so the startup knob of D-075 still decides it. The whole
+# Historic anchors (issue #152): each stands where its building can, a wharf on its terrain mask (issue #321, D-155)
+# and others on a standing building; dense housing only on a start cell, so the startup knob of D-075 still decides it. The whole
 # footprint counts (issue #186, D-086); an anchor with no use is its one cell.
 func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
@@ -1573,7 +1573,8 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 		elif not _fits(map, _area(catalog, building, cell)):
 			problem = "does not fit on the map"
 		elif building != &"" and "river" in catalog.buildings[building].tags:
-			problem = "" if _all_in(_area(catalog, building, cell), map.river_cells) else "is not on the river"
+			problem = "" if _on_terrain_mask(map, catalog, building, cell) \
+				else "does not match the terrain mask of %s" % building
 		elif not _all_in(_area(catalog, building, cell), map.existing_cells):
 			problem = "is not a standing building"
 		elif building == Simulation.DENSE_HOUSING and cell not in map.dense_housing_cells:
@@ -1605,16 +1606,33 @@ func _load_period_houses(raw: Variant, location: String, map: MapDef, catalog: D
 			map.period_house_population[cell] = int(people)
 
 
-# Damaged wharves (issue #176, D-083): on the river, where a wharf stands, all of its footprint (D-086). What repairing
-# one costs is not the map's: it is repair.wharf_cost_ratio in economy/repair.json (#177).
+# Damaged wharves (issue #176, D-083): where a wharf stands, all of its footprint (D-086) on the wharf's terrain mask
+# (issue #321, D-155). What repairing one costs is not the map's: it is repair.wharf_cost_ratio in economy/repair.json
+# (#177).
 func _load_damaged_wharves(raw: Variant, location: String, map: MapDef, catalog: DataCatalog) -> void:
 	for entry: Dictionary in _named_places(raw, location, map):
 		var cell: Vector2i = entry["cell"]
-		var area: Rect2i = _area(catalog, RepairWharfCommand.WHARF, cell)
-		if not _fits(map, area) or not _all_in(area, map.river_cells):
-			_errors.append("%s: [%d, %d] is not on the river" % [location, cell.x, cell.y])
+		var wharf: StringName = RepairWharfCommand.WHARF
+		if not _fits(map, _area(catalog, wharf, cell)) or not _on_terrain_mask(map, catalog, wharf, cell):
+			_errors.append("%s: [%d, %d] does not match the terrain mask of %s" % [location, cell.x, cell.y, wharf])
 		else:
 			map.damaged_wharves.append(cell)
+
+
+# Whether a building of the map's lists, from its north-west corner, matches its terrain mask cell by cell (issue #321,
+# D-155): the river where the mask says so, otherwise free land of that terrain, as building there asks (D-152). With
+# no mask, all of its footprint is on the river, as before the masks.
+static func _on_terrain_mask(map: MapDef, catalog: DataCatalog, id: StringName, cell: Vector2i) -> bool:
+	var definition: BuildingDef = catalog.buildings.get(id)
+	var area: Rect2i = _area(catalog, id, cell)
+	if definition == null or definition.terrain_mask.is_empty():
+		return _all_in(area, map.river_cells)
+	return EconomyContext.cells_of(area).all(func(other: Vector2i) -> bool:
+		var offset: Vector2i = other - cell
+		var label: StringName = definition.terrain_mask[offset.y * definition.footprint.x + offset.x]
+		if label == MASK_RIVER:
+			return other in map.river_cells
+		return _is_free_land(map, other) and map.terrain.get(other, EconomyContext.FIRM) == label)
 
 
 # Lot styles (issue #176, D-083): only drawing, one for each cell of free land that no period house covers and none

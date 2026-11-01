@@ -82,9 +82,12 @@ func import_documents(config: Variant, layers: Dictionary, overrides: Variant) -
 	var history_notes: Array = _history_notes(overrides)
 	var lot_styles: Dictionary = _lot_styles(overrides, size)
 	# An anchor on land is a standing building (D-075 blocks building there), its whole block; one on the water, like a
-	# wharf, stays water.
+	# wharf, stays water. A wharf on the edge, north row on the riverbank and south row on the river (D-155, D-169), keeps
+	# its terrain too: a block with any water in it is not a standing building.
 	for anchor: Dictionary in places[ANCHORS]:
 		var area: Rect2i = Rect2i(Vector2i(anchor["cell"][0], anchor["cell"][1]), Vector2i(block, block))
+		if _holds_water(classes, area):
+			continue
 		for y: int in range(area.position.y, area.end.y):
 			for x: int in range(area.position.x, area.end.x):
 				if classes.has(Vector2i(x, y)) and classes[Vector2i(x, y)] not in WATER:
@@ -139,6 +142,14 @@ func to_text(map: Dictionary) -> String:
 		edges.append("[%d, %d, %d, %d]" % edge)
 	lines.append('  "road_diagonals": [%s]' % ", ".join(edges))
 	return "{\n%s\n}\n" % ",\n".join(lines)
+
+
+func _holds_water(classes: Dictionary[Vector2i, String], area: Rect2i) -> bool:
+	for y: int in range(area.position.y, area.end.y):
+		for x: int in range(area.position.x, area.end.x):
+			if classes.get(Vector2i(x, y), "") in WATER:
+				return true
+	return false
 
 
 func _valid_config(config: Variant) -> bool:

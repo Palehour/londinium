@@ -5,10 +5,12 @@ extends GutTest
 # repaired come from the snapshot; the screen holds no rule.
 
 const ROOT: String = "user://test_period_land_map"
-const DAMAGED_WHARF: Vector2i = Vector2i(28, 14)
+# On the mask of D-155 since D-169: its north row on the riverbank and its south row on the river.
+const DAMAGED_WHARF: Vector2i = Vector2i(26, 13)
 # Another cell of the same 2x2 footprint (D-086): repairing works from any of them.
-const DAMAGED_WHARF_CORNER: Vector2i = Vector2i(29, 15)
-const PLAIN_RIVER: Vector2i = Vector2i(26, 14)
+const DAMAGED_WHARF_CORNER: Vector2i = Vector2i(27, 14)
+# Where the damaged wharf stood before D-169, now plain river.
+const PLAIN_RIVER: Vector2i = Vector2i(28, 14)
 
 var _viewport: SubViewport
 

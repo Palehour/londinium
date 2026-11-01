@@ -86,14 +86,25 @@ func test_every_layer_of_the_maps_is_made_of_whole_blocks() -> void:
 			var cells: Array[Vector2i] = []
 			cells.assign(layers[layer])
 			assert_true(_whole_blocks(cells), "%s: %s" % [id, layer])
+		# D-171: a place whose building has a terrain mask (the wharves) lines up with the riverbank/river edge of
+		# D-155 instead of the block corner; every place on land keeps the corner of D-086.
+		var masked: Array[Vector2i] = []
+		masked.append_array(map.damaged_wharves)
 		var places: Array[Vector2i] = []
-		places.append_array(map.anchors.keys())
+		for cell: Vector2i in map.anchors:
+			var building: BuildingDef = _catalog.buildings.get(map.anchors[cell])
+			if building != null and not building.terrain_mask.is_empty():
+				masked.append(cell)
+			else:
+				places.append(cell)
 		places.append_array(map.named_sites.keys())
 		places.append_array(map.period_houses)
-		places.append_array(map.damaged_wharves)
 		places.append_array(map.dense_housing_cells)
 		for cell: Vector2i in places:
 			assert_true(_on_block_corner(cell), "%s: %s starts its block" % [id, cell])
+		for cell: Vector2i in masked:
+			assert_true(cell not in map.river_cells and cell + Vector2i.DOWN in map.river_cells,
+				"%s: %s lines up with the edge of the river" % [id, cell])
 
 
 # Chronicler confirmed it for #186: with the streets as literal 2x2 blocks nobody gains or loses access (D-079).
