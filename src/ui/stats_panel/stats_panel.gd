@@ -76,6 +76,7 @@ var _victory_progress: ProgressBar
 var _victory_message: Label
 var _victory_dismiss: Button
 var _stats_button: Button
+var _loan_panel: LoanPanel
 var _victory_notice: VBoxContainer
 var _victory_announced: bool = false
 # The player moves through the panel with a gamepad (issue #68); with the mouse nothing keeps the focus.
@@ -186,6 +187,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	var defeated: bool = not defeat["causes"].is_empty()
 	var market: Dictionary = snapshot["market"]["wheat"]
 	_update_controls(economy, defeated)
+	_loan_panel.show_loan(snapshot)
 	_update_wheat_policy(market, defeated)
 	_wheat_row.text = _wheat_text(market)
 	_tea_row.text = _tea_text(snapshot["imports"]["tea"])
@@ -337,6 +339,10 @@ func _build_controls(content: VBoxContainer) -> void:
 	_step_with_gamepad(_tax)
 	tax_row.add_child(_tax)
 	content.add_child(tax_row)
+	# After the tax row and before the wheat switch, so the gamepad still starts on the language (issue #281).
+	_loan_panel = LoanPanel.new()
+	_loan_panel.setup(session)
+	content.add_child(_loan_panel)
 	_wheat = CheckButton.new()
 	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
 	_wheat.focus_mode = Control.FOCUS_NONE
