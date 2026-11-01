@@ -12,7 +12,7 @@ A task prompt only needs the issue number, the skills that apply and, if wanted,
 
 ## What this is
 City builder prototype in **Godot 4.7.2 (stable), GDScript only**, no C#/.NET, no runtime AI.
-Milestone 1 (M1) = the economy loop in `docs/GDD.md` ("Primer hito"). Colored squares, no art.
+Current milestone is Hito 2 (segunda cadena y segunda clase). Art stays out of scope except the exceptions recorded in `docs/DECISIONS.md`.
 Cristian does not write code. He reviews PRs and plays builds. Make his review easy.
 
 ## Source of truth
