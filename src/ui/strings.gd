@@ -84,6 +84,13 @@ const LOAN_MAXIMUM: StringName = &"ui.loan.maximum"
 const LOAN_INSTALLMENT: StringName = &"ui.loan.installment"
 const LOAN_BALANCE: StringName = &"ui.loan.balance"
 const LOAN_CANCEL: StringName = &"ui.loan.cancel"
+# The quote shown before asking (issue #334). Figures come from the simulation; these only format them.
+const LOAN_QUOTE_RATE: StringName = &"ui.loan.quote_rate"
+const LOAN_QUOTE_INTEREST: StringName = &"ui.loan.quote_interest"
+const LOAN_QUOTE_TERM: StringName = &"ui.loan.quote_term"
+const LOAN_QUOTE_SURCHARGE: StringName = &"ui.loan.quote_surcharge"
+const LOAN_QUOTE_SHARE: StringName = &"ui.loan.quote_share"
+const LOAN_QUOTE_RISK: StringName = &"ui.loan.quote_risk"
 const WHEAT_PURCHASES: StringName = &"ui.wheat_purchases"
 const ACCUMULATE_LABEL: StringName = &"ui.accumulate_label"
 const MAX_PRICE_LABEL: StringName = &"ui.max_price_label"
@@ -573,7 +580,8 @@ static func all_keys() -> Array[StringName]:
 		LOTS_LEGEND, DAMAGED_WHARF, REPAIR_HINT, REPAIR_HINT_GAMEPAD, BUILD_ROTATION, CRISIS_DISINFECTION, CRISIS_SECONDS_LEFT,
 		CRISIS_DISINFECT, CRISIS_DISINFECT_GAMEPAD, PENDING, SUCCESS,
 		LOAD_ERROR, PANEL_TITLE, TAX_LABEL, LOAN_TITLE, LOAN_CAP, LOAN_REQUEST, LOAN_MAXIMUM, LOAN_INSTALLMENT,
-		LOAN_BALANCE, LOAN_CANCEL, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
+		LOAN_BALANCE, LOAN_CANCEL, LOAN_QUOTE_RATE, LOAN_QUOTE_INTEREST, LOAN_QUOTE_TERM, LOAN_QUOTE_SURCHARGE,
+		LOAN_QUOTE_SHARE, LOAN_QUOTE_RISK, WHEAT_PURCHASES, ACCUMULATE_LABEL, MAX_PRICE_LABEL, TARGET_LABEL,
 		RESERVE_LABEL, WHEAT_ROW, BARLEY_ROW, MALT_BEER_ROW, UNLOADING_LABEL, WHEAT_BLOCKED_NOTE,
 		MINUTES_COVERED, PAUSE, RESUME, RESTART, POPULATION, SATISFACTION, BREAD_RATE, BREAD_OK, BREAD_SHORT,
 		BREAD_CAUSE, BREAD_CHAIN_CAUSE, STOCKS, TREASURY, OPERATING_BALANCE, PROJECTED_DELTA, BALANCE_BREAKDOWN, CONSTRUCTION,

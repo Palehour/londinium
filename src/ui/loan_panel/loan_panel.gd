@@ -1,12 +1,13 @@
 class_name LoanPanel
 extends VBoxContainer
 
-# The loan section of the stats panel (issue #281). It reads snapshot()["loan"] and the treasury, and sends
-# RequestLoanCommand or RepayLoanEarlyCommand. The installment, the balance and the payoff cost are the snapshot's;
-# this panel never computes a rate, a surcharge or an installment.
+# The loan section of the stats panel (issue #281, quote in #334). It reads snapshot()["loan"] and
+# GameSession.loan_quote, and sends RequestLoanCommand or RepayLoanEarlyCommand. It never computes a rate,
+# a surcharge or an installment.
 
-# Whole pence, the simulation's unit. Not a balance number.
+# Whole pence, the simulation's unit. Not a balance number. PERCENT only turns a ratio into a label.
 const PENNY: float = 1.0
+const PERCENT: float = 100.0
 const MIN_AMOUNT: int = 1
 
 var session: GameSession
@@ -19,6 +20,12 @@ var _cap: Label
 var _installment: Label
 var _balance: Label
 var _reason: Label
+var _quote_rate: Label
+var _quote_interest: Label
+var _quote_term: Label
+var _quote_surcharge: Label
+var _quote_share: Label
+var _quote_risk: Label
 var _snapshot: Dictionary = {}
 
 
@@ -36,7 +43,7 @@ func setup(game_session: GameSession) -> void:
 	session = game_session
 
 
-# The only refresh. A command waits for the next tick; nothing here pretends the loan is already open.
+# Refresh from a snapshot. A command waits for the next tick; the quote also refreshes when the amount changes.
 func show_loan(snapshot: Dictionary) -> void:
 	_snapshot = snapshot
 	var loan: Dictionary = snapshot["loan"]
@@ -58,6 +65,7 @@ func show_loan(snapshot: Dictionary) -> void:
 	_installment.visible = active
 	_balance.visible = active
 	_cancel.visible = active
+	_show_quote()
 	if not active:
 		return
 	var cost: int = int(loan["payoff_cost"])
@@ -99,6 +107,7 @@ func _build() -> void:
 	_amount.allow_lesser = false
 	_amount.suffix = Strings.PENCE_SUFFIX
 	_amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_amount.value_changed.connect(_on_amount_changed)
 	# Left and right on the gamepad step a penny instead of leaving the field (issue #68).
 	_amount.get_line_edit().gui_input.connect(func(event: InputEvent) -> void:
 		if not GamepadBindings.is_gamepad(event) or not _amount.editable:
@@ -111,6 +120,13 @@ func _build() -> void:
 	_maximum = _button("Maximum", _on_maximum)
 	_reason = _label("Reason", "")
 	_reason.visible = false
+	_quote_rate = _label("QuoteRate", "")
+	_quote_interest = _label("QuoteInterest", "")
+	_quote_term = _label("QuoteTerm", "")
+	_quote_surcharge = _label("QuoteSurcharge", "")
+	_quote_share = _label("QuoteShare", "")
+	_quote_risk = _label("QuoteRisk", "")
+	_hide_quote()
 	_installment = _label("Installment", "")
 	_installment.visible = false
 	_balance = _label("Balance", "")
@@ -147,6 +163,47 @@ func _sync_amount(cap: int) -> void:
 		return
 	_amount.min_value = 0.0
 	_amount.max_value = 0.0
+
+
+# The typed amount is the player's. Refreshing the quote does not ask.
+func _on_amount_changed(_value: float) -> void:
+	if session == null or _snapshot.is_empty():
+		return
+	_show_quote()
+
+
+# Hidden unless a sanctioned amount can still be asked. Every figure is the simulation's quote.
+func _show_quote() -> void:
+	var asking: bool = not _snapshot.is_empty() and not bool(_snapshot["loan"]["active"])
+	if not asking or session == null or int(_amount.value) < MIN_AMOUNT:
+		_hide_quote()
+		return
+	var quoted: Dictionary = session.loan_quote(int(_amount.value))
+	if bool(quoted["refused"]):
+		_hide_quote()
+		return
+	_quote_rate.text = Strings.text(Strings.LOAN_QUOTE_RATE) % (float(quoted["rate"]) * PERCENT)
+	_quote_interest.text = Strings.text(Strings.LOAN_QUOTE_INTEREST) % Strings.money(int(quoted["interest"]))
+	_quote_term.text = Strings.text(Strings.LOAN_QUOTE_TERM) % int(quoted["term_installments"])
+	_quote_surcharge.text = Strings.text(Strings.LOAN_QUOTE_SURCHARGE) % Strings.money(int(quoted["early_surcharge"]))
+	var share: float = float(quoted["share_of_r"])
+	if share < 0.0:
+		_quote_share.text = Strings.text(Strings.LOAN_INSTALLMENT) % Strings.money(int(quoted["installment"]))
+	else:
+		_quote_share.text = Strings.text(Strings.LOAN_QUOTE_SHARE) % [Strings.money(int(quoted["installment"])), share * PERCENT]
+	_quote_risk.text = Strings.text(Strings.LOAN_QUOTE_RISK) % int(quoted["arrears_penalty"])
+	_set_quote_visible(true)
+
+
+func _hide_quote() -> void:
+	if _quote_rate == null:
+		return
+	_set_quote_visible(false)
+
+
+func _set_quote_visible(on: bool) -> void:
+	for label: Label in [_quote_rate, _quote_interest, _quote_term, _quote_surcharge, _quote_share, _quote_risk]:
+		label.visible = on
 
 
 func _on_request() -> void:

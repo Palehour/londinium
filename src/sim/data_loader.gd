@@ -129,7 +129,7 @@ const ECONOMY_SCHEMAS: Dictionary = {
 		"causes": {"max_events": "positive_integer", "min_duration_seconds": "integer"},
 	},
 	# Loans on the rates (issue #72, D-127, D-128, D-129; values of D-138). Legitimacy and ratings run from 0 to 100.
-	"loan": {"cap_multiple": "positive", "base_interest": "number", "rate_by_rating": "number",
+	"loan": {"cap_multiple": "positive", "base_interest": "number", "rate_by_rating": "number", "rate_floor": "number",
 		"sanction_min_legitimacy": "percent", "rate_full_legitimacy": "percent", "rating_arrears_penalty": "number",
 		"term_installments": "positive_integer", "installment_interval_s": "positive_integer",
 		"early_payoff_surcharge": "number", "early_payoff_legitimacy_gain": "percent",

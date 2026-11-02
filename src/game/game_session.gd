@@ -130,6 +130,11 @@ func get_projected_delta_per_minute(id: StringName) -> float:
 	return simulation.get_projected_delta_per_minute(id)
 
 
+# The loan quote the panel shows before asking (D-174). Read-only.
+func loan_quote(amount: int) -> Dictionary:
+	return simulation.loan_quote(amount)
+
+
 func submit_command(command: SimulationCommand) -> void:
 	simulation.apply_command(command)
 	_pending.append(command)

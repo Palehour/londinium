@@ -48,6 +48,7 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	&"loan.cap_multiple": {"min": 0.0, "max": INF, "min_inclusive": false, "max_inclusive": false},
 	&"loan.base_interest": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
 	&"loan.rate_by_rating": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"loan.rate_floor": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
 	&"loan.early_payoff_surcharge": {"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
 	&"loan.sanction_min_legitimacy": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
 	&"loan.rate_full_legitimacy": {"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
