@@ -23,10 +23,10 @@ static func build(state: EconomyState, params: Params, context: EconomyContext) 
 	# Imported flour skips the wharf's wheat and the mill, so only the bakery is left in the chain; the
 	# wharf is blamed only when it cannot pay for the flour.
 	var stages: Array[StringName] = CHAIN
-	if ImportSystem.flour_import_active(state):
+	if ImportSystem.flour_import_active(state, context):
 		stages = [&"bakery"]
 	var causes: Array[Dictionary] = _chain_causes(buildings, stages)
-	if ImportSystem.flour_import_active(state) and ImportSystem.flour_reason(state, params) == &"no_money_for_imports":
+	if ImportSystem.flour_import_active(state, context) and ImportSystem.flour_reason(state, params, context) == &"no_money_for_imports":
 		causes.push_front({"definition_id": &"wharf", "reason": &"no_money_for_imports"})
 	if bread_short and causes.is_empty():
 		causes = _throughput_causes(buildings, stages)
@@ -60,8 +60,8 @@ static func building_reason(state: EconomyState, context: EconomyContext, buildi
 		return road
 	# A staffed wharf that brings in the flour is working, whatever the wheat purchases do, unless it
 	# cannot pay for the flour. An unstaffed one falls through to the usual reasons.
-	if id == &"wharf" and ImportSystem.flour_import_active(state) and int(building.get("workers", 0)) > 0:
-		var flour: StringName = ImportSystem.flour_reason(state, params)
+	if id == &"wharf" and ImportSystem.flour_import_active(state, context) and int(building.get("workers", 0)) > 0:
+		var flour: StringName = ImportSystem.flour_reason(state, params, context)
 		return flour if flour == &"no_money_for_imports" else &"ok"
 	# The wharf is the only buyer; MarketSystem stops before staffing when purchases are off.
 	if id == &"wharf" and not state.wheat_purchases_enabled:

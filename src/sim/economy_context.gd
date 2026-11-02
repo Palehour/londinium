@@ -15,6 +15,11 @@ var classes: Dictionary[StringName, ClassDef] = {}
 var missions: Dictionary[StringName, MissionDef] = {}
 # The era's factions (issue #84); shared like the missions.
 var factions: Dictionary[StringName, FactionDef] = {}
+# Issue #306 (D-164). Filled from the scenario, not from the map: two scenarios can share a map.
+# A map with a river ignores them. Not saved; the scenario id loads them again.
+const BORDER_SUPPLIER: StringName = &"border"
+var import_entries: Array[Vector2i] = []
+var import_goods: Array[StringName] = []
 
 
 func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
@@ -77,7 +82,36 @@ func copy() -> EconomyContext:
 	catalog.classes.assign(classes)
 	catalog.missions.assign(missions)
 	catalog.factions.assign(factions)
-	return EconomyContext.new(catalog, map)
+	var copied: EconomyContext = EconomyContext.new(catalog, map)
+	copied.import_entries.assign(import_entries)
+	copied.import_goods.assign(import_goods)
+	return copied
+
+
+# The edge supplies imports only on a map with no river, and only the goods the scenario lists (D-164).
+func border_import_active() -> bool:
+	return map.river_cells.is_empty() and not import_entries.is_empty()
+
+
+func border_supplies(good: StringName) -> bool:
+	return border_import_active() and good in import_goods
+
+
+# Cells and goods from a data/scenarios entry. Missing keys clear the previous scenario.
+func apply_border(scenario: Dictionary) -> void:
+	import_entries.clear()
+	import_goods.clear()
+	var cells: Variant = scenario.get("import_entries", [])
+	if cells is Array:
+		for cell: Variant in cells:
+			if cell is Vector2i:
+				import_entries.append(cell)
+			elif cell is Array and cell.size() >= 2:
+				import_entries.append(Vector2i(int(cell[0]), int(cell[1])))
+	var goods: Variant = scenario.get("import_goods", [])
+	if goods is Array:
+		for good: Variant in goods:
+			import_goods.append(StringName(str(good)))
 
 
 func building_unavailable_reason(id: StringName) -> StringName:

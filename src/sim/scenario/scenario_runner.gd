@@ -116,10 +116,12 @@ static func strip_long_scenario_paths() -> Array[String]:
 # the data scenario it names (issue #87). validate() reports an unknown one.
 func _use_map(scenario: Dictionary) -> void:
 	var map_id: StringName = StringName(str(scenario.get("map", _data_scenario(scenario).get("map", MapDef.DEFAULT_ID))))
-	if map_id == _map_id or not _catalog.maps.has(map_id):
-		return
-	_map_id = map_id
-	_context = EconomyContext.new(_catalog, _catalog.maps[map_id])
+	if map_id != _map_id and _catalog.maps.has(map_id):
+		_map_id = map_id
+		_context = EconomyContext.new(_catalog, _catalog.maps[map_id])
+	# Every run, including one that keeps the map: a later script may name no border scenario.
+	if _context != null:
+		_context.apply_border(_data_scenario(scenario))
 
 
 # The scenario of data/scenarios a script names with "scenario" (issue #87, D-122): its map and whether it has

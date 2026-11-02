@@ -56,6 +56,7 @@ func _use_catalog(catalog: DataCatalog) -> void:
 	_victory_stages.assign(scenario.get("stages", []))
 	_incidents_enabled = scenario.get("incidents_enabled", false)
 	context = EconomyContext.new(catalog, catalog.maps[scenario.get("map", MapDef.DEFAULT_ID)])
+	context.apply_border(scenario)
 
 
 func _start(params: Params, preset_id: StringName) -> void:

@@ -183,7 +183,7 @@ londinium/
    on the edge of its footprint (one of its four sides for a 1x1, D-079 with D-086) does not work (`no_road_access`),
    nor one whose inputs have suppliers but none it can reach (`no_route`); step 2 gives neither of them workers and a house without a street holds nobody. Each input comes
    from the nearest supplier (a building whose recipe makes it, or a good its data `supplies`; the wharf's imported
-   flour only while flour imports are on), and its leg is recorded with its street steps, the pieces walked with both
+   flour only while flour imports are on). On a map with no river the scenario's `import_entries` supply the goods it lists (#306, D-164); a river map ignores them. Tea then reaches a house along the streets, with no service radius. Each leg is recorded with its street steps, the pieces walked with both
    ends included, and its metres: steps times the side of a piece (`RoadSystem.metres`, piece side times
    `map.cell_size_m`, 50 m), so a route measures what it measured on cells of 50 m. A leg of `transport.expensive_m` or
    more is "expensive". A house gets a good only within the `service_radius_m` (metres along the streets, 0 = the
@@ -215,7 +215,7 @@ londinium/
 3. Sources: the market reprices (every `price_update_seconds`), stored wheat spoils a little, and the wharf buys wheat at the
    current price under the player's policy (`SetWheatPolicy`: accumulate price, max price, target stock and a safety reserve in minutes of mill,
    under which the max price stops applying; the pause toggle stops all buying). The warehouse has a capacity. The wharf buys imported flour that skips the mill
-   (D-026); wheat fields on cultivable cells only.
+   (D-026); wheat fields on cultivable cells only. Without a river, tea and flour listed by the scenario are bought at the same prices with no wharf, and the flour leaves no unloading debt (#306, D-164).
    The wharf has one unloading capacity (its staffed wheat output per minute) that wheat, barley and the imported flour share; the tea is exempt (issue #50). The player's `SetUnloadingSplit` (whole percent to barley) is reserved first and the flour never touches it (issue #116). A lot of flour is paid at once and leaves a debt of units that the next ticks unload, before the wheat, from the rest (`MarketSystem._pay_flour_unloading`); the wheat keeps its purchase policy inside what that leaves. Barley's price walks on its own seeded generator so the wheat series does not move.
    `snapshot()["diagnostics"]["unloading_split"]` (`BreadDiagnostics.unloading_split`, issue #106) only reads this: the wheat per minute the split lets the staffed wharves unload against what the staffed mills grind, `active` when it falls short and barley has a share; the panel says it under the mill and in the bread's "why".
 4. Converters: mill (wheat→flour), bakery (flour→bread), malthouse (barley→malt), brewery (malt→beer), limited by staffed jobs and input stock. Malt and beer have a warehouse cap (`market.malt.*`, `market.beer.*`): a full warehouse stops its producer instead of discarding output (only the artisans drink it, D-033, so a city without their housing still fills the warehouse and stops), and beer spoils a little each minute. Several producers of a capped good share its room and its fractions (ADR 0006).

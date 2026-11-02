@@ -1,0 +1,6 @@
+{
+  "map": "border_import",
+  "incidents_enabled": false,
+  "import_entries": [[0, 0], [2, 0]],
+  "import_goods": ["tea", "flour"]
+}

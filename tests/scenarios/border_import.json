@@ -1,0 +1,15 @@
+{
+  "id": "border_import",
+  "description": "D-164: un mapa sin río. El té y la harina entran por las celdas de data/scenarios/border_import.json y pagan el transporte de D-080 desde ahí.",
+  "notes": "Par de los escenarios con embarcadero. Sin río no hay muelle; la harina no deja deuda de descarga.",
+  "scenario": "border_import",
+  "seed": 42,
+  "duration_ticks": 900,
+  "commands": [
+    {"tick": 0, "cmd": "set_wheat_purchases", "enabled": false},
+    {"tick": 0, "cmd": "set_flour_imports", "enabled": true},
+    {"tick": 0, "cmd": "set_tea_imports", "enabled": true},
+    {"tick": 0, "cmd": "build", "building": "bakery", "cell": [2, 2]},
+    {"tick": 0, "cmd": "build", "building": "housing", "cell": [14, 2]}
+  ]
+}
