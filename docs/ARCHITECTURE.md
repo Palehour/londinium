@@ -122,7 +122,7 @@ londinium/
 │   │                         #   save_file.gd, save_settings.gd, autosave.gd (#57), gamepad_bindings.gd (#68);
 │   │                         #   city_view/ (the 3D greybox, #65, and its ink.gdshader) with city_camera.gd, city_layout.gd,
 │   │                         #   city_fog.gd and city_ink.gd
-│   └── ui/                   # stats_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
+│   └── ui/                   # stats_panel/, loan_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
 │                             #   overlay_bar/, why_panel/, need_overlay.gd (#73),
 │                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
@@ -469,7 +469,11 @@ saves load as 0).
 **Panel**: Menu calls `StatsPanel.enter_focus()`, which makes buttons, switches and sliders focusable and focuses the
 first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
 map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys
-keep working after a click. The saves and mods menus give the focus back to the same button after rebuilding. The
+keep working after a click. The saves and mods menus give the focus back to the same button after rebuilding. `LoanPanel`
+(`src/ui/loan_panel/`, issue #281) sits in that same panel, after the tax row. It only reads `snapshot()["loan"]`
+and sends `RequestLoanCommand` or `RepayLoanEarlyCommand`. The amount steps by one penny up to `cap`, with a
+Maximum button; the installment, the balance and the early-payoff cost appear once the loan is open. Its text
+size is `font_size` in `data/ui/stats.json`, not the map's. The
 help in the header switches to the gamepad's buttons (`ui.help_gamepad`) while a gamepad is in use. The window opens
 at 1280×800, the Steam Deck's resolution.
 **Statistics screen** (`src/ui/stats_screen/`, issue #83, D-052): the panel's Statistics button opens a full-window

@@ -104,6 +104,12 @@ func test_every_panel_control_is_reachable() -> void:
 		expected.append(panel.get(field) as Control)
 	for field: String in ["_tax", "_accumulate_price", "_limit_price"]:
 		expected.append((panel.get(field) as SpinBox).get_line_edit())
+	var loan: Node = panel.find_child("LoanPanel", true, false)
+	assert_not_null(loan, "The loan section is part of the panel")
+	if loan != null:
+		expected.append((loan.find_child("Amount", true, false) as SpinBox).get_line_edit())
+		expected.append(loan.find_child("Request", true, false) as Control)
+		expected.append(loan.find_child("Maximum", true, false) as Control)
 	for button: Button in (panel.get("_speed_buttons") as Dictionary).values():
 		expected.append(button)
 	for button: Button in (panel.get("_difficulty_buttons") as Dictionary).values():
