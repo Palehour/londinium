@@ -315,6 +315,14 @@ ui.stats_screen.classes,Clases,Classes
 ui.stats_screen.classes.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · Cada capa: satisfacción de la clase por su parte de los habitantes","D-pad or arrows ←/→: browse · LT/RT or +/-: range · Each layer: the class's satisfaction times its share of the residents"
 ui.stats_screen.classes.city,Ciudad %.0f,City %.0f
 ui.stats_screen.classes.class,%s %.0f (%.0f %% de los habitantes),%s %.0f (%.0f %% of residents)
+ui.stats_screen.chains,Cadenas,Chains
+ui.stats_screen.chains.hint,"Cruceta o flechas ←/→: cadena · ↑/↓: eslabón · LT/RT o +/-: ventana","D-pad or arrows ←/→: chain · ↑/↓: link · LT/RT or +/-: window"
+ui.stats_screen.chains.absent,%s · %s,%s · %s
+ui.stats_screen.chains.value,%s %s,%s %s
+ui.stats_screen.chains.bread,Pan,Bread
+ui.stats_screen.chains.beer,Cerveza,Beer
+ui.stats_screen.chains.column.in,Entradas,In
+ui.stats_screen.chains.column.spoiled,Pérdidas,Losses
 ui.stats_screen.marker.policy,Política: %s,Policy: %s
 ui.stats_screen.marker.warning,Aviso: %s,Warning: %s
 ui.stats_screen.marker.defeat,Derrota: %s,Defeat: %s

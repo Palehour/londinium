@@ -190,12 +190,12 @@ func _classes(view: Node2D) -> ClassesTab:
 	for tick: int in 120:
 		session.simulation.tick()
 	session.publish_tick()
-	# LB from the summary wraps to Classes. RB now changes the series while Historia is open.
+	# LB from the summary wraps to Classes. RB on Historia changes the series, so three RB presses never arrive.
 	_pad(JOY_BUTTON_LEFT_SHOULDER)
 	return (view.get("_stats_screen") as StatsScreen).get("_classes") as ClassesTab
 
 
-func test_rb_twice_goes_to_the_classes_and_the_dpad_walks_the_buckets() -> void:
+func test_lb_from_the_summary_goes_to_the_classes_and_the_dpad_walks_the_buckets() -> void:
 	var view: Node2D = await _view()
 	var classes: ClassesTab = _classes(view)
 	var tabs: TabContainer = (view.get("_stats_screen") as StatsScreen).get("_tabs") as TabContainer

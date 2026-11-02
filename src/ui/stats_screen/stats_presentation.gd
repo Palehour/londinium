@@ -4,7 +4,8 @@ extends RefCounted
 # Look of the statistics screen (issue #83), from data/ui/stats.json. The strokes pair a colour from a palette
 # readable with colour blindness with a dash length (0 = solid), so two lines differ even without their colour.
 # The history view's ranges each read one level of the history over a span (0 = the whole level). The classes
-# view fills its layers with the strokes' colours at fill_alpha.
+# view fills its layers with the strokes' colours at fill_alpha. The chains view (D-173) lists its links, column
+# strokes and highlight here, not in the shared strokes, so those lines do not shift.
 
 const PATH: String = "res://data/ui/stats.json"
 const LAYOUT_KEYS: Array[String] = ["font_size", "margin", "card_columns", "chart_height", "legend_width",
@@ -12,6 +13,9 @@ const LAYOUT_KEYS: Array[String] = ["font_size", "margin", "card_columns", "char
 const COLOR_KEYS: Array[String] = ["background", "card", "marker", "cursor"]
 # The fine level holds one value a second, not buckets, so the ranges read only these two.
 const RANGE_TIERS: Array[StringName] = [StatsHistory.TIER_MEDIUM, StatsHistory.TIER_CHAPTER]
+# Column ids of the chains view, in the order a link reads them. A diagnostic other than bread is not a chain.
+const CHAIN_COLUMNS: Array[String] = ["in", "produced", "consumed", "spoiled", "stock"]
+const CHAIN_DIAGNOSTICS: Array[String] = ["bread"]
 
 var summary_span_seconds: int = 0
 # {"id", "tier", "span_seconds"}, in the order the triggers go through them.
@@ -25,6 +29,12 @@ var stroke_colors: Array[Color] = []
 var stroke_dashes: PackedFloat32Array = []
 # Opacity of a stacked layer, more than 0 and at most 1.
 var fill_alpha: float = 1.0
+# Chains view (D-173): column strokes, the highlight, and the chains in LB/RB order. A chain's diagnostic is empty
+# unless the data names one (only bread, today).
+var chains_highlight_color: Color = Color.MAGENTA
+var chains_highlight_width: float = 0.0
+var chains_columns: Array[Dictionary] = []
+var chains_order: Array[Dictionary] = []
 var errors: Array[String] = []
 
 
@@ -61,6 +71,7 @@ func validate(raw: Variant) -> void:
 	_validate_series(raw.get("history"))
 	_validate_markers(raw.get("history"))
 	_validate_fill(raw.get("classes"))
+	_validate_chains(raw.get("chains"))
 
 
 # Stroke of the index-th line of a chart; they repeat when a chart has more lines than strokes.
@@ -127,6 +138,65 @@ func _validate_fill(classes: Variant) -> void:
 		errors.append("data/ui/stats.json.classes.fill_alpha: expected more than 0 and at most 1")
 		return
 	fill_alpha = float(alpha)
+
+
+func _validate_chains(chains: Variant) -> void:
+	if chains is not Dictionary or chains.get("highlight") is not Dictionary or chains.get("columns") is not Array \
+			or chains.get("order") is not Array or chains["columns"].is_empty() or chains["order"].is_empty():
+		errors.append("data/ui/stats.json.chains: expected highlight, columns and order")
+		return
+	var highlight: Dictionary = chains["highlight"]
+	chains_highlight_color = _color(highlight.get("color"), "chains.highlight.color")
+	chains_highlight_width = float(_positive(highlight.get("line_width"), "chains.highlight.line_width"))
+	var seen: Array[String] = []
+	for index: int in chains["columns"].size():
+		var entry: Variant = chains["columns"][index]
+		var key: String = "data/ui/stats.json.chains.columns.%d" % index
+		if entry is not Dictionary or entry.get("id") is not String or not CHAIN_COLUMNS.has(entry["id"]):
+			errors.append(key + ": expected a column id")
+			continue
+		if seen.has(entry["id"]):
+			errors.append(key + ": repeated column")
+			continue
+		var dash: Variant = entry.get("dash")
+		if (dash is not float and dash is not int) or dash < 0:
+			errors.append(key + ".dash: expected a length of 0 or more")
+			continue
+		seen.append(entry["id"])
+		chains_columns.append({
+			"id": StringName(entry["id"]),
+			"color": _color(entry.get("color"), "chains.columns.%d.color" % index),
+			"dash": float(dash),
+		})
+	if seen.size() != CHAIN_COLUMNS.size():
+		errors.append("data/ui/stats.json.chains.columns: expected in, produced, consumed, spoiled and stock")
+	for index: int in chains["order"].size():
+		var chain: Variant = chains["order"][index]
+		var key: String = "data/ui/stats.json.chains.order.%d" % index
+		if chain is not Dictionary or chain.get("id") is not String or chain.get("links") is not Array \
+				or chain["links"].is_empty():
+			errors.append(key + ": expected an id and a list of links")
+			continue
+		var diagnostic: String = ""
+		if chain.has("diagnostic"):
+			if chain["diagnostic"] is not String or not CHAIN_DIAGNOSTICS.has(chain["diagnostic"]):
+				errors.append(key + ".diagnostic: expected bread")
+				continue
+			diagnostic = chain["diagnostic"]
+		var links: Array[Dictionary] = []
+		var broken: bool = false
+		for link_index: int in chain["links"].size():
+			var link: Variant = chain["links"][link_index]
+			if link is not Dictionary or link.get("building") is not String or link.get("good") is not String:
+				errors.append(key + ".links.%d: expected a building and a good" % link_index)
+				broken = true
+				continue
+			links.append({"building": StringName(link["building"]), "good": StringName(link["good"])})
+		if broken:
+			continue
+		chains_order.append({
+			"id": StringName(chain["id"]), "diagnostic": StringName(diagnostic), "links": links,
+		})
 
 
 func _positive(value: Variant, key: String) -> int:
