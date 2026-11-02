@@ -350,6 +350,20 @@ const STATS_SCREEN_CLASSES: StringName = &"ui.stats_screen.classes"
 const STATS_SCREEN_CLASSES_HINT: StringName = &"ui.stats_screen.classes.hint"
 const STATS_SCREEN_CLASSES_CITY: StringName = &"ui.stats_screen.classes.city"
 const STATS_SCREEN_CLASSES_CLASS: StringName = &"ui.stats_screen.classes.class"
+# The chains view (issue #315, D-173): its tab, hint, a link with no building, one column's reading, and the chain names.
+# Column titles reuse the series labels except entradas and pérdidas, which are not the Merma label.
+const STATS_SCREEN_CHAINS: StringName = &"ui.stats_screen.chains"
+const STATS_SCREEN_CHAINS_HINT: StringName = &"ui.stats_screen.chains.hint"
+const STATS_SCREEN_CHAINS_ABSENT: StringName = &"ui.stats_screen.chains.absent"
+const STATS_SCREEN_CHAINS_VALUE: StringName = &"ui.stats_screen.chains.value"
+const STATS_SCREEN_CHAIN_NAMES: Dictionary[StringName, StringName] = {
+	&"bread": &"ui.stats_screen.chains.bread", &"beer": &"ui.stats_screen.chains.beer",
+}
+const STATS_SCREEN_CHAIN_COLUMNS: Dictionary[StringName, StringName] = {
+	&"in": &"ui.stats_screen.chains.column.in", &"produced": &"ui.stats.produced",
+	&"consumed": &"ui.stats.consumed", &"spoiled": &"ui.stats_screen.chains.column.spoiled",
+	&"stock": &"ui.stats.stock",
+}
 const STATS_SCREEN_RANGES: Dictionary[StringName, StringName] = {
 	&"ten_minutes": &"ui.stats_screen.range.ten_minutes", &"hour": &"ui.stats_screen.range.hour",
 	&"chapter": &"ui.stats_screen.range.chapter",
@@ -570,6 +584,7 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_MARKER_LINE, STATS_SCREEN_MARKER_STACK,
 		STATS_SCREEN_LESSONS, STATS_SCREEN_LESSONS_ROW, STATS_SCREEN_LESSONS_CRISIS, STATS_SCREEN_LESSONS_NO_CRISIS,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
+		STATS_SCREEN_CHAINS, STATS_SCREEN_CHAINS_HINT, STATS_SCREEN_CHAINS_ABSENT, STATS_SCREEN_CHAINS_VALUE,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
 		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
@@ -626,6 +641,10 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, STATS_SCREEN_RANGES[range_id])
 	for policy_id: StringName in STATS_SCREEN_POLICIES:
 		_append_unique(keys, STATS_SCREEN_POLICIES[policy_id])
+	for chain_id: StringName in STATS_SCREEN_CHAIN_NAMES:
+		_append_unique(keys, STATS_SCREEN_CHAIN_NAMES[chain_id])
+	for column_id: StringName in STATS_SCREEN_CHAIN_COLUMNS:
+		_append_unique(keys, STATS_SCREEN_CHAIN_COLUMNS[column_id])
 	return keys
 
 

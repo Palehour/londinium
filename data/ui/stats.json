@@ -128,6 +128,35 @@
   "classes": {
     "fill_alpha": 0.35
   },
+  "chains": {
+    "highlight": { "color": "#d55e00", "line_width": 4 },
+    "columns": [
+      { "id": "in", "color": "#e69f00", "dash": 0 },
+      { "id": "produced", "color": "#56b4e9", "dash": 8 },
+      { "id": "consumed", "color": "#009e73", "dash": 3 },
+      { "id": "spoiled", "color": "#cc79a7", "dash": 14 },
+      { "id": "stock", "color": "#0072b2", "dash": 2 }
+    ],
+    "order": [
+      {
+        "id": "bread",
+        "diagnostic": "bread",
+        "links": [
+          { "building": "wharf", "good": "wheat" },
+          { "building": "mill", "good": "flour" },
+          { "building": "bakery", "good": "bread" }
+        ]
+      },
+      {
+        "id": "beer",
+        "links": [
+          { "building": "wharf", "good": "barley" },
+          { "building": "malthouse", "good": "malt" },
+          { "building": "brewery", "good": "beer" }
+        ]
+      }
+    ]
+  },
   "layout": {
     "font_size": 16,
     "margin": 16,

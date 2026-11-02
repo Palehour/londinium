@@ -4,18 +4,20 @@ extends PanelContainer
 # The statistics screen (issue #83, D-052): views of the chapter's history over the whole window, one tab each.
 # It only reads the history the simulation keeps (#82, D-066) and never sends a command. While it shows, the map
 # gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back; the
-# chart tabs (summary, history and classes) take the rest.
+# chart tabs (summary, chains, history and classes) take the rest.
 
 signal closed
 
 const SUMMARY_TAB: int = 0
-const HISTORY_TAB: int = 1
-const CLASSES_TAB: int = 2
+const CHAINS_TAB: int = 1
+const HISTORY_TAB: int = 2
+const CLASSES_TAB: int = 3
 
 var session: GameSession
 var presentation: StatsPresentation
 var _tabs: TabContainer
 var _summary: SummaryTab
+var _chains: ChainsTab
 var _history: TimelineTab
 var _classes: ClassesTab
 var _hint: Label
@@ -57,6 +59,9 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_summary.setup(session, look)
 	_values = _summary.values
 	_charts = _summary.charts
+	_chains = ChainsTab.new()
+	_tabs.add_child(_chains)
+	_chains.setup(session, look)
 	_history = TimelineTab.new()
 	_tabs.add_child(_history)
 	_history.setup(session, look)
@@ -70,8 +75,9 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 
 
 func open() -> void:
-	# D-170: the summary opens on its newest bucket.
+	# D-170: the summary opens on its newest bucket. Chains starts on its first link (D-173).
 	_summary.reset_cursor()
+	_chains.reset_selection()
 	show()
 	refresh()
 
@@ -112,6 +118,8 @@ func refresh() -> void:
 func _on_tab_changed(tab: int) -> void:
 	if tab == SUMMARY_TAB:
 		_summary.reset_cursor()
+	elif tab == CHAINS_TAB:
+		_chains.reset_selection()
 	_apply_header()
 	refresh()
 
@@ -126,9 +134,11 @@ func _apply_texts() -> void:
 	_apply_header()
 	_back.text = Strings.text(Strings.STATS_SCREEN_BACK)
 	_tabs.set_tab_title(SUMMARY_TAB, Strings.text(Strings.STATS_SCREEN_SUMMARY))
+	_tabs.set_tab_title(CHAINS_TAB, Strings.text(Strings.STATS_SCREEN_CHAINS))
 	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
 	_tabs.set_tab_title(CLASSES_TAB, Strings.text(Strings.STATS_SCREEN_CLASSES))
 	_summary.apply_texts()
+	_chains.apply_texts()
 	_history.apply_texts()
 	_classes.apply_texts()
 

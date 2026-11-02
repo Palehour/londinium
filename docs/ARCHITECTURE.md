@@ -490,7 +490,13 @@ the medium level, or the whole chapter's minute level, with a marker on each buc
 walk the buckets and change metric, and the triggers or +/- change range. The classes tab (`ClassesTab`, built by
 `StatsClasses`, drawn by `StackedChart`) stacks the city's satisfaction by class over the same ranges and markers:
 each layer is a class's satisfaction times its share of the residents, so the top is the average resident's, and a
-bucket with no residents is a gap. The three tabs share the range, cursor and trigger handling of `ChartTab`. With the
+bucket with no residents is a gap. The chains tab (`ChainsTab`, built by `StatsChains`, D-173) shows one chain from
+`data/ui/stats.json` at a time. The D-pad or arrows ←/→ switch chain and ↑/↓ walk its links, without a detail (#319)
+and without wrapping. Each link reads five columns of the D-066 series over the same ranges: in is bought plus
+produced, then produced, consumed, spoiled and the stock at the end of the window. A missing series reads "—" and is
+not treated as zero; a link with no building of its type says there is no data. One link is highlighted, the first
+`bread_causes` entry with an id, and only on the bread chain; the colour and the width come from `stats.json`. The
+four tabs share the range and trigger handling of `ChartTab`. With the
 incidents on, the history tab also lists each district's lessons and the severity and deaths the cholera had there
 (`DistrictLessons`, from `snapshot()["incidents"]`, #87, D-120).
 

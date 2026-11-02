@@ -190,13 +190,14 @@ func _trigger(axis: JoyAxis, value: float) -> void:
 	_viewport.push_input(event)
 
 
-# The screen on its history tab, after two minutes of play.
+# The screen on its history tab, after two minutes of play. Chains sits between the summary and the history (D-173).
 func _history(view: Node2D) -> TimelineTab:
 	((view.get("_stats_panel") as StatsPanel).get("_stats_button") as Button).pressed.emit()
 	var session: GameSession = view.get("session") as GameSession
 	for tick: int in 120:
 		session.simulation.tick()
 	session.publish_tick()
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
 	_pad(JOY_BUTTON_RIGHT_SHOULDER)
 	return (view.get("_stats_screen") as StatsScreen).get("_history") as TimelineTab
 
