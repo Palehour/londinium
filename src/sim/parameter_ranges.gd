@@ -297,6 +297,8 @@ const PATTERNS: Array[Dictionary] = [
 	{"prefix": "factions.", "suffix": ".target_base", "min": 0.0, "max": 100.0, "integer": false},
 	{"prefix": "factions.", "suffix": ".target_scale", "min": 0.0, "max": INF, "integer": false},
 	{"prefix": "factions.affinity.", "suffix": "", "min": 0.0, "max": INF, "integer": false},
+	# Decree upkeep (issue #71): a validation envelope, not a shipped number. Pence per minute, 0 or more.
+	{"prefix": "decree.", "suffix": ".upkeep_per_min", "min": 0.0, "max": INF, "integer": true},
 	# 20 is the base capacity of today's housing: a class that more than doubles its house is not a bonus.
 	{"prefix": "class.", "suffix": ".housing_max_bonus", "min": 0.0, "max": 20.0, "integer": true},
 	{"prefix": "class.", "suffix": ".value", "min": 0.0, "max": 100.0, "integer": false},

@@ -185,6 +185,9 @@ const DISTRICT_FIELDS: Array[String] = ["id", "name", "symbol", "water_source"]
 # Factions and legitimacy (issue #84, D-116, D-139, D-140; values of D-141), optional per era: the numbers of the
 # reserve and of the decree cost (factions.*), each faction's engine and target, and each class's affinity to each.
 const FACTIONS_FILE: String = "factions.json"
+# Optional, like factions (issue #71, D-124): an era without it has no decrees. The shipped file is empty.
+const DECREES_FILE: String = "decrees.json"
+const DECREE_FIELDS: Array[String] = ["for", "against", "upkeep_per_min", "name_key"]
 const FACTION_SCHEMA: Dictionary = {"legitimacy_start": "percent", "legitimacy_fill_per_min": "positive",
 	"legitimacy_drain_multiplier": "positive", "support_drift_per_min": "positive", "ratio_income_floor": "positive",
 	"decree_legitimacy_cost": "percent", "low_legitimacy_threshold": "percent",
@@ -281,7 +284,7 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 		elif path.begins_with("maps/"):
 			_load_map(raw, path, catalog)
 		elif path.begins_with("scenarios/") or path.begins_with(_missions_folder() + "/") 				or path in [_needs_path(), _classes_path(), _crisis_texts_path(), _factions_path(),
-					PRESETS_PATH, KNOBS_PATH]:
+					_decrees_path(), PRESETS_PATH, KNOBS_PATH]:
 			continue
 		elif path.begins_with(SERVICES_FOLDER + "/"):
 			_load_service(raw, path, catalog)
@@ -310,6 +313,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	# The affinities name the classes, so the factions load after them.
 	if documents.has(_factions_path()):
 		_load_factions(documents[_factions_path()], catalog)
+	# After the factions: a decree's for and against name faction ids.
+	if documents.has(_decrees_path()):
+		_load_decrees(documents[_decrees_path()], catalog)
 	# A mission names the boolean key that pauses the defeat, so it loads once the economy keys exist.
 	for path: String in documents:
 		if path.begins_with(_missions_folder() + "/"):
@@ -797,6 +803,10 @@ func _factions_path() -> String:
 	return "eras".path_join(_era).path_join(FACTIONS_FILE)
 
 
+func _decrees_path() -> String:
+	return "eras".path_join(_era).path_join(DECREES_FILE)
+
+
 func _load_factions(raw: Dictionary, catalog: DataCatalog) -> void:
 	var path: String = _factions_path()
 	var fields: Array[String] = []
@@ -880,6 +890,58 @@ func _load_affinity(raw: Variant, path: String, catalog: DataCatalog) -> void:
 				catalog.factions[StringName(faction_id)].affinity_keys[StringName(class_id)] = key
 		if total <= 0.0:
 			_errors.append("%s: expected an affinity above 0" % location)
+
+
+func _load_decrees(raw: Dictionary, catalog: DataCatalog) -> void:
+	var path: String = _decrees_path()
+	if not _object(raw, ["decrees"], path):
+		return
+	if raw["decrees"] is not Dictionary:
+		_errors.append("%s.decrees: expected an object" % path)
+		return
+	for id: String in raw["decrees"]:
+		_load_decree(raw["decrees"][id], "%s.decrees.%s" % [path, id], StringName(id), catalog)
+
+
+func _load_decree(raw: Variant, path: String, id: StringName, catalog: DataCatalog) -> void:
+	if not _object(raw, DECREE_FIELDS, path):
+		return
+	var supporters: Array[String] = []
+	var opponents: Array[String] = []
+	if not _strings(raw["for"], path + ".for", supporters) \
+			or not _strings(raw["against"], path + ".against", opponents):
+		return
+	if not _decree_factions(supporters, opponents, path, catalog):
+		return
+	if raw["name_key"] is not String or raw["name_key"].is_empty():
+		_errors.append("%s.name_key: expected a translation key" % path)
+		return
+	var key: String = "decree.%s.upkeep_per_min" % id
+	if not _number(raw["upkeep_per_min"], "money", path + ".upkeep_per_min", key, catalog):
+		return
+	var decree: DecreeDef = DecreeDef.new()
+	decree.use_id(id)
+	decree.name_key = StringName(raw["name_key"])
+	decree.for_factions.assign(supporters.map(func(name: String) -> StringName: return StringName(name)))
+	decree.against_factions.assign(opponents.map(func(name: String) -> StringName: return StringName(name)))
+	catalog.decrees[id] = decree
+
+
+func _decree_factions(supporters: Array[String], opponents: Array[String], path: String,
+		catalog: DataCatalog) -> bool:
+	var valid: bool = true
+	for name: String in supporters:
+		if name in opponents:
+			_errors.append("%s: %s is both for and against" % [path, name])
+			valid = false
+		elif not catalog.factions.has(StringName(name)):
+			_errors.append("%s.for: unknown faction %s" % [path, name])
+			valid = false
+	for name: String in opponents:
+		if not catalog.factions.has(StringName(name)):
+			_errors.append("%s.against: unknown faction %s" % [path, name])
+			valid = false
+	return valid
 
 
 # The quarantine within the post's radius is the shorter one (D-107).
@@ -1794,9 +1856,10 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 	var id: StringName = StringName(path.get_file().get_basename())
 	var stages: Array[Dictionary] = []
 	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID, "incidents_enabled": false,
-		"import_entries": [] as Array[Vector2i], "import_goods": [] as Array[StringName]}
+		"import_entries": [] as Array[Vector2i], "import_goods": [] as Array[StringName],
+		"competencies": [] as Array[StringName]}
 	var scenario_fields: Array[String] = []
-	for field: String in ["victory", "map", "incidents_enabled", "import_entries", "import_goods"]:
+	for field: String in ["victory", "map", "incidents_enabled", "import_entries", "import_goods", "competencies"]:
 		if raw.has(field):
 			scenario_fields.append(field)
 	if not _object(raw, scenario_fields, path):
@@ -1813,6 +1876,8 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 		else:
 			catalog.scenarios[id]["map"] = StringName(raw["map"])
 	_load_border_imports(raw, path, catalog, id)
+	if raw.has("competencies"):
+		_load_competencies(raw["competencies"], path, catalog, id)
 	if not raw.has("victory"):
 		return
 	if not _object(raw["victory"], ["stages"], path + ".victory"):
@@ -1879,6 +1944,20 @@ func _load_border_imports(raw: Dictionary, path: String, catalog: DataCatalog, i
 			continue
 		goods.append(StringName(good))
 	catalog.scenarios[id]["import_goods"] = goods
+
+
+# A fixed list of decree ids (issue #71, D-125). Missing means the empty default; an unknown id is a load error.
+func _load_competencies(raw: Variant, path: String, catalog: DataCatalog, id: StringName) -> void:
+	var names: Array[String] = []
+	if not _strings(raw, path + ".competencies", names):
+		return
+	var competencies: Array[StringName] = []
+	for name: String in names:
+		if not catalog.decrees.has(StringName(name)):
+			_errors.append("%s.competencies: unknown decree %s" % [path, name])
+			continue
+		competencies.append(StringName(name))
+	catalog.scenarios[id]["competencies"] = competencies
 
 
 func _load_presets(raw: Dictionary, catalog: DataCatalog) -> void:

@@ -16,7 +16,7 @@ const STRIP_SCENARIO_DIR: String = "res://tests/scenarios/strip"
 const STRIP_LONG_SCENARIO_DIR: String = "res://tests/scenarios/strip/long"
 const TICKS_PER_MINUTE: int = 60
 const COMMAND_NAMES: Array[String] = ["build", "build_road", "demolish", "set_tax", "set_wheat_purchases", "set_wheat_policy",
-	"set_tea_imports", "set_flour_imports", "set_unloading_split", "set_stock"]
+	"set_tea_imports", "set_flour_imports", "set_unloading_split", "set_stock", "enact_decree", "revoke_decree"]
 const POLICY_FIELDS: Array[String] = ["accumulate_price", "max_price", "target_stock", "reserve_minutes"]
 const CONDITIONS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
 # The class and the buildings the payback probe of issue #52 follows.
@@ -448,6 +448,10 @@ func _make_command(entry: Dictionary) -> SimulationCommand:
 			return SetUnloadingSplitCommand.new(int(entry["barley_percent"]))
 		"set_stock":
 			return ForceStockCommand.new(StringName(entry["good"]), int(entry["amount"]))
+		"enact_decree":
+			return EnactDecreeCommand.new(StringName(str(entry.get("id", ""))))
+		"revoke_decree":
+			return RevokeDecreeCommand.new(StringName(str(entry.get("id", ""))))
 		_:
 			return SetWheatPurchasesCommand.new(bool(entry["enabled"]))
 
@@ -616,6 +620,10 @@ func _validate_command(entry: Variant, index: int, duration: int, previous_tick:
 		"set_stock":
 			if not _catalog.goods.has(StringName(str(entry.get("good", "")))) or not _is_whole(entry.get("amount")) 					or int(entry["amount"]) < 0:
 				errors.append("%s: set_stock needs a known good and a whole amount >= 0" % where)
+		"enact_decree", "revoke_decree":
+			# An unknown id is a runtime refusal, not a validate error.
+			if entry.get("id") is not String or String(entry["id"]).is_empty():
+				errors.append("%s: id must be a non-empty string" % where)
 		_:
 			if entry.get("enabled") is not bool:
 				errors.append("%s: enabled must be true or false" % where)

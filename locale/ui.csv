@@ -399,3 +399,11 @@ ui.why_button_gamepad,Ver causas (R3),See causes (R3)
 ui.why_row,%s · %s,%s · %s
 ui.why_intermittent,"Intermitente (%d cambios que no duraron).","Intermittent (%d changes that did not last)."
 ui.why_pruned,Registro anterior no disponible.,Earlier record not available.
+ui.decree.effect.rates_upkeep,El mantenimiento sale de las tasas y baja el apoyo de los contribuyentes.,Upkeep is paid from the rates and lowers the ratepayers' support.
+ui.decree.reason.not_enough_legitimacy,No hay legitimidad suficiente.,There is not enough legitimacy.
+ui.decree.reason.not_in_competence,Ese decreto no está en las competencias.,That decree is outside the competencies.
+ui.decree.reason.already_active,Ese decreto ya está en vigor.,That decree is already in force.
+ui.decree.reason.not_active,Ese decreto no está en vigor.,That decree is not in force.
+ui.decree.reason.unknown_decree,Decreto desconocido.,Unknown decree.
+ui.decree.reason.no_factions,Sin facciones no se dictan decretos.,Decrees need factions.
+ui.decree.lapsed,Cayó porque el receiver se quedó con las tasas.,It lapsed because the receiver took the rates.

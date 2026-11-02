@@ -59,6 +59,9 @@ var loan_late_installments: int = 0
 # before them: the save carries them apart (factions_to_dict()).
 var faction_support: Dictionary[StringName, float] = {}
 var legitimacy: float = -1.0
+# Decrees (issue #71, D-124). Outside to_dict(), like the reserve: the save carries them apart.
+var active_decrees: Array[StringName] = []
+var decree_upkeep_fraction: float = 0.0
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
 # data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).

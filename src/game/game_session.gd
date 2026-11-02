@@ -57,6 +57,16 @@ func _use_catalog(catalog: DataCatalog) -> void:
 	_incidents_enabled = scenario.get("incidents_enabled", false)
 	context = EconomyContext.new(catalog, catalog.maps[scenario.get("map", MapDef.DEFAULT_ID)])
 	context.apply_border(scenario)
+	context.decree_competencies = _competencies(scenario)
+
+
+func _competencies(scenario: Dictionary) -> Array[StringName]:
+	var competencies: Array[StringName] = []
+	var listed: Variant = scenario.get("competencies", [])
+	if listed is Array:
+		for entry: Variant in listed:
+			competencies.append(StringName(str(entry)))
+	return competencies
 
 
 func _start(params: Params, preset_id: StringName) -> void:
