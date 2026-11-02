@@ -228,6 +228,9 @@ const CONDITION_LABELS: Dictionary[StringName, StringName] = {
 # The names of the era's factions (issue #84, D-139): data/eras/<era>/factions.json picks one by year from these.
 const FACTION_NAMES: Array[StringName] = [&"ui.faction.ratepayers", &"ui.faction.sanitary_reformers",
 	&"ui.faction.toynbee_hall", &"ui.faction.vestrymen"]
+# Decree player text (issue #71). Titles wait until a decree is named; these are the reasons and the one effect.
+const DECREE_EFFECT_RATES_UPKEEP: StringName = &"ui.decree.effect.rates_upkeep"
+const DECREE_LAPSED: StringName = &"ui.decree.lapsed"
 const STATUS_LABELS: Dictionary[StringName, StringName] = {
 	&"ok": &"ui.status.ok", &"warning": &"ui.status.warning", &"defeat": &"ui.status.defeat",
 }
@@ -462,6 +465,13 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"house_not_sick": &"ui.reason.house_not_sick",
 	&"outside_health_post": &"ui.reason.outside_health_post",
 	&"disinfection_running": &"ui.reason.disinfection_running",
+	# Decrees (issue #71). not_enough_legitimacy is FactionSystem.NOT_ENOUGH_LEGITIMACY.
+	&"not_enough_legitimacy": &"ui.decree.reason.not_enough_legitimacy",
+	&"not_in_competence": &"ui.decree.reason.not_in_competence",
+	&"already_active": &"ui.decree.reason.already_active",
+	&"not_active": &"ui.decree.reason.not_active",
+	&"unknown_decree": &"ui.decree.reason.unknown_decree",
+	&"no_factions": &"ui.decree.reason.no_factions",
 }
 
 
@@ -590,6 +600,7 @@ static func all_keys() -> Array[StringName]:
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
 		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
+		DECREE_EFFECT_RATES_UPKEEP, DECREE_LAPSED,
 	]
 	for attribute: StringName in SERVICE_ATTRIBUTES:
 		_append_unique(keys, SERVICE_ATTRIBUTES[attribute])

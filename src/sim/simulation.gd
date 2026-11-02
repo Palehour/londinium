@@ -145,6 +145,9 @@ static func from_save(params: Params, context: EconomyContext, victory_stages: A
 	# A save from before the factions keeps the start the construction gave them.
 	if saved.has("factions"):
 		sim._state.restore_factions(saved["factions"])
+	# A save from before the decrees has none active and no carried upkeep.
+	if saved.has("decrees") and saved["decrees"] is Dictionary:
+		DecreeSystem.restore(sim._state, saved["decrees"])
 	return sim
 
 
@@ -164,6 +167,9 @@ func to_save() -> Dictionary:
 	# Apart from the economy (issue #84), so a game saved before the factions loads and compares as before them.
 	if _state.legitimacy >= 0.0:
 		saved["factions"] = _state.factions_to_dict()
+	# Apart from the economy, and only once a decree is active or a fraction is still owed.
+	if not _state.active_decrees.is_empty() or _state.decree_upkeep_fraction != 0.0:
+		saved["decrees"] = DecreeSystem.save_of(_state)
 	return saved
 
 
@@ -232,6 +238,7 @@ func tick() -> void:
 		_mobility.tick(_state, _params, _context)
 		_money.tick(_state, _params, _context)
 		LoanSystem.tick(_state, _params)
+		DecreeSystem.tick(_state, _params, _context)
 		FactionSystem.tick(_state, _params, _context, _coverages())
 		MissionSystem.tick(_state, _params, _context, _tick_count)
 		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context), _context)
@@ -382,6 +389,7 @@ func snapshot() -> Dictionary:
 		"incidents": IncidentSystem.snapshot(_state, _params, _context),
 		"loan": LoanSystem.snapshot(_state, _params, _context),
 		"factions": FactionSystem.snapshot(_state, _params, _context, _coverages()),
+		"decrees": DecreeDiagnostics.build(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,

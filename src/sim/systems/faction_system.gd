@@ -78,12 +78,14 @@ static func rates_ratio(state: EconomyState, params: Params, context: EconomyCon
 # every tax while the receiver takes them (D-128). The decree upkeep of #71 (D-125) joins here.
 static func rates_spending_per_minute(state: EconomyState, params: Params, income: float) -> float:
 	var loan: LoanState = state.loan
-	if loan == null:
-		return 0.0
-	if loan.receiver:
+	# The receiver already lapsed the decrees this tick, so their upkeep is not added on top of the income.
+	if loan != null and loan.receiver:
 		return income
+	var decree_upkeep: float = DecreeSystem.upkeep_per_minute(state, params)
+	if loan == null:
+		return decree_upkeep
 	var interval: float = float(params.get_value(&"loan.installment_interval_s"))
-	return loan.installment(loan.installments_paid) * SimTime.TICKS_PER_MINUTE / interval
+	return loan.installment(loan.installments_paid) * SimTime.TICKS_PER_MINUTE / interval + decree_upkeep
 
 
 # The coverage of every faction with a SERVICE_COVERAGE engine, by id. It only changes with the layout (the buildings

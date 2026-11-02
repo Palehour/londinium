@@ -96,7 +96,7 @@ static func _pay_overdue(state: EconomyState, loan: LoanState) -> void:
 		loan.overdue -= 1
 
 
-# Every tax goes to the debt. Without taxes no decree upkeep can be paid (D-125): decrees arrive with issue #71.
+# Every tax goes to the debt. Without taxes no decree upkeep can be paid (D-125): DecreeSystem lapses them.
 static func _run_receiver(state: EconomyState, params: Params, loan: LoanState) -> void:
 	var taken: int = clampi(state.taxes_tick, 0, loan.balance())
 	state.money -= taken

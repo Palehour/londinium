@@ -15,6 +15,9 @@ var classes: Dictionary[StringName, ClassDef] = {}
 var missions: Dictionary[StringName, MissionDef] = {}
 # The era's factions (issue #84); shared like the missions.
 var factions: Dictionary[StringName, FactionDef] = {}
+# The era's decrees (issue #71); shared like the factions. Competencies come from the scenario, not the era.
+var decrees: Dictionary[StringName, DecreeDef] = {}
+var decree_competencies: Array[StringName] = []
 # Issue #306 (D-164). Filled from the scenario, not from the map: two scenarios can share a map.
 # A map with a river ignores them. Not saved; the scenario id loads them again.
 const BORDER_SUPPLIER: StringName = &"border"
@@ -49,6 +52,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 		classes[definition.id] = definition.copy()
 	missions.assign(catalog.missions)
 	factions.assign(catalog.factions)
+	decrees.assign(catalog.decrees)
 	map = MapDef.new()
 	map.id = selected_map.id
 	map.width = selected_map.width
@@ -82,9 +86,11 @@ func copy() -> EconomyContext:
 	catalog.classes.assign(classes)
 	catalog.missions.assign(missions)
 	catalog.factions.assign(factions)
+	catalog.decrees.assign(decrees)
 	var copied: EconomyContext = EconomyContext.new(catalog, map)
 	copied.import_entries.assign(import_entries)
 	copied.import_goods.assign(import_goods)
+	copied.decree_competencies.assign(decree_competencies)
 	return copied
 
 

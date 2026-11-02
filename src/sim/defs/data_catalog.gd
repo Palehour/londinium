@@ -17,6 +17,8 @@ var knobs: Dictionary[StringName, KnobDef] = {}
 var crisis_texts: Dictionary[StringName, Dictionary] = {}
 # The era's factions (issue #84, D-139), in declaration order; none without a factions file.
 var factions: Dictionary[StringName, FactionDef] = {}
+# The era's decrees (issue #71, D-124); none without a decrees file, and none until one is named.
+var decrees: Dictionary[StringName, DecreeDef] = {}
 var categories: Array[StringName] = []
 var base_values: Dictionary[StringName, Variant] = {}
 # Keys read through another key (issue #202): a building priced as another has no numbers of its own.
