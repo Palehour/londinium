@@ -6,7 +6,7 @@ extends ChartTab
 # the buckets and every card reads the one the cursor is on, so the series compare bucket by bucket. The triggers
 # or +/- change the window among the history ranges of data/ui/stats.json. The range and the cursor work like every
 # chart tab (ChartTab): the cursor starts on the newest bucket, goes back to it on a new window, and stops at the
-# edges. Fear and debt have no series yet (#323): their cards say there is no data and read "—".
+# edges. Fear has no series yet (#323): that card says there is no data and reads "—". Debt reads its two series (D-172).
 
 # Per card, in StatsSummary.CARDS order: its title, its no-data line, chart, reading and legend row.
 var titles: Array[Label] = []

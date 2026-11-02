@@ -3,8 +3,8 @@ extends GutTest
 # Summary view controls (issue #314, D-170): one cursor shared by the six cards. The D-pad ←/→ walks the buckets and
 # stops at the edges, LT/RT or +/- change the window among the ranges of data/ui/stats.json, and the cursor starts
 # on the newest bucket when the summary opens or the window changes. Every card reads the cursor's bucket on one
-# line of 16 px, aggregated by the rule its series declares (D-066); fear and debt read "—". Everything is driven
-# with the gamepad alone, at 1280×800.
+# line of 16 px, aggregated by the rule its series declares (D-066). Fear still reads "—"; debt reads its series
+# (D-172). Everything is driven with the gamepad alone, at 1280×800.
 
 const ROOT: String = "user://test_stats_summary_cursor"
 # Seven minutes: 42 closed buckets of 10 s and 7 of a minute. The demo, left alone, is lost at 8 min and its history
@@ -123,10 +123,17 @@ func _expected(simulation: Simulation, entry: Dictionary, bucket: int) -> Packed
 		var def: Dictionary = _def(simulation, StringName("coverage:%s" % good))
 		goods.append(Strings.text(Strings.GOOD_COVERAGE) % [Strings.label(Strings.GOOD_LABELS, good),
 			_at(simulation, def, entry, bucket) * 100.0])
+	var debt: PackedStringArray = []
+	for id: StringName in StatsSummary.DEBT_SERIES:
+		var series: Dictionary = _def(simulation, id)
+		var value: float = _at(simulation, series, entry, bucket)
+		if not is_nan(value):
+			debt.append(Strings.money(roundi(value)))
+	var debt_text: String = " · ".join(debt)
 	return PackedStringArray([
 		none if is_nan(population) else str(roundi(population)),
 		none if is_nan(balance) else Strings.money(roundi(balance)),
-		" · ".join(classes), " · ".join(goods), none, none])
+		" · ".join(classes), " · ".join(goods), none, debt_text if not debt_text.is_empty() else none])
 
 
 func _bucket_count(simulation: Simulation, entry: Dictionary) -> int:
@@ -220,24 +227,23 @@ func test_the_summary_opens_on_its_newest_bucket() -> void:
 	assert_eq(tab.cursor_index(), newest, "Back on the summary, on the newest bucket")
 
 
-func test_fear_and_debt_read_a_dash_and_say_no_data() -> void:
+func test_fear_reads_a_dash_and_says_no_data() -> void:
 	var view: Node2D = await _view()
 	var tab: SummaryTab = await _open_summary(view)
-	for id: StringName in [&"fear", &"debt"]:
-		var index: int = StatsSummary.CARDS.find(id)
-		for locale: String in ["es", "en"]:
-			Strings.set_locale(locale)
-			await get_tree().process_frame
-			assert_eq(tab.readings[index].text, "—", "%s (%s)" % [id, locale])
-			assert_eq(tab.values[index].text, Strings.text(Strings.STATS_SCREEN_NO_DATA))
-			assert_true(tab.values[index].visible)
-			assert_false(tab.charts[index].visible)
+	var index: int = StatsSummary.CARDS.find(&"fear")
+	for locale: String in ["es", "en"]:
+		Strings.set_locale(locale)
+		await get_tree().process_frame
+		assert_eq(tab.readings[index].text, "—", "fear (%s)" % locale)
+		assert_eq(tab.values[index].text, Strings.text(Strings.STATS_SCREEN_NO_DATA))
+		assert_true(tab.values[index].visible)
+		assert_false(tab.charts[index].visible)
 
 
 func test_cards_with_data_hide_the_no_data_line() -> void:
 	var view: Node2D = await _view()
 	var tab: SummaryTab = await _open_summary(view)
-	for id: StringName in [&"population", &"balance", &"satisfaction", &"coverage"]:
+	for id: StringName in [&"population", &"balance", &"satisfaction", &"coverage", &"debt"]:
 		var index: int = StatsSummary.CARDS.find(id)
 		assert_false(tab.values[index].visible, id)
 		assert_true(tab.charts[index].visible, id)

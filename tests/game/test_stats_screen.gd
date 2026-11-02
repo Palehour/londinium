@@ -1,8 +1,8 @@
 extends GutTest
 
 # Statistics screen, summary view (issue #83, D-052): six cards read from the series of #82 (D-066) without adding
-# any; fear and debt have no series yet, so they say there is no data. The screen takes the map's input while it
-# shows: the shoulders change tab and B goes back.
+# any. Fear has no series yet, so it says there is no data. Debt reads the two series of D-172 (#323). The screen
+# takes the map's input while it shows: the shoulders change tab and B goes back.
 
 const ROOT: String = "user://test_stats_screen"
 # Two minutes: twelve closed buckets of the medium level.
@@ -24,6 +24,22 @@ func _simulation(ticks: int) -> Simulation:
 	var session: GameSession = GameSession.new(_catalog, Params.new(_catalog, RoleDef.new()))
 	for tick: int in ticks:
 		session.simulation.tick()
+	return session.simulation
+
+
+# One tick with no loan, then a loan, then the rest of the first medium bucket so both sit in it.
+func _simulation_with_loan() -> Simulation:
+	var params: Params = Params.new(_catalog, RoleDef.new())
+	var session: GameSession = GameSession.new(_catalog, params)
+	var seconds: int = int(params.get_value(&"stats.medium.bucket_seconds"))
+	session.simulation.tick()
+	var cap: int = int(session.simulation.snapshot()["loan"]["cap"])
+	assert_gt(cap, 0, "The demo can take a loan")
+	var command: RequestLoanCommand = RequestLoanCommand.new(1)
+	session.simulation.apply_command(command)
+	for tick: int in seconds - 1:
+		session.simulation.tick()
+	assert_true(command.accepted, str(command.reason))
 	return session.simulation
 
 
@@ -116,11 +132,28 @@ func test_coverage_card_shows_bread_and_beer_in_percent() -> void:
 	assert_almost_eq(card["lines"][0]["values"][-1], _medium(simulation, &"coverage:bread", "mean")[-1] * 100.0, 0.01)
 
 
-func test_fear_and_debt_have_no_series_to_draw() -> void:
-	var cards: Array[Dictionary] = StatsSummary.build(_simulation(TICKS), 600)
-	for id: StringName in [&"fear", &"debt"]:
-		assert_eq(_card(cards, id)["lines"].size(), 0, "%s draws nothing" % id)
-		assert_eq(_card(cards, id)["value"], "")
+func test_fear_has_no_series_to_draw() -> void:
+	var fear: Dictionary = _card(StatsSummary.build(_simulation(TICKS), 600), &"fear")
+	assert_eq(fear["lines"].size(), 0, "Fear draws nothing")
+	assert_eq(fear["value"], "")
+
+
+# The card reads the bucket total of each series (last balance, summed payments), not the average.
+func test_debt_card_reads_the_two_series() -> void:
+	var simulation: Simulation = _simulation_with_loan()
+	var debt: Dictionary = _card(StatsSummary.build(simulation, 600), &"debt")
+	assert_eq(debt["lines"].size(), 2)
+	assert_eq(debt["lines"][0]["label"], Strings.text(&"ui.stats.debt_balance"))
+	assert_eq(debt["lines"][1]["label"], Strings.text(&"ui.stats.debt_payments"))
+	var balance: PackedFloat32Array = _medium(simulation, &"debt_balance", "total")
+	var payments: PackedFloat32Array = _medium(simulation, &"debt_payments", "total")
+	var mean: PackedFloat32Array = _medium(simulation, &"debt_balance", "mean")
+	assert_eq(debt["lines"][0]["values"], balance)
+	assert_eq(debt["lines"][1]["values"], payments)
+	assert_gt(balance[0], 0.0, "The loan's balance is on the card")
+	assert_ne(balance[0], mean[0], "The first bucket is not the average: a tick with no loan sits in it")
+	assert_eq(payments[0], 0.0, "No installment has fallen due")
+	assert_eq(debt["value"], "%s · %s" % [Strings.money(roundi(balance[-1])), Strings.money(roundi(payments[-1]))])
 
 
 func test_summary_window_keeps_only_the_last_span() -> void:

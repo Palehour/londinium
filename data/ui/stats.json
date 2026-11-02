@@ -99,6 +99,8 @@
       "victory_progress:population",
       "victory_progress:artisans",
       "victory_progress:revenue",
+      "debt_balance",
+      "debt_payments",
       "fear",
       "debt"
     ],
@@ -491,6 +493,14 @@
     },
     {
       "color": "#56b4e9",
+      "dash": 13
+    },
+    {
+      "color": "#009e73",
+      "dash": 13
+    },
+    {
+      "color": "#cc79a7",
       "dash": 13
     }
   ]
