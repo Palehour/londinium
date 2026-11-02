@@ -288,6 +288,8 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"jobs_filled": &"ui.stats.jobs_filled",
 	&"defeat_timer": &"ui.stats.defeat_timer",
 	&"victory_progress": &"ui.stats.victory_progress",
+	&"debt_balance": &"ui.stats.debt_balance",
+	&"debt_payments": &"ui.stats.debt_payments",
 }
 # Dimension members the history series name needs and that no other label covers. Wheat, barley and tea reuse
 # ui.good.*. Hunger here is why someone left, not the riot (ui.condition.hunger).

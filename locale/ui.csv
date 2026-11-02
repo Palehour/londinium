@@ -277,6 +277,8 @@ ui.stats.demotions,Descensos,Demotions
 ui.stats.jobs_filled,Puestos cubiertos,Jobs filled
 ui.stats.defeat_timer,Temporizador de derrota,Defeat timer
 ui.stats.victory_progress,Progreso del objetivo,Objective progress
+ui.stats.debt_balance,Saldo adeudado,Amount owed
+ui.stats.debt_payments,Interés y cuota,Interest and installment
 ui.stats.source.tax,Impuestos,Tax
 ui.stats.source.refund,Reembolso,Refund
 ui.stats.source.upkeep,Mantenimiento,Upkeep

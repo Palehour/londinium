@@ -2,12 +2,15 @@ class_name StatsSummary
 extends RefCounted
 
 # The six cards of the summary view (issue #83, D-052). Every card reads series the history already keeps (#82,
-# D-066) in its medium level and adds none to the simulation. Fear has no series until #88 and debt none until the
-# loans of #72, so those two cards come out without lines and the screen says there is no data. The history view
-# draws the same metrics over other levels and spans (StatsTimeline).
+# D-066) and adds none to the simulation. Debt reads the two series of D-172 (#323): the balance keeps the last
+# value of the bucket and the payments add up. Fear has no series until there is a fear model, so that card comes
+# out without lines and the screen says there is no data. The history view draws the same metrics over other levels
+# and spans (StatsTimeline).
 
 const CARDS: Array[StringName] = [&"population", &"balance", &"satisfaction", &"coverage", &"fear", &"debt"]
 const GOODS: Array[StringName] = [&"bread", &"beer"]
+# Balance first, then what was paid (D-172). Both are pence; the field is the bucket total (last value, or the sum).
+const DEBT_SERIES: Array[StringName] = [&"debt_balance", &"debt_payments"]
 const SECONDS_PER_MINUTE: float = 60.0
 const PERCENT: float = 100.0
 
@@ -39,6 +42,8 @@ static func card(simulation: Simulation, id: StringName, tier: StringName, span:
 			lines = _classes(simulation, defs, tier, span)
 		&"coverage":
 			lines = _coverage(simulation, tier, span)
+		&"debt":
+			lines = _debt(simulation, defs, tier, span)
 	result["lines"] = lines
 	result["value"] = reading(id, lines, -1)
 	return result
@@ -61,6 +66,8 @@ static func reading(id: StringName, lines: Array[Dictionary], index: int) -> Str
 			return str(roundi(values[0]))
 		&"balance":
 			return Strings.money(roundi(values[0]))
+		&"debt":
+			return _money_lines(lines, values)
 	var key: StringName = Strings.STATS_SCREEN_CLASS_VALUE if id == &"satisfaction" else Strings.GOOD_COVERAGE
 	var parts: PackedStringArray = []
 	for line: int in lines.size():
@@ -88,6 +95,34 @@ static func _classes(simulation: Simulation, defs: Array[Dictionary], tier: Stri
 		var label: String = Strings.label(Strings.CLASS_LABELS, def["dimensions"][&"class"])
 		lines.append({"label": label, "values": window(simulation.stats_series(def["id"], tier), "mean", span)})
 	return lines
+
+
+static func _debt(simulation: Simulation, defs: Array[Dictionary], tier: StringName, span: int) -> Array[Dictionary]:
+	var lines: Array[Dictionary] = []
+	for id: StringName in DEBT_SERIES:
+		var series: Dictionary = simulation.stats_series(id, tier)
+		if series.is_empty():
+			continue
+		lines.append({"label": _label(defs, id), "values": window(series, "total", span)})
+	return lines
+
+
+static func _label(defs: Array[Dictionary], id: StringName) -> String:
+	for def: Dictionary in defs:
+		if def["id"] == id:
+			return Strings.text(def["label_key"])
+	return ""
+
+
+# Money only, in line order (balance, then payments). The legend names them; both amounts on one line of 16 px
+# would not fit the card at 1280 (D-170) once the figures are more than a few pence.
+static func _money_lines(lines: Array[Dictionary], values: PackedFloat32Array) -> String:
+	var parts: PackedStringArray = []
+	for line: int in lines.size():
+		if is_nan(values[line]):
+			continue
+		parts.append(Strings.money(roundi(values[line])))
+	return " · ".join(parts)
 
 
 static func _coverage(simulation: Simulation, tier: StringName, span: int) -> Array[Dictionary]:

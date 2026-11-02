@@ -483,8 +483,9 @@ go back. Its look (palette, dash of each stroke, 16 px text, summary window, his
 `data/ui/stats.json`. The summary tab (`SummaryTab`, built by `StatsSummary`) has six cards with a small chart and a
 one-line reading each. One cursor is shared by all six (D-170): the D-pad or arrows ←/→ walk the buckets and every
 card reads the one the cursor is on, the triggers or +/- change the window among the history ranges, and the cursor
-starts on the newest bucket when the summary opens or the window changes. A card with no series (fear and debt, #323)
-says there is no data and reads "—". The history tab (`TimelineTab`, built by `StatsTimeline`) draws one metric over 10 min or 1 h of
+starts on the newest bucket when the summary opens or the window changes. Fear has no series (#323), so that card
+says there is no data and reads "—". Debt reads `debt_balance` (last value of the bucket) and `debt_payments`
+(summed) from D-172. The history tab (`TimelineTab`, built by `StatsTimeline`) draws one metric over 10 min or 1 h of
 the medium level, or the whole chapter's minute level, with a marker on each bucket where the cause log
 (`Simulation.stats_events`) has a policy change, a defeat warning or defeat, or a stage completed. The D-pad or arrows
 walk the buckets and change metric, and the triggers or +/- change range. The classes tab (`ClassesTab`, built by

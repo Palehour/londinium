@@ -26,6 +26,7 @@ static func build(params: Params, context: EconomyContext, victory_stages: Array
 	_people(found, context)
 	_buildings(found, params, context)
 	_outcomes(found, victory_stages)
+	_debt(found)
 	return found
 
 
@@ -255,6 +256,24 @@ static func victory_progress(state: EconomyState, id: StringName, mean: bool) ->
 	if entry.is_empty():
 		return 0.0
 	return float(entry.get("mean", 0.0)) if mean else float(entry.get("streak_minutes", 0))
+
+
+# Debt of the loans (issue #323, D-172). Read from the loan already on the state; nothing here changes how it is charged.
+# No loan is nothing owed. What was paid this tick is the counter LoanSystem already writes (installment, receiver or
+# early payoff): the installment is interest plus principal, and there is no separate counter to split them.
+static func _debt(found: Array[SeriesDef]) -> void:
+	found.append(SeriesDef.create(&"debt_balance", &"pence", SeriesDef.AGGREGATION_LAST, {},
+		func(state: EconomyState) -> float: return debt_balance(state)))
+	found.append(SeriesDef.create(&"debt_payments", &"pence", SeriesDef.AGGREGATION_SUM, {},
+		func(state: EconomyState) -> float: return debt_payments(state)))
+
+
+static func debt_balance(state: EconomyState) -> float:
+	return float(state.loan.balance()) if state.loan != null else 0.0
+
+
+static func debt_payments(state: EconomyState) -> float:
+	return float(state.loan_paid_tick)
 
 
 static func member_of(def: ClassDef) -> StringName:
