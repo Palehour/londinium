@@ -186,6 +186,11 @@ func get_projected_delta_per_minute(id: StringName) -> float:
 	return MoneySystem.projected_delta_per_minute(_state, _params, _context, id)
 
 
+# A read-only loan quote (D-174). Does not open a loan and does not change the state.
+func loan_quote(amount: int) -> Dictionary:
+	return LoanSystem.quote(_state, _params, _context, amount)
+
+
 func get_building_unavailable_reason(id: StringName) -> StringName:
 	if _context == null:
 		return &"unknown_building"
@@ -240,6 +245,8 @@ func tick() -> void:
 		LoanSystem.tick(_state, _params)
 		DecreeSystem.tick(_state, _params, _context)
 		FactionSystem.tick(_state, _params, _context, _coverages())
+		# After the reserve moves, so the snapshot's installment matches the rate the panel just read (D-174).
+		LoanSystem.follow_legitimacy(_state, _params)
 		MissionSystem.tick(_state, _params, _context, _tick_count)
 		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context), _context)
 		if not _state.defeat_causes.is_empty():

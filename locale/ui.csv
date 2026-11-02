@@ -27,6 +27,12 @@ ui.loan.maximum,Máximo,Maximum
 ui.loan.installment,Cuota: %s,Installment: %s
 ui.loan.balance,Saldo: %s,Balance: %s
 ui.loan.cancel,Cancelar por %s,Pay off for %s
+ui.loan.quote_rate,Tasa: %.1f %%,Rate: %.1f %%
+ui.loan.quote_interest,Interés: %s,Interest: %s
+ui.loan.quote_term,Plazo: %d cuotas,Term: %d installments
+ui.loan.quote_surcharge,Recargo por cancelar antes: %s,Early payoff surcharge: %s
+ui.loan.quote_share,Cuota: %s · %.1f %% de las tasas,Installment: %s · %.1f %% of the rates
+ui.loan.quote_risk,Cada cuota atrasada resta %d a la calificación. Pedir no la cambia. La tasa y la cuota pueden cambiar.,Each late installment subtracts %d from the rating. Asking does not change it. The rate and the installment can change.
 ui.wheat_purchases,Comprar trigo automáticamente,Buy wheat automatically
 ui.accumulate_label,Acumular trigo hasta el precio,Stockpile wheat until the price
 ui.max_price_label,Precio máximo de compra,Maximum purchase price
