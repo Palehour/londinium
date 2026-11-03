@@ -75,7 +75,7 @@ func _ticks(state: EconomyState, count: int, taxes: int = 0) -> void:
 
 func test_the_values_are_those_of_d_138() -> void:
 	var expected: Dictionary[StringName, float] = {&"loan.cap_multiple": 20, &"loan.base_interest": 0.10,
-		&"loan.rate_by_rating": 0.10, &"loan.sanction_min_legitimacy": 30, &"loan.rate_full_legitimacy": 70,
+		&"loan.rate_by_rating": 0.10, &"loan.rate_floor": 0.20, &"loan.sanction_min_legitimacy": 30, &"loan.rate_full_legitimacy": 70,
 		&"loan.rating_arrears_penalty": 10, &"loan.term_installments": 10, &"loan.installment_interval_s": 300,
 		&"loan.early_payoff_surcharge": 0.05, &"loan.early_payoff_legitimacy_gain": 5, &"loan.default_after_s": 600,
 		&"loan.receiver_window_s": 1500}
@@ -151,6 +151,117 @@ func test_a_lower_legitimacy_makes_the_loan_dearer_and_then_refuses_it() -> void
 	assert_false(command.accepted)
 	assert_eq(command.reason, &"loan_not_sanctioned")
 	assert_eq(refused.to_dict(), before, "Refused without changes")
+
+
+# Issue #334 (D-174): a quote uses the same formulas as opening a loan and does not touch the state.
+func test_a_quote_matches_the_loan_it_would_open_and_changes_nothing() -> void:
+	var state: EconomyState = _state(100)
+	state.legitimacy = 50.0
+	var amount: int = _cap()
+	var before: Dictionary = state.to_dict()
+	var quoted: Dictionary = LoanSystem.quote(state, _params, _strip, amount)
+	assert_eq(state.to_dict(), before, "A quote does not open the loan")
+	assert_false(quoted["refused"])
+	var rate: float = LoanSystem.interest_rate(_params, 50.0, 0)
+	assert_almost_eq(float(quoted["rate"]), rate, 0.000001)
+	var interest: int = floori(amount * rate)
+	assert_eq(int(quoted["interest"]), interest)
+	assert_eq(int(quoted["term_installments"]), int(_value(&"loan.term_installments")))
+	assert_eq(int(quoted["arrears_penalty"]), int(_value(&"loan.rating_arrears_penalty")))
+	var opened: EconomyState = _state(100)
+	opened.legitimacy = 50.0
+	assert_true(_request(opened, amount).accepted)
+	assert_eq(opened.loan.total - opened.loan.principal, interest)
+	assert_eq(int(quoted["installment"]), opened.loan.installment(0))
+	assert_eq(int(quoted["early_surcharge"]), floori(opened.loan.balance() * _value(&"loan.early_payoff_surcharge")))
+	assert_eq(int(quoted["payoff_cost"]), LoanSystem.payoff_cost(opened.loan, _params))
+	var income: float = MoneySystem.tax_per_minute(state, _params, _strip)
+	var per_minute: float = float(quoted["installment"]) * float(SimTime.TICKS_PER_MINUTE) \
+			/ _value(&"loan.installment_interval_s")
+	assert_gt(income, 0.0)
+	assert_almost_eq(float(quoted["share_of_r"]), per_minute / income, 0.000001)
+
+
+func test_a_quote_below_the_sanction_is_a_refusal() -> void:
+	var state: EconomyState = _state(100)
+	state.legitimacy = _value(&"loan.sanction_min_legitimacy") - 1.0
+	var before: Dictionary = state.to_dict()
+	var quoted: Dictionary = LoanSystem.quote(state, _params, _strip, _cap())
+	assert_eq(state.to_dict(), before)
+	assert_true(quoted["refused"])
+	assert_eq(float(quoted["rate"]), LoanSystem.REFUSED)
+	assert_eq(int(quoted["installment"]), 0)
+	assert_eq(int(quoted["interest"]), 0)
+	assert_eq(float(quoted["share_of_r"]), -1.0, "No share of R when the Board refuses")
+
+
+func test_a_quote_with_no_rates_income_has_no_share_of_r() -> void:
+	var state: EconomyState = _state(100)
+	state.tax_rate = 0.0
+	var quoted: Dictionary = LoanSystem.quote(state, _params, _strip, 1)
+	assert_false(quoted["refused"], "No legitimacy, so the base rate; the empty R is separate")
+	assert_eq(float(quoted["share_of_r"]), -1.0)
+
+
+# D-174: the rate is not frozen at open. A rise in legitimacy cheapens the same loan.
+func test_the_rate_follows_legitimacy_for_the_life_of_the_loan() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	var amount: int = _cap()
+	assert_true(_request(state, amount).accepted)
+	var dear: int = amount + floori(amount * LoanSystem.interest_rate(_params, 50.0, 0))
+	assert_eq(state.loan.total, dear)
+	state.legitimacy = 70.0
+	LoanSystem.follow_legitimacy(state, _params)
+	var cheap: int = amount + floori(amount * LoanSystem.interest_rate(_params, 70.0, 0))
+	assert_lt(cheap, dear)
+	assert_eq(state.loan.total, cheap, "The same loan gets cheaper when legitimacy rises")
+	assert_not_null(state.loan)
+	var quoted: Dictionary = LoanSystem.quote(state, _params, _strip, amount)
+	assert_eq(int(quoted["interest"]), cheap - amount)
+	assert_eq(int(quoted["installment"]), state.loan.installment(0))
+	assert_eq(state.loan.due_installment(), state.loan.balance() / state.loan.installments)
+
+
+# Cristian, 2026-11-02: below the sanction the open loan keeps the dearest rate and is not cancelled.
+func test_an_open_loan_below_the_sanction_keeps_the_dearest_rate() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	var amount: int = _cap()
+	assert_true(_request(state, amount).accepted)
+	state.legitimacy = 20.0
+	state.loan_late_installments = 3
+	LoanSystem.follow_legitimacy(state, _params)
+	assert_not_null(state.loan, "It is not cancelled")
+	var minimum: float = _value(&"loan.sanction_min_legitimacy")
+	var dearest: float = LoanSystem.interest_rate(_params, minimum, 0)
+	assert_eq(LoanSystem.interest_rate(_params, 20.0, 3), LoanSystem.REFUSED, "A new ask is still refused")
+	assert_almost_eq(LoanSystem.open_rate(_params, 20.0, 3), dearest, 0.000001)
+	assert_eq(state.loan.total, amount + floori(amount * dearest))
+
+
+# A drop large enough that what was already paid covers the new total closes the loan. No refund.
+func test_a_rate_drop_that_covers_the_debt_closes_the_loan_without_a_refund() -> void:
+	_params = _with({&"loan.rate_by_rating": 0.90})
+	var state: EconomyState = _state(0)
+	state.legitimacy = _value(&"loan.sanction_min_legitimacy")
+	var amount: int = 500
+	assert_lte(amount, _cap(), "Inside the cap, so the refusal is not the point of this test")
+	assert_true(_request(state, amount).accepted)
+	var dear: float = LoanSystem.interest_rate(_params, state.legitimacy, 0)
+	var installment: int = state.loan.installment(0)
+	assert_eq(installment, (amount + floori(amount * dear)) / int(_value(&"loan.term_installments")))
+	# Six of those cover more than the base-rate total (1000 + floor(1000 x 0.10) = 1100).
+	state.money = installment * 6
+	for index: int in range(6):
+		_ticks(state, int(_value(&"loan.installment_interval_s")))
+	assert_eq(state.loan.paid, installment * 6)
+	assert_gte(state.loan.paid, amount + floori(amount * _value(&"loan.base_interest")))
+	var money: int = state.money
+	state.legitimacy = _value(&"loan.rate_full_legitimacy")
+	LoanSystem.follow_legitimacy(state, _params)
+	assert_null(state.loan, "Paid already covers the cheaper total")
+	assert_eq(state.money, money, "No refund")
 
 
 func test_the_game_quotes_the_rate_of_its_reserve() -> void:
@@ -426,7 +537,9 @@ func test_the_game_stops_on_a_bankruptcy_with_a_loan_and_only_that_one() -> void
 	sim.apply_command(SetTaxCommand.new(0.0))
 	sim.tick()
 	assert_true(command.accepted, str(command.reason))
-	assert_eq(_loan(sim)["total"], cap + floori(cap * rate), "Charged at the sanctioned rate")
+	# The tick's factions move the reserve, so the total follows that rate, not the one quoted before the tick (D-174).
+	# By hand from loan.json: reserve ~50 -> 0.10 + 0.10 x (70 - 50) / (70 - 30) = 0.15.
+	assert_almost_eq(float(_loan(sim)["total"]), cap * 1.15, cap * 0.001, "Repriced from the reserve after the tick")
 	# Taken on tick 2, so the ninth installment falls due on tick 2701 and the receiver comes 600 s after it.
 	var receiver_in: int = 2701 + 600
 	_advance(sim, 2, receiver_in + 1500 - 1)
@@ -434,3 +547,43 @@ func test_the_game_stops_on_a_bankruptcy_with_a_loan_and_only_that_one() -> void
 	assert_true(sim.snapshot()["defeat"]["causes"].is_empty())
 	sim.tick()
 	assert_eq(sim.snapshot()["defeat"]["causes"], [LoanSystem.DEFEAT_CAUSE])
+
+
+# D-174: below the sanction minimum the open loan's rate never drops under the floor, even if the formula would.
+func test_below_the_sanction_the_rate_never_drops_under_the_floor() -> void:
+	_params = _with({&"loan.rate_by_rating": 0.01})
+	var floor_rate: float = _value(&"loan.rate_floor")
+	for legitimacy: float in [0.0, 10.0, 29.0]:
+		assert_gte(LoanSystem.open_rate(_params, legitimacy, 0), floor_rate, str(legitimacy))
+
+
+# D-174: from the sanction minimum up, the rate is the live one, with no floor.
+func test_from_the_sanction_up_the_rate_is_the_live_one() -> void:
+	_params = _with({&"loan.rate_by_rating": 0.01})
+	var live: float = LoanSystem.interest_rate(_params, 30.0, 0)
+	assert_lt(live, _value(&"loan.rate_floor"))
+	assert_almost_eq(LoanSystem.open_rate(_params, 30.0, 0), live, 0.000001)
+	assert_almost_eq(LoanSystem.open_rate(_params, 100.0, 0), _value(&"loan.base_interest"), 0.000001)
+
+
+# Hand-computed from data/economy/loan.json (D-138): base 0.10, +0.10 across 70 -> 30, floor 0.20, 10 installments.
+# Legitimacy 50: 0.10 + 0.10 x (70 - 50) / 40 = 0.15, so 1000 owes 1000 + 150 = 1150 in installments of 115.
+func test_a_loan_of_1000_at_legitimacy_50_costs_1150_in_10_installments_of_115() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	assert_almost_eq(LoanSystem.interest_rate(_params, 50.0, 0), 0.15, 0.000001)
+	LoanSystem.open(state, _params, 1000, 0.15)
+	assert_eq(state.loan.total, 1150)
+	assert_eq(state.loan.installment(0), 115)
+
+
+# Legitimacy 20 (< 30): an open loan pays exactly the floor 0.20, so 1000 owes 1200 and follows no lower.
+func test_an_open_loan_at_legitimacy_20_is_repriced_to_exactly_0_20() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	LoanSystem.open(state, _params, 1000, 0.15)
+	state.legitimacy = 20.0
+	LoanSystem.follow_legitimacy(state, _params)
+	assert_almost_eq(LoanSystem.open_rate(_params, 20.0, 0), 0.20, 0.000001)
+	assert_eq(state.loan.total, 1200)
+	assert_eq(state.loan.installment(0), 120)

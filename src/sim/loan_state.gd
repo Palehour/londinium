@@ -21,6 +21,17 @@ func balance() -> int:
 	return total - paid
 
 
+# What falls due next: the remaining balance split over the installments still to pay. The last of those takes the
+# remainder, so a rate change (D-174) does not leave a penny unpaid or overpaid.
+func due_installment() -> int:
+	var left: int = installments - installments_paid
+	if left <= 0:
+		return 0
+	if left == 1:
+		return balance()
+	return balance() / left
+
+
 # Whole pence, so the last installment takes the remainder and they all add up to the total exactly.
 func installment(index: int) -> int:
 	var base: int = total / installments

@@ -85,7 +85,7 @@ static func rates_spending_per_minute(state: EconomyState, params: Params, incom
 	if loan == null:
 		return decree_upkeep
 	var interval: float = float(params.get_value(&"loan.installment_interval_s"))
-	return loan.installment(loan.installments_paid) * SimTime.TICKS_PER_MINUTE / interval + decree_upkeep
+	return loan.due_installment() * SimTime.TICKS_PER_MINUTE / interval + decree_upkeep
 
 
 # The coverage of every faction with a SERVICE_COVERAGE engine, by id. It only changes with the layout (the buildings

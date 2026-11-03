@@ -234,13 +234,18 @@ londinium/
    the upkeep in whole pence with the fraction carried, outside the administration multiplier (D-063).
    Then the loan (`LoanSystem`, issue #72). `RequestLoanCommand` opens one (one at a time, up to `loan.cap_multiple` × R,
    R = `MoneySystem.tax_per_minute`) with total = principal + interest in whole pence, paid in `loan.term_installments`
-   installments (the last takes the remainder) every `loan.installment_interval_s`. An installment the treasury cannot
+   installments (the last of those still due takes the remainder of the balance) every `loan.installment_interval_s`.
+   The rate is not frozen at open (D-174): after the factions move the reserve, `follow_legitimacy` reprices the
+   remaining debt from the current legitimacy and the late installments. A rating under the sanction minimum refuses
+   a new ask, but an open loan keeps the rate at that minimum and is not cancelled. `LoanSystem.quote` is read-only
+   and uses the same formulas, so the panel can show the installment, the interest, the term, the early surcharge and
+   the installment as a share of R before the player asks. An installment the treasury cannot
    cover stays overdue and is paid, oldest first, as soon as it can; after `loan.default_after_s` in arrears the
    receiver takes every tax of the tick until the debt is paid, or after `loan.receiver_window_s` the game is lost
    (`loan_bankruptcy`, D-128). `RepayLoanEarlyCommand` pays the balance plus `loan.early_payoff_surcharge` (D-129).
    While there is a loan the bankruptcy of step 10 does not run (D-013, D-131). The sanction and the rate read the
    legitimacy reserve of #84 (`LoanSystem.legitimacy_of`, D-139 point 3): from `loan.base_interest` at
-   `loan.rate_full_legitimacy` up to + `loan.rate_by_rating` at `loan.sanction_min_legitimacy`, and refused below it; a
+   `loan.rate_full_legitimacy` up to + `loan.rate_by_rating` at `loan.sanction_min_legitimacy`, and refused below it for a new loan (an open one pays at least `loan.rate_floor`); a
    state without factions has no legitimacy and gets the base rate.
    Then the decrees (`DecreeSystem`, issue #71, D-124, D-125): an enact costs `factions.decree_legitimacy_cost` times the weight of the factions against, a revoke times the weight of those in favor, then `FactionSystem.cost` applies the low-legitimacy multiplier. Upkeep (`decree.<id>.upkeep_per_min`) is charged outside the administration multiplier and joins `rates_spending_per_minute`, which the faction tick reads. While the receiver holds the rates, active decrees lapse that tick without spending legitimacy.
    Then the factions (`FactionSystem`, issue #84, D-116, D-139): each faction's support moves to its engine's target at
@@ -472,9 +477,11 @@ saves load as 0).
 first visible one; the d-pad moves the focus, left and right step sliders and numbers, and B, Menu or a click on the
 map call `leave_focus()`. View pauses in either mode. With the mouse, buttons never keep the focus, so the map's keys
 keep working after a click. The saves and mods menus give the focus back to the same button after rebuilding. `LoanPanel`
-(`src/ui/loan_panel/`, issue #281) sits in that same panel, after the tax row. It only reads `snapshot()["loan"]`
-and sends `RequestLoanCommand` or `RepayLoanEarlyCommand`. The amount steps by one penny up to `cap`, with a
-Maximum button; the installment, the balance and the early-payoff cost appear once the loan is open. Its text
+(`src/ui/loan_panel/`, issue #281, quote in #334) sits in that same panel, after the tax row. It only reads
+`snapshot()["loan"]` and `GameSession.loan_quote`, and sends `RequestLoanCommand` or `RepayLoanEarlyCommand`.
+The amount steps by one penny up to `cap`, with a Maximum button. Before asking, the quote (installment, interest,
+term, early surcharge, share of R, and the arrears warning) refreshes when the amount changes and on each tick.
+The installment, the balance and the early-payoff cost appear once the loan is open. Its text
 size is `font_size` in `data/ui/stats.json`, not the map's. The
 help in the header switches to the gamepad's buttons (`ui.help_gamepad`) while a gamepad is in use. The window opens
 at 1280×800, the Steam Deck's resolution.

@@ -10,6 +10,12 @@ const MAXIMUM_KEY: StringName = &"ui.loan.maximum"
 const INSTALLMENT_KEY: StringName = &"ui.loan.installment"
 const BALANCE_KEY: StringName = &"ui.loan.balance"
 const CANCEL_KEY: StringName = &"ui.loan.cancel"
+const QUOTE_RATE_KEY: StringName = &"ui.loan.quote_rate"
+const QUOTE_INTEREST_KEY: StringName = &"ui.loan.quote_interest"
+const QUOTE_TERM_KEY: StringName = &"ui.loan.quote_term"
+const QUOTE_SURCHARGE_KEY: StringName = &"ui.loan.quote_surcharge"
+const QUOTE_SHARE_KEY: StringName = &"ui.loan.quote_share"
+const QUOTE_RISK_KEY: StringName = &"ui.loan.quote_risk"
 
 
 var _catalog: DataCatalog
@@ -198,6 +204,55 @@ func _assert_unsanctioned() -> void:
 	assert_true(request.disabled)
 	assert_eq(reason.text, Strings.reason(&"loan_not_sanctioned"))
 	assert_false(snapshot["loan"]["active"])
+
+
+# Issue #334: the quote is the simulation's, and it follows the amount before the next tick and the snapshot after it.
+func test_the_quote_follows_the_amount_and_each_tick() -> void:
+	if not _has_loan_section():
+		return
+	_tick()
+	var cap: int = int(_amount().max_value)
+	assert_gt(cap, 1, "Two amounts, so the quote can change")
+	_amount().value = 1.0
+	_assert_quote(1)
+	_amount().value = float(cap)
+	_assert_quote(cap)
+	assert_ne(_session.loan_quote(1)["installment"], _session.loan_quote(cap)["installment"])
+	assert_false(_session.get_snapshot()["loan"]["active"], "Changing the amount does not ask")
+	_tick()
+	_assert_quote(cap)
+	assert_false(_label("QuoteRisk").text.begins_with("ui."))
+
+
+func test_a_refused_quote_hides_the_numbers() -> void:
+	var session: GameSession = _new_session([Modifier.new(&"factions.legitimacy_start", &"set", 20.0)])
+	session.simulation.tick()
+	var panel: StatsPanel = _new_panel(session)
+	panel.update_snapshot(session.get_snapshot())
+	var loan: Node = panel.find_child("LoanPanel", true, false)
+	assert_not_null(loan)
+	if loan == null:
+		return
+	var risk: Label = loan.find_child("QuoteRisk", true, false) as Label
+	var reason: Label = loan.find_child("Reason", true, false) as Label
+	assert_not_null(risk)
+	assert_false(risk.visible, "A refusal is not a quote")
+	assert_eq(reason.text, Strings.reason(&"loan_not_sanctioned"))
+
+
+func _assert_quote(pence: int) -> void:
+	var quoted: Dictionary = _session.loan_quote(pence)
+	assert_false(quoted["refused"])
+	assert_gte(float(quoted["share_of_r"]), 0.0)
+	assert_eq(_label("QuoteRate").text, Strings.text(QUOTE_RATE_KEY) % (float(quoted["rate"]) * 100.0))
+	assert_eq(_label("QuoteInterest").text, Strings.text(QUOTE_INTEREST_KEY) % Strings.money(int(quoted["interest"])))
+	assert_eq(_label("QuoteTerm").text, Strings.text(QUOTE_TERM_KEY) % int(quoted["term_installments"]))
+	assert_eq(_label("QuoteSurcharge").text, Strings.text(QUOTE_SURCHARGE_KEY) % Strings.money(int(quoted["early_surcharge"])))
+	assert_eq(_label("QuoteShare").text, Strings.text(QUOTE_SHARE_KEY) % [Strings.money(int(quoted["installment"])),
+			float(quoted["share_of_r"]) * 100.0])
+	assert_eq(_label("QuoteRisk").text, Strings.text(QUOTE_RISK_KEY) % int(quoted["arrears_penalty"]))
+	assert_true(_label("QuoteRisk").visible)
+	assert_false(_label("QuoteRate").text.begins_with("ui."))
 
 
 # Criterion 3: d-pad reaches the ask, the maximum and the amount, at the Steam Deck size, in both languages.
