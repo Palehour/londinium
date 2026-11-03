@@ -538,9 +538,8 @@ func test_the_game_stops_on_a_bankruptcy_with_a_loan_and_only_that_one() -> void
 	sim.tick()
 	assert_true(command.accepted, str(command.reason))
 	# The tick's factions move the reserve, so the total follows that rate, not the one quoted before the tick (D-174).
-	var applied: float = LoanSystem.open_rate(_game_params, float(sim.snapshot()["factions"]["legitimacy"]),
-			int(_loan(sim)["late_installments"]))
-	assert_eq(_loan(sim)["total"], cap + floori(cap * applied), "Repriced from the reserve after the tick")
+	# By hand from loan.json: reserve ~50 -> 0.10 + 0.10 x (70 - 50) / (70 - 30) = 0.15.
+	assert_almost_eq(float(_loan(sim)["total"]), cap * 1.15, cap * 0.001, "Repriced from the reserve after the tick")
 	# Taken on tick 2, so the ninth installment falls due on tick 2701 and the receiver comes 600 s after it.
 	var receiver_in: int = 2701 + 600
 	_advance(sim, 2, receiver_in + 1500 - 1)
@@ -565,3 +564,26 @@ func test_from_the_sanction_up_the_rate_is_the_live_one() -> void:
 	assert_lt(live, _value(&"loan.rate_floor"))
 	assert_almost_eq(LoanSystem.open_rate(_params, 30.0, 0), live, 0.000001)
 	assert_almost_eq(LoanSystem.open_rate(_params, 100.0, 0), _value(&"loan.base_interest"), 0.000001)
+
+
+# Hand-computed from data/economy/loan.json (D-138): base 0.10, +0.10 across 70 -> 30, floor 0.20, 10 installments.
+# Legitimacy 50: 0.10 + 0.10 x (70 - 50) / 40 = 0.15, so 1000 owes 1000 + 150 = 1150 in installments of 115.
+func test_a_loan_of_1000_at_legitimacy_50_costs_1150_in_10_installments_of_115() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	assert_almost_eq(LoanSystem.interest_rate(_params, 50.0, 0), 0.15, 0.000001)
+	LoanSystem.open(state, _params, 1000, 0.15)
+	assert_eq(state.loan.total, 1150)
+	assert_eq(state.loan.installment(0), 115)
+
+
+# Legitimacy 20 (< 30): an open loan pays exactly the floor 0.20, so 1000 owes 1200 and follows no lower.
+func test_an_open_loan_at_legitimacy_20_is_repriced_to_exactly_0_20() -> void:
+	var state: EconomyState = _state(0)
+	state.legitimacy = 50.0
+	LoanSystem.open(state, _params, 1000, 0.15)
+	state.legitimacy = 20.0
+	LoanSystem.follow_legitimacy(state, _params)
+	assert_almost_eq(LoanSystem.open_rate(_params, 20.0, 0), 0.20, 0.000001)
+	assert_eq(state.loan.total, 1200)
+	assert_eq(state.loan.installment(0), 120)
