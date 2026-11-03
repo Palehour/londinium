@@ -118,3 +118,13 @@ func test_every_card_text_is_in_the_csv() -> void:
 	for card: ArchiveCard in _catalog().cards:
 		for key: StringName in ArchiveCatalog.text_keys(card):
 			assert_true(keys.has(key), String(key))
+
+
+# Issue #341: a card must not ship still opening with Chronicler's placeholder.
+func test_no_archive_text_starts_with_pending_from_chronicler() -> void:
+	for locale: String in ["es", "en"]:
+		Strings.set_locale(locale)
+		for card: ArchiveCard in _catalog().cards:
+			for key: StringName in ArchiveCatalog.text_keys(card):
+				var value: String = Strings.text(key)
+				assert_false(value.begins_with("Pendiente de Chronicler"), "%s %s" % [locale, key])
