@@ -118,3 +118,18 @@ func test_every_card_text_is_in_the_csv() -> void:
 	for card: ArchiveCard in _catalog().cards:
 		for key: StringName in ArchiveCatalog.text_keys(card):
 			assert_true(keys.has(key), String(key))
+
+
+# Issue #341: a card must not ship with Chronicler's placeholder, brackets included.
+func test_no_archive_text_contains_the_chronicler_placeholder() -> void:
+	var markers: Dictionary[String, String] = {
+		"es": "[Pendiente de Chronicler]",
+		"en": "[Pending from Chronicler]",
+	}
+	for locale: String in markers:
+		Strings.set_locale(locale)
+		var marker: String = markers[locale]
+		for card: ArchiveCard in _catalog().cards:
+			for key: StringName in ArchiveCatalog.text_keys(card):
+				var value: String = Strings.text(key)
+				assert_false(value.contains(marker), "%s %s" % [locale, key])
