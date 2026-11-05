@@ -325,7 +325,11 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			# The street piece is structure, read above.
 			if section == "roads":
 				numeric.erase("footprint")
+			elif section == "defeat":
+				numeric.erase("ui")
 			_numbers(numeric, ECONOMY_SCHEMAS[section], path, section, catalog)
+			if section == "defeat" and raw.has("ui"):
+				_load_ui_defeat(raw["ui"], path, catalog)
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
 	_check_grid_maps(catalog)
@@ -434,10 +438,11 @@ func _numbers(raw: Variant, schema: Dictionary, path: String,
 	for field: String in schema:
 		var location: String = "%s.%s" % [path, field]
 		var key: String = "%s.%s" % [prefix, field]
-		if schema[field] is Dictionary:
-			_numbers(raw[field], schema[field], location, key, catalog)
+		var knd: Variant = schema[field]
+		if knd is Dictionary:
+			_numbers(raw[field], knd, location, key, catalog)
 		else:
-			_number(raw[field], schema[field], location, key, catalog)
+			_number(raw[field], String(knd), location, key, catalog)
 
 
 func _number(raw: Variant, kind: String, path: String, key: String, catalog: DataCatalog) -> bool:
@@ -496,6 +501,45 @@ func _boolean(raw: Variant, path: String, key: String, catalog: DataCatalog) -> 
 	catalog.base_values[StringName(key)] = raw
 	catalog.boolean_keys.append(StringName(key))
 	return true
+
+
+# _load_ui_defeat for defeat ui in economy/defeat.json per roads pattern (no generic object in _numbers).
+# _object with mandatory ui/defeat/critical_seconds + 3 conds.
+# null or 'sin dato' -> null; real >=0 via _number (0 valid).
+# sound: null/'sin dato'->null, non-empty string valid, else error.
+# _comment conserved and explicitly ignored per user (not removed).
+func _load_ui_defeat(raw: Dictionary, path: String, catalog: DataCatalog) -> void:
+	var ui_fields: Array[String] = ["defeat"]
+	if not _object(raw, ui_fields, path + ".ui"):
+		return
+	var defeat_raw: Variant = raw.get("defeat", {})
+	var defeat_fields: Array[String] = ["critical_seconds", "critical_sound", "_comment"]
+	if not _object(defeat_raw, defeat_fields, path + ".ui.defeat"):
+		return
+	var cs_raw: Variant = defeat_raw.get("critical_seconds", {})
+	var cs_fields: Array[String] = ["bankruptcy", "hunger", "depopulation"]
+	if not _object(cs_raw, cs_fields, path + ".ui.defeat.critical_seconds"):
+		return
+	for cond: String in cs_fields:
+		var v: Variant = cs_raw[cond]
+		var ukey: StringName = StringName("ui.defeat.critical_seconds." + cond)
+		if v == null or (v is String and v == "sin dato"):
+			catalog.base_values[ukey] = null
+		else:
+			# use _number for real values, integer >=0, 0 valid
+			_number(v, "integer", path + ".ui.defeat.critical_seconds." + cond, String(ukey), catalog)
+	var snd: Variant = defeat_raw.get("critical_sound")
+	var skey: StringName = &"ui.defeat.critical_sound"
+	if snd == null or (snd is String and snd == "sin dato"):
+		catalog.base_values[skey] = null
+	elif snd is String and not snd.is_empty():
+		catalog.base_values[skey] = snd
+	else:
+		_errors.append(path + ".ui.defeat.critical_sound: expected null, 'sin dato' or non-empty string")
+	# _comment explicitly allowed and ignored (user requirement, not removed)
+	if defeat_raw.has("_comment"):
+		# conserved per user; no validation, just present
+		pass
 
 
 func _strings(raw: Variant, path: String, target: Array[String]) -> bool:

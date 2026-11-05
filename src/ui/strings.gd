@@ -179,6 +179,27 @@ const TIMER: StringName = &"ui.timer"
 const GRACE: StringName = &"ui.grace"
 const ALERT_WARNING: StringName = &"ui.alert_warning"
 const ALERT_DEFEAT: StringName = &"ui.alert_defeat"
+# The critical step of the defeat warnings (issue #350).
+const CRITICAL_LEFT: StringName = &"ui.defeat_critical.left"
+const CRITICAL_CAUSES: Dictionary[StringName, StringName] = {
+	&"bankruptcy": &"ui.defeat_critical.cause.bankruptcy", &"hunger": &"ui.defeat_critical.cause.hunger",
+	&"depopulation": &"ui.defeat_critical.cause.depopulation",
+	&"loan_bankruptcy": &"ui.defeat_critical.cause.loan_bankruptcy",
+}
+const CRITICAL_ICON_LABELS: Dictionary[StringName, StringName] = {
+	&"bankruptcy": &"ui.defeat_critical.icon.bankruptcy", &"hunger": &"ui.defeat_critical.icon.hunger",
+	&"depopulation": &"ui.defeat_critical.icon.depopulation",
+	&"loan_bankruptcy": &"ui.defeat_critical.icon.loan_bankruptcy",
+}
+# Why the critical sound is silent, by DefeatCriticalSound status.
+const CRITICAL_SOUND_DIAGNOSTICS: Dictionary[StringName, StringName] = {
+	&"no_data": &"ui.defeat_critical.sound.no_data", &"invalid_id": &"ui.defeat_critical.sound.invalid_id",
+	&"missing_asset": &"ui.defeat_critical.sound.missing_asset",
+}
+# The settings of the critical notices are not defined yet (issue #350): said once, compactly, without a false warning.
+const CRITICAL_CONFIG_PENDING: StringName = &"ui.defeat_critical.config.pending"
+const CRITICAL_CONFIG_INVALID: StringName = &"ui.defeat_critical.config.invalid"
+const CRITICAL_CONFIG_SOUND: StringName = &"ui.defeat_critical.config.sound"
 const METRIC_BANKRUPTCY: StringName = &"ui.metric_bankruptcy"
 const METRIC_HUNGER: StringName = &"ui.metric_hunger"
 const METRIC_DEPOPULATION: StringName = &"ui.metric_depopulation"
@@ -640,6 +661,12 @@ static func all_keys() -> Array[StringName]:
 		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
 		DECREE_EFFECT_RATES_UPKEEP, DECREE_LAPSED,
 	]
+	_append_unique(keys, CRITICAL_LEFT)
+	for config_key: StringName in [CRITICAL_CONFIG_PENDING, CRITICAL_CONFIG_INVALID, CRITICAL_CONFIG_SOUND]:
+		_append_unique(keys, config_key)
+	for critical_labels: Dictionary in [CRITICAL_CAUSES, CRITICAL_ICON_LABELS, CRITICAL_SOUND_DIAGNOSTICS]:
+		for critical_key: StringName in critical_labels:
+			_append_unique(keys, critical_labels[critical_key])
 	for attribute: StringName in SERVICE_ATTRIBUTES:
 		_append_unique(keys, SERVICE_ATTRIBUTES[attribute])
 		_append_unique(keys, SERVICE_ICONS[attribute])
