@@ -113,6 +113,14 @@ func cell_size_m() -> int:
 	return int(_params.get_value(&"map.cell_size_m"))
 
 
+# The raw ui.defeat.critical_sound value (issue #350), or null while the data does not define it. The UI resolves
+# the id; here nothing is invented for a missing one.
+func critical_sound_id() -> Variant:
+	if not _params.has_value(&"ui.defeat.critical_sound"):
+		return null
+	return _params.get_value(&"ui.defeat.critical_sound")
+
+
 func get_snapshot() -> Dictionary:
 	return simulation.snapshot()
 

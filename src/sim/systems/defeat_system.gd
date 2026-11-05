@@ -114,3 +114,94 @@ func _update(condition: DefeatState, cause: StringName, warning: bool,
 	if counting and critical and condition.elapsed_seconds >= duration:
 		condition.status = &"defeat"
 		condition.cause = cause
+
+
+const CRITICAL_KEYS: Array[StringName] = [&"bankruptcy", &"hunger", &"depopulation"]
+
+# For #350: readonly derived. base from status (warning/defeat->warning, ok->normal).
+# depop warning sin timer: warning but no critical.
+# grace blocks only critical (not warning); disabled all normal.
+# crit: enabled and not grace and crit num valid and (elapsed>0 or receiver) and seconds_left <= crit.
+# float duration, ceil max( ,0). No has_value fallbacks for econ keys (fixtures provide).
+static func defeat_state_for_snapshot(state: EconomyState, params: Params, context: EconomyContext = null) -> Dictionary:
+	var result: Dictionary = {}
+	var enabled: bool = bool(params.get_value(&"defeat.enabled"))
+	var grace: float = float(params.get_value(&"defeat.grace_seconds"))
+	var in_grace: bool = state.defeat_elapsed_seconds <= grace
+	for cond: StringName in CRITICAL_KEYS:
+		var level: StringName = &"normal"
+		var status: StringName = &"ok"
+		if cond == &"bankruptcy":
+			status = state.bankruptcy.status
+		elif cond == &"hunger":
+			status = state.hunger.status
+		else:
+			status = state.depopulation.status
+		var is_receiver_bank: bool = (cond == &"bankruptcy" and state.loan != null and state.loan.receiver)
+		if status == &"warning" or status == &"defeat" or is_receiver_bank:
+			level = &"warning"
+		var seconds_left: int = 0
+		var duration: float = 0.0
+		var elapsed: float = 0.0
+		var timer_active: bool = false
+		if cond == &"bankruptcy":
+			if is_receiver_bank:
+				duration = float(params.get_value(&"loan.receiver_window_s"))
+				elapsed = float(state.loan.receiver_seconds)
+				timer_active = true
+			else:
+				duration = float(params.get_value(&"defeat.bankruptcy.duration_seconds"))
+				elapsed = float(state.bankruptcy.elapsed_seconds)
+				timer_active = elapsed > 0.0
+		elif cond == &"hunger":
+			duration = float(params.get_value(&"defeat.hunger.duration_seconds"))
+			elapsed = float(state.hunger.elapsed_seconds)
+			timer_active = elapsed > 0.0
+		else:
+			duration = float(params.get_value(&"defeat.depopulation.duration_seconds"))
+			elapsed = float(state.depopulation.elapsed_seconds)
+			timer_active = elapsed > 0.0
+		var remaining: float = maxf(0.0, duration - elapsed)
+		seconds_left = int(ceil(remaining))
+		var crit_key: StringName = StringName("ui.defeat.critical_seconds." + String(cond))
+		var crit_num: float = -1.0
+		var crit_defined: bool = false
+		if params.has_value(crit_key):
+			var v: Variant = params.get_value(crit_key)
+			if v != null and not (v is String and v == "sin dato"):
+				crit_num = float(v)
+				crit_defined = true
+		var is_crit: bool = enabled and not in_grace and crit_defined and crit_num >= 0 and timer_active and seconds_left <= crit_num
+		if is_crit:
+			level = &"critical"
+		elif not enabled:
+			level = &"normal"
+		# during grace: keep base level (warning from status/receiver or normal); only criticals blocked (by not in_grace in is_crit)
+		# depop warning sin timer: warning pero no critical (ya seteado via base)
+		var c: StringName = cond
+		if cond == &"bankruptcy":
+			if is_receiver_bank:
+				c = &"loan_bankruptcy"
+			else:
+				c = &"bankruptcy"
+		result[cond] = {"level": level, "seconds_left": seconds_left, "cause": c}
+	return result
+
+static func critical_config_errors(params: Params) -> Array[String]:
+	var errs: Array[String] = []
+	for cond: StringName in CRITICAL_KEYS:
+		var ukey: StringName = StringName("ui.defeat.critical_seconds." + String(cond))
+		if not params.has_value(ukey):
+			errs.append("ui.defeat.critical_seconds.%s: missing (incomplete)" % cond)
+			continue
+		var v: Variant = params.get_value(ukey)
+		if v == null or (v is String and v == "sin dato"):
+			errs.append("ui.defeat.critical_seconds.%s: sin dato or missing (incomplete)" % cond)
+	var skey: StringName = &"ui.defeat.critical_sound"
+	if not params.has_value(skey):
+		errs.append("ui.defeat.critical_sound: missing")
+	else:
+		var sv: Variant = params.get_value(skey)
+		if sv == null or (sv is String and sv == "sin dato"):
+			errs.append("ui.defeat.critical_sound: sin dato or missing")
+	return errs

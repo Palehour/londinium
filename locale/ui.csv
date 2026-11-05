@@ -431,3 +431,18 @@ ui.decree.reason.not_active,Ese decreto no está en vigor.,That decree is not in
 ui.decree.reason.unknown_decree,Decreto desconocido.,Unknown decree.
 ui.decree.reason.no_factions,Sin facciones no se dictan decretos.,Decrees need factions.
 ui.decree.lapsed,Cayó porque el receiver se quedó con las tasas.,It lapsed because the receiver took the rates.
+ui.defeat_critical.left,quedan %d s,%d s left
+ui.defeat_critical.cause.bankruptcy,La tesorería sigue por debajo del umbral de quiebra.,The treasury is still below the bankruptcy threshold.
+ui.defeat_critical.cause.hunger,La provisión de pan sigue por debajo del umbral: se viene el motín de hambre.,The bread supply is still below the threshold: a hunger riot is coming.
+ui.defeat_critical.cause.depopulation,La población sigue por debajo del límite: la ciudad se vacía.,Population is still below the limit: the city is emptying.
+ui.defeat_critical.cause.loan_bankruptcy,La deuda sigue sin saldarse y la ventana para pagarla se acaba.,The debt is still unpaid and the window to settle it is closing.
+ui.defeat_critical.icon.bankruptcy,Ícono cuadrado con una grieta: quiebra,Square icon with a crack: bankruptcy
+ui.defeat_critical.icon.hunger,Ícono triangular con una exclamación: motín de hambre,Triangle icon with an exclamation mark: hunger riot
+ui.defeat_critical.icon.depopulation,Ícono circular con un anillo vacío: despoblación,Circle icon with an empty ring: depopulation
+ui.defeat_critical.icon.loan_bankruptcy,Ícono de rombo con una raya: quiebra con préstamo,Diamond icon with a bar: bankruptcy with a loan
+ui.defeat_critical.sound.no_data,Sonido del aviso final: sin dato (falta definir ui.defeat.critical_sound).,Final notice sound: no data (ui.defeat.critical_sound is not defined).
+ui.defeat_critical.sound.invalid_id,Sonido del aviso final: el id de ui.defeat.critical_sound no es válido.,Final notice sound: the id in ui.defeat.critical_sound is not valid.
+ui.defeat_critical.sound.missing_asset,Sonido del aviso final: no se encontró el archivo para ese id.,Final notice sound: no file found for that id.
+ui.defeat_critical.config.pending,Aviso final sin configurar. Falta definir: %s.,Final notice not configured. Still to define: %s.
+ui.defeat_critical.config.invalid,Aviso final con configuración inválida (%d errores).,Final notice has an invalid setup (%d errors).
+ui.defeat_critical.config.sound,sonido,sound

@@ -146,6 +146,17 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 	var value: Variant = _base_values[key]
 	if key in _boolean_keys:
 		return _modified_boolean(key, value, errors)
+	var key_str: String = String(key)
+	if key_str.ends_with("critical_sound"):
+		if value != null and not (value is String):
+			errors.append("Params: sound key '%s' must be string or null" % key)
+			return null
+		for modifier: Modifier in _modifiers:
+			if modifier.key != key:
+				continue
+			errors.append("Params: modification of sound key '%s' is prohibited (only float modifiers exist)" % key)
+			return null
+		return value
 	if key == &"ui.chains.tie_break":
 		for modifier: Modifier in _modifiers:
 			if modifier.key == key:
@@ -164,16 +175,34 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 			errors.append("Params: '%s' must be gap" % key)
 			return null
 		return value
-	for modifier: Modifier in _modifiers:
-		if modifier.key != key:
-			continue
-		match modifier.op:
-			&"add": value = float(value) + modifier.value
-			&"mul": value = float(value) * modifier.value
-			&"set": value = modifier.value
-			_:
-				errors.append("Params: unknown operation '%s' for '%s'" % [modifier.op, key])
-				return null
+	# null base (e.g. ui.defeat.critical_*) resolved only by set; arith only after set in modifier order (layers then role)
+	if value == null:
+		for modifier: Modifier in _modifiers:
+			if modifier.key != key:
+				continue
+			if modifier.op == &"set":
+				value = modifier.value
+			elif modifier.op in [&"add", &"mul"]:
+				if value == null:
+					errors.append("Params: cannot add/mul on null for '%s'" % key)
+					return null
+				if modifier.op == &"add":
+					value = float(value) + modifier.value
+				else:
+					value = float(value) * modifier.value
+		if value == null:
+			return null  # valid unresolved null (no set), no global error
+	else:
+		for modifier: Modifier in _modifiers:
+			if modifier.key != key:
+				continue
+			match modifier.op:
+				&"add": value = float(value) + modifier.value
+				&"mul": value = float(value) * modifier.value
+				&"set": value = modifier.value
+				_:
+					errors.append("Params: unknown operation '%s' for '%s'" % [modifier.op, key])
+					return null
 	if not is_finite(float(value)):
 		errors.append("Params: nonfinite result for '%s'" % key)
 		return null

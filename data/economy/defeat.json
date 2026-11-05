@@ -3,5 +3,16 @@
   "bankruptcy": { "threshold_tax_minutes": -6, "duration_seconds": 300 },
   "hunger": { "threshold": 0.5, "duration_seconds": 180, "smoothing": 0.1 },
   "depopulation": { "warning_fraction": 0.5, "defeat_fraction": 0.25, "minimum_population": 10, "peak_decay_per_minute": 0.03, "duration_seconds": 180, "stability_window_seconds": 60 },
-  "grace_seconds": 300
+  "grace_seconds": 300,
+  "ui": {
+    "defeat": {
+      "critical_seconds": {
+        "bankruptcy": null,
+        "hunger": null,
+        "depopulation": null
+      },
+      "critical_sound": null,
+      "_comment": "sin dato placeholders for #350; null or 'sin dato' means incomplete config, do not activate criticals or convert to zero; define real values in DECISIONS before close; load raw without global number validation"
+    }
+  }
 }
