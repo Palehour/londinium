@@ -113,6 +113,17 @@ func cell_size_m() -> int:
 	return int(_params.get_value(&"map.cell_size_m"))
 
 
+# The parameters of the running game, so the UI reads its own knobs (ui.mobility.*) from the same place as the sim.
+func get_params() -> Params:
+	return _params
+
+
+# Who left their posts in the last tick (employed people who rose). It is not part of the snapshot: it is a transient
+# reading of the running simulation, not saved state. The panel adds it up over its window.
+func get_mobility_events() -> Dictionary:
+	return simulation.mobility_events()
+
+
 func get_snapshot() -> Dictionary:
 	return simulation.snapshot()
 

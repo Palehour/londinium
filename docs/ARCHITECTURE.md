@@ -226,7 +226,15 @@ londinium/
 8. Growth: for each class, with its own housing, satisfaction and rates, hunger emigration with hysteresis takes priority; otherwise immigration if satisfaction is high and its housing has room, emigration if low (ADR 0008). With `population.growth.served_capacity_only`, the room immigrants count is only that of the served houses: those with every good of the class's `growth.served_categories` within reach (step 1b), minus the people, who fill the served houses first (D-081). No served room means no arrivals and no backlog; losing the bread evicts nobody (#180, D-085). Without streets every house counts. After a cholera failure (#202, D-090) the immigration of every class waits for
    `cholera.vacancy_min` and then goes `cholera.recovery_mult` times as fast for `cholera.recovery_min`
    (`MissionSystem.immigration_multiplier`, which reads the timers step 9b left the tick before).
-   Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
+    Then class mobility (`MobilitySystem`, issue #53, ADR 0009): people of a class's `mobility.from` rise into it while its category scores reach their minimums, the source class is satisfied enough and its housing still has room after this tick's arrivals; they fall back once its demotion category has been under its score for the set seconds. Both at a rate per minute through a fraction; promoted people leave their jobs, so the unemployed rise first.
+    `Simulation.mobility_events()` (#352), exposed through `GameSession.get_mobility_events()`,
+    reports the tick, `employed_promoted` and the affected
+    `buildings` (`id`, `definition_id`, `workers_lost`), measured around the existing worker trim.
+    This is transient presentation telemetry owned by `Simulation`, separate from the complete-state
+    snapshot and save format, like `stats_events()`; it resets every tick. Mobility diagnostics in
+    the snapshot add `demotion.seconds_left` and `missing_goods`.
+    The panel aggregates the labor notice over simulation ticks, ignores repeated snapshots and
+    clears its window when the simulation changes; countdown recovery follows the existing clock.
 9. Money: head tax per class, on the jobs it holds or on all of its residents (`tax.basis`), at the one rate the player sets; minus wages and building upkeep.
    Then the streets (issue #67): the units each building took out of the store this tick (counted in step 4) times its
    leg's metres times `transport.cost_per_unit_per_m` (worked out per piece, the order of the sums on cells of 50 m,
@@ -538,6 +546,14 @@ incidents on, the history tab also lists each district's lessons and the severit
 Parameter keys are dotted paths into the data (`building.bakery.jobs`, `defeat.hunger.threshold`).
 Keys with ids from the era's data follow the same rule: `needs.<category>.threshold`, `needs.housing_bonus_per_category`, `class.<class>.housing_max_bonus`, `class.<class>.need.<good>.value`; `ParameterRanges.PATTERNS` validates them by shape, and structure (which good counts in which category, which building houses a class) lives in `ClassDef`/`NeedDef` and reaches the sim through `EconomyContext` (ADR 0007). `EconomyState.class_needs` holds the result per class and category; the base class keeps its satisfaction and growth in the flat fields of `EconomyState` and the other classes in `class_states` (ADR 0008); `snapshot()["needs"]` explains it (`NeedsDiagnostics`).
 `test_data_valid.gd` fails if code asks for a key that doesn't exist or a modifier targets a missing key.
+
+The mobility notices (#352) declare three optional UI parameters in `data/economy/ui.json`:
+`ui.mobility.labor_notice_window_seconds`, `ui.mobility.demotion_warning_seconds` and
+`ui.mobility.max_buildings_listed`. Until their values are decided, these keys contain the literal
+`"sin dato"`; `Params.get_value()` preserves it rather than treating it as zero. The UI leaves the
+dependent notice inactive while its parameters are pending. Numeric values use the normal parameter
+validation; numeric values in tests are fixtures, not approved balance. This exception is limited to
+these three keys and does not change D-061's rates or demotion clock.
 
 ## Conventions worth stating
 - Money is `int` in pence; display converts to £/s/d or decimals in the UI only.

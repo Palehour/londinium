@@ -25,6 +25,9 @@ var _consumption: ConsumptionSystem = ConsumptionSystem.new()
 var _satisfaction: SatisfactionSystem = SatisfactionSystem.new()
 var _growth: GrowthSystem = GrowthSystem.new()
 var _mobility: MobilitySystem = MobilitySystem.new()
+# Transient (not in EconomyState per ADR0011): mobility_events for this tick only. Reset every tick.
+# Exposed via public mobility_events() that deep-copies and sets tick=_tick_count (real, not stored internally).
+var _mobility_events: Dictionary = {"employed_promoted": 0, "buildings": []}
 var _money: MoneySystem = MoneySystem.new()
 var _roads: RoadSystem = RoadSystem.new()
 var _defeat: DefeatSystem = DefeatSystem.new()
@@ -223,6 +226,7 @@ func tick() -> void:
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
 	_state.reset_flows()
+	_mobility_events = {"employed_promoted": 0, "buildings": []}
 	for command: SimulationCommand in pending:
 		command.use_context(_context)
 		command.execute(_state, _params, _rng)
@@ -230,6 +234,7 @@ func tick() -> void:
 		if _history != null:
 			_history.note_command(command)
 	_tick_count += 1
+	# Do not store tick internally (reset only data fields); mobility_events() injects real _tick_count.
 	if _context != null:
 		CrisisSystem.tick(_state)
 		_roads.tick(_state, _params, _context)
@@ -243,7 +248,7 @@ func tick() -> void:
 		_defeat.update_hunger_coverage(_state, _params)
 		_satisfaction.tick(_state, _params, _context)
 		_growth.tick(_state, _params, _context)
-		_mobility.tick(_state, _params, _context)
+		_mobility.tick(_state, _params, _context, _mobility_events)
 		_money.tick(_state, _params, _context)
 		LoanSystem.tick(_state, _params)
 		DecreeSystem.tick(_state, _params, _context)
@@ -353,6 +358,14 @@ func stats_seconds() -> int:
 
 func stats_history_to_dict() -> Dictionary:
 	return _history.to_dict() if _history != null else {}
+
+
+func mobility_events() -> Dictionary:
+	# Deep copy so callers (UI) may mutate their view; tick is fixed to real _tick_count here (not stored in _mobility_events).
+	# Precedent: stats_events(). After from_save the data is zeroed (transient) but tick reports the loaded real tick.
+	var ev: Dictionary = _mobility_events.duplicate(true)
+	ev["tick"] = _tick_count
+	return ev
 
 
 # Worked out again only when the layout changes: a building built or demolished, or a street. The count of buildings
