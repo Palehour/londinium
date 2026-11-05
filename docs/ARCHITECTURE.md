@@ -504,8 +504,19 @@ bucket with no residents is a gap. The chains tab (`ChainsTab`, built by `StatsC
 `data/ui/stats.json` at a time. The D-pad or arrows ←/→ switch chain and ↑/↓ walk its links, without a detail (#319)
 and without wrapping. Each link reads five columns of the D-066 series over the same ranges: in is bought plus
 produced, then produced, consumed, spoiled and the stock at the end of the window. A missing series reads "—" and is
-not treated as zero; a link with no building of its type says there is no data. One link is highlighted, the first
-`bread_causes` entry with an id, and only on the bread chain; the colour and the width come from `stats.json`. The
+not treated as zero; a link with no building of its type says there is no data. Issue #353 replaces the
+`bread_causes` highlight in this tab with the bread chain's bottleneck for the selected window, calculated by the
+simulation and exposed through `snapshot(ranges)["chain_bottlenecks"]`; callers that omit the ranges receive an
+empty diagnostic. Ranges come from the presentation data, and only closed buckets are included. Required inputs are derived backwards from the
+summed `bread_demand` series using the production recipes, not from realized consumption. Opening stocks and
+imported flour are counted once; links whose output is not needed are excluded. Capacity uses the currently
+staffed buildings over the selected window, as specified by Mason; bread demand is historical (D-185). Imported
+flour is subtracted once from the wharf capacity remaining after the barley allocation, except for border imports.
+`StatsHistory` captures opening bread/flour/wheat stocks before the first tick's commands and stores them in an
+optional `opening` field. Older saves remain readable; a missing opening stock is unknown, not zero. Missing inputs or unconfigured
+`ui.chains.*` parameters yield “Sin datos” without a mark. Otherwise at most one bread link has the highlight
+stroke, with a short cause beneath the chain; beer is never highlighted. Colour and width still come from
+`stats.json`. Other consumers of `bread_causes` are unchanged. The
 four tabs share the range and trigger handling of `ChartTab`. With the
 incidents on, the history tab also lists each district's lessons and the severity and deaths the cholera had there
 (`DistrictLessons`, from `snapshot()["incidents"]`, #87, D-120).

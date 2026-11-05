@@ -193,6 +193,7 @@ var _fine_span: int
 var _medium: Tier
 var _chapter: Tier
 var _causes: CauseLog
+var _opening: Dictionary[StringName, float] = {}
 
 
 func _init(defs: Array[SeriesDef], params: Params, context: EconomyContext) -> void:
@@ -331,7 +332,8 @@ func cause_logged_count() -> int:
 # What a save keeps: the medium and chapter levels and the cause log; the fine level is rebuilt by playing.
 func to_dict() -> Dictionary:
 	return {"version": VERSION, "seconds": _seconds, "medium": _medium.to_dict(_ids),
-		"chapter": _chapter.to_dict(_ids), "causes": _causes.to_dict()}
+		"chapter": _chapter.to_dict(_ids), "causes": _causes.to_dict(),
+		"opening": _opening.duplicate()}
 
 
 # Size of a saved history once compressed, the way the size criterion of D-066 measures it.
@@ -356,3 +358,26 @@ func restore(saved: Dictionary) -> void:
 	_medium = fresh._medium
 	_chapter = fresh._chapter
 	_causes = fresh._causes
+	# Optional metadata must not invalidate an otherwise valid older history.
+	_opening.clear()
+	var opening_saved: Variant = saved.get("opening")
+	if opening_saved is Dictionary:
+		for good: StringName in [&"bread", &"flour", &"wheat"]:
+			var value: Variant = opening_saved.get(good)
+			if (value is float or value is int) and is_finite(float(value)) and float(value) >= 0.0:
+				_opening[good] = float(value)
+
+
+# Captures the exact opening stocks (before any tick or commands) for start-of-window stock.
+# Called once from Simulation.tick when history.seconds()==0 .
+func capture_opening(state: EconomyState) -> void:
+	if not _opening.is_empty() or state == null:
+		return
+	_opening[&"bread"] = float(state.stocks.get(&"bread", 0))
+	_opening[&"flour"] = float(state.stocks.get(&"flour", 0))
+	_opening[&"wheat"] = float(state.stocks.get(&"wheat", 0))
+
+
+# Returns the captured opening stock for the good (NAN if not captured or unknown).
+func opening(good: StringName) -> float:
+	return _opening.get(good, NAN)

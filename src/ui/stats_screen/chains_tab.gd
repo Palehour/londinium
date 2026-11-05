@@ -3,9 +3,12 @@ extends ChartTab
 
 # The chains tab (issue #315, D-173). One chain on screen. ←/→ switch chain and ↑/↓ walk its links, without wrapping
 # and without a detail (that is #319). LT/RT or +/- change the window, as on the other chart tabs. The highlight is
-# a border from stats.json; the focus tints the label when the same link is both.
+# a border from stats.json on the link the simulation says limits the chain (#353), with its cause in a line
+# below; the focus tints the label when the same link is both.
 
 var titles: Label
+# The cause line under the chain (issue #353). It wraps, so the cause is never cut. Empty and hidden for beer.
+var cause: Label
 var readings: Array[Label] = []
 var _rows: Array[PanelContainer] = []
 var _legend: HBoxContainer
@@ -24,6 +27,7 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	add_child(titles)
 	_legend = HBoxContainer.new()
 	add_child(_legend)
+	cause = _wrapped_label()
 	_hint = _wrapped_label()
 	apply_texts()
 
@@ -70,7 +74,7 @@ func handle(event: InputEvent) -> void:
 func refresh() -> void:
 	var range_entry: Dictionary = _range_entry()
 	_built = StatsChains.build(session.simulation, presentation.chains_order, _chain, range_entry["span_seconds"],
-		range_entry["tier"])
+		range_entry["tier"], presentation.history_ranges)
 	_show()
 
 
@@ -80,6 +84,8 @@ func _show() -> void:
 	var links: Array = _built["links"]
 	_ensure_rows(links.size())
 	var columns: Array[StringName] = _column_ids()
+	cause.text = StatsChains.cause(_built["bottleneck"])
+	cause.visible = not cause.text.is_empty()
 	for index: int in _rows.size():
 		var row: PanelContainer = _rows[index]
 		row.visible = index < links.size()
@@ -114,7 +120,7 @@ func _ensure_rows(count: int) -> void:
 		var label: Label = _one_line_label()
 		row.add_child(label)
 		add_child(row)
-		move_child(row, _hint.get_index())
+		move_child(row, cause.get_index())
 		_rows.append(row)
 		readings.append(label)
 	for index: int in _rows.size():

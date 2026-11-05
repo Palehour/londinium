@@ -60,6 +60,106 @@ func test_the_pad_walks_both_chains_and_every_link_at_the_steam_deck_size() -> v
 		assert_eq(tab.titles.text, Strings.label(Strings.STATS_SCREEN_CHAIN_NAMES, &"bread"))
 
 
+# The mark of issue #353 on the tab itself, with the simulation's reading faked: one bread row with the stroke and
+# the cause line under the chain, none on beer, and nothing on no data or no bottleneck.
+func test_the_tab_marks_one_bread_row_with_its_cause_and_never_beer() -> void:
+	var tab: ChainsTab = _standalone_tab({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"mill")})
+	assert_eq(_stroked_rows(tab), [1], "Only the mill row has the highlight stroke")
+	assert_true(tab.cause.visible)
+	assert_eq(tab.cause.text, Strings.text(Strings.STATS_SCREEN_CHAINS_CAUSE) % Strings.building_label("mill"))
+	assert_gte(tab.cause.get_theme_font_size(&"font_size"), MIN_FONT_SIZE)
+	assert_ne(tab.cause.autowrap_mode, TextServer.AUTOWRAP_OFF, "The cause wraps, so it is not cut")
+	var event: InputEventKey = InputEventKey.new()
+	event.keycode = KEY_RIGHT
+	event.pressed = true
+	tab.handle(event)
+	assert_eq(tab.chain_index(), 1)
+	assert_eq(_stroked_rows(tab), [], "Beer shows no stroke")
+	assert_false(tab.cause.visible, "Beer shows no cause line")
+	assert_eq(tab.cause.text, "")
+
+
+func test_the_tab_marks_nothing_without_data_or_without_a_bottleneck() -> void:
+	for status: StringName in [StatsChains.STATUS_NO_DATA, StatsChains.STATUS_NO_BOTTLENECK]:
+		var tab: ChainsTab = _standalone_tab({"ten_minutes": _reading(status, &"mill")})
+		assert_eq(_stroked_rows(tab), [], "%s has no stroke" % status)
+		assert_true(tab.cause.visible)
+	var calm: ChainsTab = _standalone_tab({"ten_minutes": _reading(StatsChains.STATUS_NO_BOTTLENECK, &"")})
+	assert_eq(calm.cause.text, Strings.text(Strings.STATS_SCREEN_CHAINS_NO_BOTTLENECK))
+	var blank: ChainsTab = _standalone_tab({})
+	assert_eq(blank.cause.text, Strings.text(Strings.STATS_SCREEN_NO_DATA))
+
+
+func test_a_contradicting_bread_cause_does_not_draw_a_stroke() -> void:
+	var tab: ChainsTab = _standalone_tab({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"bakery")},
+		[{"definition_id": &"wharf", "reason": &"wheat_purchases_disabled"}])
+	assert_eq(_stroked_rows(tab), [2], "The bakery, not the wharf that bread_causes names")
+
+
+func test_the_wharf_cause_shows_the_split_and_the_imported_flour() -> void:
+	var reading: Dictionary = _reading(StatsChains.STATUS_BOTTLENECK, &"wharf")
+	reading["barley_percent"] = 100.0
+	reading["imported_flour_uses_capacity"] = true
+	var tab: ChainsTab = _standalone_tab({"ten_minutes": reading})
+	assert_eq(_stroked_rows(tab), [0])
+	assert_true(tab.cause.text.contains(Strings.text(Strings.STATS_SCREEN_CHAINS_IMPORTS_TAKE)), tab.cause.text)
+	assert_true(tab.cause.text.contains("100 %"), tab.cause.text)
+	for locale: String in ["es", "en"]:
+		Strings.set_locale(locale)
+		tab.refresh()
+		assert_false(tab.cause.text.is_empty())
+		assert_false(tab.cause.text.contains("ui.stats_screen"), "Both locales have the text")
+
+
+class FakeSim extends Simulation:
+	var bottlenecks: Dictionary = {}
+	var causes: Array = []
+
+
+	func snapshot(ranges: Array[Dictionary] = []) -> Dictionary:
+		var data: Dictionary = super.snapshot(ranges)
+		data["chain_bottlenecks"] = bottlenecks
+		data["diagnostics"]["bread_causes"] = causes
+		return data
+
+
+func _standalone_tab(bottlenecks: Dictionary, causes: Array = []) -> ChainsTab:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	var params: Params = SimTestParams.isolated_params(loaded.catalog)
+	var context: EconomyContext = EconomyContext.new(loaded.catalog, loaded.catalog.maps[&"whitechapel_1850s"])
+	var session: GameSession = GameSession.new(loaded.catalog, params)
+	var fake: FakeSim = FakeSim.new(params, EconomyState.new(), 1, context)
+	fake.bottlenecks = bottlenecks
+	fake.causes = causes
+	session.simulation = fake
+	var look: StatsPresentation = StatsPresentation.new()
+	look.load_data()
+	var tab: ChainsTab = ChainsTab.new()
+	add_child_autofree(tab)
+	tab.setup(session, look)
+	tab.refresh()
+	return tab
+
+
+func _reading(status: StringName, link: StringName) -> Dictionary:
+	return {"status": status, "limiting_link": link, "reason": &"", "barley_percent": 0.0,
+		"imported_flour_uses_capacity": false}
+
+
+# Indexes of the visible rows drawn with the highlight stroke.
+func _stroked_rows(tab: ChainsTab) -> Array[int]:
+	var found: Array[int] = []
+	for index: int in tab.readings.size():
+		var row: PanelContainer = tab.readings[index].get_parent() as PanelContainer
+		if not row.visible:
+			continue
+		var style: StyleBoxFlat = row.get_theme_stylebox(&"panel") as StyleBoxFlat
+		if style.border_color == tab.presentation.chains_highlight_color \
+				and style.get_border_width(SIDE_LEFT) == int(tab.presentation.chains_highlight_width):
+			found.append(index)
+	return found
+
+
 func _check_link(tab: ChainsTab, screen: StatsScreen, simulation: Simulation) -> void:
 	var entry: Dictionary = tab.presentation.history_ranges[tab.get("_range")]
 	var built: Dictionary = StatsChains.build(simulation, tab.presentation.chains_order, tab.chain_index(),

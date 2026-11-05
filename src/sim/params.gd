@@ -58,6 +58,8 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 	var value: Variant = _get_modified_value(key, errors)
 	if value == null:
 		return null
+	if key == &"ui.chains.tie_break":
+		return value
 	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
 	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
 	if key in [defeat_key, warning_key]:
@@ -134,6 +136,15 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 	var value: Variant = _base_values[key]
 	if key in _boolean_keys:
 		return _modified_boolean(key, value, errors)
+	if key == &"ui.chains.tie_break":
+		for modifier: Modifier in _modifiers:
+			if modifier.key == key:
+				errors.append("Params: '%s' does not accept numeric modifiers" % key)
+				return null
+		if value is not String or value != "upstream":
+			errors.append("Params: '%s' must be upstream" % key)
+			return null
+		return value
 	for modifier: Modifier in _modifiers:
 		if modifier.key != key:
 			continue
@@ -149,6 +160,9 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 		return null
 	if not ParameterRanges.is_valid(key, float(value)):
 		errors.append("Params: invalid range for '%s'" % key)
+		return null
+	if key == &"ui.chains.min_samples" and float(value) != floor(float(value)):
+		errors.append("Params: '%s' must be an integer" % key)
 		return null
 	# Rounding once preserves the specified order, including intermediate fractions.
 	if key in _money_keys and typeof(value) == TYPE_FLOAT:

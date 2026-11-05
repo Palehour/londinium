@@ -101,6 +101,7 @@
       "victory_progress:revenue",
       "debt_balance",
       "debt_payments",
+      "bread_demand",
       "fear",
       "debt"
     ],
@@ -502,6 +503,10 @@
     {
       "color": "#cc79a7",
       "dash": 13
+    },
+    {
+      "color": "#e69f00",
+      "dash": 14
     }
   ]
 }
