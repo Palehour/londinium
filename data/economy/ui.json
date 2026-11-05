@@ -1,5 +1,5 @@
 {
-  "documentation": "UI mobility parameters for issue #352. Each field below holds the literal 'sin dato' until numeric data is decided.",
+  "documentation": "UI mobility parameters for issue #352. Each mobility field below holds the literal 'sin dato' until numeric data is decided.",
   "mobility": {
     "documentation": "Sin dato: pendiente decisión de Cristian para #352.",
     "labor_notice_window_seconds": "sin dato",
