@@ -6,6 +6,15 @@ const WHEAT_POLICY_KEYS: Array[StringName] = [&"policy.wheat.default_accumulate_
 	&"market.wheat.storage_capacity", &"market.wheat.min_price", &"market.wheat.max_price",
 	&"policy.wheat.default_reserve_minutes"]
 
+# These keys are allowed to hold the literal string "sin dato" in base_values (loaded from data).
+# get_value returns the string verbatim (no numeric cast, no range/modifier processing).
+# Numeric values for the same keys validate and accept modifiers normally.
+const PENDING_UI_KEYS: Array[StringName] = [
+	&"ui.mobility.labor_notice_window_seconds",
+	&"ui.mobility.demotion_warning_seconds",
+	&"ui.mobility.max_buildings_listed"
+]
+
 var _base_values: Dictionary[StringName, Variant] = {}
 var _aliases: Dictionary[StringName, StringName] = {}
 var _money_keys: Array[StringName] = []
@@ -41,7 +50,7 @@ func get_value(key: StringName) -> Variant:
 	return value
 
 
-# True when the data defines the key, so callers can ask about an optional parameter without an error.
+# True when the data defines the key (now includes ui.mobility keys that hold "sin dato" or numbers).
 func has_value(key: StringName) -> bool:
 	return _base_values.has(_aliases.get(key, key))
 
@@ -132,11 +141,15 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 		errors.append("Params: unknown key '%s'" % key)
 		return null
 	var value: Variant = _base_values[key]
+	var was_sin_dato: bool = key in PENDING_UI_KEYS and typeof(value) == TYPE_STRING and value == "sin dato"
 	if key in _boolean_keys:
 		return _modified_boolean(key, value, errors)
 	for modifier: Modifier in _modifiers:
 		if modifier.key != key:
 			continue
+		if typeof(value) == TYPE_STRING and modifier.op != &"set":
+			errors.append("Params: arithmetic modifier on 'sin dato' key '%s' not allowed (set only)" % key)
+			return null
 		match modifier.op:
 			&"add": value = float(value) + modifier.value
 			&"mul": value = float(value) * modifier.value
@@ -144,6 +157,9 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 			_:
 				errors.append("Params: unknown operation '%s' for '%s'" % [modifier.op, key])
 				return null
+	if was_sin_dato and typeof(value) == TYPE_STRING and value == "sin dato":
+		# no set modifier was applied; return literal without numeric processing
+		return value
 	if not is_finite(float(value)):
 		errors.append("Params: nonfinite result for '%s'" % key)
 		return null
