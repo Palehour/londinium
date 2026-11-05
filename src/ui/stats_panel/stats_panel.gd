@@ -22,6 +22,8 @@ var clock: SimClock
 var _speed: int = 1
 var _syncing: bool = false
 var _alert: Label
+# The last step of the defeat warnings (issue #350).
+var _critical: DefeatCritical
 var _notice: Label
 var _restart: Button
 var _archive: Button
@@ -99,6 +101,10 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_alert = _label("")
 	_alert.visible = false
 	root.add_child(_alert)
+	_critical = DefeatCritical.new()
+	_critical.name = "DefeatCritical"
+	root.add_child(_critical)
+	reset_critical()
 	_victory_notice = VBoxContainer.new()
 	_victory_notice.visible = false
 	root.add_child(_victory_notice)
@@ -195,7 +201,8 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_barley_row.text = _barley_text(snapshot["market"]["barley"])
 	_update_unloading(snapshot["market"]["barley"], defeated)
 	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
-	_update_alert(defeat)
+	_critical.show_state(snapshot)
+	_update_alert(defeat, DefeatCriticalRows.conditions(_critical.rows()))
 	_update_victory(snapshot.get("victory", {}), defeated)
 	_notice.text = _mobility_text(stats, snapshot["needs"])
 	_notice.visible = not _notice.text.is_empty()
@@ -593,7 +600,14 @@ func _update_clock_controls() -> void:
 		_speed_buttons[speed].set_pressed_no_signal(speed == _speed)
 
 
-func _update_alert(defeat: Dictionary) -> void:
+# A new game, a new difficulty or a loaded save: the critical sound rearms and its id is read again.
+func reset_critical() -> void:
+	_critical.reset_sound()
+	_critical.configure_sound(session.critical_sound_id())
+
+
+# The conditions already shown as critical notices are left out of the warning line, so none is said twice.
+func _update_alert(defeat: Dictionary, critical: Array[StringName]) -> void:
 	var names: Array[String] = []
 	if not defeat["causes"].is_empty():
 		for cause: StringName in defeat["causes"]:
@@ -602,7 +616,7 @@ func _update_alert(defeat: Dictionary) -> void:
 		_alert.text = Strings.text(template) % ", ".join(names)
 	else:
 		for key: StringName in CONDITIONS:
-			if defeat[key]["status"] == &"warning":
+			if defeat[key]["status"] == &"warning" and not critical.has(key):
 				names.append(Strings.label(Strings.CONDITION_LABELS, key) + _timer_text(defeat[key]))
 		_alert.text = Strings.text(Strings.ALERT_WARNING) % ", ".join(names) if not names.is_empty() else ""
 	_alert.visible = not _alert.text.is_empty()

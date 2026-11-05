@@ -398,6 +398,8 @@ func snapshot() -> Dictionary:
 		"factions": FactionSystem.snapshot(_state, _params, _context, _coverages()),
 		"decrees": DecreeDiagnostics.build(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
+		"defeat_state": DefeatSystem.defeat_state_for_snapshot(_state, _params, _context),
+		"defeat_critical_config": _defeat_critical_config(),
 		"victory": _victory.snapshot(_state, _params),
 		"tick_count": _tick_count,
 		"seed": _seed,
@@ -432,3 +434,26 @@ func _condition_snapshot(condition: DefeatState, key: StringName, metrics: Dicti
 	result["remaining_seconds"] = maxi(0, duration - condition.elapsed_seconds)
 	result["duration_seconds"] = duration
 	return result
+
+
+# Additional API for UI (#350): resolved critical config or clear error.
+# Uses DefeatSystem.critical_config_errors (resolved get_value). null homogéneos.
+func _defeat_critical_config() -> Dictionary:
+	var res: Dictionary = {}
+	var errs: Array[String] = DefeatSystem.critical_config_errors(_params)
+	var complete: bool = errs.is_empty()
+	for cond: StringName in DefeatSystem.CRITICAL_KEYS:
+		var key: StringName = StringName("ui.defeat.critical_seconds." + String(cond))
+		var v: Variant = null
+		if _params.has_value(key):
+			v = _params.get_value(key)
+		res[cond] = v if v != null else null
+	var skey: StringName = &"ui.defeat.critical_sound"
+	var sv: Variant = null
+	if _params.has_value(skey):
+		sv = _params.get_value(skey)
+	res["critical_sound"] = sv if sv != null else null
+	res["complete"] = complete
+	res["incomplete"] = not complete
+	res["errors"] = errs
+	return res
