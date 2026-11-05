@@ -5,8 +5,10 @@ extends RefCounted
 # moves. The five columns read the series of D-066 over the same windows as the other tabs: flows add the bucket
 # totals, stock keeps the last one. A series the registry does not have is missing (NaN, drawn as "—"), never a
 # made-up zero. A link with no building of its type says there is no data instead of those numbers.
-# The highlight is the first bread_causes entry with an id, and only on the chain whose data says so. Beer has
-# none. The colour and the width live in stats.json; this class only says which link.
+# The highlight (issue #353) is the link the simulation says limits the chain, read from snapshot()["chain_bottlenecks"]
+# for the window on screen, and only on the chain whose data names a diagnostic. Beer has none. No data, or a chain
+# with no bottleneck, marks nothing. bread_causes is no longer read here. The colour and the width live in
+# stats.json; this class only says which link and what the cause line says.
 
 const COLUMN_IN: StringName = &"in"
 const COLUMN_PRODUCED: StringName = &"produced"
@@ -14,19 +16,31 @@ const COLUMN_CONSUMED: StringName = &"consumed"
 const COLUMN_SPOILED: StringName = &"spoiled"
 const COLUMN_STOCK: StringName = &"stock"
 const DIAGNOSTIC_BREAD: StringName = &"bread"
+# The unloading split is a percentage of the wharf's capacity: barley and wheat add up to all of it.
+const PERCENT_ALL: int = 100
+const SNAPSHOT_KEY: String = "chain_bottlenecks"
+const STATUS_NONE: StringName = &""
+const STATUS_NO_DATA: StringName = &"no_data"
+const STATUS_NO_BOTTLENECK: StringName = &"no_bottleneck"
+const STATUS_BOTTLENECK: StringName = &"bottleneck"
 
 
-# One chain: {"id", "links": [{building, good, present, highlighted, values}]}. values maps each column to a float,
-# NaN where the series does not exist or the window has no number.
+# One chain: {"id", "bottleneck", "links": [{building, good, present, highlighted, values}]}. values maps each column
+# to a float, NaN where the series does not exist or the window has no number. bottleneck is the simulation's reading
+# for this window (see bottleneck_for), or {"status": STATUS_NONE} for a chain that shows none. ranges is
+# stats.json history.ranges: it turns the span and tier on screen into the window key the snapshot uses.
 static func build(simulation: Simulation, order: Array[Dictionary], chain_index: int, span: int,
-		tier: StringName) -> Dictionary:
+		tier: StringName, ranges: Array[Dictionary] = []) -> Dictionary:
 	if chain_index < 0 or chain_index >= order.size():
-		return {"id": &"", "links": [] as Array[Dictionary]}
+		return {"id": &"", "bottleneck": {"status": STATUS_NONE}, "links": [] as Array[Dictionary]}
 	var chain: Dictionary = order[chain_index]
-	var snapshot: Dictionary = simulation.snapshot()
+	var snapshot: Dictionary = simulation.snapshot(ranges)
+	var bottleneck: Dictionary = {"status": STATUS_NONE}
 	var marked: StringName = &""
 	if StringName(chain.get("diagnostic", &"")) == DIAGNOSTIC_BREAD:
-		marked = first_marked_id(snapshot["diagnostics"]["bread_causes"])
+		bottleneck = bottleneck_for(snapshot, window_key(ranges, span, tier))
+		if bottleneck["status"] == STATUS_BOTTLENECK:
+			marked = bottleneck["limiting_link"]
 	var buildings: Array = snapshot["economy"]["buildings"]
 	var source: Array = chain["links"]
 	var links: Array[Dictionary] = []
@@ -40,18 +54,58 @@ static func build(simulation: Simulation, order: Array[Dictionary], chain_index:
 			"highlighted": _highlighted(building, index, source, marked),
 			"values": _values(simulation, link["good"], tier, span),
 		})
-	return {"id": chain["id"], "links": links}
+	return {"id": chain["id"], "bottleneck": bottleneck, "links": links}
 
 
-# The first cause that names a building. An empty id (insufficient capacity) is skipped. "" when none do.
-static func first_marked_id(causes: Array) -> StringName:
-	for cause: Variant in causes:
-		if cause is not Dictionary:
-			continue
-		var id: String = str(cause.get("definition_id", ""))
-		if not id.is_empty():
-			return StringName(id)
+# The window id (ten_minutes, hour, chapter) whose span and tier are the ones on screen. &"" when none match.
+static func window_key(ranges: Array[Dictionary], span: int, tier: StringName) -> StringName:
+	for entry: Dictionary in ranges:
+		if int(entry["span_seconds"]) == span and StringName(entry["tier"]) == tier:
+			return StringName(entry["id"])
 	return &""
+
+
+# The simulation's reading for one window, kept to what the view needs. Anything missing or malformed reads as no
+# data, which marks nothing: the view never guesses a bottleneck.
+static func bottleneck_for(snapshot: Dictionary, key: StringName) -> Dictionary:
+	var none: Dictionary = {"status": STATUS_NO_DATA, "limiting_link": &"", "barley_percent": 0.0,
+		"imported_flour_uses_capacity": false}
+	var all: Variant = snapshot.get(SNAPSHOT_KEY)
+	if all is not Dictionary or all.get(key) is not Dictionary:
+		return none
+	var raw: Dictionary = all[key]
+	var status: StringName = StringName(raw.get("status", STATUS_NO_DATA))
+	var link: StringName = StringName(raw.get("limiting_link", &""))
+	if status == STATUS_BOTTLENECK and link == &"":
+		return none
+	if status != STATUS_BOTTLENECK and status != STATUS_NO_BOTTLENECK:
+		return none
+	return {"status": status, "limiting_link": link if status == STATUS_BOTTLENECK else &"",
+		"barley_percent": float(raw.get("barley_percent", 0.0)),
+		"imported_flour_uses_capacity": bool(raw.get("imported_flour_uses_capacity", false))}
+
+
+# The short cause line under the chain. "" for a chain that shows none (beer). The wharf also says the barley/wheat
+# split and whether imported flour takes the capacity (D-031).
+static func cause(bottleneck: Dictionary) -> String:
+	var status: StringName = bottleneck["status"]
+	if status == STATUS_NONE:
+		return ""
+	if status == STATUS_NO_BOTTLENECK:
+		return Strings.text(Strings.STATS_SCREEN_CHAINS_NO_BOTTLENECK)
+	if status != STATUS_BOTTLENECK:
+		return Strings.text(Strings.STATS_SCREEN_NO_DATA)
+	var building: String = String(bottleneck["limiting_link"])
+	var name: String = Strings.building_label(building)
+	if name.is_empty():
+		name = building
+	if bottleneck["limiting_link"] != &"wharf":
+		return Strings.text(Strings.STATS_SCREEN_CHAINS_CAUSE) % name
+	var barley: int = clampi(roundi(float(bottleneck["barley_percent"])), 0, PERCENT_ALL)
+	var imports: StringName = Strings.STATS_SCREEN_CHAINS_IMPORTS_TAKE \
+		if bottleneck["imported_flour_uses_capacity"] else Strings.STATS_SCREEN_CHAINS_IMPORTS_FREE
+	return Strings.text(Strings.STATS_SCREEN_CHAINS_CAUSE_WHARF) % [name, barley, PERCENT_ALL - barley,
+		Strings.text(imports)]
 
 
 # The line the link shows. Absent buildings say there is no data; the columns are not invented as zeros.

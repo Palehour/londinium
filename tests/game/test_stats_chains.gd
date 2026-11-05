@@ -2,7 +2,7 @@ extends GutTest
 
 # Chains view numbers (issue #315, D-173). Each column is the D-066 series over the same three windows as the other
 # tabs: flows add the bucket totals, stock keeps the last one. A series the registry does not have is missing, not
-# zero. The highlight is the first bread_causes id, and only on the bread chain.
+# zero. The highlight (issue #353) is the one link the simulation says limits the bread chain; bread_causes plays no part.
 
 
 var _catalog: DataCatalog
@@ -88,19 +88,114 @@ func test_a_missing_series_is_not_drawn_as_zero() -> void:
 	assert_false(reading.contains("0"), "An absent link does not invent zeros")
 
 
-func test_the_highlight_is_the_first_bread_cause_and_never_the_beer_chain() -> void:
-	assert_eq(StatsChains.first_marked_id([{"definition_id": ""}, {"definition_id": "mill"}]), &"mill")
-	assert_eq(StatsChains.first_marked_id([{"definition_id": ""}]), &"")
+func test_exactly_one_bread_link_is_marked_and_beer_never() -> void:
+	for link_id: StringName in [&"wharf", &"mill", &"bakery"]:
+		var simulation: FakeBottleneckSim = _fake({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, link_id)})
+		var bread: Dictionary = _build(simulation, 0)
+		var beer: Dictionary = _build(simulation, 1)
+		assert_eq(_marked(bread), [link_id], "Only the limiting link is marked (%s)" % link_id)
+		assert_eq(_marked(beer), [], "Beer is never marked (%s)" % link_id)
+		assert_eq(beer["bottleneck"]["status"], StatsChains.STATUS_NONE)
+		assert_eq(StatsChains.cause(beer["bottleneck"]), "", "Beer has no cause line")
+
+
+# Same call as before #353, on the empty city that used to mark the missing wharf from bread_causes.
+func test_an_empty_city_marks_no_bread_link_on_the_old_call() -> void:
 	var simulation: Simulation = Simulation.new(_params, EconomyState.new(), 1, _context)
 	simulation.tick()
 	var bread: Dictionary = StatsChains.build(simulation, _look.chains_order, 0, 0, StatsHistory.TIER_CHAPTER)
-	var beer: Dictionary = StatsChains.build(simulation, _look.chains_order, 1, 0, StatsHistory.TIER_CHAPTER)
-	assert_true(bread["links"][0]["highlighted"], "The empty city marks the missing wharf")
-	assert_false(bread["links"][1]["highlighted"])
-	assert_false(bread["links"][2]["highlighted"])
-	for link: Dictionary in beer["links"]:
-		assert_false(link["highlighted"], "Beer is never highlighted (%s)" % link["building"])
-		assert_false(link["present"])
+	assert_eq(_marked(bread), [], "No reading from the simulation means no mark")
+
+
+func test_the_window_on_screen_picks_its_own_reading() -> void:
+	var simulation: FakeBottleneckSim = _fake({
+		"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"mill"),
+		"hour": _reading(StatsChains.STATUS_BOTTLENECK, &"bakery"),
+	})
+	assert_eq(_marked(_build(simulation, 0, "ten_minutes")), [&"mill"])
+	assert_eq(_marked(_build(simulation, 0, "hour")), [&"bakery"])
+	assert_eq(_marked(_build(simulation, 0, "chapter")), [], "A window the snapshot lacks has no data")
+
+
+func test_bread_causes_no_longer_marks_anything() -> void:
+	var simulation: FakeBottleneckSim = _fake({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"bakery")})
+	simulation.diagnostics_causes = [{"definition_id": &"wharf", "reason": &"wheat_purchases_disabled"}]
+	assert_eq(_marked(_build(simulation, 0)), [&"bakery"], "The contradicting cause does not move the mark")
+	var quiet: FakeBottleneckSim = _fake({"ten_minutes": _reading(StatsChains.STATUS_NO_BOTTLENECK, &"")})
+	quiet.diagnostics_causes = [{"definition_id": &"mill", "reason": &"no_road_access"}]
+	assert_eq(_marked(_build(quiet, 0)), [], "A bread cause alone marks nothing")
+
+
+func test_no_data_and_no_bottleneck_mark_nothing_and_say_so() -> void:
+	var empty_city: Simulation = Simulation.new(_params, EconomyState.new(), 1, _context)
+	empty_city.tick()
+	var no_key: Dictionary = _build(empty_city, 0)
+	assert_eq(_marked(no_key), [], "A snapshot without the contract marks nothing")
+	assert_eq(StatsChains.cause(no_key["bottleneck"]), Strings.text(Strings.STATS_SCREEN_NO_DATA))
+	for status: StringName in [StatsChains.STATUS_NO_DATA, StatsChains.STATUS_NO_BOTTLENECK]:
+		var chain: Dictionary = _build(_fake({"ten_minutes": _reading(status, &"mill")}), 0)
+		assert_eq(_marked(chain), [], "%s marks nothing, even if a link is named" % status)
+	var calm: Dictionary = _build(_fake({"ten_minutes": _reading(StatsChains.STATUS_NO_BOTTLENECK, &"")}), 0)
+	assert_eq(StatsChains.cause(calm["bottleneck"]), Strings.text(Strings.STATS_SCREEN_CHAINS_NO_BOTTLENECK))
+	var broken: Dictionary = _build(_fake({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"")}), 0)
+	assert_eq(_marked(broken), [], "A bottleneck that names no link is treated as no data")
+	assert_eq(StatsChains.cause(broken["bottleneck"]), Strings.text(Strings.STATS_SCREEN_NO_DATA))
+
+
+func test_the_cause_names_the_link_and_the_wharf_adds_the_split_and_imports() -> void:
+	var mill: Dictionary = _build(_fake({"ten_minutes": _reading(StatsChains.STATUS_BOTTLENECK, &"mill")}), 0)
+	assert_eq(StatsChains.cause(mill["bottleneck"]), Strings.text(Strings.STATS_SCREEN_CHAINS_CAUSE) % Strings.building_label("mill"))
+	var wharf_reading: Dictionary = _reading(StatsChains.STATUS_BOTTLENECK, &"wharf")
+	wharf_reading["barley_percent"] = 100.0
+	wharf_reading["imported_flour_uses_capacity"] = true
+	var wharf: Dictionary = _build(_fake({"ten_minutes": wharf_reading}), 0)
+	var text: String = StatsChains.cause(wharf["bottleneck"])
+	assert_true(text.contains("100 %"), text)
+	assert_true(text.contains("0 %"), text)
+	assert_true(text.contains(Strings.text(Strings.STATS_SCREEN_CHAINS_IMPORTS_TAKE)), text)
+	wharf_reading["imported_flour_uses_capacity"] = false
+	text = StatsChains.cause(_build(_fake({"ten_minutes": wharf_reading}), 0)["bottleneck"])
+	assert_true(text.contains(Strings.text(Strings.STATS_SCREEN_CHAINS_IMPORTS_FREE)), text)
+
+
+# The contract of the simulation (snapshot()["chain_bottlenecks"]), faked so the view is tested apart from the sim.
+class FakeBottleneckSim extends Simulation:
+	var bottlenecks: Dictionary = {}
+	var diagnostics_causes: Array = []
+
+
+	func snapshot(ranges: Array[Dictionary] = []) -> Dictionary:
+		var data: Dictionary = super.snapshot(ranges)
+		data["chain_bottlenecks"] = bottlenecks
+		data["diagnostics"]["bread_causes"] = diagnostics_causes
+		return data
+
+
+func _fake(bottlenecks: Dictionary) -> FakeBottleneckSim:
+	var simulation: FakeBottleneckSim = FakeBottleneckSim.new(_params, EconomyState.new(), 1, _context)
+	simulation.bottlenecks = bottlenecks
+	return simulation
+
+
+func _reading(status: StringName, link: StringName) -> Dictionary:
+	return {"status": status, "limiting_link": link, "reason": &"", "barley_percent": 0.0,
+		"imported_flour_uses_capacity": false}
+
+
+func _build(simulation: Simulation, chain_index: int, window: String = "ten_minutes") -> Dictionary:
+	for entry: Dictionary in _look.history_ranges:
+		if entry["id"] == window:
+			return StatsChains.build(simulation, _look.chains_order, chain_index, entry["span_seconds"], entry["tier"],
+				_look.history_ranges)
+	return {}
+
+
+func _marked(chain: Dictionary) -> Array[StringName]:
+	var ids: Array[StringName] = []
+	for link: Dictionary in chain["links"]:
+		if link["highlighted"]:
+			ids.append(link["building"])
+	return ids
 
 
 func _assert_amount(got: float, expected: float, label: String) -> void:

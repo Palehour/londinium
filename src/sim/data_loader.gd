@@ -49,6 +49,13 @@ const LESSON_FIELDS: Dictionary[String, String] = {"severity_base": "number", "l
 const ECONOMY_SCHEMAS: Dictionary = {
 	"startup": {"money": "money", "population": "integer", "seed": "integer", "wheat_purchases_enabled": "boolean",
 		"tea_imports_enabled": "boolean", "flour_imports_enabled": "boolean", "dense_housing_occupied": "integer"},
+	"ui": {
+		"chains": {
+			"bottleneck_margin": "pending_fraction",
+			"min_samples": "pending_positive_integer",
+			"tie_break": "pending_tie_break"
+		}
+	},
 	"population": {
 		"initial_bread": "integer",
 		"bread_per_person_per_minute": "positive", "bread_decay_fraction_per_minute": "fraction",
@@ -265,7 +272,8 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 	var required: Array[String] = ["economy/goods.json", "economy/buildings.json",
 		"roles/neutral_administrator.json", "maps/whitechapel_1850s.json", _needs_path(), _classes_path()]
 	for section: String in ECONOMY_SCHEMAS:
-		required.append("economy/%s.json" % section)
+		if section != "ui":
+			required.append("economy/%s.json" % section)
 	# The severity of D-120 needs the lessons file once there are incidents to learn from.
 	if documents.keys().any(func(path: String) -> bool: return path.begins_with(INCIDENTS_FOLDER + "/")):
 		required.append(LESSONS_PATH)
@@ -413,6 +421,18 @@ func _numbers(raw: Variant, schema: Dictionary, path: String,
 
 
 func _number(raw: Variant, kind: String, path: String, key: String, catalog: DataCatalog) -> bool:
+	if kind.begins_with("pending_"):
+		# Pending UI configuration is absent from Params, never a made-up numeric default.
+		if raw is String and raw == "sin dato":
+			return true
+		kind = kind.trim_prefix("pending_")
+	if kind == "tie_break":
+		if raw is not String or raw != "upstream":
+			_errors.append("%s: expected upstream or sin dato" % path)
+			_rejected_keys.append(StringName(key))
+			return false
+		catalog.base_values[StringName(key)] = raw
+		return true
 	if kind == "boolean":
 		return _boolean(raw, path, key, catalog)
 	var integral: bool = kind in ["money", "integer", "positive_integer", "optional_price"]

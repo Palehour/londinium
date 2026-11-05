@@ -216,6 +216,9 @@ func apply_command(command: SimulationCommand) -> void:
 func tick() -> void:
 	if not _state.defeat_causes.is_empty():
 		return
+	if _history != null and _history.seconds() == 0:
+		# capture exact opening stocks before any commands or systems of first tick (per #353)
+		_history.capture_opening(_state)
 	# Detach the batch so commands queued during execution wait until the next tick.
 	var pending: Array[SimulationCommand] = _commands
 	_commands = []
@@ -377,7 +380,11 @@ func get_barley_rng_state() -> int:
 	return _barley_rng.state
 
 
-func snapshot() -> Dictionary:
+func snapshot(ranges: Array[Dictionary] = []) -> Dictionary:
+	# Only statistics callers request the read-only, window-specific diagnostic.
+	var chain_b: Dictionary = {}
+	if not ranges.is_empty() and _history != null:
+		chain_b = ChainBottleneck.snapshot(_history, _params, _context, _state, ranges)
 	return {
 		"economy": _state.to_dict(),
 		"stats": _stats.snapshot(),
@@ -399,6 +406,7 @@ func snapshot() -> Dictionary:
 		"decrees": DecreeDiagnostics.build(_state, _params, _context),
 		"defeat": _defeat_snapshot(),
 		"victory": _victory.snapshot(_state, _params),
+		"chain_bottlenecks": chain_b,
 		"tick_count": _tick_count,
 		"seed": _seed,
 		"rng_state": get_rng_state(),

@@ -268,6 +268,7 @@ ui.stats.stock,Existencias,Stock
 ui.stats.coverage,Cobertura,Coverage
 ui.stats.produced,Producción,Production
 ui.stats.consumed,Consumo,Consumption
+ui.stats.bread_demand,Demanda de pan,Bread demand
 ui.stats.spoiled,Merma,Spoilage
 ui.stats.bought,Compras,Purchases
 ui.stats.price,Precio,Price
@@ -327,6 +328,11 @@ ui.stats_screen.chains,Cadenas,Chains
 ui.stats_screen.chains.hint,"Cruceta o flechas ←/→: cadena · ↑/↓: eslabón · LT/RT o +/-: ventana","D-pad or arrows ←/→: chain · ↑/↓: link · LT/RT or +/-: window"
 ui.stats_screen.chains.absent,%s · %s,%s · %s
 ui.stats_screen.chains.value,%s %s,%s %s
+ui.stats_screen.chains.no_bottleneck,Cadena sin cuello,Chain with no bottleneck
+ui.stats_screen.chains.cause,Limita: %s,Limited by: %s
+ui.stats_screen.chains.cause_wharf,"Limita: %s · reparto %d %% cebada / %d %% trigo · %s","Limited by: %s · split %d %% barley / %d %% wheat · %s"
+ui.stats_screen.chains.imports_take,la harina importada se lleva la capacidad,imported flour takes the capacity
+ui.stats_screen.chains.imports_free,la harina importada no ocupa capacidad,imported flour does not use the capacity
 ui.stats_screen.chains.bread,Pan,Bread
 ui.stats_screen.chains.beer,Cerveza,Beer
 ui.stats_screen.chains.column.in,Entradas,In

@@ -100,7 +100,7 @@ func test_part_two_series_come_from_the_data() -> void:
 			&"consumed:malt", &"consumed:tea", &"spoiled:wheat", &"spoiled:beer", &"spoiled:bread", &"bought:wheat",
 			&"bought:barley", &"bought:flour", &"bought:tea", &"immigration:worker", &"immigration:artisan",
 			&"emigration:worker:hunger", &"emigration:artisan:satisfaction", &"promotions:artisan",
-			&"demotions:artisan", &"expense:administration", &"income:refund"]:
+			&"demotions:artisan", &"expense:administration", &"income:refund", &"bread_demand"]:
 		assert_has(by_id, id)
 	for id: StringName in [&"produced:wheat", &"produced:tea", &"spoiled:tea", &"spoiled:flour", &"bought:malt",
 			&"promotions:worker", &"promotions", &"demotions"]:
@@ -124,10 +124,12 @@ func test_part_two_samplers_read_the_counters() -> void:
 	state.administration_tick = 2.5
 	state.construction_spent_tick = 70
 	state.refunds_tick = 30
+	state.bread_demand_tick = 4.5
 	var values: Dictionary = {}
 	for def: SeriesDef in _defs():
 		values[def.id] = def.sampler.call(state)
 	assert_eq(values[&"produced:malt"], 2.0)
+	assert_eq(values[&"bread_demand"], 4.5)
 	assert_eq(values[&"produced:flour"], 0.0)
 	assert_eq(values[&"consumed:tea"], 0.5)
 	assert_eq(values[&"spoiled:beer"], 0.25)
@@ -141,3 +143,13 @@ func test_part_two_samplers_read_the_counters() -> void:
 	assert_eq(values[&"expense:administration"], 2.5)
 	assert_eq(values[&"expense:construction"], 100.0, "what was paid; the net 70 is after the refund")
 	assert_eq(values[&"income:refund"], 30.0)
+
+
+# Issue #353 (D-066): bread_demand series so windows can sum demand backwards from recipes (not realized consumed).
+func test_bread_demand_series_is_present_for_window_sums() -> void:
+	var by_id: Dictionary[StringName, SeriesDef] = {}
+	for def: SeriesDef in _defs():
+		by_id[def.id] = def
+	assert_has(by_id, &"bread_demand", "new series for summed demand over windows")
+	assert_eq(by_id[&"bread_demand"].aggregation, SeriesDef.AGGREGATION_SUM)
+	assert_eq(by_id[&"bread_demand"].unit, &"units")

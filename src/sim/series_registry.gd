@@ -27,6 +27,9 @@ static func build(params: Params, context: EconomyContext, victory_stages: Array
 	_buildings(found, params, context)
 	_outcomes(found, victory_stages)
 	_debt(found)
+	# D-185: sum required bread per second (ConsumptionSystem), not realized consumption.
+	found.append(SeriesDef.create(&"bread_demand", &"units", SeriesDef.AGGREGATION_SUM, {},
+		func(state: EconomyState) -> float: return float(state.bread_demand_tick)))
 	return found
 
 

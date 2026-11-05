@@ -283,6 +283,7 @@ const STATS_SERIES_LABELS: Dictionary[StringName, StringName] = {
 	&"coverage": &"ui.stats.coverage",
 	&"produced": &"ui.stats.produced",
 	&"consumed": &"ui.stats.consumed",
+	&"bread_demand": &"ui.stats.bread_demand",
 	&"spoiled": &"ui.stats.spoiled",
 	&"bought": &"ui.stats.bought",
 	&"price": &"ui.stats.price",
@@ -368,6 +369,12 @@ const STATS_SCREEN_CHAINS: StringName = &"ui.stats_screen.chains"
 const STATS_SCREEN_CHAINS_HINT: StringName = &"ui.stats_screen.chains.hint"
 const STATS_SCREEN_CHAINS_ABSENT: StringName = &"ui.stats_screen.chains.absent"
 const STATS_SCREEN_CHAINS_VALUE: StringName = &"ui.stats_screen.chains.value"
+# Cause line under a chain (issue #353): the link that limits it, or that none does.
+const STATS_SCREEN_CHAINS_NO_BOTTLENECK: StringName = &"ui.stats_screen.chains.no_bottleneck"
+const STATS_SCREEN_CHAINS_CAUSE: StringName = &"ui.stats_screen.chains.cause"
+const STATS_SCREEN_CHAINS_CAUSE_WHARF: StringName = &"ui.stats_screen.chains.cause_wharf"
+const STATS_SCREEN_CHAINS_IMPORTS_TAKE: StringName = &"ui.stats_screen.chains.imports_take"
+const STATS_SCREEN_CHAINS_IMPORTS_FREE: StringName = &"ui.stats_screen.chains.imports_free"
 const STATS_SCREEN_CHAIN_NAMES: Dictionary[StringName, StringName] = {
 	&"bread": &"ui.stats_screen.chains.bread", &"beer": &"ui.stats_screen.chains.beer",
 }
@@ -605,6 +612,8 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_LESSONS, STATS_SCREEN_LESSONS_ROW, STATS_SCREEN_LESSONS_CRISIS, STATS_SCREEN_LESSONS_NO_CRISIS,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
 		STATS_SCREEN_CHAINS, STATS_SCREEN_CHAINS_HINT, STATS_SCREEN_CHAINS_ABSENT, STATS_SCREEN_CHAINS_VALUE,
+		STATS_SCREEN_CHAINS_NO_BOTTLENECK, STATS_SCREEN_CHAINS_CAUSE, STATS_SCREEN_CHAINS_CAUSE_WHARF,
+		STATS_SCREEN_CHAINS_IMPORTS_TAKE, STATS_SCREEN_CHAINS_IMPORTS_FREE,
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
 		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
