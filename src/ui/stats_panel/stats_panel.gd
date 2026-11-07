@@ -68,6 +68,9 @@ var _snapshot: Dictionary = {}
 var _bread: Label
 var _economy: Label
 var _needs: Label
+# Why each class does not grow or rise: one label per class (issue #351).
+var _blockers: VBoxContainer
+var _blocker_labels: Dictionary[StringName, Label] = {}
 var _buildings: Label
 var _crises: Label
 var _objectives: Label
@@ -134,8 +137,9 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_needs = _label("")
 	_buildings = _label("")
 	_crises = _label("")
-	for label: Label in [_bread, _economy, _needs, _buildings, _crises]:
-		content.add_child(label)
+	_blockers = VBoxContainer.new()
+	for node: Control in [_bread, _economy, _needs, _blockers, _buildings, _crises]:
+		content.add_child(node)
 
 
 func apply_style(background: Color, alert: Color, margin: float) -> void:
@@ -205,6 +209,7 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_bread.text = _bread_text(economy, stats, snapshot["diagnostics"])
 	_economy.text = _economy_text(economy, stats)
 	_needs.text = _needs_text(snapshot["needs"])
+	_update_blockers(snapshot["needs"])
 	_buildings.text = _buildings_text(snapshot["diagnostics"], snapshot["distance"])
 	_crises.text = _crises_text(defeat)
 
@@ -736,34 +741,93 @@ func _promotion_lines(class_label: String, mobility: Dictionary) -> Array[String
 	var promotion: Dictionary = mobility["promotion"]
 	if promotion["active"]:
 		return [Strings.text(Strings.PROMOTION_ACTIVE) % [class_label, promotion["per_minute"]]]
-	var lines: Array[String] = [Strings.text(Strings.PROMOTION_BLOCKED) % class_label]
-	var source_label: String = Strings.label(Strings.CLASS_LABELS, mobility["from"])
-	for blocker: Dictionary in promotion["blockers"]:
-		lines.append(Strings.text(Strings.PROMOTION_BLOCKER) % _blocker_text(blocker, source_label))
-	return lines
+	# Blocked: why is in the blockers line of the class (issue #351), not listed twice.
+	return []
 
 
-func _blocker_text(blocker: Dictionary, source_label: String) -> String:
-	if blocker["reason"] == MobilitySystem.REASON_CATEGORY_BELOW:
-		return _category_blocker_text(blocker)
-	if blocker["reason"] == MobilitySystem.REASON_SOURCE_SATISFACTION_LOW:
-		# Rounded apart, so a satisfaction just under the minimum never reads as reaching it.
-		return Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [source_label, floorf(blocker["satisfaction"]),
-			ceilf(blocker["minimum"])]
-	return Strings.reason(blocker["reason"])
+# One control per class under the needs, in this same panel (issue #351). The simulation orders the blockers and says
+# how many lines fit; the first ones are the text, the rest a "+N" and the tooltip. Controls are reused, so a tooltip
+# open under the mouse survives the next snapshot.
+func _update_blockers(needs: Dictionary) -> void:
+	var classes: Dictionary = needs["classes"]
+	for class_id: StringName in _blocker_labels.keys():
+		if not classes.has(class_id):
+			_blocker_labels[class_id].queue_free()
+			_blocker_labels.erase(class_id)
+	var max_lines: int = maxi(1, int(needs.get("blockers_max_lines", 1)))
+	for class_id: StringName in classes:
+		var label: Label = _blocker_label(class_id)
+		var info: Dictionary = classes[class_id]
+		var texts: Array[String] = _blocker_texts(info.get("blockers", []), _source_label(info))
+		_show_blocker_lines(label, Strings.label(Strings.CLASS_LABELS, class_id), texts, max_lines)
 
 
-func _category_blocker_text(blocker: Dictionary) -> String:
+func _blocker_label(class_id: StringName) -> Label:
+	if _blocker_labels.has(class_id):
+		return _blocker_labels[class_id]
+	var label: Label = _label("")
+	# A label ignores the mouse by default, and an ignored control never shows its tooltip.
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	_blockers.add_child(label)
+	_blocker_labels[class_id] = label
+	return label
+
+
+func _show_blocker_lines(label: Label, class_label: String, texts: Array[String], max_lines: int) -> void:
+	if texts.is_empty():
+		label.text = Strings.text(Strings.BLOCKERS_NONE) % class_label
+		label.tooltip_text = ""
+		return
+	var shown: int = mini(max_lines, texts.size())
+	var hidden: int = texts.size() - shown
+	var lines: Array[String] = []
+	for index: int in shown:
+		var more: String = Strings.text(Strings.BLOCKERS_MORE) % hidden if hidden > 0 and index == shown - 1 else ""
+		lines.append(Strings.text(Strings.BLOCKERS_ROW) % [class_label, texts[index], more])
+	label.text = "\n".join(lines)
+	label.tooltip_text = "\n".join(texts.slice(shown))
+
+
+# The class people rise from, named in the satisfaction blocker; empty for a class with no mobility.
+func _source_label(info: Dictionary) -> String:
+	var mobility: Dictionary = info.get("mobility", {})
+	return Strings.label(Strings.CLASS_LABELS, mobility["from"]) if mobility.has("from") else ""
+
+
+func _blocker_texts(blockers: Array, source_label: String) -> Array[String]:
+	var texts: Array[String] = []
+	for blocker: Dictionary in blockers:
+		texts.append(Strings.text(Strings.BLOCKERS_ITEM) % [
+			Strings.label(Strings.BLOCKER_GROUP_LABELS, blocker["group"]), _blocker_detail(blocker, source_label)])
+	return texts
+
+
+# What fails, from the entry alone: the goods short for a category, the numbers when it has them, else its reason.
+func _blocker_detail(blocker: Dictionary, source_label: String) -> String:
+	var reason: String = Strings.reason(blocker["reason"])
+	if blocker.has("category"):
+		return _category_detail(blocker, reason)
+	var value: float = blocker.get("value", blocker.get("satisfaction", NAN))
+	var threshold: float = blocker.get("threshold", blocker.get("minimum", NAN))
+	if is_nan(value) or is_nan(threshold):
+		return reason
+	# Rounded apart, so a score just under its minimum never reads as reaching it.
+	if blocker["reason"] == MobilitySystem.REASON_SOURCE_SATISFACTION_LOW and not source_label.is_empty():
+		return Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [source_label, floorf(value), ceilf(threshold)]
+	return Strings.text(Strings.BLOCKERS_MEASURED) % [reason, floorf(value), ceilf(threshold)]
+
+
+func _category_detail(blocker: Dictionary, reason: String) -> String:
 	var category: String = Strings.label(Strings.CATEGORY_LABELS, blocker["category"])
-	# Same rounding as the needs rows: a score under its minimum never reads as equal to it.
+	# Same rounding as the needs rows: a score under its threshold never reads as equal to it.
 	var value: float = _tenths(blocker["value"], false)
-	var minimum: float = _tenths(blocker["minimum"], true)
+	var threshold: float = _tenths(blocker.get("threshold", blocker.get("minimum", 0.0)), true)
 	var missing: Array[String] = []
-	for good: StringName in blocker["missing_goods"]:
+	for good: StringName in blocker.get("missing_goods", []):
 		missing.append(Strings.label(Strings.GOOD_LABELS, good))
 	if missing.is_empty():
-		return Strings.text(Strings.PROMOTION_CATEGORY_REASON) % [category, value, minimum, Strings.reason(blocker["reason"])]
-	return Strings.text(Strings.PROMOTION_CATEGORY_BELOW) % [category, value, minimum, ", ".join(missing)]
+		return Strings.text(Strings.BLOCKERS_CATEGORY_REASON) % [category, value, threshold, reason]
+	return Strings.text(Strings.BLOCKERS_MISSING) % [", ".join(missing), category, value, threshold]
 
 
 func _tenths(value: float, round_up: bool) -> float:

@@ -105,6 +105,8 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"ui.chains.min_samples": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
+	&"ui.blockers.max_lines": {
+		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	# The policy uses -1 for "off" / "no limit" (WheatPolicy), so a price bound must not be negative.
 	&"market.wheat.min_price": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},

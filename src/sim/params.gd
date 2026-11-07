@@ -60,6 +60,16 @@ func _get_validated_value(key: StringName, errors: Array[String]) -> Variant:
 		return null
 	if key == &"ui.chains.tie_break":
 		return value
+	if key == &"ui.blockers.sort":
+		if value is not String or value != "gap":
+			errors.append("Params: 'ui.blockers.sort' must be gap")
+			return null
+		return value
+	if key == &"ui.blockers.max_lines":
+		if float(value) != floor(float(value)) or float(value) < 1.0:
+			errors.append("Params: 'ui.blockers.max_lines' must be integer >= 1")
+			return null
+		return int(value)
 	var defeat_key: StringName = &"defeat.depopulation.defeat_fraction"
 	var warning_key: StringName = &"defeat.depopulation.warning_fraction"
 	if key in [defeat_key, warning_key]:
@@ -143,6 +153,15 @@ func _get_modified_value(key: StringName, errors: Array[String]) -> Variant:
 				return null
 		if value is not String or value != "upstream":
 			errors.append("Params: '%s' must be upstream" % key)
+			return null
+		return value
+	if key == &"ui.blockers.sort":
+		for modifier: Modifier in _modifiers:
+			if modifier.key == key:
+				errors.append("Params: '%s' does not accept numeric modifiers" % key)
+				return null
+		if value is not String or value != "gap":
+			errors.append("Params: '%s' must be gap" % key)
 			return null
 		return value
 	for modifier: Modifier in _modifiers:

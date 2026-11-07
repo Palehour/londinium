@@ -99,3 +99,14 @@ static func class_housing_capacity(state: EconomyState, params: Params, context:
 		if owner == def.id or (def.base and owner == &""):
 			total += maxi(0, int(params.get_value(StringName("building.%s.capacity" % id)))) + bonus
 	return total
+
+
+# Goods whose coverage could still raise the category score (shared for diagnostics/blockers).
+static func missing_goods(state: EconomyState, params: Params, def: ClassDef, category: StringName) -> Array[StringName]:
+	var missing: Array[StringName] = []
+	for need: NeedDef in def.needs:
+		if need.category != category or coverage(state, need.good) >= 1.0:
+			continue
+		if float(params.get_value(StringName("class.%s.need.%s.value" % [def.id, need.good]))) > 0.0:
+			missing.append(need.good)
+	return missing

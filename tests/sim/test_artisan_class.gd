@@ -290,3 +290,163 @@ func test_diagnostics_explain_the_growth_of_each_class() -> void:
 	_evaluate(1.0, 0.0, 1.0)
 	info = NeedsDiagnostics.build(_state, _params, _context)["classes"]
 	assert_eq(info[&"artisan"]["growth"]["reason"], &"no_free_housing")
+
+
+# Strengthened genuine tests for #351 (D-085 served, D-186 blockers) replacing weak tautologies.
+# Remove has_method/'or true' guards. Semantic assert fails expected as RED (no prod edit).
+# Preserve all prior tests. Use real evaluate, to_dict serializer for full state incl nested ClassState.
+# Actual serializer: EconomyState.to_dict() / from_dict() for complete nested comparison.
+
+func test_growth_hunger_sets_worker_and_artisan_hungry_leaving() -> void:
+	# Point 2: real hunger flag for worker and artisan with population >0.
+	ClassStates.ensure(_state, _context)
+	var worker_def: ClassDef = _context.classes[&"worker"]
+	var artisan_def: ClassDef = _artisans()
+	_live(5, 3)
+	_state.hunger_smoothed_coverage = 0.3
+	_state.bread_coverage = 0.3
+	_state.beer_coverage = 0.0
+	# Preconditions: classes exist and populations are positive.
+	assert_true(_context.classes.has(&"artisan"), "precondition: artisan class in context")
+	assert_true(_state.class_states.has(&"artisan"), "precondition: artisan state exists")
+	assert_eq(ClassStates.population_of(_state, worker_def), 5, "precondition: worker population")
+	assert_eq(ClassStates.population_of(_state, artisan_def), 3, "precondition: artisan population")
+	if not _context.classes.has(&"artisan") or not _state.class_states.has(&"artisan"):
+		return
+	if ClassStates.population_of(_state, worker_def) != 5 or ClassStates.population_of(_state, artisan_def) != 3:
+		return
+	# Hunger coverage is below both class thresholds (resolved through Params).
+	var worker_threshold: float = float(_params.get_value(worker_def.hunger_threshold_key))
+	var artisan_threshold: float = float(_params.get_value(artisan_def.hunger_threshold_key))
+	assert_lt(_state.hunger_coverage(worker_def.id), worker_threshold, "precondition: worker hunger coverage below threshold")
+	assert_lt(_state.hunger_coverage(artisan_def.id), artisan_threshold, "precondition: artisan hunger coverage below threshold")
+	if _state.hunger_coverage(worker_def.id) >= worker_threshold or _state.hunger_coverage(artisan_def.id) >= artisan_threshold:
+		return
+	# One real tick sets the hunger flags; do not call growth.tick again after this.
+	GrowthSystem.new().tick(_state, _params, _context)
+	assert_true(_state.hunger_emigration_active, "worker hunger flag active after tick")
+	assert_true(_state.class_states[&"artisan"].hunger_emigration_active, "artisan hunger flag active after tick")
+	assert_gt(ClassStates.population_of(_state, worker_def), 0, "worker population stays positive after hunger tick")
+	assert_gt(ClassStates.population_of(_state, artisan_def), 0, "artisan population stays positive after hunger tick")
+	if not _state.hunger_emigration_active or not _state.class_states[&"artisan"].hunger_emigration_active \
+			or ClassStates.population_of(_state, worker_def) <= 0 or ClassStates.population_of(_state, artisan_def) <= 0:
+		return
+	NeedsSystem.evaluate(_state, _params, _context)
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	assert_eq(needs["classes"][&"worker"]["growth"]["reason"], &"hungry_leaving", "worker hungry_leaving in diagnostics")
+	assert_eq(needs["classes"][&"artisan"]["growth"]["reason"], &"hungry_leaving", "artisan hungry_leaving in diagnostics")
+
+
+# Helper: a sim with non-empty RoadSystem-derived service state and the artisan class erased from its copied state.
+func _sim_for_purity_test() -> Simulation:
+	var pure_context: EconomyContext = RoadTestMap.street(_catalog, 8)
+	var pure_state: EconomyState = EconomyState.new()
+	pure_state.tax_rate = 0.25
+	pure_state.buildings.append({"definition_id": &"housing",
+		"cell": [RoadTestMap.on_street(pure_context.buildings[&"housing"].footprint, 1).x,
+			RoadTestMap.on_street(pure_context.buildings[&"housing"].footprint, 1).y]})
+	pure_state.buildings.append({"definition_id": &"artisan_housing",
+		"cell": [RoadTestMap.on_street(pure_context.buildings[&"artisan_housing"].footprint, 2).x,
+			RoadTestMap.on_street(pure_context.buildings[&"artisan_housing"].footprint, 2).y]})
+	ClassStates.ensure(pure_state, pure_context)
+	pure_state.population = 5 + 3
+	pure_state.class_states[&"artisan"].population = 3
+	pure_state.hunger_smoothed_coverage = 1.0
+	pure_state.bread_coverage = 1.0
+	pure_state.beer_coverage = 1.0
+	pure_state.satisfaction = 90.0
+	pure_state.class_states[&"artisan"].satisfaction = 90.0
+	var sim: Simulation = Simulation.new(_params, pure_state, 1, pure_context)
+	# Explicit test coupling: Simulation copies its input; inspect the actual internal state.
+	assert_true(sim._context.classes.has(&"artisan"), "setup: real multiclasse context")
+	assert_true(sim._state.class_states.has(&"artisan"), "setup: artisan exists before removal")
+	assert_false(sim._state.service_rooms.is_empty(), "setup: nonempty real service rooms")
+	assert_false(sim._state.house_service.is_empty(), "setup: nonempty real house service")
+	if not sim._context.classes.has(&"artisan") or not sim._state.class_states.has(&"artisan") \
+			or sim._state.service_rooms.is_empty() or sim._state.house_service.is_empty():
+		return null
+	sim._state.class_states.erase(&"artisan")
+	assert_false(sim._state.class_states.has(&"artisan"), "setup: absent in the operation target")
+	return sim
+
+
+func test_needs_diagnostics_is_pure_with_absent_class() -> void:
+	var sim: Simulation = _sim_for_purity_test()
+	if sim == null:
+		return
+	assert_false(sim._state.service_rooms.is_empty(), "precondition: service_rooms not empty")
+	if sim._state.service_rooms.is_empty():
+		return
+	var before: Dictionary = sim._state.to_dict().duplicate(true)
+	var before_rooms: Dictionary = sim._state.service_rooms.duplicate(true)
+	var before_houses: Array = sim._state.house_service.duplicate(true)
+	var needs: Dictionary = NeedsDiagnostics.build(sim._state, sim._params, sim._context)
+	var after: Dictionary = sim._state.to_dict()
+	assert_eq_deep(before, after)
+	assert_eq_deep(sim._state.service_rooms, before_rooms)
+	assert_eq_deep(sim._state.house_service, before_houses)
+	assert_true(needs["classes"].has(&"artisan"), "diagnostics reports absent class without creating it")
+	assert_false(sim._state.class_states.has(&"artisan"), "absent class stays absent after diagnostics")
+
+
+func test_snapshot_is_pure_with_absent_class() -> void:
+	var sim: Simulation = _sim_for_purity_test()
+	if sim == null:
+		return
+	assert_false(sim._state.service_rooms.is_empty(), "precondition: service_rooms not empty")
+	if sim._state.service_rooms.is_empty():
+		return
+	var before: Dictionary = sim._state.to_dict().duplicate(true)
+	var before_rooms: Dictionary = sim._state.service_rooms.duplicate(true)
+	var before_houses: Array = sim._state.house_service.duplicate(true)
+	var snap: Dictionary = sim.snapshot()
+	var after: Dictionary = sim._state.to_dict()
+	assert_eq_deep(before, after)
+	assert_eq_deep(sim._state.service_rooms, before_rooms)
+	assert_eq_deep(sim._state.house_service, before_houses)
+	assert_true(snap["needs"]["classes"].has(&"artisan"), "snapshot reports absent class without creating it")
+	assert_false(sim._state.class_states.has(&"artisan"), "absent class stays absent after snapshot")
+
+func test_growth_sustento_precise_value_real_evaluate_and_role_override() -> void:
+	# Point 3: precise sustento value e.g. 60 th75 , role override 80; use real NeedsSystem.evaluate
+	_live(5, 0)
+	_state.hunger_smoothed_coverage = 0.6
+	_state.bread_coverage = 0.6
+	_state.tea_coverage = 1.0
+	NeedsSystem.evaluate(_state, _params, _context)  # real, not cached
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	var w_blockers: Array = needs["classes"][&"worker"].get("blockers", [])
+	var sust: Dictionary = {}
+	for b: Dictionary in w_blockers:
+		if b.get("category") == &"sustento":
+			sust = b
+			break
+	assert_eq(float(sust.get("value", 0)), 60.0, "precise value from evaluate")
+	assert_eq(float(sust.get("threshold", 0)), 75.0)
+	# role override
+	var p80: Params = _params_with({&"needs.sustento.threshold": 80.0})
+	NeedsSystem.evaluate(_state, p80, _context)
+	needs = NeedsDiagnostics.build(_state, p80, _context)
+	sust = {}
+	for b: Dictionary in needs["classes"][&"worker"].get("blockers", []):
+		if b.get("category") == &"sustento": sust = b
+	assert_eq(float(sust.get("threshold", 0)), 80.0, "role override threshold")
+
+func test_all_categories_outside_served_and_no_good_excluded() -> void:
+	# Point 4: ALL categories with good outside served included; cached no-good abrigo excluded (no NeedDef)
+	_live(5, 0)
+	_state.hunger_smoothed_coverage = 0.5
+	_state.bread_coverage = 0.5
+	_state.tea_coverage = 0.0
+	NeedsSystem.evaluate(_state, _params, _context)
+	# inject no-good category (existing evaluate only NeedDefs, construct intentionally)
+	_state.class_needs[&"worker"]["abrigo"] = {"value": 10.0, "threshold": 40.0, "met": false}
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	var w_blockers: Array = needs["classes"][&"worker"].get("blockers", [])
+	var cats: Array[StringName] = []
+	for b: Dictionary in w_blockers:
+		if b.has("category"):
+			cats.append(b["category"])
+	assert_true(&"sustento" in cats, "sustento included (served)")
+	assert_true(&"comunidad" in cats, "comunidad included (outside served)")
+	assert_false(&"abrigo" in cats, "no-good abrigo excluded from blockers categories")

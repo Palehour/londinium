@@ -54,6 +54,10 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"bottleneck_margin": "pending_fraction",
 			"min_samples": "pending_positive_integer",
 			"tie_break": "pending_tie_break"
+		},
+		"blockers": {
+			"max_lines": "pending_positive_integer",
+			"sort": "pending_blockers_sort"
 		}
 	},
 	"population": {
@@ -429,6 +433,13 @@ func _number(raw: Variant, kind: String, path: String, key: String, catalog: Dat
 	if kind == "tie_break":
 		if raw is not String or raw != "upstream":
 			_errors.append("%s: expected upstream or sin dato" % path)
+			_rejected_keys.append(StringName(key))
+			return false
+		catalog.base_values[StringName(key)] = raw
+		return true
+	if kind == "blockers_sort":
+		if raw is not String or raw != "gap":
+			_errors.append("%s: expected gap or sin dato" % path)
 			_rejected_keys.append(StringName(key))
 			return false
 		catalog.base_values[StringName(key)] = raw

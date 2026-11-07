@@ -62,6 +62,36 @@ func _seconds_per_arrival() -> int:
 	return ceili(60.0 / float(_params().get_value(&"population.growth.immigration_per_minute")))
 
 
+# Assert the real RoadSystem-derived service state for the worker class.
+# A failed preparation stops the case before diagnostic assertions or array access.
+func _assert_worker_service_preconditions(sim: Simulation, expected_total_capacity: int,
+		expected_served_capacity: int, expected_total_houses: int, expected_served_houses: int) -> bool:
+	assert_true(sim._context.classes.has(&"worker"), "precondition: context has worker class")
+	var rooms: Dictionary = sim._state.service_rooms.get(&"worker", {})
+	assert_true(rooms.has(RoadSystem.TOTAL), "precondition: worker TOTAL service room recorded")
+	assert_true(rooms.has(RoadSystem.SERVED), "precondition: worker SERVED service room recorded")
+	assert_true(rooms.has(&"bread"), "precondition: worker bread service room recorded")
+	if not sim._context.classes.has(&"worker") or not rooms.has(RoadSystem.TOTAL) \
+			or not rooms.has(RoadSystem.SERVED) or not rooms.has(&"bread"):
+		return false
+	assert_eq(rooms[RoadSystem.TOTAL], Vector2(expected_total_capacity, expected_total_houses), "total worker rooms")
+	assert_eq(rooms[RoadSystem.SERVED], Vector2(expected_served_capacity, expected_served_houses), "served worker rooms")
+	assert_eq(rooms[&"bread"], Vector2(expected_served_capacity, expected_served_houses), "worker bread rooms")
+	var worker_houses: int = 0
+	var served_houses: int = 0
+	for hs: Dictionary in sim._state.house_service:
+		if hs.get("class_id") == &"worker":
+			worker_houses += 1
+			if hs.get("connected", false) and hs.get("served", {}).get(&"bread", false):
+				served_houses += 1
+	assert_eq(worker_houses, expected_total_houses, "worker house_service entries")
+	assert_eq(served_houses, expected_served_houses, "worker served houses in house_service")
+	return rooms[RoadSystem.TOTAL] == Vector2(expected_total_capacity, expected_total_houses) \
+		and rooms[RoadSystem.SERVED] == Vector2(expected_served_capacity, expected_served_houses) \
+		and rooms[&"bread"] == Vector2(expected_served_capacity, expected_served_houses) \
+		and worker_houses == expected_total_houses and served_houses == expected_served_houses
+
+
 func test_a_free_house_without_bread_in_reach_gets_no_arrivals() -> void:
 	var sim: Simulation = _sim([2, _radius + 1] as Array[int], _capacity)
 	var economy: Dictionary = _ticks(sim, 600)
@@ -100,6 +130,75 @@ func test_losing_the_bread_evicts_nobody() -> void:
 	var sim: Simulation = _sim([2, 3] as Array[int], 2 * _capacity)
 	sim.apply_command(DemolishCommand.new(RoadTestMap.land(1)))
 	assert_eq(_ticks(sim, 1)["population"], 2 * _capacity)
+
+
+# Issue #351: a free but unserved house must report unserved_housing (missing bread), not no_free_housing.
+func test_unserved_free_housing_reports_unserved_housing_and_bread() -> void:
+	var sim: Simulation = _sim([2, _radius + 1] as Array[int], _capacity)
+	_ticks(sim, 1)
+	var worker_def: ClassDef = sim._context.classes[&"worker"]
+	var pop: int = ClassStates.population_of(sim._state, worker_def)
+	var cap: int = ClassStates.housing_capacity_of(sim._state, worker_def)
+	var served_room: int = RoadSystem.served_room(sim._state, sim._params, worker_def, cap)
+	assert_eq(pop, _capacity, "precondition: served house is full")
+	assert_eq(cap, 2 * _capacity, "precondition: total worker capacity")
+	assert_lt(served_room, cap, "precondition: not all worker room is served")
+	assert_eq(served_room, pop, "precondition: all served room is occupied")
+	assert_gt(cap - pop, 0, "precondition: physical free room exists")
+	if not _assert_worker_service_preconditions(sim, 2 * _capacity, _capacity, 2, 1):
+		return
+	if pop != _capacity or cap != 2 * _capacity or served_room != pop or cap - pop <= 0:
+		return
+	var needs: Dictionary = sim.snapshot()["needs"]
+	var blockers: Array = needs["classes"][&"worker"].get("blockers", [])
+	assert_false(blockers.is_empty(), "precondition: at least one blocker")
+	if blockers.is_empty():
+		return
+	assert_eq(blockers[0]["reason"], &"unserved_housing", "unserved housing is the first blocker")
+	assert_eq(blockers[0]["group"], &"growth")
+	assert_eq(blockers[0].get("missing_goods"), [&"bread"] as Array[StringName], "unserved housing names missing bread")
+
+
+# Issue #351: a served house that is full must report no_free_housing.
+func test_served_full_housing_reports_no_free_housing() -> void:
+	var sim: Simulation = _sim([2] as Array[int], _capacity)
+	_ticks(sim, 1)
+	var worker_def: ClassDef = sim._context.classes[&"worker"]
+	var pop: int = ClassStates.population_of(sim._state, worker_def)
+	var cap: int = ClassStates.housing_capacity_of(sim._state, worker_def)
+	var served_room: int = RoadSystem.served_room(sim._state, sim._params, worker_def, cap)
+	assert_eq(pop, _capacity, "precondition: house is full")
+	assert_eq(cap, _capacity, "precondition: one served house capacity")
+	assert_eq(served_room, cap, "precondition: all room is served")
+	if not _assert_worker_service_preconditions(sim, _capacity, _capacity, 1, 1):
+		return
+	if pop != _capacity or cap != _capacity or served_room != cap:
+		return
+	var needs: Dictionary = sim.snapshot()["needs"]
+	var blockers: Array = needs["classes"][&"worker"].get("blockers", [])
+	assert_false(blockers.is_empty(), "precondition: at least one blocker")
+	if blockers.is_empty():
+		return
+	# D-186: no_free_housing has no measurable gap, so it comes after every measurable growth blocker.
+	# The worker's comunidad (tea) is uncovered in this map, so no_free_housing is not blockers[0].
+	var reasons: Array = []
+	for b: Dictionary in blockers:
+		reasons.append(b.get("reason"))
+	assert_eq(reasons.count(&"no_free_housing"), 1, "exactly one no_free_housing")
+	assert_eq(reasons.count(&"unserved_housing"), 0, "served full housing is not unserved")
+	assert_eq(reasons[reasons.size() - 1], &"no_free_housing", "housing blocker after the measurable ones")
+	var previous_gap: float = INF
+	for i: int in range(blockers.size() - 1):
+		var b: Dictionary = blockers[i]
+		assert_eq(b.get("group"), &"growth")
+		assert_true(b.has("value") and b.has("threshold"), "blocker %d before housing is measurable" % i)
+		if not (b.has("value") and b.has("threshold")):
+			return
+		var gap: float = float(b["threshold"]) - float(b["value"])
+		assert_gt(gap, 0.0, "measurable blocker %d is below its threshold" % i)
+		assert_true(gap <= previous_gap, "measurable gaps descend")
+		previous_gap = gap
+	assert_eq(blockers[blockers.size() - 1].get("group"), &"growth")
 
 
 func test_the_8x8_plays_the_same_with_the_rule_on_or_off() -> void:

@@ -335,3 +335,151 @@ func test_beer_shortage_demotes_and_recovers() -> void:
 	sim = _reload(sim, 100000, 1000)
 	_run(sim, 300)
 	assert_gt(_artisans_in(sim), after_shortage, "Workers rise again when the beer returns")
+
+
+# Strengthened genuine tests (no has_method/'or true' tautologies). Focus full blocker order.
+# Preserve existing. Semantic fails = RED.
+
+func _blocker_gap(b: Dictionary) -> float:
+	if b.has("value") and b.has("threshold"):
+		return float(b["threshold"]) - float(b["value"])
+	return -1.0
+
+
+func _is_unmeasurable_blocker(b: Dictionary) -> bool:
+	return not (b.has("value") and b.has("threshold"))
+
+
+# Recovered from r5: promotion with every condition satisfied has an empty blocker list.
+func test_promotion_all_satisfied_has_empty_blockers() -> void:
+	var artisan_def: ClassDef = _artisans()
+	var worker_def: ClassDef = _context.classes[&"worker"]
+	_live(20, 0)
+	_city(1.0, 1.0, 100.0)
+	NeedsSystem.evaluate(_state, _params, _context)
+	# Independent preparation checks with guards.
+	assert_eq(ClassStates.population_of(_state, worker_def), 20, "source population")
+	assert_eq(ClassStates.population_of(_state, artisan_def), 0, "artisan population")
+	assert_gt(ClassStates.housing_capacity_of(_state, artisan_def), 0, "artisan housing capacity")
+	assert_true(NeedsSystem.reaches(_state.class_needs[artisan_def.id][&"comunidad"]["value"],
+		float(_params.get_value(artisan_def.promotion_min_score_keys[&"comunidad"]))), "community score reached")
+	assert_true(NeedsSystem.reaches(_state.class_needs[artisan_def.id][&"sustento"]["value"],
+		float(_params.get_value(artisan_def.promotion_min_score_keys[&"sustento"]))), "sustento score reached")
+	assert_true(NeedsSystem.reaches(_state.satisfaction,
+		float(_params.get_value(artisan_def.promotion_source_satisfaction_key))), "source satisfaction reached")
+	var all_met: bool = ClassStates.population_of(_state, worker_def) == 20 \
+		and ClassStates.population_of(_state, artisan_def) == 0 \
+		and ClassStates.housing_capacity_of(_state, artisan_def) > 0 \
+		and NeedsSystem.reaches(_state.class_needs[artisan_def.id][&"comunidad"]["value"], float(_params.get_value(artisan_def.promotion_min_score_keys[&"comunidad"]))) \
+		and NeedsSystem.reaches(_state.class_needs[artisan_def.id][&"sustento"]["value"], float(_params.get_value(artisan_def.promotion_min_score_keys[&"sustento"]))) \
+		and NeedsSystem.reaches(_state.satisfaction, float(_params.get_value(artisan_def.promotion_source_satisfaction_key)))
+	if not all_met:
+		return
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	var promo_bs: Array = []
+	for b: Dictionary in needs["classes"][&"artisan"].get("blockers", []):
+		if b.get("group") == &"promotion":
+			promo_bs.append(b)
+	assert_eq(promo_bs.size(), 0, "all satisfied promotion blockers empty")
+
+
+# Recovered from r5: a single failed condition (sustento 74/75) shows the resolved threshold through NeedsDiagnostics.
+func test_promotion_sustento_74_blocks_with_threshold_75() -> void:
+	var artisan_def: ClassDef = _artisans()
+	var worker_def: ClassDef = _context.classes[&"worker"]
+	_live(20, 0)
+	_city(0.74, 1.0, 100.0)
+	NeedsSystem.evaluate(_state, _params, _context)
+	# Independent preparation checks with guards.
+	assert_eq(ClassStates.population_of(_state, worker_def), 20, "source population")
+	assert_eq(ClassStates.population_of(_state, artisan_def), 0, "artisan population")
+	assert_gt(ClassStates.housing_capacity_of(_state, artisan_def), 0, "artisan housing capacity")
+	assert_false(NeedsSystem.reaches(_state.class_needs[artisan_def.id][&"sustento"]["value"],
+		float(_params.get_value(artisan_def.promotion_min_score_keys[&"sustento"]))), "sustento score below threshold")
+	var prepared: Array = [ClassStates.population_of(_state, worker_def), ClassStates.population_of(_state, artisan_def),
+		_state.class_needs[artisan_def.id][&"sustento"]["value"], _state.class_needs[artisan_def.id][&"comunidad"]["value"], _state.satisfaction]
+	assert_eq(prepared, [20, 0, 74.0, 100.0, 100.0], "setup: only sustento fails")
+	if prepared != [20, 0, 74.0, 100.0, 100.0] or ClassStates.housing_capacity_of(_state, artisan_def) <= 0:
+		return
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	var bs: Array = needs["classes"][&"artisan"].get("blockers", [])
+	var found: bool = false
+	var promo_count: int = 0
+	for b: Dictionary in bs:
+		if b.get("group") == &"promotion":
+			promo_count += 1
+			if b.get("category") == &"sustento":
+				found = true
+				assert_eq(float(b.get("threshold", 0)), 75.0, "sustento promotion threshold resolved")
+	assert_eq(promo_count, 1, "only one promotion blocker")
+	assert_true(found, "sustento promotion blocker found")
+
+
+func test_blockers_full_order_gaps_groups_and_ties() -> void:
+	# Artisan class with both growth and promotion blockers and known gaps.
+	_live(5, 10)
+	_city(0.35, 0.4, 40.0)
+	# Independent preparation checks from inputs/state before diagnostics.
+	NeedsSystem.evaluate(_state, _params, _context)
+	var artisan_def: ClassDef = _artisans()
+	var worker_def: ClassDef = _context.classes[&"worker"]
+	assert_eq(ClassStates.population_of(_state, worker_def), 5, "worker population")
+	assert_eq(ClassStates.population_of(_state, artisan_def), 10, "artisan population")
+	assert_eq(NeedsSystem.housing_bonus(_state, _params, artisan_def.id), 0, "artisan bonus 0")
+	assert_eq(ClassStates.housing_capacity_of(_state, artisan_def), 10, "artisan capacity")
+	assert_eq(_state.class_needs[artisan_def.id][&"sustento"]["value"], 35.0, "sustento value")
+	assert_eq(_state.class_needs[artisan_def.id][&"sustento"]["threshold"], 75.0, "sustento threshold")
+	assert_eq(_state.class_needs[artisan_def.id][&"comunidad"]["value"], 40.0, "comunidad value")
+	assert_eq(_state.class_needs[artisan_def.id][&"comunidad"]["threshold"], 50.0, "comunidad threshold")
+	assert_eq(float(_params.get_value(artisan_def.promotion_min_score_keys[&"comunidad"])), 80.0, "promotion community minimum")
+	assert_eq(float(_params.get_value(artisan_def.promotion_min_score_keys[&"sustento"])), 75.0, "promotion sustento minimum")
+	assert_eq(float(_params.get_value(artisan_def.promotion_source_satisfaction_key)), 70.0, "promotion source satisfaction minimum")
+	assert_eq(_state.satisfaction, 40.0, "source satisfaction")
+	var inputs: Array = [ClassStates.population_of(_state, worker_def), ClassStates.population_of(_state, artisan_def),
+		NeedsSystem.housing_bonus(_state, _params, artisan_def.id), ClassStates.housing_capacity_of(_state, artisan_def),
+		_state.class_needs[artisan_def.id][&"sustento"]["value"], _state.class_needs[artisan_def.id][&"sustento"]["threshold"],
+		_state.class_needs[artisan_def.id][&"comunidad"]["value"], _state.class_needs[artisan_def.id][&"comunidad"]["threshold"],
+		float(_params.get_value(artisan_def.promotion_min_score_keys[&"comunidad"])),
+		float(_params.get_value(artisan_def.promotion_min_score_keys[&"sustento"])),
+		float(_params.get_value(artisan_def.promotion_source_satisfaction_key)), _state.satisfaction]
+	if inputs != [5, 10, 0, 10, 35.0, 75.0, 40.0, 50.0, 80.0, 75.0, 70.0, 40.0]:
+		return
+	var needs: Dictionary = NeedsDiagnostics.build(_state, _params, _context)
+	var blockers: Array = needs["classes"][&"artisan"]["blockers"]
+	# Measurable gaps and unmeasurable flags.
+	assert_eq(blockers.size(), 7, "expected blocker count")
+	if blockers.size() != 7:
+		return
+	assert_eq(_blocker_gap(blockers[0]), 40.0, "growth sustento gap")
+	assert_eq(_blocker_gap(blockers[1]), 10.0, "growth comunidad gap")
+	assert_true(_is_unmeasurable_blocker(blockers[2]), "growth housing unmeasurable")
+	assert_eq(_blocker_gap(blockers[3]), 40.0, "promotion comunidad gap")
+	assert_eq(_blocker_gap(blockers[4]), 40.0, "promotion sustento gap")
+	assert_eq(_blocker_gap(blockers[5]), 30.0, "promotion satisfaction gap")
+	assert_true(_is_unmeasurable_blocker(blockers[6]), "promotion housing unmeasurable")
+	# Full exact signature comparison with default-empty category.
+	var normalized: Array[Dictionary] = []
+	for b: Dictionary in blockers:
+		var copy: Dictionary = b.duplicate(true)
+		if not copy.has("category"):
+			copy["category"] = &""
+		normalized.append(copy)
+	var expected: Array[Dictionary] = [
+		{"group": &"growth", "reason": &"below_threshold", "category": &"sustento",
+			"value": _state.class_needs[artisan_def.id][&"sustento"]["value"], "threshold": 75.0,
+			"missing_goods": [&"bread"]},
+		{"group": &"growth", "reason": &"below_threshold", "category": &"comunidad",
+			"value": _state.class_needs[artisan_def.id][&"comunidad"]["value"], "threshold": 50.0,
+			"missing_goods": [&"beer"]},
+		{"group": &"growth", "reason": GrowthSystem.REASON_NO_FREE_HOUSING, "category": &""},
+		{"group": &"promotion", "reason": MobilitySystem.REASON_CATEGORY_BELOW, "category": &"comunidad",
+			"value": _state.class_needs[artisan_def.id][&"comunidad"]["value"], "minimum": 80.0, "threshold": 80.0,
+			"missing_goods": [&"beer"]},
+		{"group": &"promotion", "reason": MobilitySystem.REASON_CATEGORY_BELOW, "category": &"sustento",
+			"value": _state.class_needs[artisan_def.id][&"sustento"]["value"], "minimum": 75.0, "threshold": 75.0,
+			"missing_goods": [&"bread"]},
+		{"group": &"promotion", "reason": MobilitySystem.REASON_SOURCE_SATISFACTION_LOW, "category": &"",
+			"satisfaction": _state.satisfaction, "minimum": 70.0, "threshold": 70.0, "value": _state.satisfaction},
+		{"group": &"promotion", "reason": GrowthSystem.REASON_NO_FREE_HOUSING, "category": &""},
+	]
+	assert_eq_deep(normalized, expected)
