@@ -3,7 +3,7 @@
 Incorporación documental del paquete consolidado. Cuatro borradores con feedback positivo. Ninguno entra al canon ni al juego: el feedback positivo no es aprobación para activarlos.
 
 - Issue: [#363](https://github.com/Palehour/londinium/issues/363)
-- PR: el que versiona este archivo (el número se anota al abrirlo)
+- PR: [#364](https://github.com/Palehour/londinium/pull/364)
 - Contraste de los canónicos: `develop` `906796b2bf8c1877f9400809c65d58a3a5a327bb`
 - No modifica `docs/GDD.md`, `docs/DECISIONS.md`, `data/`, `locale/`, UI ni reglas. No crea IDs D/P.
 
