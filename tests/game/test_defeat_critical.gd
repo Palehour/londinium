@@ -271,7 +271,7 @@ func test_panel_without_defeat_state_keeps_working_and_critical_leaves_the_warni
 	assert_true(banner.visible)
 	assert_eq((panel.get("_alert") as Label).text, "", "hunger is not said twice")
 	panel.reset_critical()
-	assert_eq(banner.sound.status, DefeatCriticalSound.STATUS_NO_DATA)
+	assert_eq(banner.sound.status, DefeatCriticalSound.STATUS_OK, "the approved sound is configured after reset")
 
 
 func _panel_with_session() -> Array:
@@ -321,7 +321,7 @@ func test_a_restarted_session_rearms_the_sound_and_clears_the_notice() -> void:
 	panel.update_snapshot(session.get_snapshot())
 	assert_eq(banner.rows(), [] as Array[Dictionary], "a fresh game has no critical state")
 	assert_eq(banner.find_children("Notice_*", "PanelContainer", true, false).size(), 0)
-	assert_ne(banner.sound.status, DefeatCriticalSound.STATUS_OK, "no sound is chosen yet, so none is claimed")
+	assert_eq(banner.sound.status, DefeatCriticalSound.STATUS_OK, "the approved sound is configured after reset")
 
 
 # Steam Deck size (D-048): three notices at once leave the panel's scroll area most of the screen and every row inside

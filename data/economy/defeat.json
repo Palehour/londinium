@@ -7,12 +7,12 @@
   "ui": {
     "defeat": {
       "critical_seconds": {
-        "bankruptcy": null,
-        "hunger": null,
-        "depopulation": null
+        "bankruptcy": 60,
+        "hunger": 60,
+        "depopulation": 60
       },
-      "critical_sound": null,
-      "_comment": "sin dato placeholders for #350; null or 'sin dato' means incomplete config, do not activate criticals or convert to zero; define real values in DECISIONS before close; load raw without global number validation"
+      "critical_sound": "critical-notice-original",
+      "_comment": "D-188 values approved for #350: 60 s remaining before defeat, original critical notice sound"
     }
   }
 }

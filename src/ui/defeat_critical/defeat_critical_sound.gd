@@ -17,7 +17,7 @@ const NO_DATA_WORDS: Array[String] = ["", "sin dato"]
 var status: StringName = STATUS_NO_DATA
 var stream: AudioStream
 var _active: Dictionary[StringName, bool] = {}
-var _id_pattern: RegEx = RegEx.create_from_string("^[a-z0-9_]+$")
+var _id_pattern: RegEx = RegEx.create_from_string("^[a-z0-9_-]+$")
 
 
 # `sound_id` is the raw parameter value. `loader` takes a path and returns a Resource or null; tests inject their own.

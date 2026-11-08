@@ -40,6 +40,7 @@ func _init() -> void:
 	_font = SystemFont.new()
 	_font.font_names = SERIF_FONTS
 	_player = AudioStreamPlayer.new()
+	_player.bus = "Master"
 	add_child(_player)
 	critical_entered.connect(_play)
 
