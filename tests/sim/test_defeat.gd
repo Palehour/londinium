@@ -26,6 +26,30 @@ func _with(overrides: Dictionary[StringName, float]) -> Params:
 	return Params.new(_catalog, role)
 
 
+# Explicit null fixture for tests that verify the unresolved/sin dato path (D-188 changed base to 60).
+func _null_catalog() -> DataCatalog:
+	var loaded: DataLoadResult = DataLoader.new().load_all()
+	assert_true(loaded.is_ok(), str(loaded.errors))
+	var catalog: DataCatalog = loaded.catalog
+	catalog.base_values[&"ui.defeat.critical_seconds.bankruptcy"] = null
+	catalog.base_values[&"ui.defeat.critical_seconds.hunger"] = null
+	catalog.base_values[&"ui.defeat.critical_seconds.depopulation"] = null
+	catalog.base_values[&"ui.defeat.critical_sound"] = null
+	return catalog
+
+
+# A mutable copy of the shipped data documents for loader tests.
+func _documents() -> Dictionary[String, Dictionary]:
+	var documents: Dictionary[String, Dictionary] = {}
+	for folder: String in ["economy", "roles", "maps", "eras/victorian", "services"]:
+		var dir: DirAccess = DirAccess.open("res://data/" + folder)
+		for file_name: String in dir.get_files():
+			if file_name.ends_with(".json"):
+				var path: String = folder.path_join(file_name)
+				documents[path] = JSON.parse_string(FileAccess.get_file_as_string("res://data/" + path))
+	return documents
+
+
 func _ticks(count: int) -> void:
 	for index: int in range(count):
 		_system.tick(_state, _params)
@@ -379,8 +403,12 @@ func test_no_critical_if_disabled_or_grace_or_incomplete_config() -> void:
 	_system.tick(_state, _params)
 	ds = DefeatSystem.defeat_state_for_snapshot(_state, _params)
 	assert_eq(ds.get(&"bankruptcy", {}).get("level"), &"normal")
-	# explicit config errors for sin dato/incomplete
-	var errs: Array[String] = DefeatSystem.critical_config_errors(_params)
+	# explicit config errors for sin dato/incomplete: use a null fixture, only bankruptcy resolved
+	var incomplete_role: RoleDef = RoleDef.new()
+	incomplete_role.modifiers.append(Modifier.new(&"defeat.grace_seconds", &"set", 0))
+	incomplete_role.modifiers.append(Modifier.new(&"ui.defeat.critical_seconds.bankruptcy", &"set", 5))
+	var null_params: Params = Params.new(_null_catalog(), incomplete_role)
+	var errs: Array[String] = DefeatSystem.critical_config_errors(null_params)
 	assert_true(errs.size() > 0, "reports sin dato keys")
 
 
@@ -504,9 +532,14 @@ func test_critical_umbral_zero_valid_triggers_at_le0() -> void:
 	assert_eq(info[&"hunger"]["seconds_left"], 0)
 
 func test_null_never_critical_nor_at_defeat_loss() -> void:
-	# no ui crit set => null, even at defeat time (status=defeat or rem=0) => level=warning not critical
-	_params = _with({&"defeat.grace_seconds": 0, &"defeat.hunger.duration_seconds": 5, &"defeat.hunger.smoothing": 1})
-	# note: no ui...hunger in overrides => remains null in base
+	# explicit null fixture: no ui crit set => null, even at defeat time => level=warning not critical
+	var catalog: DataCatalog = _null_catalog()
+	var role: RoleDef = RoleDef.new()
+	role.modifiers.append(Modifier.new(&"defeat.depopulation.peak_decay_per_minute", &"set", 0))
+	role.modifiers.append(Modifier.new(&"defeat.grace_seconds", &"set", 0))
+	role.modifiers.append(Modifier.new(&"defeat.hunger.duration_seconds", &"set", 5))
+	role.modifiers.append(Modifier.new(&"defeat.hunger.smoothing", &"set", 1))
+	_params = Params.new(catalog, role)
 	_state = EconomyState.new()
 	_state.population = 20
 	_state.bread_coverage = 0.0
@@ -534,8 +567,8 @@ func test_fractional_duration_ceil_and_same_tick() -> void:
 	assert_eq(info[&"hunger"]["level"], &"critical")
 
 func test_critical_config_errors_reports_missing_and_sin_dato() -> void:
-	var loaded: DataLoadResult = DataLoader.new().load_all()
-	var catalog: DataCatalog = loaded.catalog
+	# explicit null fixture: hunger resolved to 0, the others remain sin dato
+	var catalog: DataCatalog = _null_catalog()
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"ui.defeat.critical_seconds.hunger", &"set", 0))
 	var params: Params = Params.new(catalog, role)
@@ -545,8 +578,8 @@ func test_critical_config_errors_reports_missing_and_sin_dato() -> void:
 
 # Params resolver for nulls (layers/role, order, add/mul error) - required coverage
 func test_params_null_resolved_only_by_set_layers_then_role() -> void:
-	var loaded: DataLoadResult = DataLoader.new().load_all()
-	var catalog: DataCatalog = loaded.catalog
+	# explicit null fixture: no set => null valid; role wins over layers
+	var catalog: DataCatalog = _null_catalog()
 	var layers: Array[Modifier] = [Modifier.new(&"ui.defeat.critical_seconds.bankruptcy", &"set", 40.0)]
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"ui.defeat.critical_seconds.bankruptcy", &"set", 25.0))
@@ -559,10 +592,9 @@ func test_params_null_resolved_only_by_set_layers_then_role() -> void:
 	assert_eq(p2.get_value(&"ui.defeat.critical_seconds.hunger"), null)
 
 func test_params_add_mul_on_null_errors_but_after_set_ok_in_order() -> void:
-	var loaded: DataLoadResult = DataLoader.new().load_all()
-	var catalog: DataCatalog = loaded.catalog
+	# explicit null fixture: add before set on null => error
+	var catalog: DataCatalog = _null_catalog()
 	var role: RoleDef = RoleDef.new()
-	# add before set on null => error
 	role.modifiers.append(Modifier.new(&"ui.defeat.critical_seconds.hunger", &"add", 1.0))
 	role.modifiers.append(Modifier.new(&"ui.defeat.critical_seconds.hunger", &"set", 10.0))
 	var params: Params = Params.new(catalog, role)
@@ -583,12 +615,19 @@ func test_params_add_mul_on_null_errors_but_after_set_ok_in_order() -> void:
 
 # Loader specific for ui.defeat (null/sin_dato, integer>=0, sound, _comment tolerated explicitly; invalid/neg/frac covered via _number + clear errors, 0 valid)
 func test_loader_ui_defeat_accepts_null_sin_dato_zero_and_tolerates_comment() -> void:
-	var loaded: DataLoadResult = DataLoader.new().load_all()
-	assert_true(loaded.is_ok())
+	# explicit fixture: null, 'sin dato', zero and an extra _comment are all accepted
+	var documents: Dictionary[String, Dictionary] = _documents()
+	documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["bankruptcy"] = null
+	documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["hunger"] = "sin dato"
+	documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["depopulation"] = 0
+	documents["economy/defeat.json"]["ui"]["defeat"]["critical_sound"] = "sin dato"
+	documents["economy/defeat.json"]["ui"]["defeat"]["_comment"] = "test comment"
+	var loaded: DataLoadResult = DataLoader.new().load_documents(documents)
+	assert_true(loaded.is_ok(), str(loaded.errors))
 	var cat: DataCatalog = loaded.catalog
-	# declared in data/economy/defeat.json as null='sin dato', _comment explicit (not generalized)
 	assert_true(cat.base_values.has(&"ui.defeat.critical_seconds.bankruptcy"))
 	assert_eq(cat.base_values[&"ui.defeat.critical_seconds.bankruptcy"], null)
 	assert_eq(cat.base_values[&"ui.defeat.critical_seconds.hunger"], null)
-	assert_eq(cat.base_values[&"ui.defeat.critical_seconds.depopulation"], null)
+	assert_eq(cat.base_values[&"ui.defeat.critical_seconds.depopulation"], 0)
+	assert_true(cat.integer_keys.has(&"ui.defeat.critical_seconds.depopulation"))
 	assert_eq(cat.base_values[&"ui.defeat.critical_sound"], null)

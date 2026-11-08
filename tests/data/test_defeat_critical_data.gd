@@ -22,9 +22,11 @@ func _assert_invalid(message: String) -> void:
 
 func test_ui_defeat_critical_null_and_sin_dato_normalize_to_null_not_integer() -> void:
 	before_each()
-	# already null in data, explicit
+	# explicit null fixture: base values are now approved numbers (D-188)
+	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["bankruptcy"] = null
 	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["hunger"] = "sin dato"
 	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["depopulation"] = null
+	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_sound"] = null
 	var result: DataLoadResult = DataLoader.new().load_documents(_documents)
 	assert_true(result.is_ok())
 	var cat: DataCatalog = result.catalog
@@ -103,13 +105,16 @@ func test_params_sound_modification_prohibited() -> void:
 
 func test_params_null_critical_add_mul_error_and_set_layers_role_resolve() -> void:
 	before_each()
-	# add on null
+	# add on null: explicit null fixture, base values are now approved numbers (D-188).
+	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["hunger"] = null
 	_documents["roles/neutral_administrator.json"]["modifiers"] = [
 		{"key": "ui.defeat.critical_seconds.hunger", "op": "add", "value": 5}
 	]
 	_assert_invalid("cannot add/mul on null")
 	before_each()
-	# set via role
+	# set via role on an explicit null fixture
+	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["hunger"] = null
+	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_seconds"]["bankruptcy"] = null
 	_documents["roles/neutral_administrator.json"]["modifiers"] = [
 		{"key": "ui.defeat.critical_seconds.hunger", "op": "set", "value": 42}
 	]
@@ -119,7 +124,7 @@ func test_params_null_critical_add_mul_error_and_set_layers_role_resolve() -> vo
 	var role: RoleDef = cat.roles[&"neutral_administrator"]
 	var p: Params = Params.new(cat, role)
 	assert_eq(p.get_value(&"ui.defeat.critical_seconds.hunger"), 42.0)
-	# layers + role, role wins
+	# Reuse the catalog actually loaded from the explicit null fixture above.
 	var layers: Array[Modifier] = [Modifier.new(&"ui.defeat.critical_seconds.bankruptcy", &"set", 99.0)]
 	var p2: Params = Params.new(cat, RoleDef.new(), layers)
 	assert_eq(p2.get_value(&"ui.defeat.critical_seconds.bankruptcy"), 99.0)
