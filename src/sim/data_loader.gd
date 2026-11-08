@@ -316,6 +316,10 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_incident(raw, path, catalog)
 		elif path == "economy/ui.json":
 			_load_ui_mobility(raw, catalog)
+			var numeric: Dictionary = raw.duplicate()
+			numeric.erase("documentation")
+			numeric.erase("mobility")
+			_numbers(numeric, ECONOMY_SCHEMAS["ui"], path, "ui", catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
 			# The street piece is structure, read above.

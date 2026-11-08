@@ -127,9 +127,9 @@ static func diagnostics(state: EconomyState, params: Params, context: EconomyCon
 		"demotion": {"active": is_demotion_active_for_seconds(entry_seconds, params, def), "category": def.demotion_category,
 			"seconds_below": entry_seconds,
 			"seconds_required": int(params.get_value(def.demotion_seconds_key)),
-			"seconds_left": maxi(0, int(params.get_value(def.demotion_seconds_key)) - entry.demotion_seconds_below),
+			"seconds_left": maxi(0, int(params.get_value(def.demotion_seconds_key)) - entry_seconds),
 			"per_minute": float(params.get_value(def.demotion_per_minute_key)),
-			"missing_goods": _missing_goods(state, params, def, def.demotion_category)},
+			"missing_goods": missing_goods(state, params, def, def.demotion_category)},
 	}
 
 

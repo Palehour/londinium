@@ -17,21 +17,21 @@ func _copy_data_documents() -> Dictionary[String, Dictionary]:
 	return docs
 
 
-func test_pending_ui_mobility_keys_have_has_value_and_return_sin_dato_literal() -> void:
+func test_ui_mobility_keys_resolve_to_approved_values() -> void:
 	var result: DataLoadResult = DataLoader.new().load_all()
 	assert_true(result.is_ok(), "load_all must succeed: " + str(result.errors))
 	var catalog: DataCatalog = result.catalog
 	var params: Params = Params.new(catalog, catalog.roles[&"neutral_administrator"])
-	var pending_keys: Array[StringName] = [
-		&"ui.mobility.labor_notice_window_seconds",
-		&"ui.mobility.demotion_warning_seconds",
-		&"ui.mobility.max_buildings_listed"
-	]
-	for key: StringName in pending_keys:
-		assert_true(params.has_value(key), "has_value(%s) must be true for pending UI key" % key)
+	var approved: Dictionary[StringName, int] = {
+		&"ui.mobility.labor_notice_window_seconds": 60,
+		&"ui.mobility.demotion_warning_seconds": 60,
+		&"ui.mobility.max_buildings_listed": 2,
+	}
+	for key: StringName in approved:
+		assert_true(params.has_value(key), "has_value(%s) must be true" % key)
 		var v: Variant = params.get_value(key)
-		assert_eq(v, "sin dato", "get_value(%s) must return literal 'sin dato' string from data" % key)
-		assert_typeof(v, TYPE_STRING)
+		assert_eq(v, approved[key], "get_value(%s) must return the approved value" % key)
+		assert_typeof(v, TYPE_INT)
 	# ensure no spurious errors for these
 	assert_push_error_count(0)
 
@@ -43,6 +43,15 @@ func test_fixtures_can_provide_non_production_numbers_for_pending_keys() -> void
 			"labor_notice_window_seconds": 90,
 			"demotion_warning_seconds": 45,
 			"max_buildings_listed": 8
+		},
+		"chains": {
+			"bottleneck_margin": "sin dato",
+			"min_samples": "sin dato",
+			"tie_break": "sin dato"
+		},
+		"blockers": {
+			"max_lines": 1,
+			"sort": "gap"
 		}
 	}
 	var result: DataLoadResult = DataLoader.new().load_documents(docs)
@@ -63,6 +72,15 @@ func test_ui_mobility_fixtures_must_provide_finite_semantic_integers() -> void:
 			"labor_notice_window_seconds": 0,  # not positive
 			"demotion_warning_seconds": 10.5,  # not integer
 			"max_buildings_listed": -1
+		},
+		"chains": {
+			"bottleneck_margin": "sin dato",
+			"min_samples": "sin dato",
+			"tie_break": "sin dato"
+		},
+		"blockers": {
+			"max_lines": 1,
+			"sort": "gap"
 		}
 	}
 	var result: DataLoadResult = DataLoader.new().load_documents(docs)
@@ -82,6 +100,15 @@ func test_ui_mobility_block_requires_all_fields_when_present() -> void:
 		"mobility": {
 			"labor_notice_window_seconds": "sin dato"
 			# missing the other two required fields
+		},
+		"chains": {
+			"bottleneck_margin": "sin dato",
+			"min_samples": "sin dato",
+			"tie_break": "sin dato"
+		},
+		"blockers": {
+			"max_lines": 1,
+			"sort": "gap"
 		}
 	}
 	var result: DataLoadResult = DataLoader.new().load_documents(docs)
@@ -100,6 +127,15 @@ func test_ui_mobility_rejects_malformed_or_invalid_literal() -> void:
 			"labor_notice_window_seconds": "foo",  # invalid literal
 			"demotion_warning_seconds": true,
 			"max_buildings_listed": "sin dato"
+		},
+		"chains": {
+			"bottleneck_margin": "sin dato",
+			"min_samples": "sin dato",
+			"tie_break": "sin dato"
+		},
+		"blockers": {
+			"max_lines": 1,
+			"sort": "gap"
 		}
 	}
 	var result: DataLoadResult = DataLoader.new().load_documents(docs)
@@ -124,6 +160,11 @@ func test_validation_errors_ignores_sin_dato_keys() -> void:
 func test_ui_mobility_set_modifier_on_sin_dato_replaces_and_validates() -> void:
 	var docs: Dictionary[String, Dictionary] = _copy_data_documents()
 	# base sin dato
+	docs["economy/ui.json"]["mobility"] = {
+		"labor_notice_window_seconds": "sin dato",
+		"demotion_warning_seconds": "sin dato",
+		"max_buildings_listed": "sin dato"
+	}
 	var role: RoleDef = RoleDef.new()
 	role.id = &"test_set"
 	role.modifiers.append(Modifier.new(&"ui.mobility.labor_notice_window_seconds", &"set", 60))
@@ -150,6 +191,12 @@ func test_numeric_set_then_role_modifier_keeps_existing_parameter_order() -> voi
 
 func test_ui_mobility_arithmetic_modifier_on_sin_dato_rejected() -> void:
 	var docs: Dictionary[String, Dictionary] = _copy_data_documents()
+	# base sin dato
+	docs["economy/ui.json"]["mobility"] = {
+		"labor_notice_window_seconds": "sin dato",
+		"demotion_warning_seconds": "sin dato",
+		"max_buildings_listed": "sin dato"
+	}
 	var role: RoleDef = RoleDef.new()
 	role.id = &"test_arith"
 	role.modifiers.append(Modifier.new(&"ui.mobility.demotion_warning_seconds", &"add", 10))
@@ -178,6 +225,15 @@ func test_ui_mobility_numeric_base_accepts_modifiers() -> void:
 			"labor_notice_window_seconds": 30,
 			"demotion_warning_seconds": "sin dato",
 			"max_buildings_listed": 5
+		},
+		"chains": {
+			"bottleneck_margin": "sin dato",
+			"min_samples": "sin dato",
+			"tie_break": "sin dato"
+		},
+		"blockers": {
+			"max_lines": 1,
+			"sort": "gap"
 		}
 	}
 	var role: RoleDef = RoleDef.new()

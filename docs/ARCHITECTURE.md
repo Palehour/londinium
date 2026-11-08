@@ -549,11 +549,12 @@ Keys with ids from the era's data follow the same rule: `needs.<category>.thresh
 
 The mobility notices (#352) declare three optional UI parameters in `data/economy/ui.json`:
 `ui.mobility.labor_notice_window_seconds`, `ui.mobility.demotion_warning_seconds` and
-`ui.mobility.max_buildings_listed`. Until their values are decided, these keys contain the literal
-`"sin dato"`; `Params.get_value()` preserves it rather than treating it as zero. The UI leaves the
-dependent notice inactive while its parameters are pending. Numeric values use the normal parameter
-validation; numeric values in tests are fixtures, not approved balance. This exception is limited to
-these three keys and does not change D-061's rates or demotion clock.
+`ui.mobility.max_buildings_listed`. The approved values are 60, 60 and 2 respectively, so the labour
+notice sums promoted workers over the last 60 simulation seconds, the demotion countdown appears when
+60 seconds or fewer remain, and at most two buildings are listed. `Params.get_value()` returns these
+numbers through the normal parameter validation; tests may still use `"sin dato"` fixtures to verify
+that the notices stay inactive while their parameters are pending. This does not change D-061's rates
+or demotion clock.
 
 ## Conventions worth stating
 - Money is `int` in pence; display converts to £/s/d or decimals in the UI only.

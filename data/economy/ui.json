@@ -1,10 +1,9 @@
 {
-  "documentation": "UI mobility parameters for issue #352. Each mobility field below holds the literal 'sin dato' until numeric data is decided.",
+  "documentation": "UI mobility parameters for issue #352. Approved values: labor_notice_window_seconds=60, demotion_warning_seconds=60, max_buildings_listed=2.",
   "mobility": {
-    "documentation": "Sin dato: pendiente decisión de Cristian para #352.",
-    "labor_notice_window_seconds": "sin dato",
-    "demotion_warning_seconds": "sin dato",
-    "max_buildings_listed": "sin dato"
+    "labor_notice_window_seconds": 60,
+    "demotion_warning_seconds": 60,
+    "max_buildings_listed": 2
   },
   "chains": {
     "bottleneck_margin": "sin dato",

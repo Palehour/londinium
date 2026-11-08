@@ -2,7 +2,7 @@ extends GutTest
 
 # Issue #352: the notice of posts lost to promotions and the demotion countdown in the stats panel. Snapshots are
 # built by hand from the contract (GameSession.get_mobility_events(), demotion.seconds_left / missing_goods in the
-# snapshot). The knob values below exist only in these tests; the game data keeps them without a value.
+# snapshot). The game data now has approved values (60/60/2); tests below override them to exercise edge cases.
 
 # A session whose mobility events are the ones the test sets, the way the simulation would report them.
 class EventSession:
@@ -14,7 +14,7 @@ class EventSession:
 		return events
 
 
-# The real parameters, except for the ui.mobility.* keys the test sets: the data keeps them as "sin dato".
+# The real parameters, except for the ui.mobility.* keys the test overrides to exercise pending/off behaviour.
 class KnobParams:
 	extends Params
 	var knobs: Dictionary[StringName, Variant] = {}
@@ -154,7 +154,7 @@ func test_a_new_simulation_at_the_same_tick_does_not_count_as_a_repeat() -> void
 	assert_eq(_labor().body.text, "\n".join([_lost_text(3), _building_line(&"mill", 3)]), "Only the new game's losses")
 
 
-func test_restart_on_data_without_values_switches_both_notices_off() -> void:
+func test_restart_on_default_data_keeps_notices_on() -> void:
 	_set_knobs(60, 30, 5)
 	_show(_events(10, 2, [_lost("b1", &"bakery", 2)]), _artisans(4, 40, 20, [&"beer"]))
 	assert_true(_labor().visible)
@@ -162,8 +162,8 @@ func test_restart_on_data_without_values_switches_both_notices_off() -> void:
 	_session.restart_with(Params.new(_catalog, RoleDef.new()), DataLayers.NORMAL)
 	_clock.simulation = _session.simulation
 	_show(_events(11, 2, [_lost("b1", &"bakery", 2)]), _artisans(4, 40, 20, [&"beer"]))
-	assert_false(_labor().visible, "The new game's data has no window: off")
-	assert_false(_countdown().visible, "The new game's data has no limit: off")
+	assert_true(_labor().visible, "The new game's data has the approved window: on")
+	assert_true(_countdown().visible, "The new game's data has the approved warning seconds: on")
 
 
 func test_a_tick_that_goes_back_starts_the_window_over() -> void:
@@ -252,12 +252,12 @@ func test_a_list_size_without_data_switches_the_labour_notice_off() -> void:
 	assert_false(_labor().visible)
 
 
-func test_the_real_game_data_leaves_the_notices_off() -> void:
+func test_the_real_game_data_turns_the_notices_on() -> void:
 	_session.restart_with(Params.new(_catalog, RoleDef.new()), DataLayers.NORMAL)
 	_clock.simulation = _session.simulation
 	_show(_events(10, 2, [_lost("b1", &"bakery", 2)]), _artisans(4, 59, 1, [&"beer"]))
-	assert_false(_labor().visible)
-	assert_false(_countdown().visible)
+	assert_true(_labor().visible, "Approved window and list size show the labour notice")
+	assert_true(_countdown().visible, "Approved warning seconds show the demotion countdown")
 
 
 func test_the_real_session_reports_its_events_outside_the_snapshot() -> void:
@@ -283,11 +283,14 @@ func test_the_real_session_feeds_the_panel_without_errors() -> void:
 	assert_false((panel.get("_labor_box") as EraNotice).visible, "Data without values: off")
 
 
-func test_the_real_game_data_has_no_value_for_the_knobs_yet() -> void:
+func test_the_real_game_data_has_approved_knob_values() -> void:
 	var params: Params = Params.new(_catalog, RoleDef.new())
-	for key: StringName in [MobilityNoticeWindow.KEY_WINDOW, MobilityNoticeWindow.KEY_WARNING, MobilityNoticeWindow.KEY_MAX_BUILDINGS]:
-		assert_true(params.has_value(key), "%s must exist" % key)
-		assert_eq(params.get_value(key), NO_DATA, "%s must stay without data until Cristian decides" % key)
+	assert_true(params.has_value(MobilityNoticeWindow.KEY_WINDOW))
+	assert_true(params.has_value(MobilityNoticeWindow.KEY_WARNING))
+	assert_true(params.has_value(MobilityNoticeWindow.KEY_MAX_BUILDINGS))
+	assert_eq(params.get_value(MobilityNoticeWindow.KEY_WINDOW), 60)
+	assert_eq(params.get_value(MobilityNoticeWindow.KEY_WARNING), 60)
+	assert_eq(params.get_value(MobilityNoticeWindow.KEY_MAX_BUILDINGS), 2)
 
 
 func test_read_knob_takes_numbers_and_nothing_else() -> void:
