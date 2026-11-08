@@ -270,8 +270,16 @@ func test_panel_without_defeat_state_keeps_working_and_critical_leaves_the_warni
 	panel.update_snapshot(snapshot)
 	assert_true(banner.visible)
 	assert_eq((panel.get("_alert") as Label).text, "", "hunger is not said twice")
+	var player: AudioStreamPlayer = banner.get("_player") as AudioStreamPlayer
+	assert_true(player.stream is AudioStreamWAV, "the real player received the configured WAV on entry")
+	assert_eq(player.stream, banner.sound.stream, "the real entry path uses the loaded approved stream")
+	assert_eq(FileAccess.get_sha256("res://assets/audio/ui/critical-notice-original.wav"),
+		"ee429f3b378221eb61a94f8aab10143ad549f4ad899ea4f542a87de85f49283f", "the asset is the accepted WAV, not a substitute")
 	panel.reset_critical()
 	assert_eq(banner.sound.status, DefeatCriticalSound.STATUS_OK, "the approved sound is configured after reset")
+	assert_true(banner.sound.stream is AudioStreamWAV, "the approved sound resolves to a real WAV")
+	assert_eq((banner.sound.stream as AudioStreamWAV).loop_mode, 0, "WAV is imported without looping")
+	assert_eq((banner.get("_player") as AudioStreamPlayer).bus, "Master", "critical player is on the Master bus")
 
 
 func _panel_with_session() -> Array:
