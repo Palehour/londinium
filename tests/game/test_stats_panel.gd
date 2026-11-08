@@ -446,8 +446,11 @@ func test_pause_and_speeds_drive_the_clock_without_changing_tick_length() -> voi
 
 
 func test_defeat_shows_cause_blocks_controls_and_offers_restart() -> void:
+	# Critical seconds for bankruptcy are forced to 0 so the warning line is shown in the first tick,
+	# testing the warning->defeat->controls->restart path without relying on the default 60 s threshold.
 	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
 		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"ui.defeat.critical_seconds.bankruptcy", &"set", 0),
 		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
 	_panel = _new_panel(_session)
 	_tick()
@@ -458,6 +461,38 @@ func test_defeat_shows_cause_blocks_controls_and_offers_restart() -> void:
 	_tick()
 	assert_eq(alert.text, Strings.text(Strings.ALERT_DEFEAT) % Strings.label(Strings.CONDITION_LABELS, &"bankruptcy"))
 	assert_string_contains(_text("_crises"), Strings.label(Strings.STATUS_LABELS, &"defeat"))
+	assert_false((_panel.get("_tax") as SpinBox).editable)
+	assert_true((_panel.get("_wheat") as CheckButton).disabled)
+	var restart: Button = _panel.get("_restart") as Button
+	assert_true(restart.visible)
+	watch_signals(_panel)
+	restart.pressed.emit()
+	assert_signal_emitted(_panel, "restart_requested")
+
+
+func test_defeat_critical_notice_shows_seconds_before_defeat_and_then_blocks_controls() -> void:
+	# Same scenario as the warning test, but with the approved default of 60 s for critical notices.
+	# The bankruptcy notice moves to the critical banner; hunger stays in the warning line.
+	var params: Params = Params.new(_catalog, RoleDef.new())
+	for key: StringName in [&"ui.defeat.critical_seconds.bankruptcy", &"ui.defeat.critical_seconds.hunger", &"ui.defeat.critical_seconds.depopulation"]:
+		assert_eq(params.get_value(key), 60, "D-188 approved remaining simulation seconds")
+	assert_eq(params.get_value(&"ui.defeat.critical_sound"), "critical-notice-original")
+	_session = _new_session([Modifier.new(&"defeat.grace_seconds", &"set", 0),
+		Modifier.new(&"defeat.bankruptcy.duration_seconds", &"set", 2),
+		Modifier.new(&"startup.money", &"set", 0), Modifier.new(&"building.dense_housing.upkeep_per_minute", &"set", 6000000)])
+	_panel = _new_panel(_session)
+	_tick()
+	var banner: DefeatCritical = _panel.find_child("DefeatCritical", true, false) as DefeatCritical
+	assert_true(banner.visible)
+	var rows: Array[Dictionary] = banner.rows()
+	assert_eq(rows.size(), 1)
+	assert_eq(rows[0]["condition"], &"bankruptcy")
+	assert_eq(rows[0]["seconds_left"], 1)
+	var alert: Label = _panel.get("_alert") as Label
+	assert_true(alert.visible)
+	assert_string_contains(alert.text, Strings.label(Strings.CONDITION_LABELS, &"hunger"))
+	_tick()
+	assert_eq(alert.text, Strings.text(Strings.ALERT_DEFEAT) % Strings.label(Strings.CONDITION_LABELS, &"bankruptcy"))
 	assert_false((_panel.get("_tax") as SpinBox).editable)
 	assert_true((_panel.get("_wheat") as CheckButton).disabled)
 	var restart: Button = _panel.get("_restart") as Button
