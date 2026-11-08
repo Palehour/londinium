@@ -43,6 +43,38 @@ static func population_of(state: EconomyState, def: ClassDef) -> int:
 	return state.class_states[def.id].population if state.class_states.has(def.id) else 0
 
 
+# Safe read-only accessors for diagnostics (never ensure/checkout or mutate state).
+static func satisfaction_of(state: EconomyState, def: ClassDef) -> float:
+	if def.base:
+		return state.satisfaction
+	var e: ClassState = state.class_states.get(def.id)
+	return e.satisfaction if e != null else 0.0
+
+static func satisfaction_target_of(state: EconomyState, def: ClassDef) -> float:
+	if def.base:
+		return state.satisfaction_target
+	var e: ClassState = state.class_states.get(def.id)
+	return e.satisfaction_target if e != null else 0.0
+
+static func satisfaction_breakdown_of(state: EconomyState, def: ClassDef) -> Dictionary:
+	if def.base:
+		return state.satisfaction_breakdown.duplicate()
+	var e: ClassState = state.class_states.get(def.id)
+	return e.satisfaction_breakdown.duplicate() if e != null else {}
+
+static func housing_capacity_of(state: EconomyState, def: ClassDef) -> int:
+	if def.base:
+		return state.housing_capacity - others_capacity(state)
+	var e: ClassState = state.class_states.get(def.id)
+	return e.housing_capacity if e != null else 0
+
+static func demotion_seconds_below_of(state: EconomyState, def: ClassDef) -> int:
+	if def.base:
+		return 0
+	var e: ClassState = state.class_states.get(def.id)
+	return e.demotion_seconds_below if e != null else 0
+
+
 # People who look for a job: every resident except those of classes that do not take jobs (D-021).
 static func job_seekers(state: EconomyState) -> int:
 	var seekers: int = state.population

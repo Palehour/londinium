@@ -3,5 +3,9 @@
     "bottleneck_margin": "sin dato",
     "min_samples": "sin dato",
     "tie_break": "sin dato"
+  },
+  "blockers": {
+    "max_lines": 1,
+    "sort": "gap"
   }
 }

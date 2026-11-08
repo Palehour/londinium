@@ -74,6 +74,10 @@ static func is_demotion_active(entry: ClassState, params: Params, def: ClassDef)
 	return entry.demotion_seconds_below >= int(params.get_value(def.demotion_seconds_key))
 
 
+static func is_demotion_active_for_seconds(seconds: int, params: Params, def: ClassDef) -> bool:
+	return seconds >= int(params.get_value(def.demotion_seconds_key))
+
+
 # Everything that stops people from rising into the class now, as ids the UI translates; empty when they rise.
 static func promotion_blockers(state: EconomyState, params: Params, context: EconomyContext,
 		def: ClassDef) -> Array[Dictionary]:
@@ -81,16 +85,17 @@ static func promotion_blockers(state: EconomyState, params: Params, context: Eco
 	var source: ClassDef = context.classes[def.mobility_from]
 	if ClassStates.population_of(state, source) <= 0:
 		blockers.append({"reason": REASON_NO_SOURCE_POPULATION})
-	var entry: ClassState = ClassStates.checkout(state, def)
-	if entry.housing_capacity - entry.population <= 0:
+	var cap: int = ClassStates.housing_capacity_of(state, def)
+	var pop: int = ClassStates.population_of(state, def)
+	if cap - pop <= 0:
 		blockers.append({"reason": REASON_NO_FREE_HOUSING})
 	for category: StringName in def.promotion_min_score_keys:
 		var minimum: float = float(params.get_value(def.promotion_min_score_keys[category]))
 		var value: float = score(state, def.id, category)
 		if not NeedsSystem.reaches(value, minimum):
 			blockers.append({"reason": REASON_CATEGORY_BELOW, "category": category, "value": value,
-				"minimum": minimum, "missing_goods": _missing_goods(state, params, def, category)})
-	var satisfaction: float = ClassStates.checkout(state, source).satisfaction
+				"minimum": minimum, "missing_goods": missing_goods(state, params, def, category)})
+	var satisfaction: float = ClassStates.satisfaction_of(state, source)
 	var required: float = float(params.get_value(def.promotion_source_satisfaction_key))
 	if satisfaction < required:
 		blockers.append({"reason": REASON_SOURCE_SATISFACTION_LOW, "satisfaction": satisfaction, "minimum": required})
@@ -98,28 +103,22 @@ static func promotion_blockers(state: EconomyState, params: Params, context: Eco
 
 
 # Goods of the category whose coverage could still raise its score (the beer, for the artisans' community).
-static func _missing_goods(state: EconomyState, params: Params, def: ClassDef, category: StringName) -> Array[StringName]:
-	var missing: Array[StringName] = []
-	for need: NeedDef in def.needs:
-		if need.category != category or NeedsSystem.coverage(state, need.good) >= 1.0:
-			continue
-		if float(params.get_value(StringName("class.%s.need.%s.value" % [def.id, need.good]))) > 0.0:
-			missing.append(need.good)
-	return missing
+static func missing_goods(state: EconomyState, params: Params, def: ClassDef, category: StringName) -> Array[StringName]:
+	return NeedsSystem.missing_goods(state, params, def, category)
 
 
 # What the mobility of a class is doing and why, for the panel (#54); empty for a class without mobility.
 static func diagnostics(state: EconomyState, params: Params, context: EconomyContext, def: ClassDef) -> Dictionary:
 	if not def.has_mobility():
 		return {}
-	var entry: ClassState = ClassStates.checkout(state, def)
 	var blockers: Array[Dictionary] = promotion_blockers(state, params, context, def)
+	var entry_seconds: int = ClassStates.demotion_seconds_below_of(state, def)
 	return {
 		"from": def.mobility_from,
 		"promotion": {"active": blockers.is_empty(), "blockers": blockers,
 			"per_minute": float(params.get_value(def.promotion_per_minute_key))},
-		"demotion": {"active": is_demotion_active(entry, params, def), "category": def.demotion_category,
-			"seconds_below": entry.demotion_seconds_below,
+		"demotion": {"active": is_demotion_active_for_seconds(entry_seconds, params, def), "category": def.demotion_category,
+			"seconds_below": entry_seconds,
 			"seconds_required": int(params.get_value(def.demotion_seconds_key)),
 			"per_minute": float(params.get_value(def.demotion_per_minute_key))},
 	}

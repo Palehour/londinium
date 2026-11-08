@@ -101,6 +101,15 @@ ui.promotion_blocker,  · %s,  · %s
 ui.promotion_category_below,%s %.1f/%.1f · falta %s,%s %.1f/%.1f · short of %s
 ui.promotion_category_reason,%s %.1f/%.1f · %s,%s %.1f/%.1f · %s
 ui.promotion_satisfaction_low,Satisfacción de %s %.0f/%.0f,Satisfaction of %s %.0f/%.0f
+ui.blockers.row,%s · %s%s,%s · %s%s
+ui.blockers.item,%s: %s,%s: %s
+ui.blockers.more, (+%d), (+%d)
+ui.blockers.none,%s · Nada la frena,%s · Nothing holds it back
+ui.blockers.missing,Falta %s: %s %.1f / %.1f,Short of %s: %s %.1f / %.1f
+ui.blockers.category_reason,%s %.1f / %.1f · %s,%s %.1f / %.1f · %s
+ui.blockers.measured,%s (%.0f / %.0f),%s (%.0f / %.0f)
+ui.blockers.growth,Crecimiento,Growth
+ui.blockers.promotion,Ascenso,Promotion
 ui.needs_met,%s · %s: %.1f/%.1f ✓,%s · %s: %.1f/%.1f ✓
 ui.needs_short,%s · %s: %.1f/%.1f · falta %s,%s · %s: %.1f/%.1f · short of %s
 ui.needs_short_reason,%s · %s: %.1f/%.1f · %s,%s · %s: %.1f/%.1f · %s
@@ -183,6 +192,7 @@ ui.status.warning,aviso,warning
 ui.status.defeat,derrota,defeat
 ui.reason.arriving,Llegan nuevos habitantes.,New residents are arriving.
 ui.reason.no_free_housing,No hay lugar libre en su vivienda.,There is no free room in their housing.
+ui.reason.unserved_housing,sin pan al alcance,no bread within reach
 ui.reason.satisfaction_below_threshold,La satisfacción no alcanza para que lleguen.,Satisfaction is too low for them to arrive.
 ui.reason.hungry_leaving,Se van por hambre.,They leave because of hunger.
 ui.reason.unhappy_leaving,Se van por la baja satisfacción.,They leave because satisfaction is low.

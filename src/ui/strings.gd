@@ -201,6 +201,16 @@ const PROMOTION_BLOCKER: StringName = &"ui.promotion_blocker"
 const PROMOTION_CATEGORY_BELOW: StringName = &"ui.promotion_category_below"
 const PROMOTION_CATEGORY_REASON: StringName = &"ui.promotion_category_reason"
 const PROMOTION_SATISFACTION_LOW: StringName = &"ui.promotion_satisfaction_low"
+const BLOCKERS_ROW: StringName = &"ui.blockers.row"
+const BLOCKERS_ITEM: StringName = &"ui.blockers.item"
+const BLOCKERS_MORE: StringName = &"ui.blockers.more"
+const BLOCKERS_NONE: StringName = &"ui.blockers.none"
+const BLOCKERS_MISSING: StringName = &"ui.blockers.missing"
+const BLOCKERS_CATEGORY_REASON: StringName = &"ui.blockers.category_reason"
+const BLOCKERS_MEASURED: StringName = &"ui.blockers.measured"
+const BLOCKER_GROUP_LABELS: Dictionary[StringName, StringName] = {
+	&"growth": &"ui.blockers.growth", &"promotion": &"ui.blockers.promotion",
+}
 const NEEDS_MET: StringName = &"ui.needs_met"
 const NEEDS_SHORT: StringName = &"ui.needs_short"
 const NEEDS_SHORT_REASON: StringName = &"ui.needs_short_reason"
@@ -406,6 +416,7 @@ const SAVE_REFUSALS: Dictionary[StringName, StringName] = {
 const REASONS: Dictionary[StringName, StringName] = {
 	&"arriving": &"ui.reason.arriving",
 	&"no_free_housing": &"ui.reason.no_free_housing",
+	&"unserved_housing": &"ui.reason.unserved_housing",
 	&"satisfaction_below_threshold": &"ui.reason.satisfaction_below_threshold",
 	&"hungry_leaving": &"ui.reason.hungry_leaving",
 	&"unhappy_leaving": &"ui.reason.unhappy_leaving",
@@ -597,6 +608,8 @@ static func all_keys() -> Array[StringName]:
 		METRIC_HUNGER, METRIC_DEPOPULATION, NEEDS_TITLE, CLASS_HEADER, COVERAGE_ROW, GOOD_COVERAGE,
 		PROMOTION_ACTIVE, PROMOTION_BLOCKED, PROMOTION_BLOCKER, PROMOTION_CATEGORY_BELOW,
 		PROMOTION_CATEGORY_REASON, PROMOTION_SATISFACTION_LOW, NEEDS_MET, NEEDS_SHORT, NEEDS_SHORT_REASON,
+		BLOCKERS_ROW, BLOCKERS_ITEM, BLOCKERS_MORE, BLOCKERS_NONE, BLOCKERS_MISSING, BLOCKERS_CATEGORY_REASON,
+		BLOCKERS_MEASURED,
 		NEEDS_NO_CLASS, HOUSING_ROW, MOBILITY_PROMOTED, MOBILITY_DEMOTED, DIFFICULTY,
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
 		SAVES_TITLE, SAVES_NONE, SAVE_GAME, LOAD_GAME, SAVE_ENTRY, SAVE_UNREADABLE, SAVED, SAVED_WITHOUT_QUEUE,
@@ -637,6 +650,8 @@ static func all_keys() -> Array[StringName]:
 		_append_unique(keys, LOT_STYLE_LABELS[style_id])
 	for class_id: StringName in CLASS_LABELS:
 		_append_unique(keys, CLASS_LABELS[class_id])
+	for group_id: StringName in BLOCKER_GROUP_LABELS:
+		_append_unique(keys, BLOCKER_GROUP_LABELS[group_id])
 	for category_id: StringName in CATEGORY_LABELS:
 		_append_unique(keys, CATEGORY_LABELS[category_id])
 	for preset_id: StringName in DIFFICULTY_LABELS:

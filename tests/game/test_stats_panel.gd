@@ -779,28 +779,45 @@ func test_coverage_just_under_full_never_reads_as_100() -> void:
 	assert_string_contains(_show_classes(city), Strings.text(Strings.GOOD_COVERAGE) % [_good_label(&"beer"), 99.0])
 
 
+# Issue #351 (migrated with Cristian's permission): the promotion blockers are read from the artisan's visible blockers
+# line (cap 1, from the simulation) plus its tooltip, only the "Ascenso" items so growth blockers are not mixed in.
+func _promotion_blockers(city: Array) -> String:
+	_show_classes(city)
+	var labels: Dictionary = _panel.get("_blocker_labels") as Dictionary
+	var label: Label = labels.get(&"artisan") as Label
+	if label == null:
+		return ""
+	var prefix: String = Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION), ""]
+	var lines: Array[String] = []
+	for line: String in (label.text + "\n" + label.tooltip_text).split("\n"):
+		if line.contains(prefix):
+			lines.append(line)
+	return "\n".join(lines)
+
+
 func test_promotion_diagnosis_names_missing_beer() -> void:
-	var needs: String = _show_classes(_class_state(20, 0, 0.5, 100.0))
-	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan"))
-	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER)
-		% (Strings.text(Strings.PROMOTION_CATEGORY_BELOW) % [_category_label(&"comunidad"), 50.0, 80.0, _good_label(&"beer")]))
-	assert_false(needs.contains(Strings.reason(&"no_free_housing")), "There is room: housing is not blamed")
+	var promotion: String = _promotion_blockers(_class_state(20, 0, 0.5, 100.0))
+	assert_ne(promotion, "", "Something blocks the artisans, and it is shown for them")
+	assert_string_contains(promotion, Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION),
+		Strings.text(BLOCKERS_MISSING) % [_good_label(&"beer"), _category_label(&"comunidad"), 50.0, 80.0]])
+	assert_false(promotion.contains(Strings.reason(&"no_free_housing")), "There is room: housing is not blamed")
 
 
 func test_promotion_diagnosis_names_full_artisan_housing() -> void:
 	var city: Array = _class_state(20, 0, 1.0, 100.0)
 	var artisans: ClassState = (city[0] as EconomyState).class_states[&"artisan"]
 	artisans.population = artisans.housing_capacity
-	var needs: String = _show_classes(city)
-	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan"))
-	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER) % Strings.reason(&"no_free_housing"))
-	assert_false(needs.contains(_missing_good(Strings.PROMOTION_CATEGORY_BELOW, _good_label(&"beer"))), "The beer is covered: it is not blamed")
+	var promotion: String = _promotion_blockers(city)
+	assert_ne(promotion, "", "Something blocks the artisans, and it is shown for them")
+	assert_string_contains(promotion, Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION), Strings.reason(&"no_free_housing")])
+	assert_false(promotion.contains(_good_label(&"beer")), "The beer is covered: it is not blamed")
 
 
 func test_promotion_diagnosis_names_low_worker_satisfaction() -> void:
-	var needs: String = _show_classes(_class_state(20, 0, 1.0, 69.6))
+	var promotion: String = _promotion_blockers(_class_state(20, 0, 1.0, 69.6))
 	# 69.6 is under 70: it must not read as 70/70.
-	assert_string_contains(needs, Strings.text(Strings.PROMOTION_BLOCKER) % (Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [_class_label(&"worker"), 69.0, 70.0]))
+	assert_string_contains(promotion, Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION),
+		Strings.text(Strings.PROMOTION_SATISFACTION_LOW) % [_class_label(&"worker"), 69.0, 70.0]])
 
 
 func test_promotion_diagnosis_shows_the_rate_when_nothing_blocks() -> void:
@@ -809,6 +826,148 @@ func test_promotion_diagnosis_shows_the_rate_when_nothing_blocks() -> void:
 	var rate: float = (city[1] as Params).get_value(artisan.promotion_per_minute_key)
 	var needs: String = _show_classes(city)
 	assert_string_contains(needs, Strings.text(Strings.PROMOTION_ACTIVE) % [_class_label(&"artisan"), rate])
+	assert_false(needs.contains(Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan")))
+
+
+# --- Issue #351: one blocker line per class and "+N"; the rest is in the tooltip ----------------------
+
+const BLOCKERS_ROW: StringName = &"ui.blockers.row"
+const BLOCKERS_ITEM: StringName = &"ui.blockers.item"
+const BLOCKERS_MORE: StringName = &"ui.blockers.more"
+const BLOCKERS_NONE: StringName = &"ui.blockers.none"
+const BLOCKERS_MISSING: StringName = &"ui.blockers.missing"
+const BLOCKERS_GROWTH: StringName = &"ui.blockers.growth"
+const BLOCKERS_PROMOTION: StringName = &"ui.blockers.promotion"
+
+const GROWTH_BREAD: Dictionary = {"group": &"growth", "reason": &"category_below", "category": &"sustento",
+	"value": 25.0, "threshold": 75.0, "missing_goods": [&"bread"]}
+const PROMOTION_HOUSING: Dictionary = {"group": &"promotion", "reason": &"no_free_housing"}
+const PROMOTION_BEER: Dictionary = {"group": &"promotion", "reason": &"category_below", "category": &"comunidad",
+	"value": 50.0, "threshold": 80.0, "missing_goods": [&"beer"]}
+
+
+func _show_blockers(blockers: Array, max_lines: int = 1) -> void:
+	var snapshot: Dictionary = _session.get_snapshot()
+	snapshot["needs"] = {"blockers_max_lines": max_lines, "blockers_sort": &"gap", "classes": {&"worker": {
+		"categories": [], "housing": {"building": &"housing", "base": 20, "bonus": 0, "max_bonus": 0},
+		"population": 0, "satisfaction": {"current": 0.0}, "mobility": {}, "blockers": blockers,
+	}}}
+	_panel.update_snapshot(snapshot)
+
+
+func _blocker_label() -> Label:
+	var box: Node = _panel.get("_blockers") as Node
+	if box == null or box.get_child_count() == 0:
+		return null
+	return box.get_child(0) as Label
+
+
+func _growth_item() -> String:
+	return Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_GROWTH), Strings.text(BLOCKERS_MISSING)
+		% [_good_label(&"bread"), _category_label(&"sustento"), 25.0, 75.0]]
+
+
+func _promotion_housing_item() -> String:
+	return Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION), Strings.reason(&"no_free_housing")]
+
+
+func _promotion_beer_item() -> String:
+	return Strings.text(BLOCKERS_ITEM) % [Strings.text(BLOCKERS_PROMOTION), Strings.text(BLOCKERS_MISSING)
+		% [_good_label(&"beer"), _category_label(&"comunidad"), 50.0, 80.0]]
+
+
+func test_blockers_show_one_line_and_the_count_of_the_rest() -> void:
+	_show_blockers([GROWTH_BREAD, PROMOTION_HOUSING, PROMOTION_BEER])
+	var label: Label = _blocker_label()
+	assert_not_null(label, "one control per class, in the same panel")
+	if label == null:
+		return
+	assert_eq(label.text, Strings.text(BLOCKERS_ROW) % [_class_label(&"worker"), _growth_item(),
+		Strings.text(BLOCKERS_MORE) % 2])
+	assert_eq(label.text.count("\n"), 0, "a single line")
+
+
+func test_blockers_tooltip_has_only_the_hidden_conditions() -> void:
+	_show_blockers([GROWTH_BREAD, PROMOTION_HOUSING, PROMOTION_BEER])
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_eq(label.tooltip_text, "\n".join([_promotion_housing_item(), _promotion_beer_item()]))
+	assert_false(label.tooltip_text.contains(_growth_item()), "the shown one is not repeated")
+	assert_ne(label.mouse_filter, Control.MOUSE_FILTER_IGNORE, "an ignored control never shows a tooltip")
+
+
+func test_blockers_respect_the_max_lines_from_the_simulation() -> void:
+	_show_blockers([GROWTH_BREAD, PROMOTION_HOUSING, PROMOTION_BEER], 2)
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_eq(label.text.count("\n"), 1, "two lines")
+	assert_string_contains(label.text, Strings.text(BLOCKERS_MORE) % 1)
+	assert_eq(label.tooltip_text, _promotion_beer_item())
+
+
+func test_a_single_blocker_has_no_count_and_no_tooltip() -> void:
+	_show_blockers([PROMOTION_BEER])
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_false(label.text.contains(Strings.text(BLOCKERS_MORE) % 0))
+	assert_eq(label.tooltip_text, "")
+	assert_string_contains(label.text, _promotion_beer_item())
+
+
+func test_blockers_say_nothing_holds_the_class_back_after_the_service_is_restored() -> void:
+	_show_blockers([GROWTH_BREAD, PROMOTION_BEER])
+	_show_blockers([])
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_eq(label.text, Strings.text(BLOCKERS_NONE) % _class_label(&"worker"))
+	assert_eq(label.tooltip_text, "")
+	assert_false(label.text.contains(_good_label(&"bread")))
+	assert_eq((_panel.get("_blockers") as Node).get_child_count(), 1, "the control is reused, not piled up")
+
+
+# Round 4 (D-186): a house with no bread within reach is not "no free housing"; it reads as the approved Spanish
+# text, on one line with "+N", the rest on hover, and nothing of it once the service is back.
+const UNSERVED_TEXT_ES: String = "sin pan al alcance"
+const GROWTH_UNSERVED: Dictionary = {"group": &"growth", "reason": &"unserved_housing", "missing_goods": [&"bread"]}
+
+
+func test_unserved_housing_reads_as_no_bread_in_reach_and_not_as_no_free_housing() -> void:
+	TranslationServer.set_locale("es")
+	_show_blockers([GROWTH_UNSERVED, PROMOTION_BEER, PROMOTION_HOUSING])
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_string_contains(label.text, UNSERVED_TEXT_ES)
+	assert_false(label.text.contains(Strings.reason(&"no_free_housing")), "not the full-housing text")
+	assert_eq(label.text.count("\n"), 0, "one line")
+	assert_string_contains(label.text, Strings.text(BLOCKERS_MORE) % 2)
+	assert_eq(label.tooltip_text, "\n".join([_promotion_beer_item(), _promotion_housing_item()]), "the hidden list on hover")
+	assert_false(label.tooltip_text.contains(UNSERVED_TEXT_ES), "the shown one is not repeated")
+	_show_blockers([PROMOTION_BEER])
+	assert_false(_blocker_label().text.contains(UNSERVED_TEXT_ES), "gone once the service is restored")
+	assert_eq(_blocker_label().tooltip_text, "")
+
+
+func test_a_blocker_with_numbers_and_no_category_never_reads_as_reaching_its_threshold() -> void:
+	_show_blockers([{"group": &"promotion", "reason": &"source_satisfaction_low", "value": 69.6, "threshold": 69.2}])
+	var label: Label = _blocker_label()
+	if label == null:
+		fail_test("no blockers control")
+		return
+	assert_string_contains(label.text, "69 / 70")
+
+
+func test_needs_text_no_longer_repeats_the_full_blocker_list() -> void:
+	var needs: String = _show_classes(_class_state(20, 0, 0.5, 100.0))
 	assert_false(needs.contains(Strings.text(Strings.PROMOTION_BLOCKED) % _class_label(&"artisan")))
 
 

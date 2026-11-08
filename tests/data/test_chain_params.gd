@@ -98,3 +98,74 @@ func _window_result(margin: float) -> Dictionary:
 		history.record(state)
 	var ranges: Array[Dictionary] = [{"id": &"fixture", "tier": StatsHistory.TIER_CHAPTER, "span_seconds": 0}]
 	return ChainBottleneck.snapshot(history, params, context, state, ranges)[&"fixture"]
+
+
+# Strengthened for point 6: rejects 0/-1/fraction/nonfinite/bad sort; accepts 101/1000 (no arbitrary cap).
+# Invalid cases never touch res.catalog; acceptance cases read it only after is_ok().
+func test_ui_blockers_rejects_invalid_values() -> void:
+	var invalid_configs: Array[Dictionary] = [
+		{"max_lines": 0, "sort": "gap"},
+		{"max_lines": -1, "sort": "gap"},
+		{"max_lines": 0.5, "sort": "gap"},
+		{"max_lines": 1, "sort": "notgap"},
+		{"max_lines": INF, "sort": "gap"},
+		{"max_lines": NAN, "sort": "gap"},
+	]
+	for config: Dictionary in invalid_configs:
+		_documents["economy/ui.json"]["blockers"] = config
+		var res: DataLoadResult = DataLoader.new().load_documents(_documents)
+		assert_false(res.is_ok(), "rejects %s" % config)
+		assert_null(res.catalog, "catalog stays null when load fails for %s" % config)
+
+
+func _load_blockers(max_lines: Variant) -> DataLoadResult:
+	_documents["economy/ui.json"]["blockers"] = {"max_lines": max_lines, "sort": "gap"}
+	return DataLoader.new().load_documents(_documents)
+
+
+func test_ui_blockers_loads_max_lines_1() -> void:
+	var res: DataLoadResult = _load_blockers(1)
+	assert_true(res.is_ok(), str(res.errors))
+
+
+func test_ui_blockers_loads_max_lines_101() -> void:
+	var res: DataLoadResult = _load_blockers(101)
+	assert_true(res.is_ok(), str(res.errors))
+
+
+func test_ui_blockers_loads_max_lines_1000() -> void:
+	var res: DataLoadResult = _load_blockers(1000)
+	assert_true(res.is_ok(), str(res.errors))
+
+
+func test_ui_blockers_resolves_max_lines_1() -> void:
+	var res: DataLoadResult = _load_blockers(1)
+	assert_true(res.is_ok(), str(res.errors))
+	assert_not_null(res.catalog, "catalog available after load")
+	if not res.is_ok() or res.catalog == null or not res.catalog.roles.has(&"neutral_administrator"):
+		return
+	var p: Params = Params.new(res.catalog, res.catalog.roles[&"neutral_administrator"])
+	assert_eq(p.get_value(&"ui.blockers.max_lines"), 1)
+	assert_eq(p.get_value(&"ui.blockers.sort"), "gap")
+
+
+func test_ui_blockers_resolves_max_lines_101() -> void:
+	var res: DataLoadResult = _load_blockers(101)
+	assert_true(res.is_ok(), str(res.errors))
+	assert_not_null(res.catalog, "catalog available after load")
+	if not res.is_ok() or res.catalog == null or not res.catalog.roles.has(&"neutral_administrator"):
+		return
+	var p: Params = Params.new(res.catalog, res.catalog.roles[&"neutral_administrator"])
+	assert_eq(p.get_value(&"ui.blockers.max_lines"), 101)
+	assert_eq(p.get_value(&"ui.blockers.sort"), "gap")
+
+
+func test_ui_blockers_resolves_max_lines_1000() -> void:
+	var res: DataLoadResult = _load_blockers(1000)
+	assert_true(res.is_ok(), str(res.errors))
+	assert_not_null(res.catalog, "catalog available after load")
+	if not res.is_ok() or res.catalog == null or not res.catalog.roles.has(&"neutral_administrator"):
+		return
+	var p: Params = Params.new(res.catalog, res.catalog.roles[&"neutral_administrator"])
+	assert_eq(p.get_value(&"ui.blockers.max_lines"), 1000)
+	assert_eq(p.get_value(&"ui.blockers.sort"), "gap")
