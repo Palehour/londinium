@@ -157,6 +157,16 @@ const ECONOMY_SCHEMAS: Dictionary = {
 	},
 }
 
+# ui.mobility.* (issue #352 lane datos/Params): soporte acotado opcional para keys pendientes.
+# No se agregan a ECONOMY_SCHEMAS (no requeridos en prod), se cargan si "economy/ui.json" presente en documents (fixtures).
+# Solo se cargan los números si provistos; se tolera "documentation" y ausencia de los fields (sin 'sin dato' aquí).
+# Validación de finitos + enteros + ranges delegada a _number + ParameterRanges (sin inventar balance).
+const PENDING_UI_MOBILITY: Dictionary = {
+	"labor_notice_window_seconds": "positive_integer",
+	"demotion_warning_seconds": "positive_integer",
+	"max_buildings_listed": "positive_integer"
+}
+
 # One era's data is loaded: the engine is the same for every era, only these files change.
 const DEFAULT_ERA: String = "victorian"
 # Difficulty presets and knobs (D-065). Optional: without them the game runs on the base values alone.
@@ -304,6 +314,12 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_load_lessons(raw, catalog)
 		elif path.begins_with(INCIDENTS_FOLDER + "/"):
 			_load_incident(raw, path, catalog)
+		elif path == "economy/ui.json":
+			_load_ui_mobility(raw, catalog)
+			var numeric: Dictionary = raw.duplicate()
+			numeric.erase("documentation")
+			numeric.erase("mobility")
+			_numbers(numeric, ECONOMY_SCHEMAS["ui"], path, "ui", catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
 			# The street piece is structure, read above.
@@ -2091,3 +2107,37 @@ func _knob_targets_valid(knob: KnobDef, location: String, catalog: DataCatalog) 
 					_errors.append("%s: '%s' is not a traded grain, or min is not positive" % [location, target])
 					valid = false
 	return valid
+
+
+# Load ui.mobility keys if the data file is present. File is optional. If "mobility" block present,
+# require exact structure with the three fields (no silent missing/malformed). Accept only the literal
+# string "sin dato" or a finite number (validated per kind for numeric case). Store strings verbatim
+# into base_values so Params can return them without numeric cast or range checks.
+func _load_ui_mobility(raw: Dictionary, catalog: DataCatalog) -> void:
+	if not raw.has("mobility"):
+		return
+	if raw["mobility"] is not Dictionary:
+		_errors.append("economy/ui.json.mobility: expected an object")
+		return
+	var mobility: Dictionary = raw["mobility"]
+	var required: Array = PENDING_UI_MOBILITY.keys()
+	for f: String in required:
+		if not mobility.has(f):
+			_errors.append("economy/ui.json.mobility.%s: missing field for ui.mobility.%s" % [f, f])
+	for f: Variant in mobility:
+		if f not in required and f != "documentation":
+			_errors.append("economy/ui.json.mobility.%s: unknown field" % f)
+	if not _errors.is_empty():
+		return
+	for field: String in required:
+		var location: String = "economy/ui.json.mobility.%s" % field
+		var key: StringName = StringName("ui.mobility.%s" % field)
+		var val: Variant = mobility[field]
+		if typeof(val) == TYPE_STRING and val == "sin dato":
+			catalog.base_values[key] = "sin dato"
+		elif typeof(val) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(val)):
+			var kind: String = PENDING_UI_MOBILITY[field]
+			_number(val, kind, location, key, catalog)
+		else:
+			_errors.append("%s: expected 'sin dato' or finite number" % location)
+			_rejected_keys.append(key)

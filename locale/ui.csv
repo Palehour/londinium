@@ -117,6 +117,13 @@ ui.needs_no_class,Sin necesidades definidas.,No needs defined.
 ui.housing_row,%s · vivienda: base %d + bono %d (máximo %d),%s · housing: base %d + bonus %d (maximum %d)
 ui.mobility_promoted,↑ Ascensos en el último minuto: %d (%s → %s),↑ Promotions in the last minute: %d (%s → %s)
 ui.mobility_demoted,↓ Descensos en el último minuto: %d (%s → %s),↓ Demotions in the last minute: %d (%s → %s)
+ui.mobility_title,Cambios de clase,Class changes
+ui.labor_title,Mano de obra,Labour
+ui.labor_notice,−%d trabajadores en edificios,−%d workers in buildings
+ui.labor_building,  · %s −%d,  · %s −%d
+ui.labor_more,  · y %d más,  · and %d more
+ui.demotion_title,Aviso de descenso,Demotion warning
+ui.demotion_countdown,"Quedan %d s · sin %s, los %s vuelven a ser %s","%d s left · without %s, %s go back to being %s"
 ui.terrain.land,Tierra,Land
 ui.terrain.river,Río,River
 ui.terrain.cultivable,Cultivable,Cultivable

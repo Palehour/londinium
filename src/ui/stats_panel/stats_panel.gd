@@ -23,6 +23,13 @@ var _speed: int = 1
 var _syncing: bool = false
 var _alert: Label
 var _notice: Label
+# The period notices (D-181): class changes of the last minute, posts lost to promotions, and the demotion countdown.
+var _notice_box: EraNotice
+var _labor_box: EraNotice
+var _demotion_box: EraNotice
+var _labor_window: MobilityNoticeWindow = MobilityNoticeWindow.new()
+# The simulation the window was filled from: a restart or a load brings another, and the window starts over.
+var _window_simulation_id: int = 0
 var _restart: Button
 var _archive: Button
 var _tax: SpinBox
@@ -109,9 +116,13 @@ func setup(game_session: GameSession, game_clock: SimClock) -> void:
 	_victory_notice.add_child(_victory_message)
 	_victory_dismiss = _button(Strings.text(Strings.VICTORY_DISMISS), func() -> void: _victory_notice.hide())
 	_victory_notice.add_child(_victory_dismiss)
-	_notice = _label("")
-	_notice.visible = false
-	root.add_child(_notice)
+	_labor_box = EraNotice.new(EraNotice.Tone.LABOR, Strings.text(Strings.LABOR_TITLE))
+	root.add_child(_labor_box)
+	_demotion_box = EraNotice.new(EraNotice.Tone.WARNING, Strings.text(Strings.DEMOTION_TITLE))
+	root.add_child(_demotion_box)
+	_notice_box = EraNotice.new(EraNotice.Tone.LABOR, Strings.text(Strings.MOBILITY_TITLE))
+	_notice = _notice_box.body
+	root.add_child(_notice_box)
 	_restart = _button(Strings.text(Strings.RESTART), func() -> void: restart_requested.emit())
 	_restart.visible = false
 	root.add_child(_restart)
@@ -201,8 +212,8 @@ func update_snapshot(snapshot: Dictionary) -> void:
 	_malt_beer_row.text = _malt_beer_text(snapshot["market"]["malt"], snapshot["market"]["beer"])
 	_update_alert(defeat)
 	_update_victory(snapshot.get("victory", {}), defeated)
-	_notice.text = _mobility_text(stats, snapshot["needs"])
-	_notice.visible = not _notice.text.is_empty()
+	_notice_box.show_text(_mobility_text(stats, snapshot["needs"]))
+	_update_mobility_notices(snapshot)
 	_restart.visible = defeated
 	_sync_difficulty_buttons()
 	_mods_menu.show_mods(session.mods, session.mod_conflicts, _mods_folder, session.mods_from_save)
@@ -224,6 +235,9 @@ func _notification(what: int) -> void:
 
 func _apply_static_texts() -> void:
 	_title.text = Strings.text(Strings.PANEL_TITLE)
+	_notice_box.set_title(Strings.text(Strings.MOBILITY_TITLE))
+	_labor_box.set_title(Strings.text(Strings.LABOR_TITLE))
+	_demotion_box.set_title(Strings.text(Strings.DEMOTION_TITLE))
 	_stats_button.text = Strings.text(Strings.STATS_SCREEN_OPEN)
 	_restart.text = Strings.text(Strings.RESTART)
 	_archive.text = Strings.text(Strings.ARCHIVE_BUTTON)
@@ -633,6 +647,67 @@ func _mobility_text(stats: Dictionary, needs: Dictionary) -> String:
 		lines.append(Strings.text(Strings.MOBILITY_PROMOTED) % [promoted, lower, upper])
 	if demoted > 0:
 		lines.append(Strings.text(Strings.MOBILITY_DEMOTED) % [demoted, upper, lower])
+	return "\n".join(lines)
+
+
+func _update_mobility_notices(snapshot: Dictionary) -> void:
+	var simulation_id: int = session.simulation.get_instance_id() if session != null and session.simulation != null else 0
+	if simulation_id != _window_simulation_id:
+		_window_simulation_id = simulation_id
+		_labor_window.clear()
+	# Read on every update: a restart, a load or other mods bring other parameters.
+	var params: Params = session.get_params() if session != null else null
+	var window_seconds: int = MobilityNoticeWindow.read_knob(params, MobilityNoticeWindow.KEY_WINDOW)
+	var max_buildings: int = MobilityNoticeWindow.read_knob(params, MobilityNoticeWindow.KEY_MAX_BUILDINGS, 1)
+	# Without a window or a list size there is nothing to count or to show: the notice is off, no default stands in.
+	var events: Dictionary = session.get_mobility_events() if session != null else {}
+	_labor_window.record(events, window_seconds if max_buildings >= 0 else MobilityNoticeWindow.PENDING)
+	_labor_box.show_text(_labor_text(max_buildings))
+	var warning_seconds: int = MobilityNoticeWindow.read_knob(params, MobilityNoticeWindow.KEY_WARNING)
+	_demotion_box.show_text(_demotion_warning_text(snapshot["needs"], warning_seconds))
+
+
+# "−N workers in buildings" and the buildings that lost the most; empty when no employed worker rose in the window.
+func _labor_text(max_buildings: int) -> String:
+	if max_buildings < 0:
+		return ""
+	var summary: Dictionary = _labor_window.summary(max_buildings)
+	if summary["total"] <= 0:
+		return ""
+	var lines: Array[String] = [Strings.text(Strings.LABOR_NOTICE) % summary["total"]]
+	for row: Dictionary in summary["buildings"]:
+		var label: String = Strings.building_label(String(row["definition_id"]))
+		lines.append(Strings.text(Strings.LABOR_BUILDING) % [label if not label.is_empty() else String(row["definition_id"]), row["workers_lost"]])
+	if summary["hidden"] > 0:
+		lines.append(Strings.text(Strings.LABOR_MORE) % summary["hidden"])
+	return "\n".join(lines)
+
+
+# The seconds left before a class falls back, naming what it lacks, from `warning_seconds` before it happens. Hidden
+# with no people in the class, with the clock at zero (recovered) or with the knob pending. It stays at 0 s while the
+# fall runs and artisans remain.
+func _demotion_warning_text(needs: Dictionary, warning_seconds: int) -> String:
+	if warning_seconds < 0:
+		return ""
+	var lines: Array[String] = []
+	for class_id: StringName in needs["classes"]:
+		var info: Dictionary = needs["classes"][class_id]
+		if info["mobility"].is_empty() or info["population"] <= 0:
+			continue
+		var demotion: Dictionary = info["mobility"]["demotion"]
+		var below: int = int(demotion["seconds_below"])
+		var left: int = int(demotion.get("seconds_left", int(demotion["seconds_required"]) - below))
+		# Clock at zero means recovered. A fall already under way (left 0) keeps the notice while anyone is left.
+		left = maxi(0, left)
+		if below <= 0 or left > warning_seconds:
+			continue
+		var lacking: Array[String] = []
+		for good: StringName in demotion.get("missing_goods", []):
+			lacking.append(Strings.label(Strings.GOOD_LABELS, good))
+		var lack: String = ", ".join(lacking) if not lacking.is_empty() else Strings.label(Strings.CATEGORY_LABELS, demotion["category"])
+		lines.append(Strings.text(Strings.DEMOTION_COUNTDOWN) % [left, lack.to_lower(),
+			Strings.label(Strings.CLASS_LABELS, class_id).to_lower(),
+			Strings.label(Strings.CLASS_LABELS, info["mobility"]["from"]).to_lower()])
 	return "\n".join(lines)
 
 

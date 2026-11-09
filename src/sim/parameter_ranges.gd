@@ -101,6 +101,13 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 1000.0, "max": 100000.0, "min_inclusive": true, "max_inclusive": true},
 	&"stats.causes.min_duration_seconds": {
 		"min": 0.0, "max": 30.0, "min_inclusive": true, "max_inclusive": true},
+	# ui.mobility keys may be numeric in fixtures (positive integers). Ranges ensure finite integers; no arbitrary max.
+	&"ui.mobility.labor_notice_window_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"ui.mobility.demotion_warning_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"ui.mobility.max_buildings_listed": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"ui.chains.bottleneck_margin": {
 		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
 	&"ui.chains.min_samples": {
@@ -353,7 +360,9 @@ static func is_valid(key: StringName, value: float) -> bool:
 				&"stats.medium.bucket_seconds", &"stats.medium.span_seconds", &"stats.chapter.bucket_seconds",
 				&"stats.causes.max_events", &"stats.causes.min_duration_seconds", &"transport.expensive_m", &"map.cell_size_m",
 				&"loan.term_installments", &"loan.installment_interval_s", &"loan.default_after_s",
-				&"loan.receiver_window_s"] \
+				&"loan.receiver_window_s",
+				# ui.mobility.* (issue #352): enteros para duraciones y conteo de lista (validación semántica, fixtures no prod)
+				&"ui.mobility.labor_notice_window_seconds", &"ui.mobility.demotion_warning_seconds", &"ui.mobility.max_buildings_listed"] \
 			and value != floor(value):
 		return false
 	if not BY_KEY.has(key):

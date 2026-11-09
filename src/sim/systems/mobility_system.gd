@@ -13,7 +13,7 @@ const REASON_CATEGORY_BELOW: StringName = &"category_below"
 const REASON_SOURCE_SATISFACTION_LOW: StringName = &"source_satisfaction_low"
 
 
-func tick(state: EconomyState, params: Params, context: EconomyContext = null) -> void:
+func tick(state: EconomyState, params: Params, context: EconomyContext = null, events: Dictionary = {}) -> void:
 	if context == null:
 		return
 	var moved: bool = false
@@ -21,8 +21,15 @@ func tick(state: EconomyState, params: Params, context: EconomyContext = null) -
 		if def.has_mobility():
 			moved = _tick_class(state, params, context, def) or moved
 	# Promoted people leave their jobs; the jobs of those still looking stay, so the unemployed rise first.
+	# Only record post losses from promotion (ascenso that decrease job class pop); trim after movements.
+	# events provided by caller (Simulation) so no field in EconomyState (ADR0011). Snapshot uses real tick.
 	if moved:
+		var ev: Dictionary = events
+		if ev.is_empty():
+			ev = {"tick": 0, "employed_promoted": 0, "buildings": []}
+		var pre: Dictionary = _capture_worker_counts(state)
 		WorkersSystem.trim_to_population(state)
+		_populate_promotion_events(ev, state, pre)
 
 
 # Returns whether anyone moved.
@@ -120,5 +127,50 @@ static func diagnostics(state: EconomyState, params: Params, context: EconomyCon
 		"demotion": {"active": is_demotion_active_for_seconds(entry_seconds, params, def), "category": def.demotion_category,
 			"seconds_below": entry_seconds,
 			"seconds_required": int(params.get_value(def.demotion_seconds_key)),
-			"per_minute": float(params.get_value(def.demotion_per_minute_key))},
+			"seconds_left": maxi(0, int(params.get_value(def.demotion_seconds_key)) - entry_seconds),
+			"per_minute": float(params.get_value(def.demotion_per_minute_key)),
+			"missing_goods": missing_goods(state, params, def, def.demotion_category)},
 	}
+
+
+# Capture pre-trim workers counts by stable key (cell if present else index) to diff only ascenso losses.
+# id is stable: cell array when building has "cell" (real games), else index for headless tests.
+static func _capture_worker_counts(state: EconomyState) -> Dictionary:
+	var counts: Dictionary = {}
+	for i: int in range(state.buildings.size()):
+		var b: Dictionary = state.buildings[i]
+		var key: Variant = _building_key(b, i)
+		counts[key] = int(b.get("workers", 0))
+	return counts
+
+
+static func _building_key(b: Dictionary, idx: int) -> Variant:
+	if b.has("cell"):
+		var c: Variant = b["cell"]
+		if c is Vector2i:
+			return [c.x, c.y]
+		if c is Array:
+			return c.duplicate()
+		return c
+	return idx
+
+
+# Populate ONLY promotion lost posts (after trim, only ascenso). Does not alter trim/econ/order. Writes to provided events dict (outside state).
+static func _populate_promotion_events(events: Dictionary, state: EconomyState, pre: Dictionary) -> void:
+	var lost_total: int = 0
+	var lost_list: Array[Dictionary] = []
+	for i: int in range(state.buildings.size()):
+		var b: Dictionary = state.buildings[i]
+		var key: Variant = _building_key(b, i)
+		var before: int = int(pre.get(key, 0))
+		var after: int = int(b.get("workers", 0))
+		var lost: int = before - after
+		if lost > 0:
+			lost_total += lost
+			lost_list.append({
+				"id": key,
+				"definition_id": b["definition_id"],
+				"workers_lost": lost
+			})
+	events["employed_promoted"] = lost_total
+	events["buildings"] = lost_list
