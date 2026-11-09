@@ -313,7 +313,13 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 				numeric.erase("ui")
 			_numbers(numeric, ECONOMY_SCHEMAS[section], path, section, catalog)
 			if section == "defeat" and raw.has("ui"):
-				_load_ui_defeat(raw["ui"], path, catalog)
+				# The typed call rejects an array or a scalar before _load_ui_defeat can record
+				# economy/defeat.json.ui. Check the type here so that rejection is the result.
+				var ui_raw: Variant = raw["ui"]
+				if ui_raw is Dictionary:
+					_load_ui_defeat(ui_raw, path, catalog)
+				else:
+					_errors.append("%s.ui: expected an object" % path)
 		elif path not in required:
 			_errors.append("%s: unsupported data file" % path)
 	_check_grid_maps(catalog)
