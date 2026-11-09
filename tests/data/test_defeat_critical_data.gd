@@ -77,6 +77,18 @@ func test_ui_defeat_critical_invalid_values_negative_bool_fraction_nan_clear_err
 	_assert_invalid("depopulation:")
 
 
+# An array or a scalar is not the ui object. The loader must reject it with a catalog
+# error on economy/defeat.json.ui, instead of failing inside the typed call first.
+func test_ui_entry_of_invalid_type_is_rejected() -> void:
+	for bad: Variant in [[], 7, "no", true, null]:
+		before_each()
+		_documents["economy/defeat.json"]["ui"] = bad
+		var result: DataLoadResult = DataLoader.new().load_documents(_documents)
+		assert_false(result.is_ok(), "ui type %s must fail" % typeof(bad))
+		assert_null(result.catalog, "Invalid data must not expose a partial catalog")
+		assert_string_contains("\n".join(result.errors), "economy/defeat.json.ui: expected an object")
+
+
 func test_ui_defeat_critical_sound_invalid_number_empty_error() -> void:
 	before_each()
 	_documents["economy/defeat.json"]["ui"]["defeat"]["critical_sound"] = 123
