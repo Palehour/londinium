@@ -81,6 +81,13 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": false, "max_inclusive": false},
 	&"defeat.hunger.duration_seconds": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": false, "max_inclusive": false},
+	# Critical notice thresholds may be zero; unresolved values are null, never a numeric sentinel.
+	&"ui.defeat.critical_seconds.bankruptcy": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"ui.defeat.critical_seconds.hunger": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"ui.defeat.critical_seconds.depopulation": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"population.growth.hunger_emigration_multiplier": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"population.empty_city_bread_lookahead_seconds": {

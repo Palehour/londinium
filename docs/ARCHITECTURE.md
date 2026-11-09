@@ -298,6 +298,26 @@ londinium/
 11. Stats + snapshot emitted. The chapter history (`StatsHistory`, D-066) samples every series and notes the causes
     that changed; step 1 also notes each command's outcome. It only reads the state.
 
+### Critical defeat notices (#350)
+`snapshot()["defeat_state"]` derives `level`, `seconds_left` and `cause` for bankruptcy, hunger and depopulation
+without changing their timers or defeat outcomes. Remaining seconds use the resolved duration and round up; bankruptcy
+under a receiver uses its existing loan window and reports `loan_bankruptcy` as its cause, not a fourth condition.
+Disabled defeats expose normal levels; grace prevents the critical escalation without changing existing warnings.
+
+The four `ui.defeat.*` parameters are declared under `ui` in `data/economy/defeat.json`. D-188 approves initial
+playtest thresholds of 60 remaining simulation seconds for bankruptcy, hunger and depopulation, and the sound id
+`critical-notice-original`. These are not measured balance. Explicit `null` / "sin dato" fixtures still mean unresolved
+configuration, not zero; `snapshot()["defeat_critical_config"]` reports that case. Thresholds use the normal layers.
+
+`StatsPanel` mounts `DefeatCritical` outside its scrolling controls. It reads the derived levels, stacks critical
+notices by remaining time, and distinguishes conditions with shapes and localized causes as well as color (D-181).
+The sound identifier resolves to `assets/audio/ui/<id>.ogg` or `.wav`; missing configuration or assets are diagnosed,
+not replaced with a default. Entry tracking is per condition, rearms when it leaves, and does not repeat on pause or
+translation refresh. Restarting or loading a session resets that tracking. The approved WAV is
+`res://assets/audio/ui/critical-notice-original.wav`; the player uses the existing Master bus. A path-specific
+`.gitattributes` exception keeps this small required resource in normal Git, so CI's `lfs: false` checkout gets
+the actual WAV, not an LFS pointer. Approval and integration do not certify a listening or in-game playtest.
+
 ## Data layers (D-049, D-065, ADR 0010)
 Every value goes through the same layers, in this order: **base → mods → preset → knobs → role**.
 1. **Base:** `data/` as shipped.

@@ -1019,6 +1019,8 @@ func _reset_view() -> void:
 	_overlay_bar.setup(NeedOverlay.goods(session.context))
 	_clear_status()
 	_snapshot = session.get_snapshot()
+	# New game, new difficulty or a loaded save: the critical sound rearms and reads its id again.
+	_stats_panel.reset_critical()
 	_stats_panel.update_snapshot(_snapshot)
 	_archive_panel.update_snapshot(_snapshot)
 	_update_mode()

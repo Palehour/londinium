@@ -3,5 +3,16 @@
   "bankruptcy": { "threshold_tax_minutes": -6, "duration_seconds": 300 },
   "hunger": { "threshold": 0.5, "duration_seconds": 180, "smoothing": 0.1 },
   "depopulation": { "warning_fraction": 0.5, "defeat_fraction": 0.25, "minimum_population": 10, "peak_decay_per_minute": 0.03, "duration_seconds": 180, "stability_window_seconds": 60 },
-  "grace_seconds": 300
+  "grace_seconds": 300,
+  "ui": {
+    "defeat": {
+      "critical_seconds": {
+        "bankruptcy": 60,
+        "hunger": 60,
+        "depopulation": 60
+      },
+      "critical_sound": "critical-notice-original",
+      "_comment": "D-188 values approved for #350: 60 s remaining before defeat, original critical notice sound"
+    }
+  }
 }

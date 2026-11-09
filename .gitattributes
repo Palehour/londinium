@@ -32,6 +32,8 @@
 # so they don't spend bandwidth. Requires `git lfs install` once per machine (Git for Windows ships it;
 # macOS: `brew install git-lfs`). Patterns are active now so the first big file goes to LFS from day one.
 *.wav  filter=lfs diff=lfs merge=lfs -text
+# Exception: small approved UI sound needed at runtime/tests (D-188, #350).
+assets/audio/ui/critical-notice-original.wav -filter -diff -merge -text
 *.flac filter=lfs diff=lfs merge=lfs -text
 *.aif  filter=lfs diff=lfs merge=lfs -text
 *.aiff filter=lfs diff=lfs merge=lfs -text
