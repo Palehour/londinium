@@ -166,6 +166,7 @@ func test_one_by_one_matches_single_cell_rules() -> void:
 	var strip: EconomyContext = EconomyContext.new(catalog, catalog.maps[STRIP])
 	var events_on: RoleDef = RoleDef.new()
 	events_on.modifiers.append(Modifier.new(&"events.enabled", &"set", 1.0))
+	events_on.modifiers.append(Modifier.new(&"mourning.enabled", &"set", 1.0))
 	var params: Params = SimTestParams.isolated_params(catalog, events_on)
 	var state: EconomyState = EconomyState.new()
 	state.money = 100000

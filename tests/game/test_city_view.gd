@@ -122,15 +122,17 @@ func test_the_legend_shows_the_city_palette() -> void:
 func test_a_click_builds_on_the_cell_under_the_mouse_and_draws_its_boxes() -> void:
 	var view: CityView = await _view()
 	_zoom_in(view, HOUSE)
-	assert_eq(_instances(view, "_boxes"), 0)
+	var boxes_before: int = _instances(view, "_boxes")
+	var roofs_before: int = _instances(view, "_roofs")
 	_key(view, KEY_4)
 	_click(view, _screen(view, HOUSE))
 	assert_eq(view.geometry.selected, HOUSE)
 	await _tick(view)
 	assert_eq(_building_at(view, HOUSE), &"housing")
 	# Housing is 1x1 (D-153): the leading block fills the cell, so there is no room for filler houses.
-	assert_gt(_instances(view, "_boxes"), 0, "The house is drawn")
-	assert_eq(_instances(view, "_roofs"), 1)
+	# The St Mary Matfelon atrium is already on whitechapel_full, so we measure the delta.
+	assert_gt(_instances(view, "_boxes"), boxes_before, "The house is drawn")
+	assert_eq(_instances(view, "_roofs"), roofs_before + 1)
 
 
 func test_a_click_on_a_roof_selects_that_building_not_the_ground_behind() -> void:
@@ -156,6 +158,7 @@ func test_a_click_on_a_roof_selects_that_building_not_the_ground_behind() -> voi
 func test_delete_demolishes_the_selected_building_and_its_boxes_go() -> void:
 	var view: CityView = await _view()
 	_zoom_in(view, HOUSE)
+	var boxes_before: int = _instances(view, "_boxes")
 	_key(view, KEY_4)
 	_click(view, _screen(view, HOUSE))
 	await _tick(view)
@@ -164,7 +167,7 @@ func test_delete_demolishes_the_selected_building_and_its_boxes_go() -> void:
 	_key(view, KEY_DELETE)
 	await _tick(view)
 	assert_eq(_building_at(view, HOUSE), &"")
-	assert_eq(_instances(view, "_boxes"), 0)
+	assert_eq(_instances(view, "_boxes"), boxes_before, "The house's boxes go, the atrium's stay")
 
 
 func test_the_panel_is_the_two_d_maps_panel() -> void:

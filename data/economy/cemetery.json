@@ -1,0 +1,10 @@
+{
+  "preplaced": {
+    "radius_m": 300,
+    "capacity": 200
+  },
+  "player": {
+    "radius_m": 200,
+    "capacity": 100
+  }
+}

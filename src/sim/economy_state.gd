@@ -62,6 +62,12 @@ var legitimacy: float = -1.0
 # Decrees (issue #71, D-124). Outside to_dict(), like the reserve: the save carries them apart.
 var active_decrees: Array[StringName] = []
 var decree_upkeep_fraction: float = 0.0
+# Mourning (issue #370, D-194): off unless the data/mod switches it on.
+var mourning_enabled: bool = false
+# Per district, the deaths still unburied and those buried this chapter. Both decay with
+# satisfaction.mourning.deaths_memory_seconds and feed the mourning satisfaction term.
+var mourning_unburied: Dictionary[StringName, float] = {}
+var mourning_buried: Dictionary[StringName, float] = {}
 var wheat_purchases_enabled: bool = true
 # Wharf purchase policy (WheatPolicy). The reserve is -1 until the simulation loads the defaults from
 # data; that marks the whole policy as pending (-1 is a real value for the two prices: off / no limit).
@@ -295,6 +301,11 @@ func to_dict() -> Dictionary:
 		values["incident_pressure"] = incident_pressure.duplicate(true)
 	if not incident_counts.is_empty():
 		values["incident_counts"] = incident_counts.duplicate(true)
+	# Only with mourning on, so a game without it saves exactly as before it (issue #370).
+	if mourning_enabled:
+		values["mourning_enabled"] = true
+		values["mourning_unburied"] = mourning_unburied.duplicate()
+		values["mourning_buried"] = mourning_buried.duplicate()
 	# Only once a loan was taken, so a game without one saves exactly as before them (issue #72).
 	if loan != null:
 		values["loan"] = loan.to_dict()
@@ -408,6 +419,9 @@ static func from_dict(values: Dictionary) -> EconomyState:
 	result.incidents_enabled = bool(values.get("incidents_enabled", false))
 	result.incident_pressure = _by_district(values.get("incident_pressure", {}))
 	result.incident_counts = _by_district(values.get("incident_counts", {}))
+	result.mourning_enabled = bool(values.get("mourning_enabled", false))
+	result.mourning_unburied = _mourning_memory(values.get("mourning_unburied", {}))
+	result.mourning_buried = _mourning_memory(values.get("mourning_buried", {}))
 	result.buildings.assign(values["buildings"].duplicate(true))
 	result.player_roads.assign(values.get("player_roads", []).duplicate(true))
 	result.transport_fraction = float(values.get("transport_fraction", 0.0))
@@ -440,4 +454,12 @@ static func _by_district(saved: Dictionary) -> Dictionary[StringName, Dictionary
 			var value: Variant = saved[district][attribute]
 			values[StringName(attribute)] = value.duplicate(true) if value is Dictionary else float(value)
 		result[StringName(district)] = values
+	return result
+
+
+# A saved {district: deaths} with its keys as StringName again.
+static func _mourning_memory(saved: Dictionary) -> Dictionary[StringName, float]:
+	var result: Dictionary[StringName, float] = {}
+	for district: Variant in saved:
+		result[StringName(district)] = float(saved[district])
 	return result

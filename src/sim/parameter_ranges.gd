@@ -281,6 +281,24 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	# Bonus of housing capacity for each need category a class meets (issue #86).
 	&"needs.housing_bonus_per_category": {
 		"min": 0.0, "max": 100.0, "min_inclusive": true, "max_inclusive": true},
+	# Mourning (issue #370, D-194): unburied and buried deaths weigh on satisfaction.
+	&"satisfaction.mourning.buried_factor": {
+		"min": 0.0, "max": 1.0, "min_inclusive": true, "max_inclusive": true},
+	&"satisfaction.mourning.deaths_memory_seconds": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"satisfaction.mourning.weight.worker": {
+		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	&"satisfaction.mourning.weight.artisan": {
+		"min": 0.0, "max": INF, "min_inclusive": true, "max_inclusive": false},
+	# Cemetery reach and capacity (issue #370, D-193, D-195).
+	&"cemetery.preplaced.radius_m": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"cemetery.preplaced.capacity": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"cemetery.player.radius_m": {
+		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
+	&"cemetery.player.capacity": {
+		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 }
 
 # Keys with ids in the middle (a category, a class, a good) come from the era's data, so they are matched

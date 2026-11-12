@@ -27,6 +27,8 @@
     "well": {"color": "#7fa3b3"},
     "health_post": {"color": "#d9d2b0"},
     "fire_station": {"color": "#c98a7a"},
-    "police_station": {"color": "#8f97b8"}
+    "police_station": {"color": "#8f97b8"},
+    "st_mary_atrium": {"color": "#8a8a7a"},
+    "cemetery": {"color": "#6e7a6e"}
   }
 }

@@ -65,6 +65,7 @@ func _init(catalog: DataCatalog, selected_map: MapDef) -> void:
 	map.terrain.assign(selected_map.terrain)
 	map.dense_housing_cells.assign(selected_map.dense_housing_cells)
 	map.anchors.assign(selected_map.anchors)
+	map.anchor_historical_refs.assign(selected_map.anchor_historical_refs)
 	map.named_sites.assign(selected_map.named_sites)
 	map.period_houses.assign(selected_map.period_houses)
 	map.period_house_population.assign(selected_map.period_house_population)

@@ -65,5 +65,13 @@
   },
   "police_station": {
     "wage_per_worker_per_minute": 0, "jobs": 0, "tags": ["service"], "footprint": [2, 2], "terrain": ["firm"]
+  },
+  "st_mary_atrium": {
+    "cost": 0, "upkeep_per_minute": 0, "wage_per_worker_per_minute": 0,
+    "jobs": 0, "buildable": false, "tags": ["cemetery"], "footprint": [1, 1], "terrain": ["firm"]
+  },
+  "cemetery": {
+    "cost": 200, "upkeep_per_minute": 1, "wage_per_worker_per_minute": 0,
+    "jobs": 0, "tags": ["cemetery"], "footprint": [2, 2], "terrain": ["firm"]
   }
 }

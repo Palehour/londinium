@@ -11,7 +11,7 @@ const BUILDING_FIELDS: Dictionary = {
 # D-106) make nothing, so they have no recipe, nor do the service buildings (issue #87, D-118). A tavern raises the
 # pressure of riots in its district (issue #87, D-119).
 const BUILDING_TAGS: Array[String] = ["housing", "river", "source", "producer", "cultivable", "basic_infrastructure",
-	"water", "health", "service", "tavern"]
+	"water", "health", "service", "tavern", "cemetery"]
 # Distance model (issue #67): a building may hand out goods to the houses within its service radius, in metres since
 # issue #186 (D-086), and the wharf may supply goods it brings beyond its recipe. All three are optional.
 const BUILDING_SERVICE_FIELDS: Array[String] = ["service_radius_m", "distributes", "supplies"]
@@ -155,6 +155,22 @@ const ECONOMY_SCHEMAS: Dictionary = {
 			"peak_decay_per_minute": "fraction", "stability_window_seconds": "positive_integer"},
 		"grace_seconds": "number",
 	},
+	"mourning": {
+		# Luto (issue #370, D-194): a satisfaction term fed by cholera deaths. Off unless a scenario/mod switches it on.
+		"enabled": "boolean",
+	},
+	"satisfaction": {
+		"mourning": {
+			"buried_factor": "fraction",
+			"deaths_memory_seconds": "positive",
+			"weight": {"worker": "number", "artisan": "number"},
+		},
+	},
+	"cemetery": {
+		# St Mary Matfelon atrium (D-193) and the player cemetery (D-195): reach and capacity of each.
+		"preplaced": {"radius_m": "positive", "capacity": "integer"},
+		"player": {"radius_m": "positive", "capacity": "integer"},
+	},
 }
 
 # ui.mobility.* (issue #352 lane datos/Params): soporte acotado opcional para keys pendientes.
@@ -201,7 +217,8 @@ const MAP_IMPORTED_FIELDS: Array[String] = ["dock_cells", "road_cells", "existin
 # A map drawn as rows of cell types (issue #61, D-093). The types replace the layers of coordinates, so only the
 # optional fields that need none of them come along.
 const GRID_MAP_FIELDS: Array[String] = ["id", "size", "cell_size_m", "cells", "districts", "district_by_cell", "zones"]
-const GRID_MAP_OPTIONAL_FIELDS: Array[String] = ["roads_enabled", "road_diagonals", "named_sites", "history_notes"]
+const GRID_MAP_OPTIONAL_FIELDS: Array[String] = ["roads_enabled", "road_diagonals", "named_sites", "history_notes",
+	"existing_cells", "anchors"]
 const DISTRICT_FIELDS: Array[String] = ["id", "name", "symbol", "water_source"]
 # Factions and legitimacy (issue #84, D-116, D-139, D-140; values of D-141), optional per era: the numbers of the
 # reserve and of the decree cost (factions.*), each faction's engine and target, and each class's affinity to each.
@@ -623,8 +640,9 @@ func _load_buildings(raw: Dictionary, catalog: DataCatalog) -> void:
 		var is_housing: bool = "housing" in building.tags
 		var is_water: bool = WaterSystem.WATER_TAG in building.tags
 		var is_service: bool = ServiceSystem.SERVICE_TAG in building.tags
+		var is_cemetery: bool = "cemetery" in building.tags
 		var makes_goods: bool = not is_housing and not is_water and not is_service \
-			and CrisisSystem.POST_TAG not in building.tags
+			and CrisisSystem.POST_TAG not in building.tags and not is_cemetery
 		# A building priced as another reads that one's keys (issue #202): it has none of its own to copy.
 		var schema: Dictionary = {} if raw[id].has("priced_as") else BUILDING_FIELDS.duplicate()
 		if is_service:
@@ -1224,7 +1242,7 @@ const CLASS_FIELDS: Array[String] = ["base", "takes_jobs", "housing_building", "
 # Per block of a class: field -> number kind. Each field either points at an existing Params key (a string)
 # or is a number that becomes the key class.<id>.<block>.<field>.
 const CLASS_SATISFACTION: Dictionary = {"tax_weight": "number", "overcrowding_weight": "number",
-	"smoothing_per_second": "number", "snap_epsilon": "positive"}
+	"smoothing_per_second": "number", "snap_epsilon": "positive", "mourning_weight": "number"}
 const CLASS_GROWTH: Dictionary = {"immigration_threshold": "percent", "emigration_threshold": "percent",
 	"immigration_per_minute": "number", "emigration_per_minute": "number",
 	"hunger_emigration_threshold": "fraction", "hunger_emigration_recovery": "fraction",
@@ -1292,6 +1310,7 @@ func _load_class_blocks(raw: Dictionary, path: String, definition: ClassDef, cat
 	definition.overcrowding_weight_key = satisfaction.get("overcrowding_weight", &"")
 	definition.smoothing_key = satisfaction.get("smoothing_per_second", &"")
 	definition.snap_epsilon_key = satisfaction.get("snap_epsilon", &"")
+	definition.mourning_weight_key = satisfaction.get("mourning_weight", &"")
 	definition.immigration_threshold_key = growth.get("immigration_threshold", &"")
 	definition.emigration_threshold_key = growth.get("emigration_threshold", &"")
 	definition.immigration_per_minute_key = growth.get("immigration_per_minute", &"")
@@ -1595,6 +1614,11 @@ func _load_grid_map(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 			_errors.append("%s.district_by_cell: buildable cell [%d, %d] has no district" % [path, cell.x, cell.y])
 	_load_zones(raw["zones"], path + ".zones", map)
 	_load_map_extras(raw, path, map)
+	if raw.has("existing_cells"):
+		for position: Vector2i in _map_cells(raw["existing_cells"], path + ".existing_cells", map, []):
+			map.existing_cells.append(position)
+	if raw.has("anchors"):
+		_load_anchors(raw["anchors"], path + ".anchors", map, catalog)
 	catalog.maps[map.id] = map
 	_grid_maps.append({"map": map, "path": path, "cell_size_m": raw["cell_size_m"]})
 
@@ -1747,6 +1771,7 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 			_errors.append("%s: [%d, %d] %s" % [location, cell.x, cell.y, problem])
 			continue
 		map.anchors[cell] = building
+		map.anchor_historical_refs[cell] = str(entry.get("history", ""))
 
 
 # The 1870 houses (issue #176, D-083): free land with a street on one side, the access every housing needs (D-079).

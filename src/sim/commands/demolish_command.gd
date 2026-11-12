@@ -26,6 +26,9 @@ func execute(state: EconomyState, params: Params, _rng: RandomNumberGenerator) -
 			reason = CrisisSystem.lock_reason(state.buildings[index])
 			if reason != &"":
 				return
+			if _is_occupied_cemetery(state.buildings[index]):
+				reason = &"cemetery_occupied"
+				return
 			var refund: int = _refund(state, params, state.buildings[index])
 			state.money += refund
 			# Net spending keeps the panel's construction line honest.
@@ -86,6 +89,16 @@ func _is_anchor(definition_id: StringName, origin: Vector2i) -> bool:
 	if definition_id == Simulation.DENSE_HOUSING and origin in _context.map.period_houses:
 		return true
 	return _context.map.anchors.has(origin) and _context.map.anchors[origin] == definition_id
+
+
+# A player cemetery that has burials cannot be demolished (issue #370, D-195).
+func _is_occupied_cemetery(building: Dictionary) -> bool:
+	if _context == null:
+		return false
+	var definition: BuildingDef = _context.buildings.get(StringName(building["definition_id"]))
+	if definition == null or not definition.buildable or "cemetery" not in definition.tags:
+		return false
+	return int(building.get("buried", 0)) > 0
 
 
 func _refund(state: EconomyState, params: Params, building: Dictionary) -> int:

@@ -123,7 +123,9 @@ func test_marks_selection_and_labels_stay_out_of_the_fog() -> void:
 		assert_true((mesh.mesh.surface_get_material(0) as BaseMaterial3D).disable_fog, "%s outside the fog" % node)
 	assert_eq(view.find_children("*", "Label3D", true, false).size(), 0, "No label lives in the 3D world")
 	var labels: Array = view.get("_label_items")
-	assert_eq(labels.size(), 1, "The house's label is drawn in 2D, over the fog")
+	var house_label: String = Strings.building_label("housing")
+	assert_true(labels.any(func(item: Dictionary) -> bool: return item["text"] == house_label),
+		"The house's label is drawn in 2D, over the fog")
 
 
 func test_the_switch_changes_the_quality_on_screen() -> void:

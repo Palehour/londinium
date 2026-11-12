@@ -1,0 +1,10 @@
+{
+  "mourning": {
+    "buried_factor": 0.5,
+    "deaths_memory_seconds": 300,
+    "weight": {
+      "worker": 50,
+      "artisan": 40
+    }
+  }
+}

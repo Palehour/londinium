@@ -296,6 +296,8 @@ const BUILDING_LABELS: Dictionary[String, StringName] = {
 	"fire_station": &"ui.building.fire_station",
 	"police_station": &"ui.building.police_station",
 	"border": &"ui.building.border",
+	"st_mary_atrium": &"ui.building.st_mary_atrium",
+	"cemetery": &"ui.building.cemetery",
 }
 const CLASS_LABELS: Dictionary[StringName, StringName] = {
 	&"worker": &"ui.class.worker", &"artisan": &"ui.class.artisan",
@@ -480,6 +482,8 @@ const REASONS: Dictionary[StringName, StringName] = {
 	&"no_money_for_wheat": &"ui.reason.no_money_for_wheat",
 	&"no_building": &"ui.reason.no_building",
 	&"simulation_defeated": &"ui.reason.simulation_defeated",
+	&"mourning_disabled": &"ui.reason.mourning_disabled",
+	&"cemetery_occupied": &"ui.reason.cemetery_occupied",
 	&"wheat_purchases_disabled": &"ui.reason.wheat_purchases_disabled",
 	&"wheat_price_above_max": WHEAT_BLOCKED_NOTE,
 	&"tea_imports_disabled": &"ui.reason.tea_imports_disabled",
