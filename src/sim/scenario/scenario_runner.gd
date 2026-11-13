@@ -209,6 +209,7 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		_params = _params_without_repricing(int(scenario["duration_ticks"]))
 	var initial: EconomyState = _initial_state()
 	initial.incidents_enabled = _data_scenario(scenario).get("incidents_enabled", false)
+	initial.mourning_enabled = _data_scenario(scenario).get("mourning_enabled", false)
 	var sim: Simulation = Simulation.create_new(_params, initial, int(scenario["seed"]), _context)
 	var next_price: int = 0
 	var script: Array = scenario["commands"]

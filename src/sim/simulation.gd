@@ -52,6 +52,8 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	state.bread_consumed = 0.0
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
+	# On when the scenario switched it on (state) or the Params switch is on; both start false (D-194).
+	state.mourning_enabled = state.mourning_enabled or bool(params.get_value(&"mourning.enabled"))
 	_place_dense_housing(state, params, context)
 	# The lessons of D-120 last the chapter (a lateral legacy): a new one starts without any.
 	state.incident_counts.clear()
@@ -200,8 +202,10 @@ func get_building_unavailable_reason(id: StringName) -> StringName:
 	if _context.buildings.has(id):
 		if is_bankruptcy_window_running():
 			return &"bankruptcy_window"
-		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _state, _context,
-			_context.buildings[id])
+		var definition: BuildingDef = _context.buildings[id]
+		if "cemetery" in definition.tags and not _state.mourning_enabled:
+			return &"mourning_disabled"
+		var events_reason: StringName = WaterSystem.unavailable_reason(_params, _state, _context, definition)
 		if events_reason != &"":
 			return events_reason
 		if MoneySystem.blocks_negative_balance(_state, _params, _context, id):
@@ -256,6 +260,7 @@ func tick() -> void:
 		# After the reserve moves, so the snapshot's installment matches the rate the panel just read (D-174).
 		LoanSystem.follow_legitimacy(_state, _params)
 		MissionSystem.tick(_state, _params, _context, _tick_count)
+		MourningSystem.tick(_state, _params)
 		_defeat.tick(_state, _params, false, MissionSystem.defeat_paused(_state, _params, _context), _context)
 		if not _state.defeat_causes.is_empty():
 			for command: SimulationCommand in _commands:

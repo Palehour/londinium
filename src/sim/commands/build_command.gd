@@ -46,6 +46,8 @@ func _validate(state: EconomyState, params: Params) -> StringName:
 		return &"bankruptcy_window"
 	if not _context.buildings[_definition_id].buildable:
 		return &"not_buildable"
+	if "cemetery" in _context.buildings[_definition_id].tags and not state.mourning_enabled:
+		return &"mourning_disabled"
 	var events_reason: StringName = WaterSystem.unavailable_reason(params, state, _context,
 		_context.buildings[_definition_id])
 	if events_reason != &"":

@@ -118,6 +118,7 @@ static func _cholera(state: EconomyState, params: Params, context: EconomyContex
 	var all_houses: int = houses.values().reduce(func(total: int, list: Array) -> int: return total + list.size(), 0)
 	var health: Dictionary[StringName, Dictionary] = ServiceSystem.district_values(state, params, context)
 	var deaths: int = 0
+	var deaths_by_district: Dictionary[StringName, int] = {}
 	for district: StringName in houses:
 		if houses[district].is_empty():
 			continue
@@ -130,8 +131,10 @@ static func _cholera(state: EconomyState, params: Params, context: EconomyContex
 			lost = roundi(state.population * share * float(params.get_value(&"cholera.fail_mortality")) * severity
 				* (1.0 - prep))
 		deaths += lost
+		deaths_by_district[district] = lost
 		if state.incidents_enabled:
 			entry.districts[district] = {"severity": severity, "deaths": lost}
+	MourningSystem.assign_deaths(state, params, context, deaths_by_district)
 	entry.deaths = _kill(state, context, deaths)
 	entry.vacancy_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.vacancy_min")))
 	entry.recovery_ticks = SimTime.minutes_to_ticks(float(params.get_value(&"cholera.recovery_min")))

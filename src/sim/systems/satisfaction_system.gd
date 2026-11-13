@@ -66,7 +66,12 @@ func _update_class_target(state: EconomyState, params: Params, context: EconomyC
 	var incidents: float = IncidentSystem.class_penalty(state, params, context, def) if context != null else 0.0
 	if incidents > 0.0:
 		breakdown["incidents"] = incidents
+	# Mourning (issue #370, D-194): a term fed by cholera deaths that could not be buried.
+	var mourning: float = MourningSystem.class_penalty(state, params, context, def)
+	if mourning > 0.0:
+		breakdown["mourning"] = mourning
 	entry.satisfaction_breakdown.assign(breakdown)
-	entry.satisfaction_target = clampf(needs_total - entry.satisfaction_breakdown["tax"] 		- entry.satisfaction_breakdown["overcrowding"] - incidents, 0.0, 100.0)
+	entry.satisfaction_target = clampf(needs_total - entry.satisfaction_breakdown["tax"] \
+		- entry.satisfaction_breakdown["overcrowding"] - incidents - mourning, 0.0, 100.0)
 	entry.satisfaction_breakdown["target"] = entry.satisfaction_target
 	entry.satisfaction_breakdown["smoothed"] = entry.satisfaction

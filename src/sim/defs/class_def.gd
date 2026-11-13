@@ -19,6 +19,7 @@ var tax_weight_key: StringName
 var overcrowding_weight_key: StringName
 var smoothing_key: StringName
 var snap_epsilon_key: StringName
+var mourning_weight_key: StringName
 var immigration_threshold_key: StringName
 var emigration_threshold_key: StringName
 var immigration_per_minute_key: StringName
@@ -86,6 +87,7 @@ func copy() -> ClassDef:
 	result.overcrowding_weight_key = overcrowding_weight_key
 	result.smoothing_key = smoothing_key
 	result.snap_epsilon_key = snap_epsilon_key
+	result.mourning_weight_key = mourning_weight_key
 	result.immigration_threshold_key = immigration_threshold_key
 	result.emigration_threshold_key = emigration_threshold_key
 	result.immigration_per_minute_key = immigration_per_minute_key

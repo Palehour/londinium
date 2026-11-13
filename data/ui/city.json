@@ -49,6 +49,8 @@
     "well": {"color": "#7b8c94", "height_m": 2, "width_ratio": 0.25, "depth_ratio": 0.25, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
     "health_post": {"color": "#b9b5a2", "height_m": 8, "width_ratio": 0.45, "depth_ratio": 0.35, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true},
     "fire_station": {"color": "#a8806f", "height_m": 10, "width_ratio": 0.5, "depth_ratio": 0.4, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": true},
-    "police_station": {"color": "#7e8499", "height_m": 9, "width_ratio": 0.5, "depth_ratio": 0.35, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true}
+    "police_station": {"color": "#7e8499", "height_m": 9, "width_ratio": 0.5, "depth_ratio": 0.35, "roof": "gable", "roof_m": 3, "chimney_m": 0, "fillers": true},
+    "st_mary_atrium": {"color": "#8a8a7a", "height_m": 2, "width_ratio": 0.9, "depth_ratio": 0.9, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false},
+    "cemetery": {"color": "#6e7a6e", "height_m": 1, "width_ratio": 0.9, "depth_ratio": 0.9, "roof": "flat", "roof_m": 0, "chimney_m": 0, "fillers": false}
   }
 }

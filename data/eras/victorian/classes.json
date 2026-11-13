@@ -8,7 +8,8 @@
       "tax_weight": "population.satisfaction.tax_weight",
       "overcrowding_weight": "population.satisfaction.overcrowding_weight",
       "smoothing_per_second": "population.satisfaction.smoothing_per_second",
-      "snap_epsilon": "population.satisfaction.snap_epsilon"
+      "snap_epsilon": "population.satisfaction.snap_epsilon",
+      "mourning_weight": "satisfaction.mourning.weight.worker"
     },
     "growth": {
       "immigration_threshold": "population.growth.immigration_threshold",
@@ -43,7 +44,8 @@
       "tax_weight": 50,
       "overcrowding_weight": 30,
       "smoothing_per_second": "population.satisfaction.smoothing_per_second",
-      "snap_epsilon": "population.satisfaction.snap_epsilon"
+      "snap_epsilon": "population.satisfaction.snap_epsilon",
+      "mourning_weight": "satisfaction.mourning.weight.artisan"
     },
     "growth": {
       "immigration_threshold": 75,

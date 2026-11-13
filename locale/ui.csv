@@ -453,3 +453,7 @@ ui.defeat_critical.sound.missing_asset,Sonido del aviso final: no se encontró e
 ui.defeat_critical.config.pending,Aviso final sin configurar. Falta definir: %s.,Final notice not configured. Still to define: %s.
 ui.defeat_critical.config.invalid,Aviso final con configuración inválida (%d errores).,Final notice has an invalid setup (%d errors).
 ui.defeat_critical.config.sound,sonido,sound
+ui.building.st_mary_atrium,Atrio de St Mary Matfelon,St Mary Matfelon atrium
+ui.building.cemetery,Cementerio,Cemetery
+ui.reason.mourning_disabled,El luto está desactivado en este escenario.,Mourning is disabled in this scenario.
+ui.reason.cemetery_occupied,El cementerio tiene entierros: hay que esperar a que se olviden.,The cemetery has burials: wait for them to fade.

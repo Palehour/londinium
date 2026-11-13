@@ -67,7 +67,8 @@ func test_the_maps_and_the_buildings_take_the_new_scale() -> void:
 	# #296 (D-156) replaces the 2x2 of #186 for the buildings it names. The well was already 1x1 (D-090).
 	var decided: Dictionary[StringName, Vector2i] = {
 		&"housing": Vector2i.ONE, &"artisan_housing": Vector2i.ONE, &"malthouse": Vector2i(2, 1),
-		&"brewery": Vector2i(3, 3), &"well": Vector2i.ONE,
+		&"brewery": Vector2i(3, 3), &"well": Vector2i.ONE, &"st_mary_atrium": Vector2i(4, 4),
+		&"cemetery": Vector2i(4, 4),
 	}
 	for id: StringName in _catalog.buildings:
 		assert_eq(_catalog.buildings[id].footprint, decided.get(id, Vector2i(BLOCK, BLOCK)), String(id))

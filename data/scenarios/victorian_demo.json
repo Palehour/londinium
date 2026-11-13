@@ -1,6 +1,7 @@
 {
   "map": "riverside_strip",
   "incidents_enabled": false,
+  "mourning_enabled": false,
   "victory": {
     "stages": [
       {

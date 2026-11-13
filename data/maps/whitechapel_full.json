@@ -190,7 +190,24 @@
     "................................................",
     "................................................"
   ],
+  "existing_cells": [[24, 14], [25, 14], [26, 14], [27, 14], [24, 15], [25, 15], [26, 15], [27, 15],
+    [24, 16], [25, 16], [26, 16], [27, 16], [24, 17], [25, 17], [26, 17], [27, 17]],
   "zones": [],
+  "anchors": [
+    {
+      "name": "St Mary Matfelon atrium",
+      "source": "Parish of Whitechapel",
+      "history": "[INVENTED] liberty: St Mary Matfelon atrium reopened for burials in 1866, closed since 1854 [FACT, Survey of London]",
+      "cell": [24, 14],
+      "building": "st_mary_atrium",
+      "historical_ref": {
+        "name": "St Mary Matfelon",
+        "year": 1866,
+        "license": "[INVENTED] liberty: reabierto",
+        "source_note": "C-03; closed to burials in 1854 [FACT, Survey of London]; 4x4 footprint measured by Chronicler"
+      }
+    }
+  ],
   "history_notes": [
     "[INVENTED] Window E533500 N181850 to E534700 N179850 on EPSG:27700, 48x80 cells of 25 m, y=0 to the north (D-093); drawn from data/maps/sources/whitechapel_full_sources.csv and .md (Chronicler, #201), +-1 cell.",
     "[INVENTED] Streets are the simplified centre lines of the sources, two cells wide (D-086): each cell a line crosses marks its whole 2x2 street piece. Back streets are left out.",

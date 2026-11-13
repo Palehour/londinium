@@ -9,8 +9,9 @@ func test_every_json_loads_into_typed_definitions() -> void:
 	var catalog: DataCatalog = result.catalog
 	assert_eq(catalog.goods.size(), 7)
 	# The public fountain of issue #63 (D-089) is the tenth; the Lea Bridge fountain and the well (#202, D-090) follow,
-	# and the health post (#222, D-106) after them; the fire station and the police station (#87, D-118) close the list.
-	assert_eq(catalog.buildings.size(), 15)
+	# the health post (#222, D-106), the fire station and the police station (#87, D-118), and the St Mary Matfelon
+	# atrium with the player cemetery of issue #370 (D-193, D-195).
+	assert_eq(catalog.buildings.size(), 17)
 	assert_eq(catalog.roles.size(), 1)
 	# The 8x8 map of the scripted scenarios, the strip the game plays on (D-074), the full map (#204, D-093)
 	# and the riverless map of the border import (#306, D-164).
@@ -48,6 +49,8 @@ const DECIDED_FOOTPRINTS: Dictionary[StringName, Vector2i] = {
 	&"malthouse": Vector2i(2, 1),
 	&"brewery": Vector2i(3, 3),
 	&"well": Vector2i.ONE,
+	&"st_mary_atrium": Vector2i(4, 4),
+	&"cemetery": Vector2i(4, 4),
 }
 
 
