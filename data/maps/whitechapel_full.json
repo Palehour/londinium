@@ -190,15 +190,22 @@
     "................................................",
     "................................................"
   ],
-  "existing_cells": [[24, 14]],
+  "existing_cells": [[24, 14], [25, 14], [26, 14], [27, 14], [24, 15], [25, 15], [26, 15], [27, 15],
+    [24, 16], [25, 16], [26, 16], [27, 16], [24, 17], [25, 17], [26, 17], [27, 17]],
   "zones": [],
   "anchors": [
     {
       "name": "St Mary Matfelon atrium",
       "source": "Parish of Whitechapel",
-      "history": "[FACT] The churchyard of St Mary Matfelon, Whitechapel, used as a burial ground",
+      "history": "[INVENTED] liberty: St Mary Matfelon atrium reopened for burials in 1866, closed since 1854 [FACT, Survey of London]",
       "cell": [24, 14],
-      "building": "st_mary_atrium"
+      "building": "st_mary_atrium",
+      "historical_ref": {
+        "name": "St Mary Matfelon",
+        "year": 1866,
+        "license": "[INVENTED] liberty: reabierto",
+        "source_note": "C-03; closed to burials in 1854 [FACT, Survey of London]; 4x4 footprint measured by Chronicler"
+      }
     }
   ],
   "history_notes": [

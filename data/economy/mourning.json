@@ -1,3 +1,4 @@
 {
+  "documentation": "D-194: mourning.enabled starts false until the harness fixes the values (D-122 / D-191 pattern); each scenario also states it explicitly.",
   "enabled": false
 }

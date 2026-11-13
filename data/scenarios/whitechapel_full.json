@@ -1,4 +1,5 @@
 {
   "map": "whitechapel_full",
-  "incidents_enabled": false
+  "incidents_enabled": false,
+  "mourning_enabled": false
 }

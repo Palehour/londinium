@@ -49,7 +49,8 @@ const DECIDED_FOOTPRINTS: Dictionary[StringName, Vector2i] = {
 	&"malthouse": Vector2i(2, 1),
 	&"brewery": Vector2i(3, 3),
 	&"well": Vector2i.ONE,
-	&"st_mary_atrium": Vector2i.ONE,
+	&"st_mary_atrium": Vector2i(4, 4),
+	&"cemetery": Vector2i(4, 4),
 }
 
 

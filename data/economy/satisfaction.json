@@ -1,6 +1,7 @@
 {
+  "documentation": "D-194. buried_factor = 0 is decided (a burial with a plot erases that death's mourning). PLACEHOLDERS, not final: deaths_memory_seconds, weight.worker and weight.artisan are 'sin dato, a ajustar por harness' (D-066).",
   "mourning": {
-    "buried_factor": 0.5,
+    "buried_factor": 0,
     "deaths_memory_seconds": 300,
     "weight": {
       "worker": 50,

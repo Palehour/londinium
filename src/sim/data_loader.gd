@@ -339,6 +339,9 @@ func _build(documents: Dictionary[String, Dictionary]) -> DataLoadResult:
 			_numbers(numeric, ECONOMY_SCHEMAS["ui"], path, "ui", catalog)
 		elif ECONOMY_SCHEMAS.has(section) and path == "economy/%s.json" % section:
 			var numeric: Dictionary = raw.duplicate()
+			# A note on how final the numbers are (e.g. harness placeholders, D-066), never a value.
+			if numeric.get("documentation") is String:
+				numeric.erase("documentation")
 			# The street piece is structure, read above.
 			if section == "roads":
 				numeric.erase("footprint")
@@ -1770,8 +1773,42 @@ func _load_anchors(raw: Variant, location: String, map: MapDef, catalog: DataCat
 		if not problem.is_empty():
 			_errors.append("%s: [%d, %d] %s" % [location, cell.x, cell.y, problem])
 			continue
+		if entry.has("historical_ref"):
+			var ref: Dictionary = _historical_ref(entry["historical_ref"], location, cell)
+			if ref.is_empty():
+				continue
+			map.anchor_historical_refs[cell] = ref
 		map.anchors[cell] = building
-		map.anchor_historical_refs[cell] = str(entry.get("history", ""))
+
+
+# The optional historical card of an anchor (issue #370, D-192): a name, a whole year, a license label that opens with a
+# history tag, a source note and, optionally, a handoff id. An empty result is an invalid card (already reported).
+func _historical_ref(raw: Variant, location: String, cell: Vector2i) -> Dictionary:
+	var where: String = "%s: [%d, %d].historical_ref" % [location, cell.x, cell.y]
+	if raw is not Dictionary:
+		_errors.append("%s: expected an object" % where)
+		return {}
+	var allowed: Array[String] = ["name", "year", "license", "source_note", "handoff_id"]
+	for field: Variant in raw:
+		if field not in allowed:
+			_errors.append("%s.%s: unknown field" % [where, field])
+			return {}
+	for field: String in ["name", "license", "source_note"]:
+		if raw.get(field) is not String or raw[field].is_empty():
+			_errors.append("%s.%s: expected a text" % [where, field])
+			return {}
+	if not MapDef.is_history_note(raw["license"]):
+		_errors.append("%s.license: must open with a history tag" % where)
+		return {}
+	if not _is_whole_number(raw.get("year")):
+		_errors.append("%s.year: expected a whole year" % where)
+		return {}
+	if raw.has("handoff_id") and (raw["handoff_id"] is not String or raw["handoff_id"].is_empty()):
+		_errors.append("%s.handoff_id: expected a text" % where)
+		return {}
+	var ref: Dictionary = raw.duplicate()
+	ref["year"] = int(raw["year"])
+	return ref
 
 
 # The 1870 houses (issue #176, D-083): free land with a street on one side, the access every housing needs (D-079).
@@ -1978,10 +2015,10 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 	var id: StringName = StringName(path.get_file().get_basename())
 	var stages: Array[Dictionary] = []
 	catalog.scenarios[id] = {"stages": stages, "map": MapDef.DEFAULT_ID, "incidents_enabled": false,
-		"import_entries": [] as Array[Vector2i], "import_goods": [] as Array[StringName],
+		"mourning_enabled": false, "import_entries": [] as Array[Vector2i], "import_goods": [] as Array[StringName],
 		"competencies": [] as Array[StringName]}
 	var scenario_fields: Array[String] = []
-	for field: String in ["victory", "map", "incidents_enabled", "import_entries", "import_goods", "competencies"]:
+	for field: String in ["victory", "map", "incidents_enabled", "mourning_enabled", "import_entries", "import_goods", "competencies"]:
 		if raw.has(field):
 			scenario_fields.append(field)
 	if not _object(raw, scenario_fields, path):
@@ -1992,6 +2029,12 @@ func _load_scenario(raw: Dictionary, path: String, catalog: DataCatalog) -> void
 			_errors.append("%s.incidents_enabled: expected a boolean" % path)
 		else:
 			catalog.scenarios[id]["incidents_enabled"] = raw["incidents_enabled"]
+	# Same pattern for the mourning of D-194: off until the harness sets its values (D-195, D-122 / D-191).
+	if raw.has("mourning_enabled"):
+		if raw["mourning_enabled"] is not bool:
+			_errors.append("%s.mourning_enabled: expected a boolean" % path)
+		else:
+			catalog.scenarios[id]["mourning_enabled"] = raw["mourning_enabled"]
 	if raw.has("map"):
 		if raw["map"] is not String or not catalog.maps.has(StringName(raw["map"])):
 			_errors.append("%s.map: unknown map %s" % [path, raw["map"]])

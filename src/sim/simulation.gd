@@ -52,7 +52,8 @@ static func create_new(params: Params, initial_state: EconomyState, seed_value: 
 	state.bread_consumed = 0.0
 	if state.tax_rate < 0.0:
 		state.tax_rate = float(params.get_value(&"population.tax.rate"))
-	state.mourning_enabled = bool(params.get_value(&"mourning.enabled"))
+	# On when the scenario switched it on (state) or the Params switch is on; both start false (D-194).
+	state.mourning_enabled = state.mourning_enabled or bool(params.get_value(&"mourning.enabled"))
 	_place_dense_housing(state, params, context)
 	# The lessons of D-120 last the chapter (a lateral legacy): a new one starts without any.
 	state.incident_counts.clear()

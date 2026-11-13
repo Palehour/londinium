@@ -39,8 +39,9 @@ var dense_housing_cells: Array[Vector2i] = []
 # Historic anchors of the traced map (issue #152): cell to the building that stands there from the start, &"" for one
 # with no use. None is ever demolished. Named sites are only a name on a cell and block nothing.
 var anchors: Dictionary[Vector2i, StringName] = {}
-# The historic note that justifies each anchor, by its cell (issue #370, D-193).
-var anchor_historical_refs: Dictionary[Vector2i, String] = {}
+# Optional historical card of a preplaced building, by the cell of its anchor (issue #370, D-192): name, year, license,
+# source_note and, when it exists, handoff_id. Presentation only; a building the player builds never has one.
+var anchor_historical_refs: Dictionary[Vector2i, Dictionary] = {}
 var named_sites: Dictionary[Vector2i, String] = {}
 # Tierra de época (issue #176, D-083). The 1870 houses are free land beside a street where the simulation places plain
 # dense housing, never demolished, with the people of period_house_population (issue #180, D-085). A damaged wharf is

@@ -124,7 +124,7 @@ func test_marks_selection_and_labels_stay_out_of_the_fog() -> void:
 	assert_eq(view.find_children("*", "Label3D", true, false).size(), 0, "No label lives in the 3D world")
 	var labels: Array = view.get("_label_items")
 	var house_label: String = Strings.building_label("housing")
-	assert_true(labels.any(func(item: Dictionary) -> bool: return item["text"] == house_label),
+	assert_eq(labels.filter(func(item: Dictionary) -> bool: return item["text"] == house_label).size(), 1,
 		"The house's label is drawn in 2D, over the fog")
 
 
