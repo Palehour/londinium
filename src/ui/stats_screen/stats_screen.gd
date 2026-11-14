@@ -7,6 +7,8 @@ extends PanelContainer
 # chart tabs (summary, chains, history and classes) take the rest.
 
 signal closed
+# "See on the map" from a bucket's "why?" (issue #319): the map closes this screen and goes to the cell.
+signal map_requested(cell: Vector2i)
 
 const SUMMARY_TAB: int = 0
 const CHAINS_TAB: int = 1
@@ -20,6 +22,8 @@ var _summary: SummaryTab
 var _chains: ChainsTab
 var _history: TimelineTab
 var _classes: ClassesTab
+# The "why?" of a chart bucket (issue #319). While it shows it takes the tabs' place; B goes back to the chart.
+var _why: StatsWhyView
 var _hint: Label
 var _back: Button
 # The summary's no-data lines and charts, per card in StatsSummary.CARDS order (the same arrays SummaryTab fills).
@@ -68,6 +72,10 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_classes = ClassesTab.new()
 	_tabs.add_child(_classes)
 	_classes.setup(session, look)
+	_why = StatsWhyView.new()
+	root.add_child(_why)
+	_why.setup(look)
+	_why.map_requested.connect(func(cell: Vector2i) -> void: map_requested.emit(cell))
 	_tabs.tab_changed.connect(_on_tab_changed)
 	session.snapshot_changed.connect(func(_snapshot: Dictionary) -> void: refresh())
 	hide()
@@ -78,11 +86,13 @@ func open() -> void:
 	# D-170: the summary opens on its newest bucket. Chains starts on its first link (D-173).
 	_summary.reset_cursor()
 	_chains.reset_selection()
+	_close_why()
 	show()
 	refresh()
 
 
 func close() -> void:
+	_close_why()
 	hide()
 	closed.emit()
 
@@ -91,7 +101,16 @@ func close() -> void:
 func handle(event: InputEvent) -> void:
 	# ui_cancel is Esc on the keyboard and B on the gamepad (GamepadBindings).
 	if event.is_action_pressed(&"ui_cancel"):
-		close()
+		if _why.visible:
+			_close_why()
+		else:
+			close()
+	elif _why.visible:
+		_handle_why(event)
+	elif event.is_action_pressed(&"ui_accept") and _tabs.current_tab in [HISTORY_TAB, CLASSES_TAB]:
+		# A (or Enter) asks "why?" about the bucket the cursor is on, on the two tabs with a chart to read.
+		_tabs.hide()
+		_why.open(_tabs.get_current_tab_control() as ChartTab, session.simulation)
 	elif event.is_action_pressed(&"map_build_next"):
 		# On Historia, LB/RB change the series. The other tabs keep the shoulders for the tabs. Godot's
 		# select_previous_available stays on the first tab, so the index wraps here: LB from the summary opens
@@ -113,6 +132,20 @@ func refresh() -> void:
 	if not visible:
 		return
 	(_tabs.get_current_tab_control() as ChartTab).refresh()
+	_why.refresh()
+
+
+# Only the D-pad, A and B reach the "why?": the rest of the chart's controls wait for B.
+func _handle_why(event: InputEvent) -> void:
+	if event.is_action_pressed(&"ui_left", true) or event.is_action_pressed(&"ui_right", true):
+		_why.walk(1 if event.is_action_pressed(&"ui_right", true) else -1)
+	elif event.is_action_pressed(&"ui_accept"):
+		_why.request_map()
+
+
+func _close_why() -> void:
+	_why.close()
+	_tabs.show()
 
 
 func _on_tab_changed(tab: int) -> void:
@@ -141,6 +174,7 @@ func _apply_texts() -> void:
 	_chains.apply_texts()
 	_history.apply_texts()
 	_classes.apply_texts()
+	_why.refresh()
 
 
 func _apply_header() -> void:

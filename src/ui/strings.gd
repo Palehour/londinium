@@ -216,6 +216,15 @@ const WHY_BUTTON_GAMEPAD: StringName = &"ui.why_button_gamepad"
 const WHY_ROW: StringName = &"ui.why_row"
 const WHY_INTERMITTENT: StringName = &"ui.why_intermittent"
 const WHY_PRUNED: StringName = &"ui.why_pruned"
+# A row of the "why?" that mixes subjects: time, what it is about, and the cause (the statistics screen, issue #319).
+const WHY_ROW_SUBJECT: StringName = &"ui.why_row_subject"
+# The "why?" of a chart bucket (issue #319, D-168): the change of the value, the causes, and "see on the map".
+const STATS_SCREEN_WHY_PART: StringName = &"ui.stats_screen.why.part"
+const STATS_SCREEN_WHY_FIRST: StringName = &"ui.stats_screen.why.first"
+const STATS_SCREEN_WHY_CAUSES: StringName = &"ui.stats_screen.why.causes"
+const STATS_SCREEN_WHY_NO_CAUSES: StringName = &"ui.stats_screen.why.no_causes"
+const STATS_SCREEN_WHY_MAP: StringName = &"ui.stats_screen.why.map"
+const STATS_SCREEN_WHY_HINT: StringName = &"ui.stats_screen.why.hint"
 const PROMOTION_ACTIVE: StringName = &"ui.promotion_active"
 const PROMOTION_BLOCKED: StringName = &"ui.promotion_blocked"
 const PROMOTION_BLOCKER: StringName = &"ui.promotion_blocker"
@@ -663,6 +672,8 @@ static func all_keys() -> Array[StringName]:
 		SERVICE_AVAILABILITY, SERVICE_VALUE, SERVICE_DISTRICT, SERVICE_WHOLE_CITY,
 		INCIDENT_PRESSURE, INCIDENT_WARNING, INCIDENT_ICON,
 		OVERLAY_CAPTION, OVERLAY_NONE, WHY_TITLE, WHY_BUTTON, WHY_BUTTON_GAMEPAD, WHY_ROW, WHY_INTERMITTENT, WHY_PRUNED,
+		WHY_ROW_SUBJECT, STATS_SCREEN_WHY_PART, STATS_SCREEN_WHY_FIRST, STATS_SCREEN_WHY_CAUSES,
+		STATS_SCREEN_WHY_NO_CAUSES, STATS_SCREEN_WHY_MAP, STATS_SCREEN_WHY_HINT,
 		DECREE_EFFECT_RATES_UPKEEP, DECREE_LAPSED,
 	]
 	_append_unique(keys, CRITICAL_LEFT)

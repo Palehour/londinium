@@ -50,6 +50,28 @@ func cursor_index() -> int:
 	return clampi(_cursor - int(_chart["first_bucket"]), 0, count - 1)
 
 
+# For the "why?" of a bucket (issue #319): the chart the cursor reads, its parts to break down ({"label", "values",
+# "unit"}), and the cursor's time. A tab says which values explain its chart; the default is each of its lines.
+func why_chart() -> Dictionary:
+	return _chart
+
+
+func why_parts() -> Array[Dictionary]:
+	var parts: Array[Dictionary] = []
+	for line: Dictionary in _chart.get("lines", []):
+		parts.append({"label": line["label"], "values": line["values"], "unit": _chart.get("unit", &"")})
+	return parts
+
+
+func bucket_time() -> String:
+	return _time(cursor_index())
+
+
+# One bucket on, as the D-pad does.
+func walk(step: int) -> void:
+	_move_cursor(step)
+
+
 func _show() -> void:
 	pass
 

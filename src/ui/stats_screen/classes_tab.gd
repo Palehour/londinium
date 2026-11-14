@@ -38,6 +38,14 @@ func refresh() -> void:
 	_show()
 
 
+# The layers are satisfaction weighted by share: the change that matters is each class's own satisfaction.
+func why_parts() -> Array[Dictionary]:
+	var parts: Array[Dictionary] = []
+	for line: Dictionary in _chart.get("lines", []):
+		parts.append({"label": line["label"], "values": line["satisfaction"], "unit": &""})
+	return parts
+
+
 func _show() -> void:
 	var strokes: Dictionary = _strokes()
 	_plot.show_layers(strokes["lines"], strokes["colors"], strokes["dashes"], presentation.layout["line_width"],

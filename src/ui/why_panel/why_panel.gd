@@ -44,14 +44,15 @@ func apply_style(background: Color, margin: float) -> void:
 
 # A subject with no events hides the panel. Another subject starts folded. `pruned`: the log has dropped its
 # oldest events, so the chain may begin later than the subject did.
-func show_chain(subject: StringName, title: String, chain: Array[Dictionary], pruned: bool, gamepad: bool) -> void:
+func show_chain(subject: StringName, title: String, chain: Array[Dictionary], pruned: bool, gamepad: bool,
+		with_subject: bool = false) -> void:
 	if subject != _subject:
 		_subject = subject
 		expanded = false
 	visible = not chain.is_empty()
 	lines.clear()
 	for event: Dictionary in chain:
-		lines.append(line(event))
+		lines.append(line(event, with_subject))
 	if pruned and not chain.is_empty():
 		lines.append(Strings.text(Strings.WHY_PRUNED))
 	_title.text = title
@@ -67,12 +68,29 @@ func toggle() -> void:
 	_rows.visible = expanded
 
 
-# Game time as minutes:seconds since the chapter began, and the cause as the log keeps it.
-static func line(event: Dictionary) -> String:
+# Game time as minutes:seconds since the chapter began, and the cause as the log keeps it. `with_subject` adds what the
+# event is about, for a list that mixes subjects (the statistics screen, issue #319).
+static func line(event: Dictionary, with_subject: bool = false) -> String:
 	var second: int = int(event["second"])
 	@warning_ignore("integer_division")
 	var time: String = "%d:%02d" % [second / SECONDS_PER_MINUTE, second % SECONDS_PER_MINUTE]
 	var cause: StringName = StringName(event["cause"])
 	var text: String = Strings.text(Strings.WHY_INTERMITTENT) % int(event.get("count", 0)) \
 		if cause == CauseLog.INTERMITTENT else Strings.reason(cause)
+	if with_subject:
+		return Strings.text(Strings.WHY_ROW_SUBJECT) % [time, subject_label(event), text]
 	return Strings.text(Strings.WHY_ROW) % [time, text]
+
+
+# What an event is about, translated where the project has a name for it, and as the log keeps it otherwise.
+static func subject_label(event: Dictionary) -> String:
+	var subject: StringName = StringName(event["subject"])
+	match StringName(event["kind"]):
+		&"building":
+			var name: String = Strings.building_label(String(subject).get_slice("@", 0))
+			return name if not name.is_empty() else String(subject)
+		&"policy":
+			return Strings.label(Strings.STATS_SCREEN_POLICIES, subject)
+		&"defeat":
+			return Strings.label(Strings.CONDITION_LABELS, subject)
+	return String(subject)
