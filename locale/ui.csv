@@ -329,7 +329,7 @@ ui.stats_screen.card.fear,Miedo,Fear
 ui.stats_screen.card.debt,Deuda,Debt
 ui.stats_screen.history,Historia,History
 ui.stats_screen.history.header,"LB/RB: cambiar de serie · B o Esc: volver","LB/RB: switch series · B or Esc: back"
-ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango","D-pad or arrows ←/→: browse · LT/RT or +/-: range"
+ui.stats_screen.history.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · A o Enter: ¿por qué?","D-pad or arrows ←/→: browse · LT/RT or +/-: range · A or Enter: why?"
 ui.stats_screen.history.value,%.0f,%.0f
 ui.stats_screen.history.value.ratio,%.2f,%.2f
 ui.stats_screen.history.reading,Minuto %s · %s,Minute %s · %s
@@ -338,7 +338,7 @@ ui.stats_screen.lessons.row,%s · lecciones: %s · %s,%s · lessons: %s · %s
 ui.stats_screen.lessons.crisis,cólera: gravedad %d %% · %d muertes,cholera: severity %d %% · %d deaths
 ui.stats_screen.lessons.no_crisis,el cólera todavía no llegó,cholera has not come yet
 ui.stats_screen.classes,Clases,Classes
-ui.stats_screen.classes.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · Cada capa: satisfacción de la clase por su parte de los habitantes","D-pad or arrows ←/→: browse · LT/RT or +/-: range · Each layer: the class's satisfaction times its share of the residents"
+ui.stats_screen.classes.hint,"Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · A o Enter: ¿por qué? · Cada capa: satisfacción de la clase por su parte de los habitantes","D-pad or arrows ←/→: browse · LT/RT or +/-: range · A or Enter: why? · Each layer: the class's satisfaction times its share of the residents"
 ui.stats_screen.classes.city,Ciudad %.0f,City %.0f
 ui.stats_screen.classes.class,%s %.0f (%.0f %% de los habitantes),%s %.0f (%.0f %% of residents)
 ui.stats_screen.chains,Cadenas,Chains
@@ -430,6 +430,13 @@ ui.why_button_gamepad,Ver causas (R3),See causes (R3)
 ui.why_row,%s · %s,%s · %s
 ui.why_intermittent,"Intermitente (%d cambios que no duraron).","Intermittent (%d changes that did not last)."
 ui.why_pruned,Registro anterior no disponible.,Earlier record not available.
+ui.why_row_subject,%s · %s · %s,%s · %s · %s
+ui.stats_screen.why.part,"%s: %s → %s (%s)","%s: %s → %s (%s)"
+ui.stats_screen.why.first,"%s: %s (primer balde, sin anterior)","%s: %s (first bucket, no earlier one)"
+ui.stats_screen.why.causes,Causas registradas en este tramo,Causes recorded in this stretch
+ui.stats_screen.why.no_causes,No hay causas registradas en este tramo.,No causes were recorded in this stretch.
+ui.stats_screen.why.map,Ver en el mapa,See on the map
+ui.stats_screen.why.hint,"Cruceta o flechas ←/→: balde · A o Enter: ver en el mapa · B o Esc: volver","D-pad or arrows ←/→: bucket · A or Enter: see on the map · B or Esc: back"
 ui.decree.effect.rates_upkeep,El mantenimiento sale de las tasas y baja el apoyo de los contribuyentes.,Upkeep is paid from the rates and lowers the ratepayers' support.
 ui.decree.reason.not_enough_legitimacy,No hay legitimidad suficiente.,There is not enough legitimacy.
 ui.decree.reason.not_in_competence,Ese decreto no está en las competencias.,That decree is outside the competencies.

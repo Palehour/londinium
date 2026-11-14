@@ -206,6 +206,7 @@ func _ready() -> void:
 	_stats_screen.name = "StatsScreen"
 	_stats_screen.setup(session, stats_look)
 	_stats_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stats_screen.map_requested.connect(_show_cell_on_map)
 	panel_mount.add_child(_stats_screen)
 	get_viewport().size_changed.connect(_resized)
 	_overlay_bar.setup(NeedOverlay.goods(session.context))
@@ -878,6 +879,16 @@ func _open_stats() -> void:
 	get_viewport().gui_release_focus()
 	_stats_panel.leave_focus()
 	_stats_screen.open()
+
+
+# "See on the map" from the statistics screen (issue #319): the screen closes and the cursor goes to the cell, where
+# the building's own "why?" is, with the camera following it.
+func _show_cell_on_map(cell: Vector2i) -> void:
+	_stats_screen.close()
+	geometry.selected = cell
+	geometry.follow_selection()
+	_update_mode()
+	queue_redraw()
 
 
 func _snapshot_received(snapshot: Dictionary) -> void:
