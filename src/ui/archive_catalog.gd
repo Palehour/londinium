@@ -41,12 +41,17 @@ func validate(documents: Dictionary) -> void:
 # Kept apart from validate() so Strings can list the cards' keys without loading the economy data.
 func check_missions(mission_ids: Array) -> void:
 	for card: ArchiveCard in cards:
+		if card.unlock_from_start:
+			continue
 		if not mission_ids.has(card.unlock_mission):
 			errors.append("%s.unlock.mission_closed: unknown mission %s" % [_path(card.id), card.unlock_mission])
 
 
 # Reads economy.missions of a snapshot or a save; it never writes.
 static func is_unlocked(card: ArchiveCard, economy: Dictionary) -> bool:
+	# From the start of the game (D-189): open at tick 0 in any game, new or loaded, with nothing to read.
+	if card.unlock_from_start:
+		return true
 	var missions: Dictionary = economy.get("missions", {})
 	var entry: Variant = missions.get(String(card.unlock_mission), missions.get(card.unlock_mission))
 	return entry is Dictionary and StringName(entry.get("status", "")) in CLOSED
@@ -74,10 +79,13 @@ func _card(id: StringName, raw: Variant) -> ArchiveCard:
 		errors.append("%s.kind: expected one of %s" % [path, KINDS])
 		return null
 	var unlock: Variant = raw.get("unlock")
-	if unlock is not Dictionary or unlock.get("mission_closed") is not String or unlock["mission_closed"].is_empty():
-		errors.append("%s.unlock.mission_closed: expected a mission id" % path)
+	if unlock is Dictionary and unlock.get("game_start") == true and unlock.size() == 1:
+		card.unlock_from_start = true
+	elif unlock is Dictionary and unlock.get("mission_closed") is String and not unlock["mission_closed"].is_empty():
+		card.unlock_mission = StringName(unlock["mission_closed"])
+	else:
+		errors.append("%s.unlock: expected {\"game_start\": true} or {\"mission_closed\": <mission id>}" % path)
 		return null
-	card.unlock_mission = StringName(unlock["mission_closed"])
 	if raw.get("image") != null and not _image(raw["image"], card):
 		return null
 	return card

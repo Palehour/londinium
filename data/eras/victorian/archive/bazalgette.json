@@ -1,6 +1,6 @@
 {
   "order": 2,
   "kind": "character",
-  "unlock": {"mission_closed": "oldford"},
+  "unlock": {"game_start": true},
   "image": null
 }

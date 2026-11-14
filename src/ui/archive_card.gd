@@ -6,8 +6,10 @@ extends RefCounted
 var id: StringName = &""
 var order: int = 0
 var kind: StringName = &""
-# The mission whose close opens it, met or not (D-097, D-099).
+# The mission whose close opens it, met or not (D-097, D-099); empty when it opens from the start.
 var unlock_mission: StringName = &""
+# Open since the start of the game (D-189: STINK and BAZALGETTE). No mission to wait for.
+var unlock_from_start: bool = false
 # The credit of its period print (D-103): ArchiveCatalog.CREDIT_FIELDS, or empty when the card has no image yet.
 var image: Dictionary[String, String] = {}
 # The print is not of the exact place or moment, so the card explains it (D-103).

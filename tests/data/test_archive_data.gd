@@ -46,10 +46,20 @@ func test_the_four_cards_load_in_order() -> void:
 	assert_eq(catalog.cards[3].kind, &"moment")
 
 
-# D-097 and D-099: all four open together when the Old Ford mission closes.
-func test_every_card_opens_with_the_old_ford_mission() -> void:
+# D-189 (amends D-099): STINK and BAZALGETTE open from the start; OLDFORD and INQUIRY with the Old Ford mission (D-090).
+func test_unlock_triggers_follow_d189() -> void:
 	for card: ArchiveCard in _catalog().cards:
-		assert_eq(card.unlock_mission, &"oldford", String(card.id))
+		var from_start: bool = card.id in [&"stink", &"bazalgette"]
+		assert_eq(card.unlock_from_start, from_start, String(card.id))
+		assert_eq(card.unlock_mission, &"" if from_start else &"oldford", String(card.id))
+
+
+func test_game_start_unlock_needs_no_mission_and_rejects_extras() -> void:
+	var raw: Dictionary = _card(null)
+	raw["unlock"] = {"game_start": true}
+	assert_eq(_errors(&"probe", raw).size(), 0)
+	raw["unlock"] = {"game_start": false}
+	assert_eq(_errors(&"probe", raw).size(), 1)
 
 
 # Only the images Chronicler listed with every credit field (PR #229): INQUIRY stays out while its credit is

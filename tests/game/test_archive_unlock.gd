@@ -1,8 +1,8 @@
 extends GutTest
 
-# The Archive (issue #64) only reads the simulation: its cards stay locked until their event has passed (D-097), and
-# STINK, BAZALGETTE and INQUIRY open together when the Old Ford mission closes, met or not (D-099). Reading it never
-# changes the game.
+# The Archive (issue #64) only reads the simulation: its cards stay locked until their trigger (D-097). STINK and
+# BAZALGETTE are open from the start of the game (D-189, amending D-099); OLDFORD and INQUIRY open when the Old Ford
+# mission closes, met or not (D-090, D-099). Reading it never changes the game.
 
 const OLDFORD: StringName = &"oldford"
 const MAP: StringName = &"whitechapel_1850s"
@@ -28,11 +28,15 @@ func after_each() -> void:
 	Strings.use_default_locale()
 
 
-func _sim() -> Simulation:
+func _params() -> Params:
 	var role: RoleDef = RoleDef.new()
 	role.modifiers.append(Modifier.new(&"events.enabled", &"set", 1.0))
 	role.modifiers.append(Modifier.new(&"defeat.enabled", &"set", 0.0))
-	var params: Params = SimTestParams.isolated_params(_data, role)
+	return SimTestParams.isolated_params(_data, role)
+
+
+func _sim() -> Simulation:
+	var params: Params = _params()
 	var state: EconomyState = EconomyState.new()
 	state.money = 100000
 	for cell: Vector2i in HOUSE_CELLS:
@@ -59,12 +63,46 @@ func _status(sim: Simulation) -> StringName:
 	return StringName(sim.snapshot()["economy"]["missions"][OLDFORD]["status"])
 
 
-func test_every_card_is_locked_before_and_during_the_mission() -> void:
+const FROM_START: Array[StringName] = [&"stink", &"bazalgette"]
+
+
+# D-189: a new game at tick 0 already has STINK and BAZALGETTE; OLDFORD and INQUIRY wait for the mission to close.
+func test_a_new_game_opens_stink_and_bazalgette_only() -> void:
 	var sim: Simulation = _sim()
-	assert_eq(_unlocked(sim), [] as Array[StringName])
+	assert_eq(sim.snapshot()["tick_count"], 0)
+	assert_eq(_unlocked(sim), FROM_START)
 	_command(sim, &"start")
 	assert_eq(_status(sim), MissionSystem.ACTIVE)
-	assert_eq(_unlocked(sim), [] as Array[StringName])
+	assert_eq(_unlocked(sim), FROM_START)
+
+
+func test_closing_old_ford_opens_inquiry() -> void:
+	var sim: Simulation = _sim()
+	_command(sim, &"start")
+	_command(sim, &"abandon")
+	assert_true(_unlocked(sim).has(&"inquiry"))
+
+
+# The Archive stores nothing: a save keeps the three states because they are read from the loaded game.
+func test_save_and_load_keep_the_three_states() -> void:
+	var stages: Array[Dictionary] = []
+	var sim: Simulation = _sim()
+	var loaded: Simulation = Simulation.from_save(_params(), _context, stages, bytes_to_var(var_to_bytes(sim.to_save())))
+	assert_eq(_unlocked(loaded), FROM_START)
+	_command(sim, &"start")
+	_command(sim, &"abandon")
+	loaded = Simulation.from_save(_params(), _context, stages, bytes_to_var(var_to_bytes(sim.to_save())))
+	assert_eq(_unlocked(loaded), [&"stink", &"bazalgette", &"oldford", &"inquiry"] as Array[StringName])
+
+
+# A save from before D-189 holds the Old Ford mission and nothing else about the Archive.
+func test_a_save_from_before_d189_opens_the_same_cards() -> void:
+	var economy: Dictionary = {"missions": {}}
+	var ids: Array[StringName] = []
+	for card: ArchiveCard in _archive.cards:
+		if ArchiveCatalog.is_unlocked(card, economy):
+			ids.append(card.id)
+	assert_eq(ids, FROM_START)
 
 
 # Houses with no water at the close: the mission fails, and the cards open anyway.
@@ -100,8 +138,8 @@ func test_the_panel_hides_locked_cards_and_never_touches_the_snapshot() -> void:
 	var copy: Dictionary = before.duplicate(true)
 	panel.update_snapshot(before)
 	assert_eq(before, copy, "The Archive only reads the snapshot")
-	var title: String = Strings.text(Strings.archive_key(&"stink", Strings.ARCHIVE_TITLE_FIELD))
-	assert_false(_texts(panel).has(title), "A locked card does not show its title")
+	var title: String = Strings.text(Strings.archive_key(&"inquiry", Strings.ARCHIVE_TITLE_FIELD))
+	assert_false(_texts(panel).has(title), "A locked card (INQUIRY) does not show its title")
 	assert_true(_texts(panel).has(Strings.text(Strings.ARCHIVE_LOCKED)))
 	_command(sim, &"start")
 	_command(sim, &"abandon")
