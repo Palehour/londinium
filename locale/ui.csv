@@ -463,4 +463,4 @@ ui.defeat_critical.config.sound,sonido,sound
 ui.building.st_mary_atrium,Atrio de St Mary Matfelon,St Mary Matfelon atrium
 ui.building.cemetery,Cementerio,Cemetery
 ui.reason.mourning_disabled,El luto está desactivado en este escenario.,Mourning is disabled in this scenario.
-ui.reason.cemetery_occupied,El cementerio tiene entierros: hay que esperar a que se olviden.,The cemetery has burials: wait for them to fade.
+ui.reason.cemetery_occupied,Este cementerio tiene entierros: no se puede demoler en este capítulo.,This cemetery holds burials: it can't be demolished in this chapter.
