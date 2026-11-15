@@ -36,7 +36,7 @@ func test_help_fits_beside_the_panel_in_both_languages_and_inputs() -> void:
 	var view: Node2D = await _view()
 	var presentation: MapPresentation = view.get("presentation") as MapPresentation
 	var help: Label = view.get("_help") as Label
-	var block: Control = help.get_parent() as Control
+	var block: Control = view.get("_header_block") as Control
 	var room: Vector2 = Vector2(WIDTH - presentation.layout["panel_width"] - presentation.layout["help_x"],
 		presentation.layout["header_height"] - presentation.layout["help_y"])
 	for locale: String in ["es", "en"]:
@@ -49,6 +49,33 @@ func test_help_fits_beside_the_panel_in_both_languages_and_inputs() -> void:
 				"Help stops short of the panel (%s, gamepad %s)" % [locale, gamepad])
 			assert_lte(block.get_combined_minimum_size().x, room.x, "Help width (%s, gamepad %s)" % [locale, gamepad])
 			assert_lte(block.get_combined_minimum_size().y, room.y, "Help height (%s, gamepad %s)" % [locale, gamepad])
+
+
+func test_header_stays_296_and_the_open_help_lies_over_the_map_not_the_panel() -> void:
+	var view: Node2D = await _view()
+	var presentation: MapPresentation = view.get("presentation") as MapPresentation
+	var header: float = presentation.layout["header_height"]
+	var overlay: Control = view.get("_help_overlay") as Control
+	assert_eq(header, 296.0)
+	assert_false(overlay.visible, "The help starts closed")
+	var closed_map: Vector2 = view.call("_map_viewport")
+	assert_eq(closed_map, Vector2(920, 504))
+	for locale: String in ["es", "en"]:
+		Strings.set_locale(locale)
+		for gamepad: bool in [false, true]:
+			view.set("_gamepad", gamepad)
+			view.call("_update_help")
+			view.call("_toggle_help")
+			await get_tree().process_frame
+			assert_true(overlay.visible)
+			assert_eq(presentation.layout["header_height"], header)
+			assert_eq(view.call("_map_viewport"), closed_map)
+			assert_gte(overlay.get_rect().position.y, header, "Overlay is under the header")
+			assert_lte(overlay.get_rect().end.x, float(WIDTH) - presentation.layout["panel_width"],
+				"Overlay stops short of the panel (%s, gamepad %s)" % [locale, gamepad])
+			view.call("_toggle_help")
+			await get_tree().process_frame
+			assert_false(overlay.visible)
 
 
 func test_panel_rows_fit_its_width_in_both_languages() -> void:

@@ -9,6 +9,7 @@ signal load_requested(path: String)
 signal load_with_save_mods_requested(path: String)
 # The Archive button (issue #64, D-110): the map view opens the panel.
 signal archive_requested
+signal help_requested
 # The player asked for the statistics screen (issue #83).
 signal stats_requested
 
@@ -34,6 +35,7 @@ var _labor_window: MobilityNoticeWindow = MobilityNoticeWindow.new()
 var _window_simulation_id: int = 0
 var _restart: Button
 var _archive: Button
+var _help_button: Button
 var _tax: SpinBox
 var _wheat: CheckButton
 var _accumulate_on: CheckBox
@@ -248,6 +250,7 @@ func _apply_static_texts() -> void:
 	_stats_button.text = Strings.text(Strings.STATS_SCREEN_OPEN)
 	_restart.text = Strings.text(Strings.RESTART)
 	_archive.text = Strings.text(Strings.ARCHIVE_BUTTON)
+	_help_button.text = Strings.text(Strings.HELP_BUTTON)
 	_tax_label.text = Strings.text(Strings.TAX_LABEL)
 	_wheat.text = Strings.text(Strings.WHEAT_PURCHASES)
 	_tea.text = Strings.text(Strings.TEA_IMPORTS)
@@ -342,6 +345,8 @@ func _build_controls(content: VBoxContainer) -> void:
 	# After the language row, so a gamepad still starts on the language (issue #68).
 	_archive = _button(Strings.text(Strings.ARCHIVE_BUTTON), func() -> void: archive_requested.emit())
 	content.add_child(_archive)
+	_help_button = _button(Strings.text(Strings.HELP_BUTTON), func() -> void: help_requested.emit())
+	content.add_child(_help_button)
 	_stats_button = _button(Strings.text(Strings.STATS_SCREEN_OPEN), func() -> void: stats_requested.emit())
 	content.add_child(_stats_button)
 	_saves_menu = SavesMenu.new()

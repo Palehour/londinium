@@ -122,7 +122,8 @@ func test_the_map_shows_its_layers_in_the_legend_and_credits_its_sources() -> vo
 	for index: int in range(keys.size()):
 		assert_eq((legend.get_child(index * 2 + 1) as ColorRect).color, presentation.terrain[keys[index]])
 		assert_eq((legend.get_child(index * 2 + 2) as Label).text, Strings.text(Strings.TERRAIN_LABELS[keys[index]]))
-	var credits: Label = help.get_parent().get_child(help.get_parent().get_child_count() - 1) as Label
+	# The credits stay in the header block, which holds no legend now (issue #382).
+	var credits: Label = view.get("_credits") as Label
 	assert_eq(credits.text, Strings.text(Strings.MAP_CREDITS))
 	assert_string_contains(credits.text, "CC-BY")
 	# The credit NLS asks for, word for word, with its site (issue #152).

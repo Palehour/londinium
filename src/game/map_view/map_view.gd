@@ -23,6 +23,8 @@ const REPAIR_KEY: Key = KEY_R
 # The next need layer and the "why?" of the selected building (issue #73); L3 and R3 on the gamepad.
 const OVERLAY_KEY: Key = KEY_O
 const WHY_KEY: Key = KEY_I
+# Opens and closes the help and the legends (issue #382); the gamepad uses the Help button of the panel.
+const HELP_KEY: Key = KEY_H
 # Points in the demolish ring. A drawing constant, not the hold time (that lives in data/ui/map.json).
 const DEMOLISH_RING_POINTS: int = 32
 
@@ -45,6 +47,10 @@ var _rotation: int = 0
 var _status: Label
 var _mode: Label
 var _help: Label
+# The one line that says how to open the help, and the overlay that holds the help and the legends (issue #382).
+var _help_hint: Label
+var _help_overlay: PanelContainer
+var _header_block: VBoxContainer
 var _legend_caption: Label
 var _terrain_labels: Dictionary[String, Label] = {}
 # The second legend row: the 1870 lots and the damaged wharf (issue #178).
@@ -117,19 +123,25 @@ func _ready() -> void:
 	background.offset_bottom = presentation.layout["header_height"]
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(background)
-	var help: VBoxContainer = VBoxContainer.new()
+	# The header block that is always there: the one-line hint, the mode, the status and the credits (issue #382).
+	var block: VBoxContainer = VBoxContainer.new()
 	# Stops short of the panel, so at 1280×800 a long line wraps instead of running under it.
-	help.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	help.offset_left = presentation.layout["help_x"]
-	help.offset_top = presentation.layout["help_y"]
-	help.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
+	block.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	block.offset_left = presentation.layout["help_x"]
+	block.offset_top = presentation.layout["help_y"]
+	block.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
+	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(block)
+	_help_hint = _header_label(block, "")
+	_mode = _header_label(block, "")
+	_status = _header_label(block, "")
+	# The full NLS credit line (issue #152) is long: it wraps instead of widening the header.
+	_credits = _header_label(block, Strings.text(Strings.MAP_CREDITS))
+	_header_block = block
+	# The help and the two legends: closed by default, over the map when open (issue #382).
+	var help: VBoxContainer = VBoxContainer.new()
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(help)
-	for text: String in [Strings.text(Strings.LOADING), "", ""]:
-		var label: Label = Label.new()
-		label.text = text
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		help.add_child(label)
+	_help = _header_label(help, Strings.text(Strings.LOADING))
 	var legend: HBoxContainer = HBoxContainer.new()
 	legend.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var caption: Label = Label.new()
@@ -147,18 +159,9 @@ func _ready() -> void:
 		_terrain_labels[kind] = label
 		legend.add_child(label)
 	help.add_child(legend)
-	help.move_child(legend, 1)
-	var lots: HBoxContainer = _lots_legend()
-	help.add_child(lots)
-	help.move_child(lots, 2)
-	_credits = Label.new()
-	# The full NLS credit line (issue #152) is long: it wraps instead of widening the header.
-	_credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_credits.text = Strings.text(Strings.MAP_CREDITS)
-	help.add_child(_credits)
-	_mode = help.get_child(3) as Label
-	_status = help.get_child(4) as Label
-	_help = help.get_child(0) as Label
+	help.add_child(_lots_legend())
+	_help_overlay = _help_overlay_panel(help)
+	layer.add_child(_help_overlay)
 	_crisis_tip = _crisis_tooltip()
 	layer.add_child(_crisis_tip)
 	_service_tip = _service_tooltip()
@@ -200,6 +203,7 @@ func _ready() -> void:
 	_stats_panel.load_requested.connect(_load_game)
 	_stats_panel.load_with_save_mods_requested.connect(_load_with_save_mods)
 	_stats_panel.stats_requested.connect(_open_stats)
+	_stats_panel.help_requested.connect(_toggle_help)
 	if not mods_root.is_empty():
 		_stats_panel.set_mods_folder(ProjectSettings.globalize_path(mods_root))
 	panel_mount.add_child(_stats_panel)
@@ -331,6 +335,38 @@ func _update_help() -> void:
 		var reason: String = presentation.building_unavailable_reason(session.get_building_unavailable_reason(id))
 		labels.append(label if reason.is_empty() else Strings.text(Strings.DISABLED_BUILDING) % [label, reason])
 	_help.text = Strings.text(Strings.HELP_GAMEPAD if _gamepad else Strings.HELP) % labels
+	_help_hint.text = Strings.text(Strings.HELP_HINT_GAMEPAD if _gamepad else Strings.HELP_HINT)
+
+
+func _header_label(parent: Control, text: String) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(label)
+	return label
+
+
+# Over the map under the header, left of the side panel: the header keeps its height whether this shows or not.
+func _help_overlay_panel(content: Control) -> PanelContainer:
+	var overlay: PanelContainer = PanelContainer.new()
+	overlay.name = "HelpOverlay"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	overlay.offset_top = presentation.layout["header_height"]
+	overlay.offset_right = -presentation.layout["panel_width"]
+	overlay.grow_vertical = Control.GROW_DIRECTION_END
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = presentation.ui_colors["header"]
+	style.set_content_margin_all(presentation.layout["help_y"])
+	overlay.add_theme_stylebox_override(&"panel", style)
+	overlay.visible = false
+	overlay.add_child(content)
+	return overlay
+
+
+# A session toggle, closed at the start and never saved (issue #382).
+func _toggle_help() -> void:
+	_help_overlay.visible = not _help_overlay.visible
 
 
 # The Archive (issue #64, D-110): over the map, left of the side panel, hidden until its button is pressed. It only
@@ -451,6 +487,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_overlay_bar.cycle()
 		elif event.keycode == WHY_KEY:
 			_why_panel.toggle()
+		elif event.keycode == HELP_KEY:
+			_toggle_help()
 		elif event.keycode == KEY_ESCAPE:
 			_set_building_type(&"")
 		elif event.keycode == KEY_DELETE and geometry.selected != Vector2i(-1, -1):
