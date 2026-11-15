@@ -12,6 +12,10 @@ const ROAD_KEY: Key = KEY_9
 # The service buildings (issue #87, D-118): key 0 goes through them in the order of their attributes. The LB/RB cycle
 # does not take them yet.
 const SERVICE_KEY: Key = KEY_0
+# The water and cemetery buildings the player builds (issue #376, D-089, D-195): key C goes through them, and the
+# LB/RB cycle takes them when they can be built. The ones the player does not build (the Lea Bridge fountain a mission
+# option opens, the preplaced atrium) are left out of both.
+const CIVIC_KEY: Key = KEY_C
 const SCENARIO_FLAG: String = "--scenario="
 # Repairs the damaged wharf under the selection (issue #178, D-083), or disinfects the house in a crisis (issue #222);
 # Y on the gamepad.
@@ -440,7 +444,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not reason.is_empty():
 				_show_result(false, reason_id)
 		elif event.keycode == SERVICE_KEY:
-			_next_service()
+			_next_of(_service_types())
+		elif event.keycode == CIVIC_KEY:
+			_next_of(_civic_types())
 		elif event.keycode == OVERLAY_KEY:
 			_overlay_bar.cycle()
 		elif event.keycode == WHY_KEY:
@@ -602,10 +608,10 @@ func _draw_demolish_ring(cell_size: float) -> void:
 	draw_arc(center, radius, start, start + TAU * _demolish_progress, DEMOLISH_RING_POINTS, presentation.ui_colors["selection"], presentation.layout["selection_width"])
 
 
-# Selecting, then every building that can be built now and the street; the help already says why the others cannot.
+# Selecting, then every building that can be built now, the fountain, well and cemetery among them, and the street; the help already says why the others cannot.
 func _cycle_building(step: int) -> void:
 	var choices: Array[StringName] = [&""]
-	for type: StringName in TYPES + [ROAD]:
+	for type: StringName in TYPES + _civic_types() + [ROAD]:
 		if session.get_building_unavailable_reason(type) == &"":
 			choices.append(type)
 	_set_building_type(choices[posmod(maxi(choices.find(_building_type), 0) + step, choices.size())])
@@ -621,12 +627,23 @@ func _service_types() -> Array[StringName]:
 	return found
 
 
-# Key 0: the service after the one picked, the first one otherwise. One that cannot be built says why, like 1 to 8.
-func _next_service() -> void:
-	var services: Array[StringName] = _service_types()
-	if services.is_empty():
+# The fountain, the well and the cemetery in the order of the data. Not the buildings with a fixed source or that cannot
+# be built at all: the Lea Bridge fountain and the atrium.
+func _civic_types() -> Array[StringName]:
+	var found: Array[StringName] = []
+	for definition: BuildingDef in session.context.buildings.values():
+		if definition.buildable and definition.water_source != &"lea_bridge" \
+				and (WaterSystem.WATER_TAG in definition.tags or MourningSystem.CEMETERY_TAG in definition.tags):
+			found.append(definition.id)
+	return found
+
+
+# Key 0 and key C: the building after the one picked, the first one otherwise. One that cannot be built says why,
+# like 1 to 8.
+func _next_of(types: Array[StringName]) -> void:
+	if types.is_empty():
 		return
-	var next: StringName = services[(services.find(_building_type) + 1) % services.size()]
+	var next: StringName = types[(types.find(_building_type) + 1) % types.size()]
 	var reason_id: StringName = session.get_building_unavailable_reason(next)
 	_set_building_type(next if reason_id == &"" else &"")
 	if reason_id != &"":
