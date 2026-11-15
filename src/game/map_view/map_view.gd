@@ -632,7 +632,7 @@ func _civic_types() -> Array[StringName]:
 	var found: Array[StringName] = []
 	for definition: BuildingDef in session.context.buildings.values():
 		if definition.buildable and definition.water_source != &"lea_bridge" \
-				and (WaterSystem.WATER_TAG in definition.tags or "cemetery" in definition.tags):
+				and (WaterSystem.WATER_TAG in definition.tags or MourningSystem.CEMETERY_TAG in definition.tags):
 			found.append(definition.id)
 	return found
 
