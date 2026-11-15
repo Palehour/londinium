@@ -25,6 +25,10 @@ const LOCALE_EN: String = "English"
 # GDScript's % operator cannot reorder them, so every language keeps the same order.
 const HELP: StringName = &"ui.help"
 const HELP_GAMEPAD: StringName = &"ui.help_gamepad"
+# The help and the legends fold away (issue #382): the one line that stays, and the panel button of the gamepad.
+const HELP_HINT: StringName = &"ui.help_hint"
+const HELP_HINT_GAMEPAD: StringName = &"ui.help_hint_gamepad"
+const HELP_BUTTON: StringName = &"ui.help_button"
 # The extra line of the 3D city's camera (issue #65).
 const HELP_CITY: StringName = &"ui.help_city"
 const HELP_CITY_GAMEPAD: StringName = &"ui.help_city_gamepad"
@@ -656,6 +660,7 @@ static func all_keys() -> Array[StringName]:
 		MODS_TITLE, MODS_NONE, MODS_UP, MODS_DOWN, MODS_CONFLICTS, MODS_CONFLICT, MODS_ERROR, UNLOADING_SPLIT_SHORT,
 		SAVES_TITLE, SAVES_NONE, SAVE_GAME, LOAD_GAME, SAVE_ENTRY, SAVE_UNREADABLE, SAVED, SAVED_WITHOUT_QUEUE,
 		SAVE_WRITE_ERROR, SAVE_LOADED, SAVE_NO_MODS, SAVE_MODS_DIFFER, LOAD_WITH_SAVE_MODS, MODS_FROM_SAVE,
+		HELP_HINT, HELP_HINT_GAMEPAD, HELP_BUTTON,
 		ARCHIVE_BUTTON, ARCHIVE_TITLE, ARCHIVE_CLOSE, ARCHIVE_LOCKED, ARCHIVE_SOURCES, ARCHIVE_NO_IMAGE,
 		ARCHIVE_IMAGE_CREDIT, ARCHIVE_IMAGE_NOTE,
 		STATS_SCREEN_OPEN, STATS_SCREEN_HINT, STATS_SCREEN_BACK, STATS_SCREEN_SUMMARY, STATS_SCREEN_NO_DATA,
