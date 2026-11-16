@@ -356,3 +356,24 @@ func test_the_simulation_reads_the_chain_and_the_entries_of_its_history() -> voi
 	assert_eq(history.cause_entries(0).size(), history.events().size())
 	assert_eq(history.cause_first_serial(), 0)
 	assert_eq(history.cause_logged_count(), history.events().size())
+
+
+# D-147: the narrator reads CAUSE_KINDS as the kinds the log keeps; a new kind must be added there too.
+func test_every_kind_the_history_logs_is_a_cause_kind() -> void:
+	var catalog: DataCatalog = DataLoader.new().load_all().catalog
+	var params: Params = _params()
+	var context: EconomyContext = EconomyContext.new(catalog, catalog.maps[&"riverside_strip"])
+	var state: EconomyState = _state()
+	state.buildings.append({"definition_id": &"mill", "cell": [4, 2], "workers": 0})
+	var simulation: Simulation = Simulation.new(params, state, 7, context)
+	simulation.apply_command(SetTaxCommand.new(0.3))
+	for second: int in 5:
+		simulation.tick()
+	var kinds: Array[StringName] = []
+	for event: Dictionary in simulation.stats_events():
+		if event["kind"] not in kinds:
+			kinds.append(event["kind"])
+	for kind: StringName in kinds:
+		assert_has(StatsHistory.CAUSE_KINDS, kind)
+	assert_has(kinds, &"command", "the command was logged")
+	assert_has(kinds, &"building")

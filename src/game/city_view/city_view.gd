@@ -176,6 +176,10 @@ func _move_cursor(offset: Vector2i) -> void:
 	_follow(geometry.selected)
 
 
+func _follow_cell(cell: Vector2i) -> void:
+	_follow(cell)
+
+
 # Centres the camera on the cell only when it is out of view, so moving inside the view keeps the city still.
 func _follow(cell: Vector2i) -> void:
 	_camera_3d.transform = camera.camera_transform()

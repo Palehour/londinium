@@ -14,6 +14,9 @@ const TIER_CHAPTER: StringName = &"chapter"
 const BUCKET_FIELDS: int = 4
 # An open bucket also counts its samples, so a bucket cut by a load still averages right.
 const OPEN_FIELDS: int = 5
+# Every kind of event the cause log keeps today; the narrator (#73, D-147) announces nothing outside them.
+const CAUSE_KINDS: Array[StringName] = [&"command", &"building", &"import", &"emigration", &"policy", &"defeat",
+	&"victory"]
 # Cause of a building that was demolished, logged once.
 const GONE: StringName = &"gone"
 const NO_EMIGRATION: StringName = &"none"

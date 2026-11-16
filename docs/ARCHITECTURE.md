@@ -124,7 +124,7 @@ londinium/
 │   │                         #   city_view/ (the 3D greybox, #65, and its ink.gdshader) with city_camera.gd, city_layout.gd,
 │   │                         #   city_fog.gd and city_ink.gd
 │   └── ui/                   # stats_panel/, loan_panel/, stats_screen/, mods_menu/, saves_menu/, build_bar/, controls/, defeat_banner/, strings.gd,
-│                             #   overlay_bar/, why_panel/, need_overlay.gd (#73),
+│                             #   overlay_bar/, why_panel/, narrator/, need_overlay.gd (#73),
 │                             #   map_presentation.gd (data/ui/map.json), city_presentation.gd (data/ui/city.json, #65)
 ├── scenes/
 │   ├── main.tscn             # composes the 2D map view + UI; no logic. The tests of tests/game drive it
@@ -463,6 +463,31 @@ mark like the others (`_flat_material`: no fog, after the ink). `WhyPanel` (`src
 for the selected building with jobs, `stats_cause_chain(&"building", subject)` line by line in the same order, each
 cause as its translated reason or its id; I or R3 open and fold it, and it says so when the log has dropped older
 events.
+
+The narrator (`src/ui/narrator/`, issue #73, D-137, D-145, D-146, D-147) is neutral: no character, no random number,
+no frame time. `Narrator` reads the cause log by serial after each published snapshot
+(`stats_cause_entries(narrator.read_from())`) and `data/ui/narrator.json` (`NarratorConfig`) maps each event to a
+notice: the first rule whose kind (and cause, if it names one) matches decides, a silent one says nothing, and a
+kind the log does not keep (`StatsHistory.CAUSE_KINDS`) is refused. A subject's first cause is its starting state and
+is never announced, and a new game or a load starts after the last serial, so the history is not announced again.
+By kind|cause and in game seconds: a repeat while its notice is up, or within `group_window_s` of its last one, adds
+to that notice's `merged`; one inside `cooldown_s` of its priority after its notice went goes to the digest. At most
+`max_visible` are up: the oldest of the lowest priority goes out (the new one included), and a critical one waits for
+a slot instead. Notices spend `attention_cost` of `attention_budget_per_min` over the last minute; past it normal and
+low go to the digest, shown every `digest_interval_s` when it holds anything; critical spends nothing. A rule with
+`pause` stops the clock once (`pause_on_critical` turns it off); a `crisis` rule also needs `events.cholera.defeat_pause`
+(read through `GameSession.parameter`). A non-critical notice leaves after `toast_lifetime_s` of its priority in game
+seconds without a repeat; a critical one stays until it is closed. Each notice holds `cause_id` (the event's serial),
+`map_target` (`building`, `tile` or `none`; `target_from` of its rule, a demolished building falls to its tile, a tile
+off the map to none, and no kind the log keeps is a district yet) and `graph_link` (`series` and `second`; the rule's
+`series` may use `{subject}` and `{building}`). `NarratorFeed`, under the layer picker, shows each notice
+(`NarratorText`) with "why?" (that kind|subject's chain in the `WhyPanel`, until the selection moves), "see on the map"
+(camera and selection go to the target, and the layer of the rule's `overlay` turns on), "see on the chart"
+(`StatsScreen.open_history`: Historia on that series, cursor on the event's bucket) and close. I or R3 with nothing in
+the panel open the newest notice's chain; on the gamepad R3 also gives that notice the face buttons: A why, X map,
+Y chart, B close (R3 again leaves). Buttons are at least `min_button_px` wide. `threshold_hysteresis` and
+`legitimacy_thresholds` are read and checked but unused until the log keeps `legitimacy` (#84); the narrator reads
+`data/ui/narrator.json` through `NarratorConfig`, as the other UI data, not through `Params` (that is the sim's).
 
 ## Input: mouse, keyboard and gamepad (D-048, issue #68)
 `GamepadBindings.install()` (called by the map view) adds the gamepad actions to the `InputMap` in code, and A and B

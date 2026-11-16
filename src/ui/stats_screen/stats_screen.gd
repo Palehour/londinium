@@ -91,6 +91,24 @@ func open() -> void:
 	refresh()
 
 
+# Opens on the history tab with a series and a second (issue #73, "see on the chart"); false, and still closed,
+# when the series is not in the history.
+func open_history(series_id: StringName, second: int) -> bool:
+	if not has_series(series_id):
+		return false
+	open()
+	_tabs.current_tab = HISTORY_TAB
+	return _history.focus_series(series_id, second)
+
+
+func has_series(series_id: StringName) -> bool:
+	return presentation.history_series.has(series_id)
+
+
+func current_series() -> StringName:
+	return _history.series_id()
+
+
 func close() -> void:
 	_close_why()
 	hide()
