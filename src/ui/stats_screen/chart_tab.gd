@@ -67,6 +67,22 @@ func bucket_time() -> String:
 	return _time(cursor_index())
 
 
+# Puts the cursor on the bucket that holds `second` (the one a sample closes, as _time reads it) when the chart shows
+# it; false when it is out of the range.
+func _place_cursor(second: int) -> bool:
+	var count: int = _bucket_count()
+	if count == 0:
+		return false
+	@warning_ignore("integer_division")
+	var bucket: int = maxi(0, second - 1) / int(_chart["bucket_seconds"])
+	var index: int = bucket - int(_chart["first_bucket"])
+	if index < 0 or index >= count:
+		return false
+	_cursor = -1 if index == count - 1 else bucket
+	_show()
+	return true
+
+
 # One bucket on, as the D-pad does.
 func walk(step: int) -> void:
 	_move_cursor(step)
@@ -131,6 +147,11 @@ func _show_reading(value: String) -> void:
 
 
 # Game time at the end of the cursor's bucket, as minutes:seconds since the chapter began.
+# The second the cursor's bucket closes at.
+func cursor_second() -> int:
+	return (int(_chart["first_bucket"]) + cursor_index() + 1) * int(_chart["bucket_seconds"])
+
+
 func _time(index: int) -> String:
 	var second: int = (int(_chart["first_bucket"]) + index + 1) * int(_chart["bucket_seconds"])
 	@warning_ignore("integer_division")

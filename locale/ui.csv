@@ -467,3 +467,20 @@ ui.building.st_mary_atrium,Atrio de St Mary Matfelon,St Mary Matfelon atrium
 ui.building.cemetery,Cementerio,Cemetery
 ui.reason.mourning_disabled,El luto está desactivado en este escenario.,Mourning is disabled in this scenario.
 ui.reason.cemetery_occupied,Este cementerio tiene entierros: no se puede demoler en este capítulo.,This cemetery holds burials: it can't be demolished in this chapter.
+narrator.defeat.warning,Riesgo de derrota: %s.,Defeat at risk: %s.
+narrator.defeat.defeat,Derrota: %s.,Defeat: %s.
+narrator.victory.completed,Etapa de la misión completada.,Mission stage completed.
+narrator.emigration.hungry,%s: la gente se va por hambre.,%s: people are leaving out of hunger.
+narrator.emigration.unhappy,%s: la gente se va por baja satisfacción.,%s: people are leaving out of low satisfaction.
+narrator.building.intermittent,%s: arranca y se para (%d cambios que no duraron).,%s: starts and stops (%d changes that did not last).
+narrator.building.stopped,%s parado: %s,%s stopped: %s
+narrator.import.stopped,Importación de %s frenada: %s,%s imports held up: %s
+narrator.policy.changed,Política cambiada: %s → %s,Policy changed: %s → %s
+narrator.digest,En el último minuto: %s,In the last minute: %s
+narrator.digest_item,%d × %s,%d × %s
+narrator.merged,%s (×%d),%s (×%d)
+narrator.why,¿Por qué?,Why?
+narrator.map,Ver en el mapa,See on the map
+narrator.close,Cerrar,Close
+narrator.graph,Ver en el gráfico,See on the chart
+narrator.pad_button,%s (%s),%s (%s)

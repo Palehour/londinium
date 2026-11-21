@@ -229,6 +229,16 @@ const STATS_SCREEN_WHY_CAUSES: StringName = &"ui.stats_screen.why.causes"
 const STATS_SCREEN_WHY_NO_CAUSES: StringName = &"ui.stats_screen.why.no_causes"
 const STATS_SCREEN_WHY_MAP: StringName = &"ui.stats_screen.why.map"
 const STATS_SCREEN_WHY_HINT: StringName = &"ui.stats_screen.why.hint"
+# The narrator's fixed words (issue #73, D-137); the key of each notice comes from data/ui/narrator.json.
+const NARRATOR_DIGEST: StringName = &"narrator.digest"
+const NARRATOR_DIGEST_ITEM: StringName = &"narrator.digest_item"
+const NARRATOR_MERGED: StringName = &"narrator.merged"
+const NARRATOR_WHY: StringName = &"narrator.why"
+const NARRATOR_MAP: StringName = &"narrator.map"
+const NARRATOR_CLOSE: StringName = &"narrator.close"
+const NARRATOR_GRAPH: StringName = &"narrator.graph"
+# A button with the gamepad face button that presses it.
+const NARRATOR_PAD_BUTTON: StringName = &"narrator.pad_button"
 const PROMOTION_ACTIVE: StringName = &"ui.promotion_active"
 const PROMOTION_BLOCKED: StringName = &"ui.promotion_blocked"
 const PROMOTION_BLOCKER: StringName = &"ui.promotion_blocker"
@@ -680,6 +690,8 @@ static func all_keys() -> Array[StringName]:
 		WHY_ROW_SUBJECT, STATS_SCREEN_WHY_PART, STATS_SCREEN_WHY_FIRST, STATS_SCREEN_WHY_CAUSES,
 		STATS_SCREEN_WHY_NO_CAUSES, STATS_SCREEN_WHY_MAP, STATS_SCREEN_WHY_HINT,
 		DECREE_EFFECT_RATES_UPKEEP, DECREE_LAPSED,
+		NARRATOR_DIGEST, NARRATOR_DIGEST_ITEM, NARRATOR_MERGED, NARRATOR_WHY, NARRATOR_MAP, NARRATOR_CLOSE,
+		NARRATOR_GRAPH, NARRATOR_PAD_BUTTON,
 	]
 	_append_unique(keys, CRITICAL_LEFT)
 	for config_key: StringName in [CRITICAL_CONFIG_PENDING, CRITICAL_CONFIG_INVALID, CRITICAL_CONFIG_SOUND]:
@@ -697,6 +709,11 @@ static func all_keys() -> Array[StringName]:
 	for card: ArchiveCard in archive.cards:
 		for key: StringName in ArchiveCatalog.text_keys(card):
 			_append_unique(keys, key)
+	# The narrator's keys live in its rules (data/ui/narrator.json), like the archive's in its cards.
+	var narrator: NarratorConfig = NarratorConfig.new()
+	narrator.load_data()
+	for key: StringName in narrator.keys():
+		_append_unique(keys, key)
 	for terrain_id: String in TERRAIN_LABELS:
 		_append_unique(keys, TERRAIN_LABELS[terrain_id])
 	for building_id: String in BUILDING_LABELS:

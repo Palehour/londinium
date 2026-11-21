@@ -48,6 +48,26 @@ func change_series(step: int) -> void:
 	refresh()
 
 
+# The narrator's "see on the chart" (issue #73): this series, on the narrowest range whose buckets hold `second`, with
+# the cursor on that bucket. False when the series is not one of the history's.
+func focus_series(series_id: StringName, second: int) -> bool:
+	var index: int = presentation.history_series.find(series_id)
+	if index < 0:
+		return false
+	_series = index
+	_cursor = -1
+	for range_index: int in presentation.history_ranges.size():
+		_range = range_index
+		refresh()
+		if _place_cursor(second):
+			break
+	return true
+
+
+func series_id() -> StringName:
+	return presentation.history_series[_series] if _series < presentation.history_series.size() else &""
+
+
 func refresh() -> void:
 	var count: int = presentation.history_series.size()
 	if count == 0:

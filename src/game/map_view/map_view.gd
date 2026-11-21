@@ -90,6 +90,14 @@ var _service_text: Label
 # The need layer drawn over the houses and the cause chain of the selected building (issue #73, D-038, D-137).
 var _overlay_bar: OverlayBar
 var _why_panel: WhyPanel
+# The neutral narrator (issue #73, D-137, D-145, D-146) and its notices on screen.
+var narrator: Narrator
+var _narrator_config: NarratorConfig = NarratorConfig.new()
+var _feed: NarratorFeed
+# The kind and subject a notice's "why?" opened, until the selection moves; empty while the panel follows it.
+var _why_target: Dictionary = {}
+# The notice the gamepad acts on (A why, X map, Y graph, B close) while the narrator has it; 0 when the map has the pad.
+var _narrator_focus: int = 0
 
 
 func _ready() -> void:
@@ -108,8 +116,9 @@ func _ready() -> void:
 	_load_presentation(ids)
 	var stats_look: StatsPresentation = StatsPresentation.new()
 	stats_look.load_data()
-	if not presentation.errors.is_empty() or not stats_look.errors.is_empty():
-		_show_load_error(layer, presentation.errors + stats_look.errors)
+	_narrator_config.load_data()
+	if not presentation.errors.is_empty() or not stats_look.errors.is_empty() or not _narrator_config.errors.is_empty():
+		_show_load_error(layer, presentation.errors + stats_look.errors + _narrator_config.errors)
 		return
 	var save_settings: SaveSettings = SaveSettings.new()
 	save_settings.load_data()
@@ -218,6 +227,7 @@ func _ready() -> void:
 	panel_mount.add_child(_stats_screen)
 	get_viewport().size_changed.connect(_resized)
 	_overlay_bar.setup(NeedOverlay.goods(session.context))
+	_start_narrator()
 	_view_ready()
 	_update_mode()
 	queue_redraw()
@@ -255,14 +265,30 @@ func _notification(what: int) -> void:
 # Below the header: the layer picker on the right of the map, the "why?" on its left. Neither takes the focus.
 func _mount_legibility(layer: CanvasLayer) -> void:
 	var top: float = presentation.layout["header_height"] + presentation.layout["help_x"]
+	# The layer picker with the narrator's notices under it, in one column on the right.
+	var column: VBoxContainer = VBoxContainer.new()
+	column.name = "LegibilityColumn"
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	column.offset_top = top
+	column.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
+	layer.add_child(column)
 	_overlay_bar = OverlayBar.new()
 	_overlay_bar.name = "OverlayBar"
-	_overlay_bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_overlay_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_overlay_bar.offset_top = top
-	_overlay_bar.offset_right = -presentation.layout["panel_width"] - presentation.layout["help_x"]
 	_overlay_bar.overlay_changed.connect(func(_good: StringName) -> void: _overlay_changed())
-	layer.add_child(_overlay_bar)
+	column.add_child(_overlay_bar)
+	narrator = Narrator.new(_narrator_config)
+	_feed = NarratorFeed.new()
+	_feed.name = "NarratorFeed"
+	_feed.setup(presentation.ui_colors["header"], presentation.ui_colors["alert"], presentation.layout["panel_margin"],
+		_narrator_config.min_button_px)
+	_feed.custom_minimum_size.x = presentation.layout["panel_width"]
+	_feed.why_requested.connect(_open_why)
+	_feed.map_requested.connect(_go_to)
+	_feed.graph_requested.connect(_show_on_chart)
+	_feed.dismissed.connect(_dismiss_notice)
+	column.add_child(_feed)
 	_why_panel = WhyPanel.new()
 	_why_panel.name = "WhyPanel"
 	_why_panel.setup()
@@ -274,6 +300,131 @@ func _mount_legibility(layer: CanvasLayer) -> void:
 	layer.add_child(_why_panel)
 
 
+# A new game or a load: the narrator announces only what comes after this point. The crisis pause follows the
+# cholera's switch in events.json (D-145).
+func _start_narrator() -> void:
+	var simulation: Simulation = session.simulation
+	narrator.start(simulation.stats_cause_entries(0), simulation.stats_cause_count(), simulation.stats_seconds())
+	narrator.crisis_pause_allowed = session.parameter(&"events.cholera.defeat_pause") == true
+	_why_target = {}
+	_narrator_focus = 0
+	_show_notices()
+
+
+# The new events of the log since the last read; a notice that asks for it pauses the game.
+func _narrate() -> void:
+	var simulation: Simulation = session.simulation
+	narrator.feed(simulation.stats_cause_entries(narrator.read_from()), simulation.stats_seconds())
+	if narrator.take_pause() and clock.speed != 0:
+		_stats_panel.toggle_pause()
+	_show_notices()
+
+
+func _show_notices() -> void:
+	if _narrator_focus != 0 and _notice_by_id(_narrator_focus).is_empty():
+		_narrator_focus = 0
+	_feed.show_notices(narrator.visible(), presentation.labels, _target_of, _has_graph, _narrator_focus, _gamepad)
+
+
+# Where "see on the map" goes now: the building, its tile if it was demolished, or nothing.
+func _target_of(notice: Dictionary) -> Dictionary:
+	return NarratorText.resolve_target(notice["map_target"],
+		func(cell: Vector2i) -> bool: return not _building_at(cell).is_empty(),
+		func(cell: Vector2i) -> bool: return Rect2i(Vector2i.ZERO, Vector2i(session.context.map.width, session.context.map.height)).has_point(cell))
+
+
+func _has_graph(notice: Dictionary) -> bool:
+	return _stats_screen != null and not notice["graph_link"].is_empty() and _stats_screen.has_series(notice["graph_link"]["series"])
+
+
+func _notice_by_id(id: int) -> Dictionary:
+	for notice: Dictionary in narrator.visible():
+		if notice["id"] == id:
+			return notice
+	return {}
+
+
+func _dismiss_notice(id: int) -> void:
+	narrator.dismiss(id)
+	_show_notices()
+
+
+# A notice's "why?": its own chain, whatever is selected, until the selection moves.
+func _open_why(notice: Dictionary) -> void:
+	_why_target = {"kind": notice["kind"], "subject": notice["subject"], "title": NarratorText.text(notice, presentation.labels)}
+	_update_why()
+	if not _why_panel.expanded:
+		_why_panel.toggle()
+
+
+# "See on the map": the target's cell is selected, the camera goes there and the layer of the notice's need turns on.
+func _go_to(notice: Dictionary, target: Dictionary) -> void:
+	var cell: Vector2i = target["cell"]
+	geometry.selected = cell
+	_follow_cell(cell)
+	if not String(notice["overlay"]).is_empty():
+		_overlay_bar.select(StringName(notice["overlay"]))
+	_why_target = {}
+	_update_mode()
+	queue_redraw()
+
+
+# "See on the chart": the history of the statistics screen, on the notice's series and second (#83).
+func _show_on_chart(notice: Dictionary) -> void:
+	var link: Dictionary = notice["graph_link"]
+	if link.is_empty():
+		return
+	get_viewport().gui_release_focus()
+	_stats_panel.leave_focus()
+	_narrator_focus = 0
+	_stats_screen.open_history(link["series"], link["second"])
+	_show_notices()
+
+
+# The camera goes to the cell when it is out of view; the 3D city moves its own camera.
+func _follow_cell(_cell: Vector2i) -> void:
+	geometry.follow_selection()
+
+
+# I and R3: fold or open the panel; with nothing in it, the newest notice's chain. On the gamepad the newest notice
+# also gets the face buttons until R3 or B (the narrator's A, X, Y and B, issue #73).
+func _why_pressed() -> void:
+	if _narrator_focus != 0:
+		_narrator_focus = 0
+		_show_notices()
+		return
+	var notices: Array[Dictionary] = narrator.visible()
+	if not _why_panel.visible and not notices.is_empty() and notices[-1]["kind"] != Narrator.DIGEST_KIND:
+		_open_why(notices[-1])
+		if _gamepad:
+			_narrator_focus = int(notices[-1]["id"])
+			_show_notices()
+		return
+	_why_panel.toggle()
+
+
+# The face buttons while the narrator has the gamepad. True when the press was its own.
+func _narrator_pad(event: InputEvent) -> bool:
+	var notice: Dictionary = _notice_by_id(_narrator_focus)
+	if notice.is_empty():
+		return false
+	if event.is_action_pressed(&"map_place"):
+		_open_why(notice)
+	elif event.is_action_pressed(&"map_demolish"):
+		var target: Dictionary = _target_of(notice)
+		if target.get("type", NarratorText.TYPE_NONE) != NarratorText.TYPE_NONE:
+			_go_to(notice, target)
+	elif event.is_action_pressed(&"map_repair"):
+		if _has_graph(notice):
+			_show_on_chart(notice)
+	elif event.is_action_pressed(&"ui_cancel"):
+		_narrator_focus = 0
+		_dismiss_notice(int(notice["id"]))
+	else:
+		return false
+	return true
+
+
 # The 3D city rebuilds its marks; the map only draws again.
 func _overlay_changed() -> void:
 	queue_redraw()
@@ -281,6 +432,11 @@ func _overlay_changed() -> void:
 
 # The building under the selection, if the cause log follows it (one with jobs), with its chain as stored.
 func _update_why() -> void:
+	if not _why_target.is_empty():
+		_why_panel.show_chain(_why_target["subject"], Strings.text(Strings.WHY_TITLE) % _why_target["title"],
+			session.simulation.stats_cause_chain(_why_target["kind"], _why_target["subject"]),
+			session.simulation.stats_cause_first_serial() > 0, _gamepad)
+		return
 	var building: Dictionary = _building_at(geometry.selected)
 	var subject: StringName = StatsHistory.building_subject(building) if not building.is_empty() else &""
 	var chain: Array[Dictionary] = []
@@ -451,8 +607,11 @@ func _input(event: InputEvent) -> void:
 		gamepad = false
 	if gamepad != _gamepad:
 		_gamepad = gamepad
+		if not gamepad:
+			_narrator_focus = 0
 		_update_help()
 		_update_mode()
+		_show_notices()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -486,7 +645,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == OVERLAY_KEY:
 			_overlay_bar.cycle()
 		elif event.keycode == WHY_KEY:
-			_why_panel.toggle()
+			_why_pressed()
 		elif event.keycode == HELP_KEY:
 			_toggle_help()
 		elif event.keycode == KEY_ESCAPE:
@@ -517,6 +676,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_drag_camera(event.relative)
 	geometry.constrain()
+	if geometry.selected != previous_selection:
+		_why_target = {}
 	if geometry.selected != previous_selection or _building_type != previous_type or _rotation != previous_rotation:
 		_update_mode()
 	if geometry.center != previous_center or geometry.zoom != previous_zoom or geometry.selected != previous_selection or _building_type != previous_type or _rotation != previous_rotation:
@@ -564,6 +725,8 @@ func _gamepad_command(event: InputEvent) -> void:
 	elif _stats_panel.is_focused():
 		if event.is_action_pressed(&"ui_cancel"):
 			_stats_panel.leave_focus()
+	elif _narrator_focus != 0 and _narrator_pad(event):
+		return
 	elif event.is_action_pressed(&"ui_cancel"):
 		_set_building_type(&"")
 	elif event.is_action_pressed(&"map_build_next") or event.is_action_pressed(&"map_build_prev"):
@@ -575,7 +738,7 @@ func _gamepad_command(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"map_overlay_next"):
 		_overlay_bar.cycle()
 	elif event.is_action_pressed(&"map_why"):
-		_why_panel.toggle()
+		_why_pressed()
 	else:
 		for action: StringName in GamepadBindings.CURSOR:
 			if event.is_action_pressed(action):
@@ -590,7 +753,9 @@ func _advance_demolish_hold(delta: float) -> void:
 	if not down:
 		_end_demolish_hold(true)
 		return
-	if get_viewport().gui_get_focus_owner() != null or (_stats_panel != null and _stats_panel.is_focused()):
+	# X belongs to the narrator while it has the pad (see on the map): it never starts a demolition.
+	if get_viewport().gui_get_focus_owner() != null or (_stats_panel != null and _stats_panel.is_focused()) \
+			or _narrator_focus != 0:
 		_end_demolish_hold(false)
 		_demolish_was_down = true
 		return
@@ -952,6 +1117,7 @@ func _snapshot_received(snapshot: Dictionary) -> void:
 	_snapshot = snapshot
 	_stats_panel.update_snapshot(snapshot)
 	_archive_panel.update_snapshot(snapshot)
+	_narrate()
 	# A repair or a new wharf on the ruin changes what the selected cell offers.
 	_update_mode()
 	queue_redraw()
@@ -1083,6 +1249,7 @@ func _reset_view() -> void:
 	geometry.selected = Vector2i(-1, -1)
 	# Other data can bring other classes, and so other needs.
 	_overlay_bar.setup(NeedOverlay.goods(session.context))
+	_start_narrator()
 	_clear_status()
 	_snapshot = session.get_snapshot()
 	# New game, new difficulty or a loaded save: the critical sound rearms and reads its id again.

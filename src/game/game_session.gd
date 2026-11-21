@@ -111,6 +111,11 @@ func scenario_id() -> StringName:
 	return _scenario_id
 
 
+# A parameter of this game's data, read through Params (issue #73: the narrator reads the crisis pause switch).
+func parameter(key: StringName) -> Variant:
+	return _params.get_value(key)
+
+
 # The side of a map cell in metres (D-086, D-093), so the 3D city draws the map at its real size (issue #65).
 func cell_size_m() -> int:
 	return int(_params.get_value(&"map.cell_size_m"))

@@ -1,0 +1,137 @@
+{
+  "pause_on_critical": true,
+  "max_visible": 4,
+  "cooldown_s": {
+    "critical": 0,
+    "high": 30,
+    "normal": 60,
+    "low": 120
+  },
+  "group_window_s": 10,
+  "attention_budget_per_min": 6,
+  "attention_cost": {
+    "high": 2,
+    "normal": 1,
+    "low": 1
+  },
+  "digest_interval_s": 60,
+  "first_cause_grace_s": 10,
+  "toast_lifetime_s": {
+    "high": 12,
+    "normal": 8,
+    "low": 5
+  },
+  "threshold_hysteresis": 5,
+  "legitimacy_thresholds": [
+    25,
+    10
+  ],
+  "min_button_px": 16,
+  "rules": [
+    {
+      "kind": "defeat",
+      "cause": "warning",
+      "priority": "critical",
+      "key": "narrator.defeat.warning",
+      "pause": true,
+      "series": "defeat_timer:{subject}"
+    },
+    {
+      "kind": "defeat",
+      "cause": "defeat",
+      "priority": "critical",
+      "key": "narrator.defeat.defeat",
+      "series": "defeat_timer:{subject}"
+    },
+    {
+      "kind": "defeat",
+      "silent": true
+    },
+    {
+      "kind": "victory",
+      "cause": "completed",
+      "priority": "high",
+      "key": "narrator.victory.completed",
+      "series": "victory_progress:population"
+    },
+    {
+      "kind": "victory",
+      "silent": true
+    },
+    {
+      "kind": "emigration",
+      "cause": "hungry_leaving",
+      "priority": "high",
+      "key": "narrator.emigration.hungry",
+      "series": "emigration:{subject}:hunger"
+    },
+    {
+      "kind": "emigration",
+      "cause": "unhappy_leaving",
+      "priority": "high",
+      "key": "narrator.emigration.unhappy",
+      "series": "emigration:{subject}:satisfaction"
+    },
+    {
+      "kind": "emigration",
+      "silent": true
+    },
+    {
+      "kind": "building",
+      "cause": "ok",
+      "silent": true
+    },
+    {
+      "kind": "building",
+      "cause": "gone",
+      "silent": true
+    },
+    {
+      "kind": "building",
+      "cause": "intermittent",
+      "priority": "normal",
+      "key": "narrator.building.intermittent",
+      "series": "jobs_filled:{building}",
+      "target_from": "subject_cell"
+    },
+    {
+      "kind": "building",
+      "priority": "normal",
+      "key": "narrator.building.stopped",
+      "series": "jobs_filled:{building}",
+      "target_from": "subject_cell"
+    },
+    {
+      "kind": "import",
+      "cause": "ok",
+      "silent": true
+    },
+    {
+      "kind": "import",
+      "cause": "mill_covers_flour",
+      "silent": true
+    },
+    {
+      "kind": "import",
+      "cause": "tea_imports_disabled",
+      "silent": true
+    },
+    {
+      "kind": "import",
+      "cause": "flour_imports_disabled",
+      "silent": true
+    },
+    {
+      "kind": "import",
+      "priority": "normal",
+      "key": "narrator.import.stopped",
+      "series": "bought:{subject}"
+    },
+    {
+      "kind": "policy",
+      "priority": "low",
+      "key": "narrator.policy.changed",
+      "series": "money"
+    }
+  ]
+}
