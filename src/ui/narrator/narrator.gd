@@ -131,7 +131,10 @@ func _offer_due_pendings(now: int) -> void:
 	for pending: Dictionary in _pending.duplicate():
 		if now - int(pending["arrival"]) >= config.first_cause_grace_s:
 			_pending.erase(pending)
-			_offer(_notice(int(pending["serial"]), pending["event"], pending["rule"]))
+			var notice: Dictionary = _notice(int(pending["serial"]), pending["event"], pending["rule"])
+			notice["second"] = now
+			notice["last_second"] = now
+			_offer(notice)
 
 
 # D-198: a later event of a pending subject replaces the state its first cause would announce.

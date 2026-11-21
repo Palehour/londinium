@@ -143,6 +143,36 @@ func test_a_change_within_the_grace_cancels_the_first_cause() -> void:
 		"a later change of the canceled mill shows at once, no grace")
 
 
+func test_a_first_cause_lives_for_its_full_lifetime_after_the_grace() -> void:
+	var config: NarratorConfig = _config()
+	var narrator: Narrator = _narrator(config)
+	var arrival: int = 20
+	var shown: int = arrival + config.first_cause_grace_s
+	var lifetime: int = config.toast_lifetime_s[&"normal"]
+	var keys: Array[StringName] = [&"narrator.building.stopped"]
+	_feed(narrator, [_entry(arrival, &"building", &"mill@1,1", &"no_workers")], arrival)
+	narrator.advance(shown)
+	assert_eq(_visible_keys(narrator), keys, "the first cause shows when the grace ends")
+	narrator.advance(shown + lifetime - 1)
+	assert_eq(_visible_keys(narrator), keys, "the first cause is still visible one second before expiry")
+	narrator.advance(shown + lifetime)
+	assert_true(narrator.visible().is_empty(), "the first cause expires one full lifetime after it shows")
+
+
+func test_a_subject_gone_within_the_grace_leaves_no_notice_or_digest_item() -> void:
+	var config: NarratorConfig = _config()
+	var narrator: Narrator = _narrator(config)
+	var arrival: int = 20
+	var shown: int = arrival + config.first_cause_grace_s
+	_feed(narrator, [_entry(arrival, &"building", &"mill@1,1", &"no_workers")], arrival)
+	_feed(narrator, [_entry(shown - 1, &"building", &"mill@1,1", &"gone")], shown - 1)
+	narrator.advance(shown)
+	assert_true(narrator.visible().is_empty(), "a demolished building does not announce its first cause")
+	assert_eq(narrator.digest_size(), 0, "the canceled first cause does not enter the digest")
+	narrator.advance(shown + config.digest_interval_s)
+	assert_true(narrator.visible().is_empty(), "there is no digest to show for the canceled first cause")
+
+
 # D-198: first causes that share a cause and a second are one notice: the merge window does the rest.
 func test_first_causes_of_one_cause_and_second_merge_into_one() -> void:
 	var narrator: Narrator = _narrator()
