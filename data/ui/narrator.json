@@ -15,6 +15,7 @@
     "low": 1
   },
   "digest_interval_s": 60,
+  "first_cause_grace_s": 10,
   "toast_lifetime_s": {
     "high": 12,
     "normal": 8,

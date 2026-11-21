@@ -1,8 +1,9 @@
 extends GutTest
 
-# data/ui/narrator.json (issue #73): the knobs of D-145 (pause on what is critical) and D-146 (anti-saturation), the
-# attention cost Cristian approved in the plan (2026-10-28: high 2, normal 1, low 1), and the rules that map the cause
-# log's events to notices. The narrator only announces kinds the log keeps today (D-147).
+# data/ui/narrator.json (issue #73): the knobs of D-145 (pause on what is critical), D-146 (anti-saturation) and the
+# grace of a first cause (D-198), the attention cost Cristian approved in the plan (2026-10-28: high 2, normal 1,
+# low 1), and the rules that map the cause log's events to notices. The narrator only announces kinds the log keeps
+# today (D-147).
 
 
 func after_each() -> void:
@@ -35,6 +36,15 @@ func test_the_file_holds_the_values_of_d145_and_d146() -> void:
 	assert_eq(config.threshold_hysteresis, 5)
 	assert_eq(config.legitimacy_thresholds, [25, 10] as Array[int])
 	assert_gte(config.min_button_px, 16, "buttons the gamepad reaches are at least 16 px")
+
+
+# D-198: the grace a first cause waits before it is offered, a knob like the others: in the file, whole and 0 or more.
+func test_the_file_holds_the_grace_of_a_first_cause() -> void:
+	assert_true(_raw().has("first_cause_grace_s"), "the grace a first cause waits is in the file")
+	var config: NarratorConfig = NarratorConfig.new()
+	config.load_data()
+	assert_eq(config.errors, [] as Array[String])
+	assert_eq(config.first_cause_grace_s, 10, "a first cause waits ten seconds")
 
 
 func test_the_rules_only_use_kinds_the_cause_log_keeps() -> void:
@@ -72,6 +82,9 @@ func test_bad_knobs_and_rules_are_errors() -> void:
 		"missing lifetime": func(raw: Dictionary) -> void: raw["toast_lifetime_s"].erase("high"),
 		"thresholds out of range": func(raw: Dictionary) -> void: raw["legitimacy_thresholds"] = [250],
 		"unknown target": func(raw: Dictionary) -> void: raw["rules"][0]["target_from"] = "district",
+		"missing grace": func(raw: Dictionary) -> void: raw.erase("first_cause_grace_s"),
+		"negative grace": func(raw: Dictionary) -> void: raw["first_cause_grace_s"] = -1,
+		"fractional grace": func(raw: Dictionary) -> void: raw["first_cause_grace_s"] = 2.5,
 	}
 	for name: String in cases:
 		var raw: Dictionary = _raw()

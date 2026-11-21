@@ -4,6 +4,7 @@ extends GutTest
 # data/ui/narrator.json. It pauses on a defeat warning and at the start of a crisis (D-145), and does not flood the
 # screen (D-146): a wait between repeats by priority, repeats within the merge window as one notice, at most
 # max_visible on screen, and an attention budget a minute whose overflow goes to a digest. Times are game seconds.
+# A subject's first cause waits out a grace before it speaks (D-198); a change of that subject within it cancels it.
 
 const BAKERIES: int = 6
 
@@ -113,9 +114,67 @@ func test_a_starting_state_and_a_loaded_history_are_not_announced() -> void:
 	assert_eq(narrator.visible(), [] as Array[Dictionary], "what happened before the load is not announced again")
 	assert_false(narrator.take_pause())
 	_feed(narrator, [_entry(61, &"building", &"mill@1,1", &"no_workers")], 61)
-	assert_eq(narrator.visible(), [] as Array[Dictionary], "a new subject's first cause is its starting state")
+	assert_eq(narrator.visible(), [] as Array[Dictionary], "a new subject's first cause waits out its grace (D-198)")
 	_feed(narrator, [_entry(70, &"defeat", &"bankruptcy", &"defeat")], 70)
 	assert_eq(_visible_keys(narrator), [&"narrator.defeat.defeat"] as Array[StringName], "what comes after the load is")
+	# D-198: the new mill's first cause shows once its grace is met, and the loaded history still says nothing.
+	var grace: int = _config().first_cause_grace_s
+	narrator.advance(61 + grace - 1)
+	assert_does_not_have(_visible_keys(narrator), &"narrator.building.stopped", "a second short of the grace it is held")
+	narrator.advance(61 + grace)
+	var keys: Array[StringName] = _visible_keys(narrator)
+	assert_has(keys, &"narrator.building.stopped", "the first cause of the new mill is offered")
+	assert_does_not_have(keys, &"narrator.defeat.warning", "the loaded history says nothing even past the grace")
+	assert_false(narrator.take_pause(), "its warning never asked for a pause")
+
+
+# D-198: within the grace a change of the same subject cancels its first cause: the state it would announce is over.
+func test_a_change_within_the_grace_cancels_the_first_cause() -> void:
+	var narrator: Narrator = _narrator()
+	var grace: int = _config().first_cause_grace_s
+	_feed(narrator, [_entry(10, &"building", &"mill@1,1", &"no_workers"), _entry(10, &"building", &"mill@2,2", &"no_workers")], 10)
+	_feed(narrator, [_entry(11, &"building", &"mill@1,1", &"ok")], 11)
+	narrator.advance(10 + grace)
+	assert_eq(_visible_keys(narrator), [&"narrator.building.stopped"] as Array[StringName],
+		"only the mill nobody fixed speaks")
+	assert_eq(narrator.visible()[0]["merged"], 1)
+	_feed(narrator, [_entry(30, &"building", &"mill@1,1", &"no_flour")], 30)
+	assert_eq(_visible_keys(narrator), [&"narrator.building.stopped"] as Array[StringName],
+		"a later change of the canceled mill shows at once, no grace")
+
+
+# D-198: first causes that share a cause and a second are one notice: the merge window does the rest.
+func test_first_causes_of_one_cause_and_second_merge_into_one() -> void:
+	var narrator: Narrator = _narrator()
+	var entries: Array[Dictionary] = []
+	for index: int in 3:
+		entries.append(_entry(20, &"building", StringName("mill@%d,3" % index), &"no_workers"))
+	_feed(narrator, entries, 20)
+	assert_eq(narrator.visible(), [] as Array[Dictionary], "within the grace nothing is up")
+	narrator.advance(20 + _config().first_cause_grace_s)
+	assert_eq(narrator.visible().size(), 1, "three first causes of one cause and second are one notice")
+	assert_eq(narrator.visible()[0]["merged"], 3)
+
+
+# D-198: pendings that come due together are offered by serial, the order the log holds them.
+func test_due_pendings_are_offered_in_serial_order() -> void:
+	var narrator: Narrator = _narrator()
+	var entries: Array[Dictionary] = [_entry(10, &"import", &"wool", &"no_wharf_for_imports"),
+		_entry(10, &"building", &"mill@9,9", &"no_workers")]
+	_feed(narrator, entries, 10)
+	narrator.advance(10 + _config().first_cause_grace_s)
+	assert_eq(_visible_keys(narrator), [&"narrator.import.stopped", &"narrator.building.stopped"] as Array[StringName],
+		"the earlier serial speaks first")
+
+
+# D-198: the pendings are UI state, not saved state: a new game or a load does not inherit them.
+func test_a_fresh_start_clears_the_pendings() -> void:
+	var narrator: Narrator = _narrator()
+	var entry: Dictionary = _entry(10, &"building", &"mill@1,1", &"no_workers")
+	_feed(narrator, [entry], 10)
+	narrator.start([entry], int(entry["serial"]) + 1, 10)
+	narrator.advance(10 + _config().first_cause_grace_s + 1)
+	assert_eq(narrator.visible(), [] as Array[Dictionary], "no pending survives a fresh start")
 
 
 func test_a_repeat_waits_the_cooldown_of_its_priority() -> void:

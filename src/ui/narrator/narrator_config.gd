@@ -2,16 +2,16 @@ class_name NarratorConfig
 extends RefCounted
 
 # The knobs and rules of the narrator (issue #73), from data/ui/narrator.json: the pause on what is critical (D-145),
-# the anti-saturation (D-146) and which events of the cause log become notices. A rule matches a kind and, if it
-# names one, a cause; the first rule that matches decides, and a silent one says nothing. Only the kinds the cause
-# log keeps are accepted (D-147).
+# the anti-saturation (D-146), the grace a subject's first cause waits (D-198) and which events of the cause log
+# become notices. A rule matches a kind and, if it names one, a cause; the first rule that matches decides, and a
+# silent one says nothing. Only the kinds the cause log keeps are accepted (D-147).
 
 const PATH: String = "res://data/ui/narrator.json"
 # Most urgent first: a lower index wins a slot.
 const PRIORITIES: Array[StringName] = [&"critical", &"high", &"normal", &"low"]
 const CRITICAL: StringName = &"critical"
 const COUNT_KNOBS: Array[String] = ["group_window_s", "max_visible", "attention_budget_per_min", "digest_interval_s",
-	"threshold_hysteresis", "min_button_px"]
+	"first_cause_grace_s", "threshold_hysteresis", "min_button_px"]
 # Rules that name no target go nowhere on the map; a building's subject carries its cell. Districts fall back to none
 # until the log keeps one as a subject (#82 note).
 # The points a threshold is read in (0 to 100, spec §10).
@@ -28,6 +28,9 @@ var attention_budget_per_min: int = 0
 # What a notice of each priority spends of the budget; what is critical spends nothing.
 var attention_cost: Dictionary[StringName, int] = {}
 var digest_interval_s: int = 0
+# D-198: how long the first cause of a subject nobody has seen is held before it is offered; a change of that
+# subject within the grace cancels it.
+var first_cause_grace_s: int = 0
 # Seconds a notice stays up by priority; a critical one stays until it is closed.
 var toast_lifetime_s: Dictionary[StringName, int] = {}
 # Reserved for the thresholds of the kinds the log does not keep yet (legitimacy, factions): read and checked, not used.

@@ -42,7 +42,8 @@ func _build(view: MapView, id: StringName) -> Vector2i:
 
 
 # A change of one subject, numbered after what the log already holds, as if logged now. A subject the log has not
-# seen gets its starting cause first: the narrator never announces a first cause.
+# seen gets its starting cause first: a first cause waits the grace of D-198 before it is announced, so a test that
+# needs the notice now marks the subject as known.
 func _announce(view: MapView, kind: StringName, subject: StringName, cause: StringName, known: bool = false) -> void:
 	var serial: int = view.narrator.read_from()
 	var second: int = view.session.simulation.stats_seconds()
@@ -146,6 +147,10 @@ func _mill_notice(view: MapView) -> Vector2i:
 	for second: int in HISTORY_SECONDS:
 		view.session.simulation.tick()
 	view.session.publish_tick()
+	# The history the scene made while it ran is a starting state, as after a load (D-198): start the narrator on it
+	# the way the map does, so only the mill's own change is announced and no first cause is waiting in the grace.
+	var simulation: Simulation = view.session.simulation
+	view.narrator.start(simulation.stats_cause_entries(0), simulation.stats_cause_count(), simulation.stats_seconds())
 	var subject: StringName = StatsHistory.building_subject(view.call("_building_at", cell))
 	_announce(view, &"building", subject, &"no_workers", true)
 	return cell

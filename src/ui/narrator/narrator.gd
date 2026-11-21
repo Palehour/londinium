@@ -10,6 +10,10 @@ extends RefCounted
 # At most max_visible are up: the oldest of the lowest priority goes out, and what is critical never does (it waits
 # for a slot instead). Notices spend a budget per minute by priority; past it normal and low go to the digest, shown
 # every digest_interval_s when it holds anything. Pause (D-145): a rule that says so asks once for a pause.
+#
+# The first cause of a subject nobody has seen (D-198) waits first_cause_grace_s before it is offered: a change of
+# that subject within the grace cancels it, and what survives is offered in serial order after `_expire`, so the
+# wait does not eat the lifetime of the notice that just appeared.
 
 const DIGEST_KEY: StringName = Strings.NARRATOR_DIGEST
 const DIGEST_KIND: StringName = &"digest"
@@ -22,10 +26,13 @@ var config: NarratorConfig
 # The crisis rules pause only while the crisis's events.json switch lets them (D-145, `defeat_pause`).
 var crisis_pause_allowed: bool = false
 var _next_serial: int = 0
-# kind|subject seen at least once: its first cause is a starting state, not a change.
+# kind|subject seen at least once: only subjects first seen after start may wait for a first-cause notice.
 var _known: Dictionary[String, bool] = {}
 var _visible: Array[Dictionary] = []
 var _queued: Array[Dictionary] = []
+# Each {key, serial, event, rule, arrival} (D-198): a first cause waiting out its grace; `arrival` is the second it
+# came, not the one its event carries.
+var _pending: Array[Dictionary] = []
 # kind|cause -> the second its last notice was shown.
 var _last_shown: Dictionary[String, int] = {}
 # (second, cost) of what was shown, for the budget of the last minute.
@@ -42,10 +49,12 @@ func _init(narrator_config: NarratorConfig) -> void:
 
 
 # A new game or a load: what the log already holds is not announced again, only what comes after `next_serial`.
+# The pendings (D-198) are UI state, not saved state: they do not survive the screen that held them.
 func start(entries: Array[Dictionary], next_serial: int, now: int) -> void:
 	_known.clear()
 	_visible.clear()
 	_queued.clear()
+	_pending.clear()
 	_last_shown.clear()
 	_spent.clear()
 	_digest.clear()
@@ -74,19 +83,26 @@ func feed(entries: Array[Dictionary], now: int) -> void:
 			continue
 		_next_serial = serial + 1
 		var key: String = _subject_key(event)
+		var rule: Dictionary = config.rule_for(StringName(event["kind"]), StringName(event["cause"]))
 		if not _known.has(key):
 			_known[key] = true
+			# D-198: a first cause may be the subject's starting state or a change nobody has seen yet; it waits out
+			# its grace instead of being offered at once.
+			if not rule.is_empty() and not rule["silent"]:
+				_pending.append({"key": key, "serial": serial, "event": event, "rule": rule, "arrival": now})
 			continue
-		var rule: Dictionary = config.rule_for(StringName(event["kind"]), StringName(event["cause"]))
+		_cancel_pending(key)
 		if rule.is_empty() or rule["silent"]:
 			continue
 		_offer(_notice(serial, event, rule))
 	advance(now)
 
 
-# The digest, once its interval has gone by and only if it holds anything.
+# The digest, once its interval has gone by and only if it holds anything. Before it, the first causes whose grace
+# is over (D-198), in serial order and after `_expire`: a notice born here is not born expired.
 func advance(now: int) -> void:
 	_expire(now)
+	_offer_due_pendings(now)
 	if now - _digest_started < config.digest_interval_s:
 		return
 	_digest_started = now
@@ -108,6 +124,21 @@ func _expire(now: int) -> void:
 			_visible.erase(notice)
 	while not _queued.is_empty() and _visible.size() < config.max_visible:
 		_visible.append(_queued.pop_front())
+
+
+# D-198: the first causes whose grace is over, offered by serial, the order the log holds them.
+func _offer_due_pendings(now: int) -> void:
+	for pending: Dictionary in _pending.duplicate():
+		if now - int(pending["arrival"]) >= config.first_cause_grace_s:
+			_pending.erase(pending)
+			_offer(_notice(int(pending["serial"]), pending["event"], pending["rule"]))
+
+
+# D-198: a later event of a pending subject replaces the state its first cause would announce.
+func _cancel_pending(key: String) -> void:
+	for pending: Dictionary in _pending.duplicate():
+		if pending["key"] == key:
+			_pending.erase(pending)
 
 
 func visible() -> Array[Dictionary]:
