@@ -36,6 +36,10 @@ var final_distance: Dictionary = {}
 var final_diagnostics: Dictionary = {}
 # The incidents of each district at the end (issue #87, D-119): its pressure and its incidents by attribute.
 var final_incidents: Dictionary = {}
+# The whole Simulation.snapshot() at the end of the game (issue #385: tools/verificar.gd dumps it as estado.json), and
+# one every ScenarioRunner.snapshot_every ticks as {tick, snapshot}.
+var final_snapshot: Dictionary = {}
+var snapshots: Array[Dictionary] = []
 # First tick (1-based count of ticks run) with a defeat cause, or -1 if the city survived.
 var defeat_tick: int = -1
 var defeat_causes: Array[StringName] = []

@@ -35,6 +35,10 @@ var _map_id: StringName = &"whitechapel_1850s"
 var _layers: Array[Modifier] = []
 # Off by default: a long game logs thousands of events and the many-seed checks keep every result.
 var keep_cause_events: bool = false
+# Issue #385 (tools/verificar.gd): keep the snapshot of every n-th tick in the result (0 = none), and accept a game of
+# 0 ticks (the state as it starts). Both off by default, so no other caller changes.
+var snapshot_every: int = 0
+var allow_zero_ticks: bool = false
 
 
 # Returns null (and logs the errors) when data/ does not load.
@@ -72,6 +76,10 @@ func _new_params() -> Params:
 # Read-only view of a parameter, so tests derive timings from data/ instead of copying them.
 func param(key: StringName) -> Variant:
 	return _params.get_value(key)
+
+
+func has_param(key: StringName) -> bool:
+	return _params.has_value(key)
 
 
 # Balance probes only: every draw of the wheat price becomes `price`. It changes this runner's
@@ -165,7 +173,7 @@ func validate(scenario: Dictionary) -> Array[String]:
 	if not _is_whole(scenario.get("seed")):
 		errors.append("seed must be an integer")
 	var duration: int = int(scenario.get("duration_ticks", 0)) if _is_whole(scenario.get("duration_ticks")) else 0
-	if duration <= 0:
+	if duration < 0 or (duration == 0 and not allow_zero_ticks):
 		errors.append("duration_ticks must be a positive integer")
 	if scenario.get("commands") is not Array:
 		errors.append("commands must be a list")
@@ -243,6 +251,8 @@ func run(scenario: Dictionary) -> ScenarioResult:
 			result.rows.append(_row(result.id, (tick_index + 1) / TICKS_PER_MINUTE, tick_index + 1, snapshot, probe))
 			probe["beer_minute"] = 0.0
 			probe["tax_minute"] = 0.0
+		if snapshot_every > 0 and (tick_index + 1) % snapshot_every == 0:
+			result.snapshots.append({"tick": tick_index + 1, "snapshot": snapshot})
 	# A game that does not end on a whole minute gets a last, partial-minute row, so final_row()
 	# is the state final_economy describes and not one up to 59 ticks older.
 	var duration_ticks: int = int(scenario["duration_ticks"])
@@ -250,6 +260,7 @@ func run(scenario: Dictionary) -> ScenarioResult:
 		@warning_ignore("integer_division")
 		var last_minute: int = duration_ticks / TICKS_PER_MINUTE + 1
 		result.rows.append(_row(result.id, last_minute, duration_ticks, snapshot, probe))
+	result.final_snapshot = snapshot
 	result.final_economy = snapshot["economy"]
 	result.final_distance = snapshot["distance"]
 	result.final_diagnostics = snapshot["diagnostics"]

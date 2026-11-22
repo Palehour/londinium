@@ -85,6 +85,34 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Parity of the two verification wrappers (#389): tools/verificar.sh and tools/verificar.ps1 (pwsh) must leave the
+  # same evidence. Own job so the unit job keeps its 10-min limit (D-132). pwsh comes with the ubuntu runner image.
+  verificar-parity:
+    name: verificar (sh vs ps1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0 (pinned by SHA)
+        with:
+          lfs: false
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Set up Godot and check the project
+        id: setup
+        uses: ./.github/actions/setup-godot-ci
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+
+      - name: Check pwsh is available
+        if: steps.setup.outputs.docs_only != 'true'
+        run: command -v pwsh || { echo "::error::pwsh missing on the runner image"; exit 1; }
+
+      - name: Compare verificar.sh and verificar.ps1
+        if: steps.setup.outputs.docs_only != 'true'
+        run: bash tools/paridad_verificar.sh "$PWD/build/verificacion"
+        timeout-minutes: 5
+
   # tests/slow/ (the scripted scenario games) in parallel parts, each with the 10-min limit of D-132 (#287, D-144).
   slow-part:
     name: tests (slow ${{ matrix.part }}/3)
