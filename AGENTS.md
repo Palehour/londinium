@@ -114,3 +114,11 @@ not later. Steps and commands: `abrir-pr`. PRs are squash-merged into `develop`.
 3. No hardcoded balance values; new parameters added to `data/` and read through `Params`.
 4. `docs/GDD.md` / `docs/DECISIONS.md` untouched unless `decision-diseno` allows it; no P-xxx implemented without approval.
 5. PR description uses the template: what changed, how to verify (≤ 3 steps), screenshots if UI, "Decisiones y docs".
+
+## Lecciones
+Las lecciones salen de hallazgos REPETIDO del revisor y de `correct`. Los agentes las leen antes de
+cada tarea. Se agrega una nueva cuando Bailey marca un REPETIDO.
+- Solo el orquestador corre la verificación (tests, `tools/verificar.sh` y demás chequeos). Los
+  agentes o especialistas delegados no corren chequeos: informan y el orquestador verifica.
+  Origen: [#385](https://github.com/Palehour/londinium/issues/385) (piloto T1) y
+  [cstack#13](https://github.com/crisesarmiento/cstack/pull/13).
