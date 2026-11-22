@@ -71,6 +71,16 @@ func test_negative_wheat_base_price_is_rejected_after_modifiers() -> void:
 	assert_eq(Params.new(_catalog, zero_role).get_value(key), 0)
 
 
+func test_market_price_bounds_apply_without_per_good_registration() -> void:
+	for good: String in ["wheat", "barley", "another_good"]:
+		for field: String in ["base_price", "min_price", "max_price"]:
+			var key: StringName = StringName("market.%s.%s" % [good, field])
+			assert_false(ParameterRanges.is_valid(key, -1.0), "%s rejects negative prices" % key)
+			assert_false(ParameterRanges.is_valid(key, 1e30), "%s rejects overflow" % key)
+			assert_true(ParameterRanges.is_valid(key, 0.0), "%s accepts zero" % key)
+			assert_true(ParameterRanges.is_valid(key, 1.5), "%s allows rounding after modifiers" % key)
+
+
 func test_unknown_key_is_an_error_not_zero() -> void:
 	var params: Params = Params.new(_catalog, _catalog.roles[&"neutral_administrator"])
 	assert_null(params.get_value(&"missing.key"))

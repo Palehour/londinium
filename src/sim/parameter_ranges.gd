@@ -121,14 +121,6 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
 	&"ui.blockers.max_lines": {
 		"min": 1.0, "max": INF, "min_inclusive": true, "max_inclusive": true},
-	# The policy uses -1 for "off" / "no limit" (WheatPolicy), so a price bound must not be negative.
-	&"market.wheat.min_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
-	&"market.wheat.max_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
-	# -1 is the "uninitialised" sentinel of EconomyState.wheat_price, so the base price must not be negative.
-	&"market.wheat.base_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.max_step": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.wheat.reversion": {
@@ -148,12 +140,6 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 	&"policy.wheat.default_target_stock": {
 		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	# Barley (issue #50) walks like wheat, with its own parameters; same bounds as the wheat ones.
-	&"market.barley.min_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
-	&"market.barley.max_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
-	&"market.barley.base_price": {
-		"min": 0.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.barley.max_step": {
 		"min": 1.0, "max": INT64_UPPER_BOUND, "min_inclusive": true, "max_inclusive": false},
 	&"market.barley.reversion": {
@@ -304,6 +290,10 @@ const BY_KEY: Dictionary[StringName, Dictionary] = {
 # Keys with ids in the middle (a category, a class, a good) come from the era's data, so they are matched
 # by shape instead of listed: a new era needs no edit here. Bounds are inclusive unless marked exclusive.
 const PATTERNS: Array[Dictionary] = [
+	# A market price must never collide with the -1 sentinel for uninitialised prices or disabled policy bounds.
+	{"prefix": "market.", "suffix": ".base_price", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": false, "max_exclusive": true},
+	{"prefix": "market.", "suffix": ".min_price", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": false, "max_exclusive": true},
+	{"prefix": "market.", "suffix": ".max_price", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": false, "max_exclusive": true},
 	{"prefix": "victory.", "suffix": ".threshold", "min": 0.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
 	{"prefix": "victory.", "suffix": ".duration_seconds", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
 	{"prefix": "victory.", "suffix": ".required_minutes", "min": 1.0, "max": INT64_UPPER_BOUND, "integer": true, "max_exclusive": true},
