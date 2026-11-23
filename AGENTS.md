@@ -91,6 +91,7 @@ Cristian does not write code. He reviews PRs and plays builds. Make his review e
 - **Rebasear solo ante conflictos reales** o cuando la rama necesita un arreglo de CI que ya entró en `develop`;
   estar atrasada respecto de `develop` no es motivo. Siempre rebase sobre `develop`, nunca mergear `develop` dentro
   de la rama.
+- **Las PRs se abren listas para revisar, nunca como draft.** El revisor revisa una sola vez, cuando la PR se abre (Cristian, 2026-11-22).
 - **Antes de pedir revisión a Bailey**, el PR necesita dos corridas de CI verdes seguidas sobre el mismo commit final,
   sin cambios en el medio (o una corrida verde y una re-verificación de que el tip no cambió). Si se pushea algo, se
   vuelve a esperar.
