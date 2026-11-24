@@ -4,7 +4,7 @@ extends PanelContainer
 # The statistics screen (issue #83, D-052): views of the chapter's history over the whole window, one tab each.
 # It only reads the history the simulation keeps (#82, D-066) and never sends a command. While it shows, the map
 # gets no input: the map passes its events here. The shoulder buttons change tab and B or Esc goes back; the
-# chart tabs (summary, chains, history and classes) take the rest.
+# chart tabs (summary, chains, history, classes and compare) take the rest.
 
 signal closed
 # "See on the map" from a bucket's "why?" (issue #319): the map closes this screen and goes to the cell.
@@ -14,6 +14,7 @@ const SUMMARY_TAB: int = 0
 const CHAINS_TAB: int = 1
 const HISTORY_TAB: int = 2
 const CLASSES_TAB: int = 3
+const COMPARE_TAB: int = 4
 
 var session: GameSession
 var presentation: StatsPresentation
@@ -22,6 +23,7 @@ var _summary: SummaryTab
 var _chains: ChainsTab
 var _history: TimelineTab
 var _classes: ClassesTab
+var _compare: CompareTab
 # The "why?" of a chart bucket (issue #319). While it shows it takes the tabs' place; B goes back to the chart.
 var _why: StatsWhyView
 var _hint: Label
@@ -72,6 +74,9 @@ func setup(game_session: GameSession, look: StatsPresentation) -> void:
 	_classes = ClassesTab.new()
 	_tabs.add_child(_classes)
 	_classes.setup(session, look)
+	_compare = CompareTab.new()
+	_tabs.add_child(_compare)
+	_compare.setup(session, look)
 	_why = StatsWhyView.new()
 	root.add_child(_why)
 	_why.setup(look)
@@ -86,6 +91,7 @@ func open() -> void:
 	# D-170: the summary opens on its newest bucket. Chains starts on its first link (D-173).
 	_summary.reset_cursor()
 	_chains.reset_selection()
+	_compare.reset()
 	_close_why()
 	show()
 	refresh()
@@ -188,10 +194,12 @@ func _apply_texts() -> void:
 	_tabs.set_tab_title(CHAINS_TAB, Strings.text(Strings.STATS_SCREEN_CHAINS))
 	_tabs.set_tab_title(HISTORY_TAB, Strings.text(Strings.STATS_SCREEN_HISTORY))
 	_tabs.set_tab_title(CLASSES_TAB, Strings.text(Strings.STATS_SCREEN_CLASSES))
+	_tabs.set_tab_title(COMPARE_TAB, Strings.text(Strings.STATS_SCREEN_COMPARE))
 	_summary.apply_texts()
 	_chains.apply_texts()
 	_history.apply_texts()
 	_classes.apply_texts()
+	_compare.apply_texts()
 	_why.refresh()
 
 
