@@ -190,8 +190,13 @@ func _classes(view: Node2D) -> ClassesTab:
 	for tick: int in 120:
 		session.simulation.tick()
 	session.publish_tick()
-	# LB from the summary wraps to Classes. RB on Historia changes the series, so three RB presses never arrive.
-	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	# LB wraps backwards from the summary; RB on Historia changes the series, so only LB is safe. The tab order grew
+	# (Compare, #318), so it goes by identity: LB until Classes shows, with a cap so a wrong order cannot hang.
+	var tabs: TabContainer = (view.get("_stats_screen") as StatsScreen).get("_tabs") as TabContainer
+	var presses: int = 0
+	while tabs.current_tab != StatsScreen.CLASSES_TAB and presses < tabs.get_tab_count():
+		_pad(JOY_BUTTON_LEFT_SHOULDER)
+		presses += 1
 	return (view.get("_stats_screen") as StatsScreen).get("_classes") as ClassesTab
 
 
