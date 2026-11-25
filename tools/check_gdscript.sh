@@ -79,6 +79,11 @@ if [[ "$mode" != "parse" ]]; then
 		exit 1
 	fi
 
+	# Index-wide UID guard; only for the default no-path run.
+	if [[ ${#paths[@]} -eq 0 ]]; then
+		bash "$ROOT/tools/check_script_uids.sh" || exit 1
+	fi
+
 	found=0
 	if [[ ${#files[@]} -gt 0 ]]; then
 		# One grep per rule, not per line: a process per line makes the scan take minutes.
