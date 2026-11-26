@@ -236,3 +236,25 @@ func test_compare_texts_are_translated_and_at_least_16_px() -> void:
 				Strings.STATS_SCREEN_COMPARE_METRIC, Strings.STATS_SCREEN_COMPARE_DIFF,
 				Strings.STATS_SCREEN_COMPARE_NEXT]:
 			assert_ne(Strings.text(key), String(key), "%s has a %s text" % [key, locale])
+
+
+# D-205: a limit of the view lives in data/ui/stats.json, not in the code.
+func test_the_width_of_a_value_column_comes_from_the_data() -> void:
+	var look: StatsPresentation = StatsPresentation.new()
+	look.load_data()
+	assert_eq(look.errors, [] as Array[String])
+	assert_gt(look.layout["compare_column_width"], 0.0)
+	var compare: CompareTab = CompareTab.new()
+	var session: GameSession = GameSession.new(_catalog, Params.new(_catalog, RoleDef.new()))
+	add_child_autofree(compare)
+	compare.setup(session, look)
+	compare.refresh()
+	var table: GridContainer = compare.get("_table") as GridContainer
+	assert_gt(table.get_child_count(), 4)
+	assert_eq((table.get_child(1) as Label).custom_minimum_size.x, look.layout["compare_column_width"])
+
+
+func test_the_data_must_give_the_column_width() -> void:
+	var look: StatsPresentation = StatsPresentation.new()
+	look.validate({"summary": {"span_seconds": 600}, "layout": {}, "colors": {}, "strokes": [{"color": "#ffffff", "dash": 0}]})
+	assert_true(look.errors.has("data/ui/stats.json.layout.compare_column_width: invalid positive value"))

@@ -120,7 +120,8 @@ func _show_table() -> void:
 		child.free()
 	for heading: String in [Strings.text(Strings.STATS_SCREEN_COMPARE_METRIC), _moment_heading("A", _second_a, index_a),
 			_moment_heading("B", _second_b, index_b), Strings.text(Strings.STATS_SCREEN_COMPARE_DIFF)]:
-		_cell(heading, true)
+		# Same widths as the rows below, so each heading sits over its column.
+		_cell(heading, _table.get_child_count() == 0)
 	for row: Dictionary in data:
 		_cell(row["label"], true)
 		_cell(StatsCompare.format(row["card"], row["a"]), false)
@@ -139,7 +140,7 @@ func _cell(text: String, first_column: bool) -> void:
 	var label: Label = Label.new()
 	label.text = text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL if first_column else Control.SIZE_SHRINK_BEGIN
-	label.custom_minimum_size.x = 0.0 if first_column else presentation.layout["legend_width"] * 5.0
+	label.custom_minimum_size.x = 0.0 if first_column else presentation.layout["compare_column_width"]
 	label.clip_text = true
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_table.add_child(label)
