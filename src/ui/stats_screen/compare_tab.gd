@@ -1,7 +1,7 @@
 class_name CompareTab
 extends ChartTab
 
-# The compare tab of the statistics screen (issue #318, D-168; controls of #83): two moments of the chapter, A and B,
+# The compare tab of the statistics screen (issue #318, D-205; controls of #83): two moments of the chapter, A and B,
 # and a table of what changed between them (StatsCompare). One chart at a time, as everywhere: ↑/↓ pick which card
 # it draws, the D-pad or ←/→ walk its buckets, LT/RT or +/- change the range, and Y (or M) puts the next marker, A
 # then B then A again, on the bucket the cursor is on. A marker is a second of the chapter, so it stays when the

@@ -1,10 +1,10 @@
 class_name StatsCompare
 extends RefCounted
 
-# The compare view's table (issue #318, D-168): the readings of two moments of the chapter, A and B, and what changed
+# The compare view's table (issue #318, D-205): the readings of two moments of the chapter, A and B, and what changed
 # between them. It reads the summary's cards (StatsSummary), so it adds no series to the simulation and invents no
 # number: a bucket with no data stays "—" and has no difference. Moments, not districts: the history keeps the city's
-# series only, so there is nothing to split by district yet (D-168).
+# series only, so there is nothing to split by district yet (D-205).
 
 # The summary cards that have data. Fear has no series yet (#323), so it is not a row.
 const CARDS: Array[StringName] = [&"population", &"balance", &"satisfaction", &"coverage", &"debt"]

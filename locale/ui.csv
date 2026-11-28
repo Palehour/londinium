@@ -348,9 +348,9 @@ ui.stats_screen.compare,Comparar,Compare
 ui.stats_screen.compare.hint,"↑/↓: gráfico · Cruceta o flechas ←/→: recorrer · LT/RT o +/-: rango · Y o M: marcar A o B","↑/↓: chart · D-pad or arrows ←/→: browse · LT/RT or +/-: range · Y or M: set A or B"
 ui.stats_screen.compare.metric,Dato,Measure
 ui.stats_screen.compare.moment,%s · %s,%s · %s
-ui.stats_screen.compare.diff,Diferencia (B − A),Difference (B − A)
+ui.stats_screen.compare.diff,Diferencia (B - A),Difference (B - A)
 ui.stats_screen.compare.up,+%s,+%s
-ui.stats_screen.compare.down,−%s,−%s
+ui.stats_screen.compare.down,-%s,-%s
 ui.stats_screen.compare.row,%s · %s,%s · %s
 ui.stats_screen.compare.next,Próxima marca: %s,Next marker: %s
 ui.stats_screen.chains,Cadenas,Chains

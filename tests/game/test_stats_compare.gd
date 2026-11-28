@@ -53,6 +53,16 @@ func test_a_gap_in_the_history_is_not_a_zero() -> void:
 	assert_true(is_nan(rows[0]["diff"]))
 
 
+# One minus glyph on the screen: the one Strings.money writes for a negative sum, so a loss reads the same in a value
+# and in a difference.
+func test_the_minus_of_a_difference_is_the_one_money_writes() -> void:
+	var money_minus: String = Strings.money(-1).substr(0, 1)
+	for locale: String in ["es", "en"]:
+		Strings.set_locale(locale)
+		assert_eq(StatsCompare.format_diff(&"population", -4.0).substr(0, 1), money_minus)
+		assert_string_contains(Strings.text(Strings.STATS_SCREEN_COMPARE_DIFF), " %s A" % money_minus)
+
+
 func test_a_difference_writes_its_sign_in_both_languages() -> void:
 	for locale: String in ["es", "en"]:
 		Strings.set_locale(locale)
