@@ -9,7 +9,7 @@ extends RefCounted
 
 const PATH: String = "res://data/ui/stats.json"
 const LAYOUT_KEYS: Array[String] = ["font_size", "margin", "card_columns", "chart_height", "legend_width",
-	"line_width", "history_chart_height"]
+	"line_width", "history_chart_height", "compare_column_width"]
 const COLOR_KEYS: Array[String] = ["background", "card", "marker", "cursor"]
 # The fine level holds one value a second, not buckets, so the ranges read only these two.
 const RANGE_TIERS: Array[StringName] = [StatsHistory.TIER_MEDIUM, StatsHistory.TIER_CHAPTER]

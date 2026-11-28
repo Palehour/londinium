@@ -167,7 +167,8 @@
     "chart_height": 120,
     "legend_width": 32,
     "line_width": 2,
-    "history_chart_height": 360
+    "history_chart_height": 360,
+    "compare_column_width": 160
   },
   "colors": {
     "background": "#20242b",

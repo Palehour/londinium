@@ -426,6 +426,17 @@ const STATS_SCREEN_CLASSES: StringName = &"ui.stats_screen.classes"
 const STATS_SCREEN_CLASSES_HINT: StringName = &"ui.stats_screen.classes.hint"
 const STATS_SCREEN_CLASSES_CITY: StringName = &"ui.stats_screen.classes.city"
 const STATS_SCREEN_CLASSES_CLASS: StringName = &"ui.stats_screen.classes.class"
+# The compare view (issue #318, D-168): its tab, hint, table headings, a moment's heading, the written sign of a
+# difference, a row's name and which marker Y sets next.
+const STATS_SCREEN_COMPARE: StringName = &"ui.stats_screen.compare"
+const STATS_SCREEN_COMPARE_HINT: StringName = &"ui.stats_screen.compare.hint"
+const STATS_SCREEN_COMPARE_METRIC: StringName = &"ui.stats_screen.compare.metric"
+const STATS_SCREEN_COMPARE_MOMENT: StringName = &"ui.stats_screen.compare.moment"
+const STATS_SCREEN_COMPARE_DIFF: StringName = &"ui.stats_screen.compare.diff"
+const STATS_SCREEN_COMPARE_UP: StringName = &"ui.stats_screen.compare.up"
+const STATS_SCREEN_COMPARE_DOWN: StringName = &"ui.stats_screen.compare.down"
+const STATS_SCREEN_COMPARE_ROW: StringName = &"ui.stats_screen.compare.row"
+const STATS_SCREEN_COMPARE_NEXT: StringName = &"ui.stats_screen.compare.next"
 # The chains view (issue #315, D-173): its tab, hint, a link with no building, one column's reading, and the chain names.
 # Column titles reuse the series labels except entradas and pérdidas, which are not the Merma label.
 const STATS_SCREEN_CHAINS: StringName = &"ui.stats_screen.chains"
@@ -681,6 +692,9 @@ static func all_keys() -> Array[StringName]:
 		STATS_SCREEN_MARKER_LINE, STATS_SCREEN_MARKER_STACK,
 		STATS_SCREEN_LESSONS, STATS_SCREEN_LESSONS_ROW, STATS_SCREEN_LESSONS_CRISIS, STATS_SCREEN_LESSONS_NO_CRISIS,
 		STATS_SCREEN_CLASSES, STATS_SCREEN_CLASSES_HINT, STATS_SCREEN_CLASSES_CITY, STATS_SCREEN_CLASSES_CLASS,
+		STATS_SCREEN_COMPARE, STATS_SCREEN_COMPARE_HINT, STATS_SCREEN_COMPARE_METRIC, STATS_SCREEN_COMPARE_MOMENT,
+		STATS_SCREEN_COMPARE_DIFF, STATS_SCREEN_COMPARE_UP, STATS_SCREEN_COMPARE_DOWN, STATS_SCREEN_COMPARE_ROW,
+		STATS_SCREEN_COMPARE_NEXT,
 		STATS_SCREEN_CHAINS, STATS_SCREEN_CHAINS_HINT, STATS_SCREEN_CHAINS_ABSENT, STATS_SCREEN_CHAINS_VALUE,
 		STATS_SCREEN_CHAINS_NO_BOTTLENECK, STATS_SCREEN_CHAINS_CAUSE, STATS_SCREEN_CHAINS_CAUSE_WHARF,
 		STATS_SCREEN_CHAINS_IMPORTS_TAKE, STATS_SCREEN_CHAINS_IMPORTS_FREE,
